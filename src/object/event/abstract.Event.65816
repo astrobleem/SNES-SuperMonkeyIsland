@@ -1,0 +1,114 @@
+/**
+* just a little object to automatically test core functionality
+* 
+*/
+.include "src/object/event/abstract.Event.h"
+.section "abstract.Event"
+
+  METHOD init
+  METHOD play
+  METHOD kill
+  rep #$31
+  TRIGGER_ERROR E_abstractClass
+  rts
+
+/**
+* triggers result if frame reached.
+*
+* @return c<bool>	set if result was triggered
+*/
+abstract.Event.checkResult:
+  rep #$31
+  lda.b event.endFrame
+  jsr GLOBAL.checkFrameReached
+  bcc +
+  	jsr abstract.Event.triggerResult
+	sec
++ rts
+
+abstract.Event.triggerResult:
+	ldx.b event.result
+	lda.l (BSL << 16),x
+	cmp #RESULT_MAGIC
+	beq +
+	  phx
+      TRIGGER_ERROR E_BadEventResult
+
+
++	pea _return-1	;push return adress
+	inx
+	phx		;push target subroutine adress. next rts is abused to actually do a jump to subroutine
+
+_return:
+  rts
+
+;chapter results, trigger some action, then kill self.
+EventResult.none:
+  .dw RESULT_MAGIC
+  CALL abstract.Event.kill.MTD iterator.self
+  rts
+
+
+EventResult.playchapter:
+  .dw RESULT_MAGIC
+  pei (event.resultTarget)
+  NEW Script.CLS.PTR oopCreateNoPtr
+  pla
+  ;self-kill removed: new chapter's Event.chapter.init killOthers already kills this event
+  rts
+
+
+EventResult.restartchapter:
+  .dw RESULT_MAGIC
+  pei (event.chapterId)
+  NEW Script.CLS.PTR oopCreateNoPtr
+  pla
+  ;self-kill removed: new chapter's Event.chapter.init killOthers already kills this event
+  rts
+
+
+EventResult.lastcheckpoint:
+  .dw RESULT_MAGIC
+  CALL Player.loseLife.MTD event.player
+  bcc _lastcheckpoint.alive
+
+  ;--- Game over: save checkpoint, show continue screen ---
+  jsr abstract.Iterator.reset
+  lda.w #OBJECT.PROPERTIES.isCheckpoint
+  jsr abstract.Iterator.each.byProperties
+  bcc _lastcheckpoint.noCheckpointSave
+    CALL Event.checkpoint.getCheckpointAdress.MTD iterator.target
+    sta.w GLOBAL.lastCheckpoint
+    bra _lastcheckpoint.goContinue
+_lastcheckpoint.noCheckpointSave:
+  stz.w GLOBAL.lastCheckpoint
+_lastcheckpoint.goContinue:
+  lda.b event.resultTarget
+  cmp.w #none
+  bne +
+    lda.w #title_screen
++
+  pha
+  NEW Script.CLS.PTR oopCreateNoPtr
+  pla
+  rts
+
+_lastcheckpoint.alive:
+  ;--- Still alive: restart from checkpoint ---
+  ;flush DMA queue to prevent stale entries from corrupting during restart
+  jsr core.dma.flushQueue
+  jsr abstract.Iterator.reset
+  lda.w #OBJECT.PROPERTIES.isCheckpoint
+  jsr abstract.Iterator.each.byProperties
+  bcs _lastcheckpoint.foundCP
+    TRIGGER_ERROR E_NoCheckpointFound
+_lastcheckpoint.foundCP:
+  CALL Event.checkpoint.getCheckpointAdress.MTD iterator.target
+  pha
+  NEW Script.CLS.PTR oopCreateNoPtr
+  pla
+  rts
+
+  CLASS abstract.Event
+.ends	
+	

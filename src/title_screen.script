@@ -1,0 +1,112 @@
+
+	SCRIPT title_screen
+.ACCU 16
+.INDEX 16
+
+  .def objBackground hashPtr.1
+  .def objText hashPtr.2
+  ;objBrightness is predefined at hashPtr.4 (hashPtr+12) in script.h
+  .def objSuper hashPtr.9
+
+  ;--- Cleanup stale objects from previous session ---
+  jsr core.dma.resetHardware
+
+  lda.w #OBJECT.PROPERTIES.isSprite
+  jsr abstract.Iterator.kill.byProperties
+
+  lda.w #OBJECT.PROPERTIES.isHdma
+  jsr abstract.Iterator.kill.byProperties
+
+  jsr core.vram.init
+  jsr core.cgram.clear
+
+  lda.w #OBJECT.PROPERTIES.isChapter
+  jsr abstract.Iterator.setProperties
+  jsr abstract.Iterator.killOthers
+
+  lda.w #OBJECT.PROPERTIES.isEvent
+  jsr abstract.Iterator.kill.byProperties
+
+  lda.w #OBJID.Msu1
+  jsr abstract.Iterator.kill.byId
+
+  sep #$20
+  lda.b #BGMODE_MODE_1 | BGMODE_PRIORITY_LAYER_3
+  sta.w ScreenMode
+  lda.w MainScreen
+  and.b #(T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_BG4_ENABLE) ~$ff
+  sta.w MainScreen
+
+  ;Reset MSU-1 video window/color registers
+  stz.w colorAdditionSelect
+  stz.w window12Sel
+  stz.w windowObjSel
+  stz.w windowMainscreen
+  rep #$31
+
+  NEW Brightness.CLS.PTR objBrightness
+  NEW Background.generic.CLS.PTR objBackground BG.LAYER.1 BG.titlescreen.PTR
+
+  lda #BRIGHTNESS.FULL
+  CALL Brightness.set.MTD objBrightness
+
+  ;create text layer
+  NEW Background.textlayer.8x8.CLS.PTR objText
+
+  NEW Sprite.super.CLS.PTR objSuper 0 0
+
+  ;draw title text
+  CALL Background.textlayer.8x8.clear.MTD objText
+  lda #T_title.PTR
+  CALL Background.textlayer.8x8.print.MTD objText
+
+  ;write '>' cursor at START GAME
+  lda.w #$286
+  tax
+  sep #$20
+  lda #$3E
+  sta.w GLOBAL.CORE.STRING.buffer,x
+  rep #$20
+
+  CALL Background.textlayer.8x8.flush.MTD objText
+
+  ;--- Wait for START or A button ---
+_title_screen.waitLoop:
+  jsr SavePC
+
+  ldx #INPUT.DEVICE.ID.0
+  jsr core.input.get.trigger
+  and.w #(JOY_BUTTON_A | JOY_BUTTON_START)
+  beq _title_screen.waitLoop.noPress
+    jmp _title_screen.startTransition
+_title_screen.waitLoop.noPress:
+  rts
+
+_title_screen.startTransition:
+  lda #BRIGHTNESS.NONE
+  CALL Brightness.fadeTo.MTD objBrightness
+
+  jsr SavePC
+  CALL Brightness.isDone.MTD objBrightness
+  bcs +
+    rts
++
+
+  ;--- Cleanup and launch level1 ---
+  jsr core.dma.resetHardware
+
+  CALL Sprite.super.kill.MTD objSuper
+  jsr core.oam.clearTable
+  CALL Background.generic.kill.MTD objBackground
+  CALL Background.textlayer.8x8.kill.MTD objText
+  jsr core.vram.init
+  lda.w #OBJECT.PROPERTIES.isHdma
+  jsr abstract.Iterator.kill.byProperties
+  jsr core.cgram.clear
+
+  lda.w #level1
+  pha
+  NEW Script.CLS.PTR oopCreateNoPtr
+  pla
+  DIE
+

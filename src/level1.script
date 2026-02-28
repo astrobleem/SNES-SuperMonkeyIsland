@@ -1,0 +1,5 @@
+
+  SCRIPT level1
+  ;placeholder — SCUMM interpreter entry point goes here
+  jsr SavePC
+  rts

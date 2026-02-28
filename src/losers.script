@@ -1,0 +1,64 @@
+  SCRIPT losers
+  .def objLosersBg hashPtr.1
+  .def hold.timer this._tmp+10
+
+  lda.w #OBJECT.PROPERTIES.isChapter
+  jsr abstract.Iterator.setProperties
+  jsr abstract.Iterator.killOthers
+
+  lda.w #OBJECT.PROPERTIES.isEvent
+  jsr abstract.Iterator.kill.byProperties
+
+  sep #$20
+  lda.b #BGMODE_MODE_1 | BGMODE_PRIORITY_LAYER_3
+  sta.w ScreenMode
+  lda.w MainScreen
+  and.b #(T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_BG4_ENABLE) ~$ff
+  sta.w MainScreen
+
+  rep #$31
+
+  NEW Brightness.CLS.PTR objBrightness
+  NEW Background.generic.CLS.PTR objLosersBg BG.LAYER.0 BG.losers.PTR
+
+  lda #BRIGHTNESS.FULL
+  CALL Brightness.fadeTo.MTD objBrightness
+
+  jsr SavePC
+
+  CALL Brightness.isDone.MTD objBrightness
+  bcs +
+    rts
++
+
+  lda #180
+  sta.b hold.timer
+
+  jsr SavePC
+
+  ;decrement hold timer
+  lda.b hold.timer
+  beq _losers.holdDone
+  dec.b hold.timer
+  rts
+
+_losers.holdDone:
+
+  lda #BRIGHTNESS.NONE
+  CALL Brightness.fadeTo.MTD objBrightness
+
+  jsr SavePC
+  CALL Brightness.isDone.MTD objBrightness
+
+  bcs +
+    rts
++
+
+  CALL Background.generic.kill.MTD objLosersBg
+
+  jsr core.cgram.clear
+
+  NEW Script.CLS.PTR oopCreateNoPtr title_screen
+
+  DIE
+

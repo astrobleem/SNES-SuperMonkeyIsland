@@ -1,0 +1,86 @@
+/**
+* Directional prompt that can be configured for any input direction or action.
+* Direction mask is passed at runtime.
+*/
+.include "src/object/event/Event.direction_generic.h"
+
+.section "Event.direction_generic"
+
+; expected direction mask is passed as OBJECT.CALL.ARG.5
+; optional immediate-branch flag is passed as OBJECT.CALL.ARG.6 (non-zero)
+
+  METHOD init
+  rep #$31
+
+  jsr Event.template.initCommon
+
+  lda OBJECT.CALL.ARG.5,s
+  sta this.direction
+
+  ; Build input mask: action events accept all face buttons (A/B/X/Y)
+  lda this.direction
+  cmp #JOY_BUTTON_A
+  bne _not_action_mask
+    lda #(JOY_BUTTON_A | JOY_BUTTON_B | JOY_BUTTON_X | JOY_BUTTON_Y)
+_not_action_mask:
+  sta this.inputMask
+
+  lda OBJECT.CALL.ARG.6,s
+  and #$0001
+  sta this.branchImmediate
+  stz this.hasTriggered
+
+  NEW Spc.CLS.PTR this.audio
+  rts
+
+  METHOD play
+  rep #$31
+
+  jsr Event.template.waitTimeline
+  bcs _in_timeline
+    rts
+_in_timeline:
+
+  ;attract mode: direction=0 means check START button
+  lda this.direction
+  bne _direction_normalCheck
+    ldx #INPUT.DEVICE.ID.0
+    jsr core.input.get.trigger
+    and.w #$FFF0
+    beq _direction_done
+      ;any button pressed in attract mode: trigger result (no score)
+      jsr abstract.Event.triggerResult
+      sep #$20
+      lda #1
+      sta this.hasTriggered
+      rep #$20
+      rts
+
+_direction_normalCheck:
+  ;check if player pressed the expected direction
+  ldx #INPUT.DEVICE.ID.0
+  jsr core.input.get.trigger
+  and this.inputMask
+  beq _direction_done
+
+      lda this.hasTriggered
+      and #$00FF                ;hasTriggered is db, mask off stale high byte
+      bne _direction_done
+
+        ; Trigger immediately — chapter transition kills all events
+        jsr abstract.Event.triggerResult
+        sep #$20
+        lda #1
+        sta this.hasTriggered
+        rep #$20
+        rts
+
+_direction_done:
+  rts
+
+  METHOD kill
+  rep #$31
+  jmp Event.template.kill
+
+  CLASS Event.direction_generic
+.ends

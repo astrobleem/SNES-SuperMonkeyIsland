@@ -6,3 +6,13 @@ __pycache__/
 *.spo
 config.ini
 .claude/
+
+# Commercial game assets — DO NOT commit
+data/monkeypacks/
+data/scumm_extracted/
+data/snes_converted/
+
+# Mesen runtime files
+mesen/Debugger/
+mesen/Saves/
+mesen/Screenshots/

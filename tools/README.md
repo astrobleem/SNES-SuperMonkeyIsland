@@ -1,6 +1,6 @@
 # Tools Overview
 
-This folder contains all helper utilities for the SNES Super Dragon's Lair Arcade build pipeline. Scripts are written in Python 3 (requires Pillow and NumPy); external dependencies such as WLA-DX and superfamiconv are included as pre-built binaries.
+This folder contains helper utilities for the SNES Super Monkey Island project — a native SCUMM v5 interpreter for The Secret of Monkey Island on Super Nintendo with MSU-1. Also includes legacy tools from the SuperDragonsLairArcade engine fork. Scripts are written in Python 3 (requires Pillow and NumPy); external dependencies such as WLA-DX and superfamiconv are included as pre-built binaries.
 
 Install Python dependencies with `pip install -r requirements.txt`.
 
@@ -8,7 +8,12 @@ Install Python dependencies with `pip install -r requirements.txt`.
 
 | Tool | Purpose |
 | --- | --- |
-| **Core Pipeline** | |
+| **SCUMM Resource Extraction & Conversion** | |
+| `scumm_extract.py` | Extract all resources from MI1 CD Talkie data files (monkey.000 + monkey.001) |
+| `scumm/` | SCUMM v5 parser package: crypto, chunks, index, resource, smap, palette, room_gfx, object_gfx, metadata, costume, charset, manifest |
+| `snes_room_converter.py` | Convert extracted VGA room backgrounds to SNES Mode 1 tile format (palette, tileset, tilemap, column index) |
+| `msu1_pack_rooms.py` | Pack all SNES room assets into a single .msu data file with dense room index for MSU-1 streaming |
+| **Core Pipeline (Dragon's Lair Legacy)** | |
 | `lua_scene_exporter.py` | Export DirkSimple `game.lua` scene data to XML event files with frame-accurate timing |
 | `xmlsceneparser.py` | Convert XML chapter events to assembly `.script` + `.data` files (516 chapters) |
 | `generate_msu_data.py` | Full MSU-1 video pipeline: Daphne .m2v extraction, tile conversion, .msu packaging |
@@ -374,6 +379,162 @@ These tools are legacy, one-time-use, or optional:
 - `exporter.py` — generic export helper
 - `gimp-batch-convert-indexed.scm` — optional GIMP palette conversion
 - `jpeg_to_png.py` — one-time JPEG to PNG conversion
+
+## SCUMM v5 Resource Extractor
+
+### scumm_extract.py
+
+Extracts all game resources from The Secret of Monkey Island CD Talkie data files (`monkey.000` index + `monkey.001` data). Both files are XOR 0x69 encrypted. Parses the SCUMM v5 chunk format and exports:
+
+- **86 room backgrounds** as full-color PNGs (320-1008px wide, 144-200px tall)
+- **697 object images** as PNGs (per-state images from OBIM chunks)
+- **86 room metadata** as JSON (walkboxes, scaling, color cycling, object lists)
+- **187 global scripts** as raw bytecode (.bin)
+- **138 sounds** as raw binary
+- **123 costumes** as raw binary (full decode deferred to Phase 2)
+- **5 charsets** as raw binary + font sheet PNGs
+- **Palette data** per room (raw .bin + 16x16 swatch .png)
+- **manifest.json** summarizing all extracted resources
+
+```bash
+# Full extraction
+python tools/scumm_extract.py \
+    --index data/monkeypacks/talkie/monkey.000 \
+    --data data/monkeypacks/talkie/monkey.001 \
+    --output data/scumm_extracted
+
+# Extract specific rooms only
+python tools/scumm_extract.py \
+    --index data/monkeypacks/talkie/monkey.000 \
+    --data data/monkeypacks/talkie/monkey.001 \
+    --output data/scumm_extracted \
+    --rooms 1,20,28
+
+# Extract specific resource types only
+python tools/scumm_extract.py \
+    --index data/monkeypacks/talkie/monkey.000 \
+    --data data/monkeypacks/talkie/monkey.001 \
+    --output data/scumm_extracted \
+    --types backgrounds,metadata
+
+# Index-only mode (parse and dump index file without extracting resources)
+python tools/scumm_extract.py \
+    --index data/monkeypacks/talkie/monkey.000 \
+    --data data/monkeypacks/talkie/monkey.001 \
+    --output data/scumm_extracted \
+    --index-only
+```
+
+**Output directory structure:**
+```
+data/scumm_extracted/
+  manifest.json
+  index/
+    maxs.json, room_names.json, directories.json, objects.json
+  rooms/
+    room_001_beach/
+      background.png, palette.bin, palette.png, metadata.json
+      objects/   (per-object PNGs)
+      scripts/   (encd.bin, excd.bin, lscr_NNN.bin, scrp_NNN.bin)
+      costumes/  (cost_NNN.bin)
+      sounds/    (soun_NNN.bin)
+  scripts/   (global scripts: scrp_NNN_roomNNN.bin)
+  sounds/    (soun_NNN_roomNNN.bin)
+  costumes/  (cost_NNN_roomNNN.bin)
+  charsets/  (char_NNN_roomNNN.bin)
+```
+
+### scumm/ package modules
+
+| Module | Purpose |
+| --- | --- |
+| `crypto.py` | XOR 0x69 decryption + DecryptedReader wrapper |
+| `chunks.py` | Chunk reader (4-byte ASCII tag + 4-byte BE size) |
+| `index.py` | Index file parser (RNAM room names, MAXS limits, DROO/DSCR/DSOU/DCOS/DCHR directories, DOBJ objects) |
+| `resource.py` | Data file parser (LECF/LOFF/LFLF/ROOM structure) |
+| `smap.py` | SMAP stripe decompression (all codecs: raw, BasicV, BasicH, MajMin, with/without transparency) |
+| `palette.py` | CLUT 256-color palette parsing + swatch PNG rendering |
+| `room_gfx.py` | Background extraction (RMIM/IM00/SMAP + CLUT → PNG) |
+| `object_gfx.py` | Object image extraction (OBIM/IMHD/IM01+ → PNG) |
+| `metadata.py` | Room metadata → JSON (RMHD, BOXD walkboxes, SCAL scaling, CYCL color cycling, OBCD objects, scripts) |
+| `costume.py` | Costume raw binary extraction |
+| `charset.py` | Charset raw binary extraction + font sheet PNG attempt |
+| `manifest.py` | Resource manifest JSON generation |
+
+## SNES Room Tile Converter
+
+### snes_room_converter.py
+
+Converts extracted VGA room background PNGs to SNES Mode 1 native tile format for MSU-1 streaming. Full Python pipeline with gracon-inspired lossy palette assignment, tile deduplication with flip detection, and column-major tilemap output.
+
+```bash
+# Single room
+python tools/snes_room_converter.py \
+    --input data/scumm_extracted/rooms/room_028_bar/background.png \
+    --output data/snes_converted/rooms/
+
+# All rooms (batch)
+python tools/snes_room_converter.py \
+    --input data/scumm_extracted/rooms/ \
+    --output data/snes_converted/rooms/ \
+    --verbose
+
+# Specific rooms with verification images
+python tools/snes_room_converter.py \
+    --input data/scumm_extracted/rooms/ \
+    --output data/snes_converted/rooms/ \
+    --rooms 1,10,20,28 \
+    --verify
+```
+
+**Pipeline per room:**
+1. Load RGB PNG, convert to SNES BGR555 color space
+2. Build 8 sub-palettes via global color reduction (median-cut merge nearest pairs, then partition)
+3. Assign each 8x8 tile to best sub-palette, remap pixels to nearest palette color (lossy)
+4. Deduplicate tiles with horizontal/vertical flip detection (hash-based O(1) lookup)
+5. Encode binary outputs: `.pal`, `.chr`, `.map`, `.col`, `.hdr`
+
+**Output per room** (in `data/snes_converted/rooms/`):
+
+| File | Format | Description |
+| --- | --- | --- |
+| `room_NNN.pal` | 256 bytes (8x16x2 BGR555) | SNES CGRAM palette data |
+| `room_NNN.chr` | Variable (32 bytes/tile) | 4bpp planar tileset, deduplicated |
+| `room_NNN.map` | w_tiles x h_tiles x 2 bytes | Column-major tilemap (SNES tilemap words) |
+| `room_NNN.col` | Variable | Column streaming index for scroll engine |
+| `room_NNN.hdr` | 32 bytes | Room header (dimensions, sizes, offsets) |
+| `room_NNN_verify.png` | PNG | Verification image (optional, `--verify`) |
+| `manifest.json` | JSON | Batch conversion stats for all rooms |
+
+**Key stats (all 86 rooms):** 0 failures, avg 732 tiles/room, avg 23.8% dedup, ~2 MB total tileset, 0.6s/room. 14 wide rooms (>320px) exceed the 1024-tile SNES tilemap limit and will need tile streaming.
+
+## MSU-1 Room Data Packer
+
+### msu1_pack_rooms.py
+
+Packs all SNES-converted room assets into a single `.msu` data file with a dense room index for O(1) lookup by the 65816 engine via MSU-1 registers. Reads room binaries and `manifest.json` from `snes_room_converter.py` output.
+
+```bash
+# Basic pack
+python tools/msu1_pack_rooms.py \
+    --input data/snes_converted/rooms/ \
+    --output distribution/SuperMonkeyIsland.msu
+
+# With verification and verbose output
+python tools/msu1_pack_rooms.py \
+    --input data/snes_converted/rooms/ \
+    --output distribution/SuperMonkeyIsland.msu \
+    --verify --verbose
+```
+
+**File format:**
+- 256-byte header with `S-MSU1` magic, title, section offsets, and placeholders for future resource types (scripts, costumes, sounds, charsets)
+- Dense room index table (100 entries × 8 bytes) — room ID maps directly to entry offset for O(1) lookup
+- Room data blocks (512-byte aligned for SD2SNES sector reads), each containing hdr+pal+chr+map+col in engine load order
+
+**Verification (`--verify`):** Reads back every room from the packed `.msu` file and compares byte-for-byte against source files. Also validates magic, title, null entries for missing room IDs, and 512-byte alignment of all data block offsets.
+
+**Output:** `distribution/SuperMonkeyIsland.msu` (~2.52 MB for 86 rooms)
 
 ## Platform Notes
 

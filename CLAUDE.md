@@ -104,6 +104,9 @@ In 16-bit mode, `lda` reads 2 bytes even from `db` fields. Mask with `and #$00FF
 ### `.base BSL` Required for HiROM Superfree Sections
 Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read WRAM not ROM.
 
+### PHA/PLA Width Must Match Processor Mode
+`pha` pushes 2 bytes when M=0 (16-bit A) but only 1 byte when M=1 (8-bit A). If a function does `rep #$31; pha` at entry then `sep #$20` in the body, the exit MUST do `rep #$20; pla` to pop the correct number of bytes. A mismatched `pla` with M=1 causes a 1-byte stack misalignment that corrupts the return address. Same applies to `phx`/`plx` and `phy`/`ply` with the X flag.
+
 ## Key Files
 
 | File | Purpose |
@@ -119,6 +122,11 @@ Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read
 | `src/object/brightness/brightness.65816` | Screen fade control (singleton) |
 | `src/object/iterator/abstract.Iterator.65816` | killOthers, each.byProperties, setProperties |
 | `src/object/event/abstract.Event.65816` | Base event class, EventResult handlers |
+| `src/object/room/room.65816` | Room loader: MSU-1 seek, index lookup, tileset/tilemap/palette DMA |
+| `src/object/room/room.h` | Room structs, MSU-1 constants, WRAM buffers |
 | `tools/create_event.py` | Generate boilerplate for new Event classes |
 | `tools/paths.py` | Shared path resolution for Python tools |
+| `tools/fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
+| `tools/fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
+| `tools/fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
 | `build/SuperMonkeyIsland.sym` | Symbol table — look up addresses here after each build |

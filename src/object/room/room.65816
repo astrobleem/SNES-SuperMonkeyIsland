@@ -1,0 +1,474 @@
+/**
+* Room loader subroutines for MSU-1 room data pack.
+*
+* Not an OOP class — just jsr-callable functions.
+* Reads room data from .msu file: index lookup, header parse,
+* palette/tileset DMA, column-major tilemap write.
+*/
+
+.include "src/object/room/room.h"
+.section "room loader"
+
+
+/**
+* Seek to 32-bit address in MSU-1 data file and wait for ready.
+* Drains any pending seek first, then issues new seek.
+*
+* @param a<16bit>  low 16 bits of address
+* @param x<16bit>  high 16 bits of address
+*/
+room.msu1Seek:
+  php
+  rep #$31
+  pha
+  phx
+
+  ;drain any pending seek (non-fatal timeout)
+  sep #$20
+  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
+-   dex
+    beq +
+    lda.l MSU_STATUS
+    bmi -
++
+  rep #$31
+  ;write 32-bit address
+  lda 3,s   ;low 16 bits (was in A, now on stack)
+  sta.l MSU_ADRESS
+  lda 1,s   ;high 16 bits (was in X)
+  sta.l MSU_ADRESS+2
+
+  ;SD2SNES settle delay
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+
+  ;wait for seek complete
+  sep #$20
+  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
+-   dex
+    beq _room.seekTimeout
+    lda.l MSU_STATUS
+    bmi -
+
+  plx
+  rep #$20        ;restore 16-bit A to match pha at entry
+  pla
+  plp
+  rts
+
+_room.seekTimeout:
+  TRIGGER_ERROR E_Msu1SeekTimeout
+
+
+/**
+* Load room index entry for given room ID.
+* Seeks to index table, reads data_offset and data_size into WRAM.
+*
+* @param a<16bit>  room ID
+* @return carry    set if room exists (data_offset != 0), clear if missing
+*/
+room.loadIndex:
+  php
+  rep #$31
+
+  ;calculate index offset: ROOM_INDEX_OFFSET + room_id * 8
+  asl a
+  asl a
+  asl a
+  clc
+  adc.w #ROOM_INDEX_OFFSET
+  ;A = low 16 bits of seek address, X = high 16 bits (0)
+  ldx #0
+  jsr room.msu1Seek
+
+  ;read 8 bytes from MSU_DATA into index entry struct
+  ;MSU_DATA auto-advances on each byte read
+  sep #$20
+  ldx #0
+- lda.l MSU_DATA
+  sta.w GLOBAL.room.idx,x
+  inx
+  cpx #ROOM_INDEX_ENTRY_SIZE
+  bne -
+
+  ;check if data_offset is zero (room doesn't exist)
+  rep #$20
+  lda.w GLOBAL.room.idx.offset_lo
+  ora.w GLOBAL.room.idx.offset_hi
+  beq _room.loadIndex.missing
+
+  plp
+  sec
+  rts
+
+_room.loadIndex.missing:
+  plp
+  clc
+  rts
+
+
+/**
+* Read 32-byte room header from MSU-1 into WRAM buffer.
+* Seeks to dataOffset, then reads header bytes via CPU.
+*/
+room.loadHeader:
+  php
+  rep #$31
+
+  ;seek to room data block
+  lda.w GLOBAL.room.idx.offset_lo
+  ldx.w GLOBAL.room.idx.offset_hi
+  jsr room.msu1Seek
+
+  ;read 32 bytes of header from MSU_DATA into WRAM struct
+  ;use indexed loop with struct base address
+  sep #$20
+  ldx #0
+- lda.l MSU_DATA
+  sta.w GLOBAL.room.hdr,x
+  inx
+  cpx #ROOM_HEADER_SIZE
+  bne -
+
+  plp
+  rts
+
+
+/**
+* Register CGRAM DMA transfer from MSU_DATA (palette).
+* MSU_DATA stream is positioned right after the header.
+* Uses FIXED_SOURCE since MSU_DATA is a fixed-address auto-advancing port.
+*/
+room.loadPalette:
+  php
+  rep #$31
+  tsx
+
+  sep #$20
+  lda.b #DMA_TRANSFER.CGRAM | DMA_TRANSFER.OPTION.FIXED_SOURCE
+  pha                           ;1 byte: transfer type
+
+  pea MSU_DATA                  ;2 bytes: source address ($2001)
+
+  sep #$20
+  lda #0
+  pha                           ;1 byte: source bank ($00)
+
+  rep #$20
+  lda #0
+  pha                           ;2 bytes: target address (CGRAM addr 0)
+
+  lda.w #ROOM_PALETTE_SIZE
+  pha                           ;2 bytes: transfer length (256)
+
+  jsr core.dma.registerTransfer
+  txs                           ;restore stack (clean up 8 bytes)
+
+  plp
+  rts
+
+
+/**
+* Register VRAM DMA transfer from MSU_DATA (tileset).
+* MSU_DATA stream is positioned right after the palette.
+* Transfer length comes from room header chr_size field.
+*/
+room.loadTileset:
+  php
+  rep #$31
+  tsx
+
+  sep #$20
+  lda.b #DMA_TRANSFER.VRAM | DMA_TRANSFER.OPTION.FIXED_SOURCE
+  pha                           ;1 byte: transfer type
+
+  pea MSU_DATA                  ;2 bytes: source address ($2001)
+
+  sep #$20
+  lda #0
+  pha                           ;1 byte: source bank ($00)
+
+  rep #$20
+  lda.w #ROOM_TILES_VRAM * 2    ;target: VRAM byte address 0
+  pha                           ;2 bytes: target address
+
+  ;chr_size from header (16-bit value, clamp to max 28KB)
+  lda.w GLOBAL.room.hdr.chr_size
+  cmp.w #ROOM_MAX_CHR_SIZE + 1
+  bcc +
+    lda.w #ROOM_MAX_CHR_SIZE
++
+  pha                           ;2 bytes: transfer length
+
+  jsr core.dma.registerTransfer
+  txs                           ;restore stack
+
+  plp
+  rts
+
+
+/**
+* Write column-major tilemap to VRAM via CPU loop.
+* MSU_DATA stream is positioned right after the tileset.
+* Uses VMAIN increment-by-32 mode to write one column at a time.
+*/
+room.loadTilemap:
+  php
+  rep #$31
+
+  ;load dimensions from header
+  ;clamp to 64 visible columns (tilemap is 2 nametables of 32 cols)
+  lda.w GLOBAL.room.hdr.width_tiles
+  cmp.w #65
+  bcc +
+    lda.w #64
++
+  sta.b tmp                     ;visible columns to write
+  lda.w GLOBAL.room.hdr.height_tiles
+  sta.b tmp+2                   ;rows per column
+
+  ;current VRAM column address (word address)
+  lda.w #ROOM_TILEMAP_VRAM_WORD
+  sta.b tmp+4                   ;current column VRAM word addr
+
+_room.tilemap.columnLoop:
+  lda.b tmp                     ;columns remaining
+  beq _room.tilemap.drainExtra
+
+  ;handle nametable boundary: columns 0-31 in nametable 0 ($3800),
+  ;columns 32-63 in nametable 1 ($3C00).  Linear increment would
+  ;wrap into nametable 0's row data, so jump to nametable 1 base.
+  lda.b tmp+4
+  cmp.w #ROOM_TILEMAP_VRAM_WORD + 32
+  bne +
+    lda.w #ROOM_TILEMAP_VRAM_WORD + $0400
+    sta.b tmp+4
++
+
+  ;set VMAIN to increment by 32 (vertical write)
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE | VMAIN_INCREMENT_32
+  sta.l VMAIN
+  rep #$20
+
+  ;set VRAM address for this column
+  lda.b tmp+4
+  sta.l VMADDL
+
+  ;write height_tiles words from MSU_DATA
+  ldy.b tmp+2                  ;row count
+_room.tilemap.rowLoop:
+  sep #$20
+  lda.l MSU_DATA                ;low byte (auto-advance)
+  sta.l VMDATAL
+  lda.l MSU_DATA                ;high byte (auto-advance)
+  sta.l VMDATAH                 ;triggers VRAM addr += 32
+  rep #$20
+  dey
+  bne _room.tilemap.rowLoop
+
+  ;advance to next column
+  lda.b tmp+4
+  inc a
+  sta.b tmp+4
+
+  ;decrement column counter
+  lda.b tmp
+  dec a
+  sta.b tmp
+  bra _room.tilemap.columnLoop
+
+_room.tilemap.drainExtra:
+  ;drain remaining MSU data for columns beyond the 64-column tilemap
+  ;so MSU stream ends at the correct position
+  lda.w GLOBAL.room.hdr.width_tiles
+  sec
+  sbc.w #64
+  beq _room.tilemap.done
+  bcc _room.tilemap.done        ;room <= 64 columns, nothing to drain
+
+  ;A = extra columns to drain
+  sta.b tmp
+_room.tilemap.drainColLoop:
+  ldy.b tmp+2                   ;rows per column
+_room.tilemap.drainRowLoop:
+  sep #$20
+  lda.l MSU_DATA                 ;discard low byte
+  lda.l MSU_DATA                 ;discard high byte
+  rep #$20
+  dey
+  bne _room.tilemap.drainRowLoop
+  lda.b tmp
+  dec a
+  sta.b tmp
+  bne _room.tilemap.drainColLoop
+
+_room.tilemap.done:
+  ;restore VMAIN to normal increment-by-1 mode
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+
+  plp
+  rts
+
+
+/**
+* Clear VRAM tilemap area to zero.
+* Zeroes tilemap region so unused columns are blank.
+* Must be called during force blank.
+*/
+room.clearTilemap:
+  php
+  rep #$31
+
+  ;set VMAIN to increment by 1
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+
+  ;set VRAM address
+  lda.w #ROOM_TILEMAP_VRAM_WORD
+  sta.l VMADDL
+
+  ;write 2048 zero words (4KB)
+  lda #0
+  ldy.w #ROOM_TILEMAP_CLEAR_SIZE / 2
+- sta.l VMDATAL
+  sta.l VMDATAH
+  dey
+  bne -
+
+  plp
+  rts
+
+
+/**
+* Drain excess tileset bytes from MSU_DATA stream.
+* If chr_size > ROOM_MAX_CHR_SIZE, the DMA only transferred the clamped
+* amount, leaving (chr_size - ROOM_MAX_CHR_SIZE) bytes unread.
+* Must drain these so the stream is positioned at tilemap data.
+*/
+room.drainExcessTileset:
+  php
+  rep #$31
+
+  lda.w GLOBAL.room.hdr.chr_size
+  sec
+  sbc.w #ROOM_MAX_CHR_SIZE
+  beq _room.drainExcess.done
+  bcc _room.drainExcess.done    ;chr_size <= max, nothing to drain
+
+  ;A = number of excess bytes to drain
+  tax
+  sep #$20
+- lda.l MSU_DATA                ;discard byte (auto-advance)
+  dex
+  bne -
+  rep #$20
+
+_room.drainExcess.done:
+  plp
+  rts
+
+
+/**
+* Master room loader. Loads a complete room from MSU-1 data pack.
+*
+* @param a<16bit>  room ID (0-99)
+* @return carry    set on success, clear if room doesn't exist
+*/
+room.load:
+  php
+  rep #$31
+
+  ;save room ID
+  sta.w GLOBAL.room.currentId
+
+  ;disable ALL interrupts (NMI + V-IRQ) to prevent the dmaQueue
+  ;IRQ handler from toggling INIDSP mid-write, which kills VRAM writes.
+  ;sei alone doesn't block NMI, and nmi.stop doesn't block V-IRQ.
+  sei                             ;block IRQ at CPU level
+  sep #$20
+  lda.w GLOBAL.interruptFlags
+  pha                             ;save original interrupt flags
+  lda #0
+  sta.w GLOBAL.interruptFlags     ;clear NMI + IRQ enable bits
+  sta.l NMITIMEN                  ;apply to hardware
+  rep #$20
+
+  ;enter force blank for unrestricted VRAM/CGRAM access
+  sep #$20
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+  rep #$20
+
+  ;clear tilemap area
+  jsr room.clearTilemap
+
+  ;look up room in index
+  lda.w GLOBAL.room.currentId
+  jsr room.loadIndex
+  bcs +
+    ;room doesn't exist — restore display, re-enable interrupts, return failure
+    sep #$20
+    lda.w ScreenBrightness
+    sta.l INIDSP
+    pla                             ;restore saved interrupt flags
+    sta.w GLOBAL.interruptFlags
+    sta.l NMITIMEN
+    rep #$20
+    cli
+    plp
+    clc
+    rts
+
++
+  ;read 32-byte header (seeks to dataOffset internally)
+  jsr room.loadHeader
+
+  ;MSU_DATA stream now positioned after header = palette data
+  ;register CGRAM DMA (256 bytes)
+  jsr room.loadPalette
+
+  ;MSU_DATA stream now after palette = tileset data
+  ;register VRAM DMA (chr_size bytes)
+  jsr room.loadTileset
+
+  ;flush DMA queue immediately (we're in force blank)
+  jsr core.dma.processQueue
+
+  ;DMA may have clamped chr_size to ROOM_MAX_CHR_SIZE.
+  ;Drain any excess tileset bytes so MSU stream is at tilemap start.
+  jsr room.drainExcessTileset
+
+  ;MSU_DATA stream now after tileset = tilemap data
+  ;CPU loop writes column-major tilemap to VRAM
+  jsr room.loadTilemap
+
+  ;restore display brightness
+  sep #$20
+  lda.w ScreenBrightness
+  sta.l INIDSP
+
+  ;restore interrupt flags (NMI + V-IRQ)
+  pla                             ;saved GLOBAL.interruptFlags
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+  cli
+
+  plp
+  sec
+  rts
+
+
+.ends

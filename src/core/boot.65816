@@ -67,6 +67,15 @@ core.boot.mainLoop:
 	bra core.boot.mainLoop
 .ends
 
+;null guard: OOP dispatcher uses $0000 as "no method" sentinel.
+;Prevent any real code from landing at address $0000.
+.bank 0 slot 0
+.org 0
+.section "null_guard" force
+  brk
+  brk
+.ends
+
 .bank 0 slot 0
 .org BANK0_LOROM
 .section "IRQ Bootstrap" force

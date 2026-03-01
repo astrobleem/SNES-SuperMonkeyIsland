@@ -1,0 +1,211 @@
+"""SCUMM v5 room metadata extraction — walkboxes, scaling, objects → JSON."""
+
+import struct
+import json
+import logging
+from pathlib import Path
+from .chunks import iter_chunks
+
+log = logging.getLogger(__name__)
+
+
+def _parse_rmhd(data: bytes) -> dict:
+    """Parse RMHD: width(LE16), height(LE16), num_objects(LE16)."""
+    w, h, num_obj = struct.unpack_from('<HHH', data, 0)
+    return {'width': w, 'height': h, 'num_objects': num_obj}
+
+
+def _parse_boxd(data: bytes) -> list:
+    """Parse BOXD walkbox data.
+    SCUMM v5: num_boxes(LE16), then 20 bytes per box.
+    Each box: ulx, uly, urx, ury, lrx, lry, llx, lly (8 x LE16) + mask(byte) + flags(byte) + scale(LE16).
+    """
+    if len(data) < 2:
+        return []
+    num_boxes = struct.unpack_from('<H', data, 0)[0]
+    boxes = []
+    pos = 2
+    for i in range(num_boxes):
+        if pos + 20 > len(data):
+            break
+        vals = struct.unpack_from('<8h', data, pos)
+        ulx, uly, urx, ury, lrx, lry, llx, lly = vals
+        mask = data[pos + 16]
+        flags = data[pos + 17]
+        scale = struct.unpack_from('<H', data, pos + 18)[0]
+        boxes.append({
+            'index': i,
+            'ul': [ulx, uly], 'ur': [urx, ury],
+            'lr': [lrx, lry], 'll': [llx, lly],
+            'mask': mask, 'flags': flags, 'scale': scale,
+        })
+        pos += 20
+    return boxes
+
+
+def _parse_scal(data: bytes) -> list:
+    """Parse SCAL: 4 scale slots, each 8 bytes (s1 LE16, y1 LE16, s2 LE16, y2 LE16)."""
+    slots = []
+    for i in range(4):
+        off = i * 8
+        if off + 8 > len(data):
+            break
+        s1, y1, s2, y2 = struct.unpack_from('<HHHH', data, off)
+        if s1 or y1 or s2 or y2:
+            slots.append({'slot': i, 's1': s1, 'y1': y1, 's2': s2, 'y2': y2})
+    return slots
+
+
+def _parse_cycl(data: bytes) -> list:
+    """Parse CYCL: color cycling data.
+    Each entry: index(byte=0 → end), freq(LE16), flags(LE16), start(byte), end(byte).
+    """
+    cycles = []
+    pos = 0
+    while pos < len(data):
+        idx = data[pos]
+        pos += 1
+        if idx == 0:
+            break
+        if pos + 6 > len(data):
+            break
+        freq = struct.unpack_from('>H', data, pos)[0]
+        flags = struct.unpack_from('>H', data, pos + 2)[0]
+        start = data[pos + 4]
+        end = data[pos + 5]
+        pos += 6
+        cycles.append({
+            'index': idx, 'freq': freq, 'flags': flags,
+            'start': start, 'end': end,
+        })
+    return cycles
+
+
+def _parse_obcd(data: bytes) -> dict:
+    """Parse OBCD chunk — object code/data.
+    Contains CDHD (header), VERB (verb table), OBNA (name).
+    """
+    subs = iter_chunks(data)
+    result = {}
+
+    for sub in subs:
+        if sub.tag == 'CDHD':
+            d = sub.data
+            if len(d) >= 13:
+                obj_id = struct.unpack_from('<H', d, 0)[0]
+                x = d[2]
+                y = d[3]
+                w = d[4]
+                h = d[5]
+                flags = d[6]
+                parent = d[7]
+                walk_x = struct.unpack_from('<h', d, 8)[0]
+                walk_y = struct.unpack_from('<h', d, 10)[0]
+                result['obj_id'] = obj_id
+                result['x'] = x * 8  # SCUMM stores x in 8-pixel units
+                result['y'] = y * 8 if y & 0x80 == 0 else y  # some rooms use pixel coords
+                result['width'] = w * 8
+                result['height'] = h & 0xF8
+                result['flags'] = flags
+                result['parent'] = parent
+                result['walk_x'] = walk_x
+                result['walk_y'] = walk_y
+                result['actor_dir'] = (h & 0x07)
+
+        elif sub.tag == 'OBNA':
+            name = sub.data.split(b'\x00')[0].decode('ascii', errors='replace')
+            name = name.rstrip('@')  # SCUMM uses @ as null padding
+            result['name'] = name
+
+    return result
+
+
+def extract_metadata(room_resource, output_dir: Path, room_name: str = '') -> dict:
+    """Extract room metadata to JSON.
+
+    Returns the metadata dict.
+    """
+    meta = {'room_id': room_resource.room_id, 'room_name': room_name}
+
+    # RMHD
+    rmhd = room_resource.get_room_sub('RMHD')
+    if rmhd:
+        meta['header'] = _parse_rmhd(rmhd.data)
+
+    # BOXD walkboxes
+    boxd = room_resource.get_room_sub('BOXD')
+    if boxd:
+        meta['walkboxes'] = _parse_boxd(boxd.data)
+
+    # SCAL
+    scal = room_resource.get_room_sub('SCAL')
+    if scal:
+        meta['scaling'] = _parse_scal(scal.data)
+
+    # CYCL color cycling
+    cycl = room_resource.get_room_sub('CYCL')
+    if cycl:
+        meta['color_cycling'] = _parse_cycl(cycl.data)
+
+    # TRNS transparent color
+    trns = room_resource.get_room_sub('TRNS')
+    if trns and len(trns.data) >= 2:
+        meta['transparent_color'] = struct.unpack_from('<H', trns.data, 0)[0]
+
+    # Objects
+    obcds = room_resource.get_all_room_sub('OBCD')
+    objects = []
+    for obcd in obcds:
+        obj_data = _parse_obcd(obcd.data)
+        if obj_data:
+            objects.append(obj_data)
+    if objects:
+        meta['objects'] = objects
+
+    # EPAL
+    epal = room_resource.get_room_sub('EPAL')
+    if epal:
+        meta['has_epal'] = True
+        meta['epal_size'] = len(epal.data)
+
+    # Save JSON
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = output_dir / 'metadata.json'
+    with open(json_path, 'w') as f:
+        json.dump(meta, f, indent=2)
+    log.info("Room %d: saved metadata → %s", room_resource.room_id, json_path)
+
+    return meta
+
+
+def extract_scripts(room_resource, output_dir: Path):
+    """Extract room scripts (ENCD, EXCD, LSCR) as raw binary files."""
+    scripts_dir = output_dir / 'scripts'
+
+    # Entry/exit scripts
+    for tag in ('ENCD', 'EXCD'):
+        chunk = room_resource.get_room_sub(tag)
+        if chunk:
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+            path = scripts_dir / f'{tag.lower()}.bin'
+            path.write_bytes(chunk.data)
+            log.debug("Room %d: saved %s script (%d bytes)",
+                      room_resource.room_id, tag, len(chunk.data))
+
+    # Local scripts
+    lscrs = room_resource.get_all_room_sub('LSCR')
+    for i, lscr in enumerate(lscrs):
+        scripts_dir.mkdir(parents=True, exist_ok=True)
+        # First byte of LSCR is the script number
+        script_num = lscr.data[0] if lscr.data else i
+        path = scripts_dir / f'lscr_{script_num:03d}.bin'
+        path.write_bytes(lscr.data)
+        log.debug("Room %d: saved LSCR %d (%d bytes)",
+                  room_resource.room_id, script_num, len(lscr.data))
+
+    # Trailing global scripts (SCRP)
+    scrps = room_resource.get_trailing('SCRP')
+    for i, scrp in enumerate(scrps):
+        scripts_dir.mkdir(parents=True, exist_ok=True)
+        path = scripts_dir / f'scrp_{i:03d}.bin'
+        path.write_bytes(scrp.data)

@@ -49,6 +49,8 @@ OBJECT.CALL.ARG.1	dw
 .def OBJECT.PROPERTIES.isCollidable	1 << 4
 .def OBJECT.PROPERTIES.isLifeform	1 << 5
 .def OBJECT.PROPERTIES.isUnitTest	1 << 6
+.def OBJECT.PROPERTIES.likesBananas	1 << 7	;used by unit tests
+.def OBJECT.PROPERTIES.likesHamburgers	1 << 8	;used by unit tests
 .def OBJECT.PROPERTIES.isCheckpoint	1 << 9
 .def OBJECT.PROPERTIES.isSprite	1 << 10
 .def OBJECT.PROPERTIES.isSerializable	1 << 12

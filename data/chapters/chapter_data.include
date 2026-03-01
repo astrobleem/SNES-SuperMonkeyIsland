@@ -1,1 +1,4 @@
 ;placeholder — no chapter data yet
+;'none' label is required by EventResult handlers as a null target
+none:
+  .dw 0

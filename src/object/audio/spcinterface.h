@@ -119,51 +119,25 @@ PtPlayerSamplePackPointertable:
 .ends
 
 .enum 0
-  SAMPLE.0.BRAKE db
   SAMPLE.0.TECHNIQUE db
-  SAMPLE.0.TURBO db
-  SAMPLE.0.TURN db
   SAMPLE.0.OK db
   SAMPLE.0.SHURIKEN db
-  SAMPLE.0.SAVEME db
 .ende
 
-.export SAMPLE.0.BRAKE
 .export SAMPLE.0.TECHNIQUE
-.export SAMPLE.0.TURBO
-.export SAMPLE.0.TURN
 .export SAMPLE.0.OK
 .export SAMPLE.0.SHURIKEN
-.export SAMPLE.0.SAVEME
 
 
 .Section "sample pack 0" superfree
 SamplePack0:
 	.dw (SamplePack0End-SamplePack0)
 SamplePackStart0:
-	.db 7				;number of samples in this pack
+	.db 3				;number of samples in this pack
 
 Sample0Header:
 	.dw (Sample0-SamplePackStart0)	;relative pointer to sample
 	.dw (Sample0-SamplePackStart0)	;relative loop pointer
-	.db $0C				;volume l
-	.db $0C				;volume r
-	.dw $c00			;pitch
-        ;edddaaaa VxADSR1
-    .db %10001111         ;adsr
-        ;lllrrrrr VxADSR2
-    .db %00011111           ;adsr
-        ;Emmggggg VxGAIN
-    .db %00011111               ;gain
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-
-Sample1Header:
-	.dw (Sample1-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample1-SamplePackStart0)	;relative loop pointer
 	.db $14				;volume l
 	.db $14				;volume r
 	.dw $1400			;pitch
@@ -175,56 +149,9 @@ Sample1Header:
 	.db 0
 	.db 0
 
-Sample2Header:
-	.dw (Sample2-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample2-SamplePackStart0)	;relative loop pointer
-	.db $0C				;volume l
-	.db $0C				;volume r
-	.dw $c00			;pitch
-        ;edddaaaa VxADSR1
-    .db %10001111         ;adsr
-        ;lllrrrrr VxADSR2
-    .db %00011111           ;adsr
-        ;Emmggggg VxGAIN
-    .db %00011111               ;gain
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-
-/*
-         e/E     = Envelope adjustment method bits.
-        ddd     = Decay rate: R=16+d*2
-        aaaa    = Attack rate: R=a*2+1
-        lll     = Sustain level (see note)
-        rrrrr   = Sustain rate: R=r
-        mm      = Gain mode
-        ggggg   = Gain rate: R=g
-        GGGGGGG = Direct Gain mode gain setting: E=g*16
-
- */	
-Sample3Header:
-	.dw (Sample3-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample3-SamplePackStart0)	;relative loop pointer
-	.db $04				;volume l
-	.db $04				;volume r
-	.dw $e00			;pitch
-        ;edddaaaa VxADSR1
-	.db %10001111         ;adsr
-        ;lllrrrrr VxADSR2
-    .db %00011111			;adsr
-        ;Emmggggg VxGAIN
-	.db %00011111				;gain
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-
-Sample4Header:
-	.dw (Sample4-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample4-SamplePackStart0)	;relative loop pointer
+Sample1Header:
+	.dw (Sample1-SamplePackStart0)	;relative pointer to sample
+	.dw (Sample1-SamplePackStart0)	;relative loop pointer
 	.db $0C				;volume l
 	.db $0C				;volume r
 	.dw $1000			;pitch
@@ -236,9 +163,9 @@ Sample4Header:
 	.db 0
 	.db 0
 
-Sample5Header:
-	.dw (Sample5-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample5-SamplePackStart0)	;relative loop pointer
+Sample2Header:
+	.dw (Sample2-SamplePackStart0)	;relative pointer to sample
+	.dw (Sample2-SamplePackStart0)	;relative loop pointer
 	.db $14				;volume l
 	.db $14				;volume r
 	.dw $e00			;pitch
@@ -250,34 +177,12 @@ Sample5Header:
 	.db 0
 	.db 0
 
-Sample6Header:
-	.dw (Sample6-SamplePackStart0)	;relative pointer to sample
-	.dw (Sample6-SamplePackStart0)	;relative loop pointer (no loop)
-	.db $28				;volume l
-	.db $28				;volume r
-	.dw $0B06			;pitch (22050 Hz)
-	.dw $0000			;adsr (off)
-	.db %11111111				;gain
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-	.db 0
-
 Sample0:
-	.incbin "build/data/sounds/brake.sfx_loop.brr"
+	.incbin "build/data/sounds/technique.sfx_normal.brr"
 Sample1:
-	.incbin "build/data/sounds/technique.sfx_normal.brr"		
+	.incbin "build/data/sounds/ok.sfx_normal.brr"
 Sample2:
-	.incbin "build/data/sounds/turbo.sfx_loop.brr"		
-Sample3:
-	.incbin "build/data/sounds/turn.sfx_loop.brr"	
-Sample4:
-	.incbin "build/data/sounds/ok.sfx_normal.brr"	
-Sample5:
 	.incbin "build/data/sounds/shuriken.sfx_normal.brr"
-Sample6:
-	.incbin "build/data/sounds/saveme.sfx_normal.brr"
 
 SamplePack0End:
 

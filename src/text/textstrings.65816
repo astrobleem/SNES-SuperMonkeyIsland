@@ -728,6 +728,55 @@ T_menu_main:
     .dw $286
     .db " START GAME",TC_end
 
+;stub labels for removed DL strings (needed by LUT in textstrings.h)
+T_EXCP_E_ScoreTest:
+T_hallOfFame:
+T_highScore:
+T_schleck:
+T_scoreEntry:
+T_scoreEntryName:
+T_levelComplete:
+T_menu_options:
+T_menu_soundtest:
+T_menu_levelselect:
+T_menu_main_credits:
+T_continue:
+T_sceneName.1:
+T_sceneName.2:
+T_sceneName.3:
+T_sceneName.4:
+T_sceneName.5:
+T_sceneName.6:
+T_sceneName.7:
+T_sceneName.8:
+T_sceneName.9:
+T_sceneName.10:
+T_sceneName.11:
+T_sceneName.12:
+T_sceneName.13:
+T_sceneName.14:
+T_sceneName.15:
+T_sceneName.16:
+T_sceneName.17:
+T_sceneName.18:
+T_sceneName.19:
+T_sceneName.20:
+T_sceneName.21:
+T_sceneName.22:
+T_sceneName.23:
+T_sceneName.24:
+T_sceneName.25:
+T_sceneName.26:
+T_sceneName.27:
+T_sceneName.28:
+T_sceneName.29:
+T_sceneName.30:
+T_sceneName.31:
+T_sceneName.32:
+T_pause:
+T_dreck:
+    .db "unused",TC_end
+
 ;used to check maximum valid string id
 T_max:
 	.db "Max string id.",TC_end

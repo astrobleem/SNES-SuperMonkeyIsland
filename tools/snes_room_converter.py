@@ -284,11 +284,18 @@ def encode_4bpp_tile(indexed_tile):
 
 
 def encode_tilemap_word(tile_id, pal_id, hflip, vflip, priority=False):
-    """Build SNES tilemap word: vvhp pppt tttt tttt."""
-    word = (tile_id & 0x03FF)
-    word |= (pal_id & 0x07) << 10
-    if priority:
-        word |= 1 << 13
+    """Build custom WRAM tilemap word: vh_pppTTTTTTTTTTT.
+
+    Custom format for tile cache (NOT raw SNES format):
+      Bits 0-10:  Tile ID (11 bits, 0-2047)
+      Bits 11-13: Palette (3 bits, 0-7)
+      Bit 14:     H flip
+      Bit 15:     V flip
+    Priority is dropped (always 0 for BG backgrounds).
+    The SNES engine remaps to hardware format when writing to VRAM.
+    """
+    word = (tile_id & 0x07FF)
+    word |= (pal_id & 0x07) << 11
     if hflip:
         word |= 1 << 14
     if vflip:
@@ -347,7 +354,7 @@ def build_column_index(map_data, width_tiles, height_tiles):
         for row in range(height_tiles):
             offset = (col * height_tiles + row) * 2
             tilemap_word = struct.unpack_from('<H', map_data, offset)[0]
-            tile_id = tilemap_word & 0x03FF
+            tile_id = tilemap_word & 0x07FF
             entry += struct.pack('<HHB', tile_id, tilemap_word, row)
         tile_data_parts.append(entry)
 
@@ -428,8 +435,8 @@ def generate_verification_image(pal_data, chr_data, map_data,
         for row in range(height_tiles):
             off = (col * height_tiles + row) * 2
             word = struct.unpack_from('<H', map_data, off)[0]
-            tid = word & 0x03FF
-            pal_id = (word >> 10) & 0x07
+            tid = word & 0x07FF
+            pal_id = (word >> 11) & 0x07
             hflip = bool(word & 0x4000)
             vflip = bool(word & 0x8000)
 

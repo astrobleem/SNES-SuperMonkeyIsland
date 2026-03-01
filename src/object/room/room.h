@@ -17,7 +17,25 @@
 .define ROOM_TILEMAP_VRAM     $7000    ;VRAM byte address for BG1 tilemap
 .define ROOM_TILEMAP_VRAM_WORD $3800   ;VRAM word address ($7000 / 2)
 .define ROOM_MAX_CHR_SIZE     $7000    ;28KB max tileset (896 tiles)
+.define ROOM_MAX_TILES        896      ;max tiles that fit in 28KB VRAM
 .define ROOM_TILEMAP_CLEAR_SIZE $1000  ;4KB tilemap area to clear (64x32 words)
+
+;scroll constants
+.define ROOM_SCROLL_SPEED        2      ;pixels/frame for D-pad testing
+.define ROOM_VIEWPORT_WIDTH_PX   256
+.define ROOM_VIEWPORT_TILES      32     ;256 / 8
+.define ROOM_TILE_BYTES          32     ;bytes per 4bpp 8x8 tile
+
+;bank $7F buffer addresses (long-addressed)
+.define SCROLL_TILEMAP_WRAM      $7F0000  ;full room tilemap (max ~6.3KB)
+
+;VRAM tile cache (Step 2) — bank $7F lookup tables
+.define SCROLL_TILE2SLOT_WRAM    $7F3000  ;tileIdToSlot[2048] (4KB, 2 bytes per entry)
+.define SCROLL_SLOT2TILE_WRAM    $7F4000  ;slotToTileId[896]  (1792 bytes)
+.define SCROLL_TILE_STAGE_WRAM   $7F4800  ;tile data staging (576B max, 18 tiles * 32B)
+.define ROOM_CACHE_SLOTS         896
+.define ROOM_TILE_NOT_CACHED     $FFFF
+.define ROOM_MAX_LOOKUP_TILES    2048     ;max tile IDs in lookup table
 
 ;BG1 register config values for room display
 .define ROOM_BG1_TILEMAP_REG  $71    ;($7000 >> 8) & $FC | 1 = tilemap at $7000, 64x32
@@ -56,6 +74,27 @@
 GLOBAL.room.hdr INSTANCEOF roomHeader         ;32-byte room header from MSU-1
 GLOBAL.room.idx INSTANCEOF roomIndexEntry     ;8-byte index entry
 GLOBAL.room.currentId      dw                 ;currently loaded room ID
+.ends
+
+;scroll state variables (bank $7E work RAM)
+.ramsection "global room scroll" bank 0 slot 1
+GLOBAL.room.cameraX        dw                 ;current camera X in pixels
+GLOBAL.room.cameraXOld     dw                 ;previous frame camera X
+GLOBAL.room.maxScrollX     dw                 ;max camera X (roomWidthPx - 256)
+GLOBAL.room.roomWidthTiles dw                 ;cached from header
+GLOBAL.room.roomHeightTiles dw                ;cached from header
+GLOBAL.room.nmiColFlag     db                 ;nonzero = NMI should write column
+GLOBAL.room.nmiColVramAddr dw                 ;VRAM word address for column
+GLOBAL.room.nmiColRows     dw                 ;rows to write
+GLOBAL.room.colStaging     ds 50              ;NMI column staging buffer (25 rows * 2 bytes)
+GLOBAL.room.cacheNextSlot  dw                 ;ring buffer next allocation slot (0-895)
+GLOBAL.room.cacheMissCount dw                 ;tiles to DMA in NMI this frame
+GLOBAL.room.tileDataMsuBase_lo dw             ;MSU offset to tile data (low 16)
+GLOBAL.room.tileDataMsuBase_hi dw             ;MSU offset to tile data (high 16)
+GLOBAL.room.nmiTileFlag    db                 ;nonzero = NMI should write tile data
+GLOBAL.room.nmiTileCount   dw                 ;number of new tiles for NMI
+GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buffer
+GLOBAL.room.refreshIdx     dw                 ;background refresh column offset (0-31)
 .ends
 
 .base BSL

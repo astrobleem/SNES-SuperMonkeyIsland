@@ -72,6 +72,9 @@
 _level1.inputLoop:
   jsr SavePC
 
+  ;update camera scroll from D-pad input
+  jsr room.scrollUpdate
+
   stz.b roomChanged
 
   ;check L button (previous room)
@@ -164,7 +167,14 @@ _level1.roomLoaded:
   lda #BRIGHTNESS.FULL
   CALL Brightness.fadeTo.MTD objBrightness
 
+  ;MUST jump back to inputLoop so SavePC updates away from waitFade.
+  ;Without this, the script resumes at waitFade after fade-in completes,
+  ;which re-triggers room.load in an infinite loop.
+  jmp _level1.inputLoop
+
 _level1.scanGiveUp:
+  jmp _level1.inputLoop
+
 _level1.noChange:
   rts
 

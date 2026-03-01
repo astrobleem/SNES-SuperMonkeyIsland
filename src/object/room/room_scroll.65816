@@ -1,0 +1,669 @@
+/**
+* Room scroll routines: horizontal scrolling via D-pad,
+* tilemap column staging for NMI VRAM writes,
+* VRAM tile cache with MSU-1 streaming.
+*/
+
+.include "src/object/room/room_scroll.h"
+.section "room scroll"
+
+
+/**
+* Initialize scroll state after a room is loaded.
+*/
+room.initScroll:
+  php
+  rep #$31
+
+  stz.w GLOBAL.room.cameraX
+  stz.w GLOBAL.room.cameraXOld
+
+  lda.w GLOBAL.room.hdr.width_tiles
+  sta.w GLOBAL.room.roomWidthTiles
+  lda.w GLOBAL.room.hdr.height_tiles
+  sta.w GLOBAL.room.roomHeightTiles
+
+  lda.w GLOBAL.room.hdr.width_px
+  sec
+  sbc.w #ROOM_VIEWPORT_WIDTH_PX
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.maxScrollX
+
+  sep #$20
+  stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiTileFlag
+  rep #$20
+
+  stz.w GLOBAL.room.refreshIdx
+
+  plp
+  rts
+
+
+/**
+* Initialize tile cache: clear tileIdToSlot and slotToTileId tables.
+*/
+room.initTileCache:
+  php
+  rep #$31
+
+  ;zero ring buffer pointer
+  stz.w GLOBAL.room.cacheNextSlot
+  stz.w GLOBAL.room.cacheMissCount
+
+  ;fill tileIdToSlot[0..2047] with $FFFF
+  lda.w #ROOM_TILE_NOT_CACHED
+  ldx #0
+  ldy.w #ROOM_MAX_LOOKUP_TILES
+_initCache.tile2slot:
+  sta.l SCROLL_TILE2SLOT_WRAM,x
+  inx
+  inx
+  dey
+  bne _initCache.tile2slot
+
+  ;fill slotToTileId[0..895] with $FFFF
+  ldx #0
+  ldy.w #ROOM_CACHE_SLOTS
+_initCache.slot2tile:
+  sta.l SCROLL_SLOT2TILE_WRAM,x
+  inx
+  inx
+  dey
+  bne _initCache.slot2tile
+
+  plp
+  rts
+
+
+/**
+* Allocate a VRAM cache slot (ring buffer, O(1)).
+* Evicts old tile if slot occupied.
+*
+* @param a<16bit> new tile ID to cache
+* @return a<16bit> allocated VRAM slot index (0-895)
+*/
+room.allocCacheSlot:
+  php
+  rep #$31
+
+  ;save new tile ID
+  sta.b tmp+20                  ;newTileId
+
+  ;get current slot
+  lda.w GLOBAL.room.cacheNextSlot
+  sta.b tmp+22                  ;slot
+
+  ;evict old mapping: oldTileId = slotToTileId[slot]
+  asl a                         ;slot * 2 for word index
+  tax
+  lda.l SCROLL_SLOT2TILE_WRAM,x
+  cmp.w #ROOM_TILE_NOT_CACHED
+  beq _allocSlot.noEvict
+
+  ;invalidate old: tileIdToSlot[oldTileId] = $FFFF
+  asl a                         ;oldTileId * 2
+  tax
+  lda.w #ROOM_TILE_NOT_CACHED
+  sta.l SCROLL_TILE2SLOT_WRAM,x
+
+_allocSlot.noEvict:
+  ;write new mappings
+  ;slotToTileId[slot] = newTileId
+  lda.b tmp+22                  ;slot
+  asl a
+  tax
+  lda.b tmp+20                  ;newTileId
+  sta.l SCROLL_SLOT2TILE_WRAM,x
+
+  ;tileIdToSlot[newTileId] = slot
+  lda.b tmp+20                  ;newTileId
+  asl a
+  tax
+  lda.b tmp+22                  ;slot
+  sta.l SCROLL_TILE2SLOT_WRAM,x
+
+  ;advance ring buffer: cacheNextSlot = (slot + 1) % 896
+  lda.b tmp+22
+  inc a
+  cmp.w #ROOM_CACHE_SLOTS
+  bcc +
+    lda #0
++
+  sta.w GLOBAL.room.cacheNextSlot
+
+  ;return slot in A
+  lda.b tmp+22
+
+  plp
+  rts
+
+
+/**
+* Load initial viewport tiles during force blank.
+* Two-pass per column:
+*   Pass 1: check cache, handle misses (MSU seek + VRAM tile write),
+*           buffer remapped tilemap words to colStaging
+*   Pass 2: write remapped tilemap column to VRAM (increment-by-32)
+*
+* tmp+0  = columns remaining
+* tmp+2  = WRAM byte offset (advances per column)
+* tmp+4  = VRAM tilemap column address
+* tmp+6  = staging write offset (reset per column)
+* tmp+8  = row counter
+* tmp+10 = original tilemap word
+* tmp+12 = tileId
+* tmp+14 = slot
+* tmp+16 = MSU seek addr low (scratch)
+*
+* Called from room.load while still in force blank.
+*/
+room.loadInitialViewport:
+  php
+  rep #$31
+
+  ;how many columns to load: min(widthTiles, 32)
+  lda.w GLOBAL.room.roomWidthTiles
+  cmp.w #ROOM_VIEWPORT_TILES + 1
+  bcc +
+    lda.w #ROOM_VIEWPORT_TILES
++
+  sta.b tmp                     ;columns remaining
+
+  stz.b tmp+2                   ;WRAM tilemap byte offset
+
+  lda.w #ROOM_TILEMAP_VRAM_WORD
+  sta.b tmp+4                   ;VRAM tilemap column address
+
+_initVP.colLoop:
+  lda.b tmp
+  bne _initVP.colContinue
+  jmp _initVP.done
+_initVP.colContinue:
+
+  ;=== Pass 1: cache-check each row, tile-write misses, buffer remap ===
+  stz.b tmp+6                   ;staging write offset = 0
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+8                   ;row counter
+  ldx.b tmp+2                   ;X = WRAM read offset
+
+_initVP.p1Loop:
+  ;read tilemap word from WRAM
+  lda.l SCROLL_TILEMAP_WRAM,x
+  sta.b tmp+10                  ;original tilemap word
+  phx                           ;save WRAM offset
+
+  ;extract tile ID (bits 0-10, custom 11-bit format)
+  and.w #$07FF
+  sta.b tmp+12                  ;tileId
+
+  ;check cache: tileIdToSlot[tileId]
+  asl a
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x
+  cmp.w #ROOM_TILE_NOT_CACHED
+  bne _initVP.p1Hit
+
+  ;--- cache miss: allocate slot, MSU seek, write tile to VRAM ---
+  lda.b tmp+12                  ;tileId
+  jsr room.allocCacheSlot        ;returns slot in A (clobbers X, Y)
+  sta.b tmp+14                  ;allocated slot
+
+  ;compute MSU address: tileDataMsuBase + tileId * 32
+  ;tileId < 2048, so tileId * 32 fits in 16 bits
+  lda.b tmp+12
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                          ;A = tileId * 32
+  clc
+  adc.w GLOBAL.room.tileDataMsuBase_lo
+  sta.b tmp+16                  ;MSU addr low
+  lda.w #0
+  adc.w GLOBAL.room.tileDataMsuBase_hi
+  tax                            ;X = MSU addr high
+  lda.b tmp+16                  ;A = MSU addr low
+  jsr room.msu1Seek
+
+  ;set VMAIN increment-by-1 for tile data write
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+
+  ;VRAM word address = slot * 16
+  lda.b tmp+14
+  asl a
+  asl a
+  asl a
+  asl a
+  sta.l VMADDL
+
+  ;read 32 bytes (16 words) from MSU, write to VRAM
+  ldy #16
+_initVP.tileRead:
+  sep #$20
+  lda.l MSU_DATA
+  sta.l VMDATAL
+  lda.l MSU_DATA
+  sta.l VMDATAH
+  rep #$20
+  dey
+  bne _initVP.tileRead
+
+  lda.b tmp+14                  ;slot
+  bra _initVP.p1Remap
+
+_initVP.p1Hit:
+  ;A = cached slot
+
+_initVP.p1Remap:
+  ;A = VRAM slot index
+  sta.b tmp+14
+
+  ;remap custom format → SNES tilemap word
+  ;custom: VH_pppTTTTTTTTTTT → SNES: VHPpppTTTTTTTTTT
+  ;slot replaces tile ID; palette shifts from bits 13-11 to 12-10; priority=0
+  lda.b tmp+10                  ;original custom word
+  and.w #$C000                  ;V/H flip (bits 15-14)
+  sta.b tmp+16                  ;save flip bits
+  lda.b tmp+10
+  and.w #$3800                  ;palette (bits 13-11)
+  lsr a                          ;shift to SNES position (bits 12-10)
+  ora.b tmp+14                  ;OR with slot (bits 9-0)
+  ora.b tmp+16                  ;OR with flip bits
+
+  ;store remapped word to colStaging
+  ldy.b tmp+6
+  sta.w GLOBAL.room.colStaging,y
+  iny
+  iny
+  sty.b tmp+6
+
+  plx                            ;restore WRAM read offset
+  inx
+  inx
+
+  dec.b tmp+8
+  beq _initVP.p1End
+  jmp _initVP.p1Loop
+_initVP.p1End:
+
+  ;save advanced WRAM offset for next column
+  stx.b tmp+2
+
+  ;=== Pass 2: write remapped tilemap column to VRAM ===
+  ;handle nametable boundary: column 32 jumps to NT1
+  lda.b tmp+4
+  cmp.w #ROOM_TILEMAP_VRAM_WORD + 32
+  bne +
+    lda.w #ROOM_TILEMAP_VRAM_WORD + $0400
+    sta.b tmp+4
++
+
+  ;set VMAIN increment-by-32 for vertical tilemap column
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE | VMAIN_INCREMENT_32
+  sta.l VMAIN
+  rep #$20
+
+  ;set VRAM address for this column
+  lda.b tmp+4
+  sta.l VMADDL
+
+  ;write heightTiles words from colStaging
+  ldx #0
+  ldy.w GLOBAL.room.roomHeightTiles
+_initVP.p2Loop:
+  lda.w GLOBAL.room.colStaging,x
+  sep #$20
+  sta.l VMDATAL
+  xba
+  sta.l VMDATAH
+  rep #$20
+  inx
+  inx
+  dey
+  bne _initVP.p2Loop
+
+  ;advance VRAM tilemap column address
+  lda.b tmp+4
+  inc a
+  sta.b tmp+4
+
+  ;decrement columns remaining
+  lda.b tmp
+  dec a
+  sta.b tmp
+  jmp _initVP.colLoop
+
+_initVP.done:
+  ;restore VMAIN to increment-by-1
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+
+  plp
+  rts
+
+
+/**
+* Per-frame scroll update. Reads D-pad, moves camera,
+* stages new tilemap column for NMI if crossing a tile boundary.
+*/
+room.scrollUpdate:
+  php
+  rep #$31
+
+  lda.w GLOBAL.room.maxScrollX
+  bne _scrollUpdate.canScroll
+  jmp _scrollUpdate.done
+_scrollUpdate.canScroll:
+
+  lda.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+
+  ldx #INPUT.DEVICE.ID.0
+  jsr core.input.get.press
+
+  bit.w #JOY_DIR_RIGHT
+  beq _scrollUpdate.checkLeft
+
+  lda.w GLOBAL.room.cameraX
+  clc
+  adc.w #ROOM_SCROLL_SPEED
+  cmp.w GLOBAL.room.maxScrollX
+  bcc +
+  beq +
+    lda.w GLOBAL.room.maxScrollX
++
+  sta.w GLOBAL.room.cameraX
+  bra _scrollUpdate.applyScroll
+
+_scrollUpdate.checkLeft:
+  lda.w inputDevice.press
+  bit.w #JOY_DIR_LEFT
+  beq _scrollUpdate.applyScroll
+
+  lda.w GLOBAL.room.cameraX
+  sec
+  sbc.w #ROOM_SCROLL_SPEED
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.cameraX
+
+_scrollUpdate.applyScroll:
+  lda.w GLOBAL.room.cameraX
+  sta.w xScrollBG1
+
+  ;boundary detection
+  lda.w GLOBAL.room.cameraXOld
+  lsr a
+  lsr a
+  lsr a
+  sta.b tmp
+
+  lda.w GLOBAL.room.cameraX
+  lsr a
+  lsr a
+  lsr a
+  sta.b tmp+2
+
+  lda.b tmp+2
+  cmp.b tmp
+  beq _scrollUpdate.bgRefresh
+
+  lda.b tmp+2
+  cmp.b tmp
+  bcc _scrollUpdate.scrolledLeft
+
+  ;scrolled right
+  lda.w GLOBAL.room.cameraX
+  clc
+  adc.w #ROOM_VIEWPORT_WIDTH_PX - 1
+  lsr a
+  lsr a
+  lsr a
+  cmp.w GLOBAL.room.roomWidthTiles
+  bcc +
+    lda.w GLOBAL.room.roomWidthTiles
+    dec a
++
+  jsr room.stageColumnForNmi
+  stz.w GLOBAL.room.refreshIdx
+  bra _scrollUpdate.done
+
+_scrollUpdate.scrolledLeft:
+  lda.b tmp+2
+  jsr room.stageColumnForNmi
+  stz.w GLOBAL.room.refreshIdx
+  bra _scrollUpdate.done
+
+_scrollUpdate.bgRefresh:
+  ;no boundary crossing — refresh one viewport column in background
+  lda.w GLOBAL.room.cameraX
+  lsr a
+  lsr a
+  lsr a                             ;leftCol = cameraX >> 3
+  clc
+  adc.w GLOBAL.room.refreshIdx      ;refreshCol = leftCol + refreshIdx
+  cmp.w GLOBAL.room.roomWidthTiles
+  bcs _scrollUpdate.bgRefreshSkip   ;out of bounds, skip
+  jsr room.stageColumnForNmi
+_scrollUpdate.bgRefreshSkip:
+  lda.w GLOBAL.room.refreshIdx
+  inc a
+  cmp.w #ROOM_VIEWPORT_TILES        ;wrap at 32
+  bcc +
+    lda #0
++
+  sta.w GLOBAL.room.refreshIdx
+
+_scrollUpdate.done:
+  plp
+  rts
+
+
+/**
+* Stage a single tilemap column for NMI VRAM write.
+* Cache-aware: checks each tile, MSU-1 seeks for cache misses.
+* Remaps tilemap entries to use VRAM cache slots.
+*
+* Pass 1: handle cache misses — allocate slots, MSU read to staging buffer
+* Pass 2: remap all tilemap entries, store to colStaging for NMI
+*
+* tmp+6  = tile data staging byte offset (persists across rows)
+* tmp+8  = VRAM addr array byte offset (persists across rows)
+* tmp+10 = column index
+* tmp+12 = WRAM byte offset
+* tmp+14 = row counter (per pass)
+* tmp+16 = tileId (per row)
+* tmp+18 = slot (per row)
+*
+* @param a<16bit> room column index to write
+*/
+room.stageColumnForNmi:
+  php
+  rep #$31
+
+  sta.b tmp+10                  ;column index
+
+  ;--- compute WRAM source offset: col * heightTiles * 2 ---
+  sta.b tmp+12
+  lda #0
+  ldy.b tmp+12
+  beq _stageCol.mulDone
+_stageCol.mulLoop:
+  clc
+  adc.w GLOBAL.room.roomHeightTiles
+  dey
+  bne _stageCol.mulLoop
+_stageCol.mulDone:
+  asl a
+  sta.b tmp+12                  ;WRAM byte offset
+
+  ;--- Pass 1: handle cache misses, stage tile data for NMI ---
+  stz.w GLOBAL.room.nmiTileCount
+  stz.w GLOBAL.room.nmiTileStageLen
+  lda #0
+  sta.b tmp+6                   ;tile data staging byte offset
+  sta.b tmp+8                   ;VRAM addr array byte offset
+
+  ldx.b tmp+12                  ;X = WRAM source offset
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+14                  ;row counter
+
+_stageCol.p1Loop:
+  lda.l SCROLL_TILEMAP_WRAM,x
+  and.w #$07FF                  ;extract tileId (11-bit custom format)
+  sta.b tmp+16                  ;save tileId
+  phx                            ;save WRAM offset
+
+  ;check cache: tileIdToSlot[tileId]
+  asl a
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x
+  cmp.w #ROOM_TILE_NOT_CACHED
+  bne _stageCol.p1Skip
+
+  ;--- cache miss: allocate slot ---
+  lda.b tmp+16                  ;tileId
+  jsr room.allocCacheSlot        ;returns slot in A (clobbers X, Y)
+  sta.b tmp+18                  ;allocated slot
+
+  ;record VRAM word address for NMI: slot * 16
+  asl a
+  asl a
+  asl a
+  asl a
+  ldx.b tmp+8                   ;VRAM addr array offset
+  sta.l SCROLL_NMI_SLOTS_WRAM,x
+  inx
+  inx
+  stx.b tmp+8
+
+  ;MSU seek: tileDataMsuBase + tileId * 32
+  lda.b tmp+16                  ;tileId
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                          ;tileId * 32 (fits 16 bits)
+  clc
+  adc.w GLOBAL.room.tileDataMsuBase_lo
+  pha                            ;push MSU addr low
+  lda.w #0
+  adc.w GLOBAL.room.tileDataMsuBase_hi
+  tax                            ;X = MSU addr high
+  pla                            ;A = MSU addr low
+  jsr room.msu1Seek
+
+  ;read 32 bytes from MSU to tile staging buffer
+  ldx.b tmp+6                   ;staging byte offset
+  ldy #32
+_stageCol.tileRead:
+  sep #$20
+  lda.l MSU_DATA
+  sta.l SCROLL_TILE_STAGE_WRAM,x
+  rep #$20
+  inx
+  dey
+  bne _stageCol.tileRead
+  stx.b tmp+6                   ;update staging offset
+
+  ;increment tile count
+  lda.w GLOBAL.room.nmiTileCount
+  inc a
+  sta.w GLOBAL.room.nmiTileCount
+
+_stageCol.p1Skip:
+  plx                            ;restore WRAM offset
+  inx
+  inx
+  dec.b tmp+14                   ;row counter
+  beq _stageCol.p1Done
+  jmp _stageCol.p1Loop
+_stageCol.p1Done:
+
+  ;save staging length
+  lda.b tmp+6
+  sta.w GLOBAL.room.nmiTileStageLen
+
+  ;--- Pass 2: remap all tilemap entries, store to colStaging ---
+  ldx.b tmp+12                  ;WRAM source offset (restart)
+  ldy #0                        ;staging buffer offset
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+14                  ;row counter
+
+_stageCol.p2Loop:
+  lda.l SCROLL_TILEMAP_WRAM,x
+  sta.b tmp+16                  ;original word
+  and.w #$07FF                  ;tileId (11-bit custom format)
+  asl a                          ;* 2 for word index
+  phx
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x  ;slot
+  plx
+  sta.b tmp+18                  ;cached slot
+
+  ;remap custom → SNES: palette bits 13-11 → 12-10, flip stays, priority=0
+  lda.b tmp+16
+  and.w #$C000                  ;V/H flip
+  sta.b tmp+22                  ;save flip
+  lda.b tmp+16
+  and.w #$3800                  ;palette (bits 13-11)
+  lsr a                          ;shift to SNES position (bits 12-10)
+  ora.b tmp+18                  ;OR slot
+  ora.b tmp+22                  ;OR flip
+  sta.w GLOBAL.room.colStaging,y
+
+  inx
+  inx
+  iny
+  iny
+  dec.b tmp+14
+  bne _stageCol.p2Loop
+
+  ;--- compute VRAM tilemap address ---
+  lda.b tmp+10                  ;column index
+  and.w #$001F                  ;col & 31
+  sta.b tmp+14
+
+  lda.b tmp+10
+  and.w #$0020                  ;bit 5 = nametable 1
+  beq +
+    lda.b tmp+14
+    clc
+    adc.w #$0400
+    sta.b tmp+14
++
+
+  lda.b tmp+14
+  clc
+  adc.w #ROOM_TILEMAP_VRAM_WORD
+  sta.w GLOBAL.room.nmiColVramAddr
+
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.w GLOBAL.room.nmiColRows
+
+  ;set NMI flags
+  sep #$20
+  lda #1
+  sta.w GLOBAL.room.nmiColFlag
+  lda.w GLOBAL.room.nmiTileCount
+  beq +
+    lda #1
+    sta.w GLOBAL.room.nmiTileFlag
++
+  rep #$20
+
+  plp
+  rts
+
+
+.ends

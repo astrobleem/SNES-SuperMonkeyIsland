@@ -18,7 +18,7 @@ We do the same thing, but for SCUMM v5 on SNES+MSU-1.
 ### Target
 - **Game**: The Secret of Monkey Island (VGA/CD, SCUMM v5)
 - **Platform**: SNES + MSU-1
-- **Language**: 65816 assembly (ca65 or asar)
+- **Language**: 65816 assembly (WLA-DX v9.3)
 - **Input**: SNES Mouse (primary), joypad (fallback with virtual cursor)
 - **Audio**: MSU-1 PCM for music, SPC700 for sound effects
 
@@ -35,17 +35,35 @@ The SNES ROM itself is just the engine. All game assets live in the MSU-1 data p
 
 ## 2. SCUMM v5 As Used By Monkey Island 1
 
-### 2.1 What MI1 Actually Uses
+### 2.1 What MI1 Actually Uses — AUDITED
 
-SCUMM v5 has 101 base opcodes. The parameter encoding uses flag bits in the high bits of the opcode byte, making the same opcode appear at multiple byte values (e.g., `WalkActorTo` is `$1E`, `$3E`, `$5E`, `$7E`, `$9E`, `$BE`, `$DE`, `$FE` — same opcode, different parameter modes). This looks scary but it's actually clean: mask off the flag bits, dispatch on the base opcode, then decode parameters based on the flags.
+SCUMM v5 has **105 base opcodes** (not 101 as previously estimated — the full 256-byte opcode space maps to 105 unique handlers, with flag bits creating variants of each). The parameter encoding uses flag bits in the high bits of the opcode byte, making the same opcode appear at multiple byte values (e.g., `walkActorTo` is `$1E`, `$3E`, `$5E`, `$7E`, `$9E`, `$BE`, `$DE`, `$FE` — same opcode, different parameter modes). Mask off the flag bits, dispatch on the base opcode, decode parameters based on the flags.
 
-**Phase 1 task: Run `descumm` on every script in MI1's data files, catalog which of the 101 base opcodes actually appear.** Community analysis suggests MI1 uses roughly 60-70 of them. The rest are v5 additions used by MI2, Fate of Atlantis, or edge cases MI1 never hits.
+**Opcode audit complete** (`tools/scumm_opcode_audit.py`): walked all 748 script files (187 SCRP + 86 ENCD + 86 EXCD + 389 LSCR), 370 KB of bytecode, 30,066 opcodes decoded with **zero decode errors**.
 
-Opcodes we can almost certainly **skip entirely**:
-- `drawObject` with complex image manipulation (MI1 uses simple object states)
-- Advanced string formatting opcodes MI1 doesn't use
-- `debug` / developer opcodes
-- Opcodes documented as "not present in v5" or MI2-specific
+**MI1 uses 103 of 105 base opcodes.** This is far more than the ~60-70 originally estimated. Nearly the entire v5 instruction set is exercised.
+
+Opcodes we can **skip entirely** (only 2):
+- `getAnimCounter` ($22/$A2) — never appears in any MI1 script
+- `getInventoryCount` ($31/$B1) — never appears in any MI1 script
+
+**Top 10 opcodes by frequency** (60% of all instructions):
+| Opcode | Count | % | Notes |
+|--------|-------|---|-------|
+| `startScript` | 5,833 | 19.4% | Script spawning — hottest path |
+| `breakHere` | 3,809 | 12.7% | Yield point — every script loop |
+| `move` | 1,887 | 6.3% | Variable assignment |
+| `stopObjectCode` | 1,382 | 4.6% | Script termination |
+| `isEqual` | 1,143 | 3.8% | Conditional branch |
+| `jumpRelative` | 1,110 | 3.7% | Unconditional jump |
+| `putActor` | 972 | 3.2% | Actor positioning |
+| `resourceRoutines` | 763 | 2.5% | Resource management |
+| `drawObject` | 713 | 2.4% | Object rendering |
+| `animateActor` | 711 | 2.4% | Animation control |
+
+**Rarely-used opcodes** (present but <10 occurrences): `and`(1), `findInventory`(1), `getActorScale`(1), `multiply`(4), `oldRoomEffect`(5), `pickupObjectOld`(6), `isActorInBox`(7), `ifState`(7), `pseudoRoom`(7), `lights`(8), `freezeScripts`(8)
+
+**Key design implication**: The interpreter must implement essentially all 105 opcodes. The "skip unused opcodes" optimization opportunity is minimal — only 2 opcodes can be omitted. Focus optimization effort on the top 10 instead.
 
 ### 2.2 Key MI1-Specific Constraints
 
@@ -301,7 +319,7 @@ $C000-$FFFF   16 KB   DMA Staging Buffer
 The heart of the engine. Interprets MI1's script bytecode.
 
 **Architecture:**
-- Opcode dispatch via jump table: mask flag bits, index into 101-entry table
+- Opcode dispatch via jump table: mask flag bits, index into 105-entry table
 - Parameter decoding: flag bits determine if params are constants or variable references
 - 16-bit operations map naturally to 65816 native mode
 - Multiple concurrent script slots (MI1 uses up to ~15 simultaneously)
@@ -542,10 +560,10 @@ Input: monkey.000, monkey.001
     └────┬─────────────────────────┘
          │
     ┌────▼─────────────────────────┐
-    │  2. Opcode Audit             │
-    │     Run descumm on all SCRP  │
-    │     Catalog used opcodes     │
-    │     Flag any unsupported     │
+    │  2. Opcode Audit  ✅ DONE   │
+    │     scumm_opcode_audit.py   │
+    │     748 scripts, 30K ops    │
+    │     103/105 opcodes used    │
     └────┬─────────────────────────┘
          │
     ┌────▼─────────────────────────┐
@@ -609,11 +627,20 @@ Input: monkey.000, monkey.001
 | Tool | Use |
 |------|-----|
 | **ScummVM source** (`engines/scumm/`) | Reference for all format parsing, opcode behavior |
-| **descumm** (ScummVM tools) | Disassemble scripts, audit opcode usage |
+| **descumm** (ScummVM tools) | Disassemble scripts (superseded by our own opcode audit tool) |
 | **ScummPacker** | Unpack/repack MI1 data files |
 | **ScummAtlas** | Room visualization, costume decoding reference |
 | **Scummbler** | SCUMM v5 assembler/disassembler — good opcode reference |
 | **MonkeyBusiness** | Java-based v5 script extractor — opcode catalog |
+
+**Our own tools** (in `tools/`):
+| Tool | Status |
+|------|--------|
+| `scumm_extract.py` + `scumm/` package | ✅ Complete — extracts all MI1 resources |
+| `snes_room_converter.py` | ✅ Complete — 86/86 rooms converted |
+| `msu1_pack_rooms.py` | ✅ Complete — 2.52 MB MSU-1 pack |
+| `scumm_opcode_audit.py` + `scumm/opcodes_v5.py` | ✅ Complete — 103/105 opcodes cataloged |
+| `fxpak_push.py` / `fxpak_debug.py` / `fxpak_crash_dump.py` | ✅ Complete — real hardware tools |
 
 We're not starting from zero on understanding the data format. ScummVM has been reverse-engineering this for 20+ years.
 
@@ -621,36 +648,79 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 
 ## 7. Development Phases
 
-### Phase 0: Room Rendering + Scroll Streaming (4-6 weeks)
+### Phase 0: Room Rendering + Scroll Streaming — COMPLETE
 
 **Goal:** Display MI1 rooms on SNES hardware with streaming tile cache and smooth scrolling. Prove the MSU-1 pipeline end-to-end.
 
-- [ ] Write MI1 data file parser (Python) — decrypt, parse chunks, extract room bitmaps
-- [ ] Build room tile converter — palette quantize, tile split, dedup, generate tileset + tilemap + column index
-- [ ] Build MSU-1 data pack generator (pack converted rooms into .msu format)
-- [ ] Write SNES engine foundation: Mode 1 init, MSU-1 interface, VBlank DMA framework
-- [ ] Implement tile scroll streamer (ring buffer VRAM cache, column-based streaming from MSU-1)
-- [ ] Smooth horizontal scrolling for wide rooms (joypad-controlled camera for testing)
-- [ ] Render verb bar placeholder on BG2
-- [ ] Process all ~80 rooms through the pipeline, verify visual quality of palette quantization
-- [ ] Test on Mesen-S and real hardware (FXPak Pro)
+- [x] Write MI1 data file parser (Python) — decrypt, parse chunks, extract room bitmaps
+  - `tools/scumm_extract.py` + `tools/scumm/` package — extracts all resource types
+  - 86 rooms, 187 scripts, 138 sounds, 123 costumes, 5 charsets, 697 object images
+- [x] Build room tile converter — palette quantize, tile split, dedup, generate tileset + tilemap + column index
+  - `tools/snes_room_converter.py` — full RGB→BGR555→palette→tile→dedup→encode pipeline
+  - Custom WRAM tilemap format: 11-bit tile ID, 3-bit palette, H/V flip (no priority)
+  - All 86 rooms: 0 failures, avg 732 tiles/room, 23.8% dedup rate
+- [x] Build MSU-1 data pack generator (pack converted rooms into .msu format)
+  - `tools/msu1_pack_rooms.py` — 2.52 MB total, 256B header + 800B index + room data blocks (512B aligned)
+- [x] Write SNES engine foundation: Mode 1 init, MSU-1 interface, VBlank DMA framework
+  - Engine inherited from SuperDragonsLairArcade (OOP framework, NMI handler, DMA queue, boot chain)
+  - Room loader: `src/object/room/room.{h,65816}` — MSU-1 seek, index lookup, header parse, palette/tileset DMA
+- [x] Implement tile scroll streamer (ring buffer VRAM cache, column-based streaming from MSU-1)
+  - `src/object/room/room_scroll.{h,65816}` — 896-slot ring buffer, per-tile MSU-1 random access
+  - Two-pass column staging: Pass 1 handles cache misses (allocate + MSU read), Pass 2 remaps tilemap
+  - NMI writes staged tile data + tilemap column to VRAM during VBlank
+  - Background column refresh: 1 viewport column re-synced per idle frame to fix ring buffer eviction on scroll reversal
+  - 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit IDs
+- [x] Smooth horizontal scrolling for wide rooms (joypad-controlled camera for testing)
+  - D-pad left/right at 2px/frame, clamped to [0, maxScrollX]
+- [ ] Render verb bar placeholder on BG2 *(deferred to Phase 2 — verb system needed first)*
+- [x] Process all ~80 rooms through the pipeline, verify visual quality of palette quantization
+  - 86/86 rooms converted and packed, visual quality verified in Mesen
+- [x] Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
+- [ ] Test on real hardware (FXPak Pro) *(tools ready: fxpak_push.py, fxpak_debug.py)*
 
-**Success Criteria:** SCUMM Bar interior renders with correct colors, scrolls smoothly, tiles stream from MSU-1 without glitches. Can cycle through multiple rooms to verify the pipeline handles the full game. The engine foundation (MSU-1 streaming, VBlank DMA, Mode 1 setup) is solid enough to build the VM on top of.
+**Key technical decisions made during Phase 0:**
+- **VRAM layout**: Tiles at $0000 (28KB), tilemap at $7000 (4KB, 64x32 nametable pair)
+- **BG1SC**: $39 = tilemap at VRAM word $3800, 64 tiles wide
+- **Ring buffer eviction fix**: Background column refresh — on idle frames (no tile boundary crossing), re-stage one existing viewport column to remap stale tilemap entries. Full viewport re-sync in ~32 idle frames.
+- **NMI column/tile writes**: Flag-gated staging buffers (nmiColFlag, nmiTileFlag) written by main loop, consumed by NMI. No force blank needed during scrolling.
+- **Interrupts during room load**: All interrupts disabled (sei + clear NMITIMEN) during force-blank room loading to prevent dmaQueue V-IRQ from toggling INIDSP mid-write.
 
-**This phase establishes the entire rendering and data pipeline.** Everything after this builds on proven infrastructure — the VM interprets bytecode and issues commands to a rendering layer that already works.
+**Bugs fixed during Phase 0:**
+- Null guard at $0000 for wild jumps (E_ObjBadMethod)
+- PHA/PLA width mismatch in msu1Seek (16-bit push, 8-bit pop → stack misalignment)
+- Tilemap nametable boundary wrap at column 32
+- MSU stream position drift after clamped tileset DMA (drainExcessTileset)
+- VRAM writes dropped by dmaQueue IRQ toggling force blank
+- BG1SC tilemap base mismatch ($71 vs $39)
+- Room change infinite loop (SavePC stuck at waitFade → room.load called repeatedly)
+
+**Success Criteria:** MET — SCUMM Bar interior renders with correct colors, scrolls smoothly, tiles stream from MSU-1 without glitches. All 86 rooms browsable with correct display. Engine foundation solid for Phase 1.
 
 ### Phase 1: The Interpreter Boots (8-10 weeks)
 
 **Goal:** SCUMM v5 bytecode interpreter running MI1's boot sequence and loading the first room.
 
-- [ ] Run `descumm` on all MI1 scripts, catalog used opcodes → build the actual opcode list
+- [x] Opcode audit — catalog which opcodes MI1 actually uses
+  - `tools/scumm_opcode_audit.py` + `tools/scumm/opcodes_v5.py`
+  - 748 scripts, 30,066 opcodes decoded, 0 errors
+  - **Result: 103/105 opcodes used** — must implement nearly all of them
+  - Full opcode table with variable-length parameter decoders (reusable for interpreter)
+  - JSON report: `data/scumm_extracted/opcode_audit.json`
+- [ ] Pack script bytecode into MSU-1 data (extend msu1_pack_rooms.py or new packer)
+  - Header already has placeholder offsets for scripts, costumes, sounds, charsets
 - [ ] Implement opcode dispatch (jump table, flag bit parameter decoding)
 - [ ] Implement arithmetic, variables, flow control opcodes (~25 opcodes)
 - [ ] Implement script management opcodes (startScript, breakHere, etc.)
 - [ ] Implement room loading opcodes (loadRoom, initRoom)
 - [ ] Implement basic actor placement (putActor)
 - [ ] Resource loader: script cache with LRU eviction
-- [ ] Build MSU-1 data pack generator (Python — rooms + scripts for now)
+
+**Key findings from opcode audit:**
+- `startScript` is 19.4% of all opcodes — script spawning must be fast
+- `breakHere` is 12.7% — yield/resume path is second-hottest
+- Only 2 opcodes unused (`getAnimCounter`, `getInventoryCount`) — no shortcuts
+- Complex sub-opcode opcodes (`actorOps`, `verbOps`, `roomOps`, `print`) appear frequently
+- Per-type distribution: LSCR scripts are the bulk (15,101 opcodes in 389 scripts)
 
 **Success Criteria:** ROM boots, runs MI1's boot script (script 1), loads the intro sequence rooms, places actors at initial positions. Rooms display correctly with actors as static sprites.
 
@@ -737,13 +807,13 @@ The engine itself contains zero LucasArts intellectual property. It's a clean-ro
 
 ## 10. Open Questions
 
-1. **MI1 VGA or MI1 EGA first?** With streaming VRAM, VGA tile counts aren't a concern. The real question is palette quantization quality: does 256→128 color reduction look acceptable? EGA (16 colors) could still be useful as a quick pipeline validation target since palette management is trivial, but VGA is the obvious goal and there's no architectural reason to delay it.
+1. ~~**MI1 VGA or MI1 EGA first?**~~ **RESOLVED: VGA.** Palette quantization to 128 colors (8 subpalettes × 16 colors) works well across all 86 rooms. Per-room adaptive palettes via CIELAB perceptual distance. Average 732 unique tiles/room after dedup. No need for EGA fallback.
 
-2. **Coordinate remapping strategy?** MI1 scripts reference 320-wide coordinates. Recommended approach: keep all native 320-wide coordinates in the VM and game logic untouched. Apply the viewport transform only at render time (camera offset into 320-wide room space, display the 256-wide window). This means the VM runs identically to the original — no script patching, no subtle breakage. The renderer just shows a scrollable window into the original coordinate space.
+2. **Coordinate remapping strategy?** MI1 scripts reference 320-wide coordinates. Recommended approach: keep all native 320-wide coordinates in the VM and game logic untouched. Apply the viewport transform only at render time (camera offset into 320-wide room space, display the 256-wide window). This means the VM runs identically to the original — no script patching, no subtle breakage. The renderer just shows a scrollable window into the original coordinate space. *(To be validated in Phase 1 when the interpreter boots.)*
 
-3. **Which MI1 version exactly?** Floppy VGA, CD VGA, or FM-Towns? CD adds voice acting (huge MSU-1 data but amazing result). FM-Towns has 256-color rooms already adapted for a Japanese release. The CD talkie version would be the ultimate target but adds speech streaming complexity.
+3. ~~**Which MI1 version exactly?**~~ **RESOLVED: CD Talkie** (`monkey.000` / `monkey.001`, XOR'd with `0x69`). All 86 rooms, 187 scripts, 138 sounds, 123 costumes, 5 charsets extracted and verified. Voice streaming can be deferred — start with text-only, add MSU-1 PCM speech later.
 
-4. **BG2 split: foreground masking vs verb UI.** Both need BG2. Can we share it? Foreground mask occupies the room viewport area, verb UI occupies the bottom. They don't overlap vertically. Use HDMA to switch BG2 tilemap/scroll mid-screen between room area and verb area.
+4. **BG2 split: foreground masking vs verb UI.** Both need BG2. Can we share it? Foreground mask occupies the room viewport area, verb UI occupies the bottom. They don't overlap vertically. Use HDMA to switch BG2 tilemap/scroll mid-screen between room area and verb area. *(Deferred verb bar placeholder to Phase 2 — needs verb system design first.)*
 
 5. **MI2 compatibility path?** MI2 is also SCUMM v5. If we architect the interpreter cleanly, MI2 support might be relatively achievable as a follow-up. Worth keeping in mind during design, without over-engineering for it.
 
@@ -761,5 +831,5 @@ The engine itself contains zero LucasArts intellectual property. It's a clean-ro
 - SNES dev wiki: https://snes.nesdev.org/
 - 65816 programming manual (WDC)
 - MSU-1 specification: https://github.com/ikari-01/msu1-spec
-- ca65 assembler: https://cc65.github.io/doc/ca65.html
+- WLA-DX assembler (v9.3): https://github.com/vhelin/wla-dx
 - SPC700 / BRR documentation: https://snes.nesdev.org/wiki/SPC-700

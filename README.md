@@ -6,9 +6,11 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 
 - **Language**: 65816 assembly with a custom OOP framework
 - **Platform**: SNES + MSU-1 (SD2SNES / FXPAK Pro)
+- **Target**: MI1 VGA CD Talkie (`monkey.000` / `monkey.001`)
 - **Input**: SNES Mouse (primary), joypad with virtual cursor (fallback)
 - **Audio**: MSU-1 PCM for music, SPC700 for sound effects
 - **Assembler**: WLA-DX v9.3 (v9.4+ breaks the build)
+- **Engine base**: Forked from Super Dragon's Lair Arcade (SNES MSU-1)
 
 ## Approach
 
@@ -26,13 +28,49 @@ Build runs under WSL with WLA-DX v9.3:
 # Standard build (clean + build)
 wsl -e bash -c "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make clean && make"
 
-# Output: build/SuperMonkeyIsland.sfc
+# Output: build/SuperMonkeyIsland.sfc (also copied to distribution/)
 ```
+
+## Offline Pipeline Tools
+
+The `tools/` directory contains Python tools that convert MI1 data into SNES-native format:
+
+| Tool | Purpose |
+|------|---------|
+| `scumm_extract.py` | Extract all MI1 resources (rooms, scripts, costumes, sounds, charsets) |
+| `snes_room_converter.py` | Convert room backgrounds to SNES 4bpp tilesets + tilemaps |
+| `msu1_pack_rooms.py` | Pack all converted rooms into MSU-1 data file |
+| `scumm_opcode_audit.py` | Walk all 748 script files, decode bytecode, report opcode coverage |
+| `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
+| `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
+| `fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
 
 ## Legal Model
 
 Engine distributed separately from game data (like GBAGI). Users supply their own copy of Monkey Island.
 
+## Reusable Modules
+
+The `tools/scumm/` package contains reusable SCUMM v5 modules:
+
+| Module | Purpose |
+|--------|---------|
+| `opcodes_v5.py` | Complete 256-entry opcode table with variable-length parameter decoders |
+
 ## Status
 
-Engine skeleton — OOP framework, MSU-1 streaming engine, sprite engine, boot chain with title screen. SCUMM interpreter not yet implemented.
+**Phase 0 complete** — room rendering and scroll streaming fully operational.
+
+- All 86 MI1 rooms extracted, converted, and packed into MSU-1 data (2.52 MB)
+- Rooms display correctly on SNES via Mode 1 BG1 with per-room adaptive palettes
+- 896-slot VRAM tile cache with MSU-1 random-access streaming
+- Smooth horizontal scrolling with background column refresh (handles ring buffer eviction on scroll reversal)
+- Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
+- 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit tile IDs
+
+**Phase 1 in progress** — SCUMM v5 bytecode interpreter.
+
+- Opcode audit complete: 103 of 105 base opcodes used by MI1 (only `getAnimCounter` and `getInventoryCount` unused)
+- 748 scripts analyzed (30,066 opcodes decoded, 0 decode errors)
+- Full opcode table with variable-length parameter decoders built (`tools/scumm/opcodes_v5.py`)
+- Next: script packing into MSU-1 data, then 65816 opcode dispatch

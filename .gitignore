@@ -1,0 +1,8 @@
+build/
+distribution/
+__pycache__/
+*.pyc
+*.o
+*.spo
+config.ini
+.claude/

@@ -40,6 +40,7 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | `scumm_extract.py` | Extract all MI1 resources (rooms, scripts, costumes, sounds, charsets) |
 | `snes_room_converter.py` | Convert room backgrounds to SNES 4bpp tilesets + tilemaps |
 | `msu1_pack_rooms.py` | Pack all converted rooms into MSU-1 data file |
+| `msu1_pack_scripts.py` | Pack all script bytecode into MSU-1 data file (appends to room pack) |
 | `scumm_opcode_audit.py` | Walk all 748 script files, decode bytecode, report opcode coverage |
 | `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
@@ -73,4 +74,6 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - Opcode audit complete: 103 of 105 base opcodes used by MI1 (only `getAnimCounter` and `getInventoryCount` unused)
 - 748 scripts analyzed (30,066 opcodes decoded, 0 decode errors)
 - Full opcode table with variable-length parameter decoders built (`tools/scumm/opcodes_v5.py`)
-- Next: script packing into MSU-1 data, then 65816 opcode dispatch
+- All 748 scripts packed into MSU-1 data (380 KB bytecode, indexed by script number and room)
+- Pipeline: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` → 2.89 MB data pack
+- Next: 65816 opcode dispatch and script execution engine

@@ -363,12 +363,12 @@ All game data lives on the MSU-1 data pack. The resource streamer handles both b
 - `$2008`: Audio volume
 - `$2009`: Audio control (play, loop)
 
-**Data Pack Layout:**
+**Data Pack Layout (actual):**
 ```
 Offset          Content
-$000000         Master index (room offsets, script offsets, costume offsets)
-$001000         Global scripts (bytecode, loaded into script cache)
-$010000         Room data blocks (per-room):
+$000000         File header (256 bytes: magic, title, version, section offsets)
+$000100         Room index table (100 slots × 8 bytes = 800 bytes)
+$000600         Room data blocks (per-room, 512-byte aligned):
                   - Tileset (full deduplicated 4bpp tile data — no size limit)
                   - Tilemap (full room width × height)
                   - Column streaming index (tile IDs per column for scroll streamer)
@@ -377,12 +377,13 @@ $010000         Room data blocks (per-room):
                   - Object table
                   - Room scripts
                   - Palette (CGRAM data)
-$180000         Costume data (per-costume: pre-converted SNES sprite tiles,
-                animation sequences, frame dimensions)
-$280000         Sound effects (BRR samples for SPC700)
-$290000         String/charset data
-$2A0000         Reserved
-$300000+        MSU-1 PCM audio tracks (music — separate .pcm files per track)
+$285C00         Script section header (32 bytes: magic "SCPT", version, slot counts)
+$285C20         Global script index (187 slots × 8 bytes)
+$2861F8         Room script index (100 slots × 8 bytes)
+$286600         Global script data (187 scripts, contiguous, individually indexed)
+$2B1E00         Room script blocks (per-room: mini-header + ENCD + EXCD + LSCRs)
+$2E3800+        [Reserved for future sections: costumes, sounds, charsets]
+---             MSU-1 PCM audio tracks (music — separate .pcm files per track)
 ```
 
 **Loading Flow — Room Change (Bulk Load):**
@@ -706,8 +707,15 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - **Result: 103/105 opcodes used** — must implement nearly all of them
   - Full opcode table with variable-length parameter decoders (reusable for interpreter)
   - JSON report: `data/scumm_extracted/opcode_audit.json`
-- [ ] Pack script bytecode into MSU-1 data (extend msu1_pack_rooms.py or new packer)
-  - Header already has placeholder offsets for scripts, costumes, sounds, charsets
+- [x] Pack script bytecode into MSU-1 data
+  - `tools/msu1_pack_scripts.py` — appends script section after room data in .msu file
+  - 187 global scripts indexed by script number (177,844 bytes, dense index: 187 slots × 8 bytes)
+  - 86 rooms with script blocks (ENCD + EXCD + LSCR), indexed by room number (202,785 bytes)
+  - Room script blocks use mini-header: encd_size, excd_size, lscr_count, per-LSCR number+size
+  - LSCR prefix bytes stripped (script number stored in block header instead)
+  - Total: 748 scripts, 380,629 bytes bytecode, MSU file: 2.89 MB
+  - Pipeline order: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` (rooms create .msu, scripts append)
+  - Byte-for-byte verified against source files
 - [ ] Implement opcode dispatch (jump table, flag bit parameter decoding)
 - [ ] Implement arithmetic, variables, flow control opcodes (~25 opcodes)
 - [ ] Implement script management opcodes (startScript, breakHere, etc.)

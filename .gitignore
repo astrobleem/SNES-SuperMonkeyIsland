@@ -12,8 +12,5 @@ data/monkeypacks/
 data/scumm_extracted/
 data/snes_converted/
 
-# Mesen runtime files
-mesen/Avi/
-mesen/Debugger/
-mesen/Saves/
-mesen/Screenshots/
+# Mesen emulator (download separately)
+mesen/

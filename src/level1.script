@@ -4,8 +4,7 @@
 .INDEX 16
 
   ;objBrightness is predefined at hashPtr.4 (hashPtr+12) in script.h
-  .def roomId this._tmp+8
-  .def roomChanged this._tmp+10
+  .def objScummVM hashPtr+8
 
   ;--- Cleanup stale objects from previous session ---
   jsr core.dma.resetHardware
@@ -44,137 +43,12 @@
   ;--- Create Brightness object ---
   NEW Brightness.CLS.PTR objBrightness
 
-  ;--- Load initial room (room 28 = SCUMM Bar) ---
-  lda #28
-  sta.b roomId
-  jsr room.load
+  ;--- Create ScummVM interpreter object ---
+  ; ScummVM.init reads MSU-1 script headers and starts boot script 1
+  NEW ScummVM.CLS.PTR objScummVM
 
-  ;--- Configure BG1 display registers ---
-  ;BG1SC: tilemap at VRAM word $3800 (= $3800/$400 << 2), 64 tiles wide (bit 0)
-  sep #$20
-  lda.b #$39
-  sta.w BG1TilemapVram
-  lda.b #$00
-  sta.w BGTilesVram12
-  lda.w MainScreen
-  ora.b #T_BG1_ENABLE
-  sta.w MainScreen
-  rep #$20
-
-  stz.w xScrollBG1
-  stz.w yScrollBG1
-
-  ;--- Fade in ---
-  lda #BRIGHTNESS.FULL
-  CALL Brightness.set.MTD objBrightness
-
-  ;--- Input loop ---
-_level1.inputLoop:
+  ;--- Idle loop: ScummVM.play runs in OOP play loop ---
+_level1.idle:
   jsr SavePC
-
-  ;update camera scroll from D-pad input
-  jsr room.scrollUpdate
-
-  stz.b roomChanged
-
-  ;check L button (previous room)
-  ldx #INPUT.DEVICE.ID.0
-  jsr core.input.get.trigger
-  bit.w #JOY_BUTTON_L
-  beq _level1.checkR
-
-    ;decrement room ID with wrap
-    lda.b roomId
-    dec a
-    bpl +
-      lda #99
-+   sta.b roomId
-    lda #1
-    sta.b roomChanged
-    bra _level1.checkChange
-
-_level1.checkR:
-  ;check R button (next room)
-  ldx #INPUT.DEVICE.ID.0
-  jsr core.input.get.trigger
-  bit.w #JOY_BUTTON_R
-  beq _level1.checkChange
-
-    ;increment room ID with wrap
-    lda.b roomId
-    inc a
-    cmp #100
-    bcc +
-      lda #0
-+   sta.b roomId
-    lda #1
-    sta.b roomChanged
-
-_level1.checkChange:
-  lda.b roomChanged
-  beq _level1.noChange
-
-  ;--- Room change sequence ---
-  ;fade to black
-  lda #BRIGHTNESS.NONE
-  CALL Brightness.fadeTo.MTD objBrightness
-
-  ;wait for fade complete
-_level1.waitFade:
-  jsr SavePC
-  CALL Brightness.isDone.MTD objBrightness
-  bcs +
-    rts   ;not done yet, yield frame
-+
-
-  ;load new room (skip if room doesn't exist)
-  lda.b roomId
-  jsr room.load
-  bcs _level1.roomLoaded
-
-    ;room doesn't exist — try next in same direction, up to 100 attempts
-    ;(simple scan: just increment until we find a valid room)
-    ldy #100
-_level1.scanNext:
-    dey
-    beq _level1.scanGiveUp
-    lda.b roomId
-    inc a
-    cmp #100
-    bcc +
-      lda #0
-+   sta.b roomId
-    jsr room.load
-    bcc _level1.scanNext
-
-_level1.roomLoaded:
-  ;reconfigure BG1 registers
-  ;BG1SC: tilemap at VRAM word $3800, 64 tiles wide
-  sep #$20
-  lda.b #$39
-  sta.w BG1TilemapVram
-  lda.b #$00
-  sta.w BGTilesVram12
-  lda.w MainScreen
-  ora.b #T_BG1_ENABLE
-  sta.w MainScreen
-  rep #$20
-
-  stz.w xScrollBG1
-  stz.w yScrollBG1
-
-  ;fade in
-  lda #BRIGHTNESS.FULL
-  CALL Brightness.fadeTo.MTD objBrightness
-
-  ;MUST jump back to inputLoop so SavePC updates away from waitFade.
-  ;Without this, the script resumes at waitFade after fade-in completes,
-  ;which re-triggers room.load in an infinite loop.
-  jmp _level1.inputLoop
-
-_level1.scanGiveUp:
-  jmp _level1.inputLoop
-
-_level1.noChange:
   rts
 

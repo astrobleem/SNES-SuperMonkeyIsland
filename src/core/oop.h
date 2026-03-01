@@ -112,6 +112,7 @@ OBJID.Player db
 OBJID.Background.textlayer.8x8 db
 OBJID.Background.textlayer.16x16 db
 OBJID.Sprite.super db
+OBJID.ScummVM db
 MAXOBJID	ds 0
 .ende
 
@@ -151,4 +152,5 @@ OopClassLut:
     PTRLONG OopClassLut Background.textlayer.8x8.CLS
     PTRLONG OopClassLut Background.textlayer.16x16.CLS
     PTRLONG OopClassLut Sprite.super.CLS
+    PTRLONG OopClassLut ScummVM.CLS
 .ends

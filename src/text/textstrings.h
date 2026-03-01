@@ -99,6 +99,8 @@ TextstringLUT:
     PTRLONG TextstringLUT T_EXCP_E_BadIrqCallback
     PTRLONG TextstringLUT T_levelComplete
     PTRLONG TextstringLUT T_EXCP_E_SramBad
+    PTRLONG TextstringLUT T_EXCP_E_ScummVmBadOpcode
+    PTRLONG TextstringLUT T_EXCP_E_ScummVmCacheFull
     PTRLONG TextstringLUT T_menu_main
     PTRLONG TextstringLUT T_menu_options
     PTRLONG TextstringLUT T_menu_soundtest

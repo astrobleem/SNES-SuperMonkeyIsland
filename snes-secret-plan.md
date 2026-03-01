@@ -271,59 +271,60 @@ This is the same streaming pattern proven by the Dragon's Lair engine, adapted f
 
 ### 4.2 WRAM Memory Map (128KB)
 
+*Note: Bank $7E addresses below are linker-placed via wla-dx ramsections. Actual addresses shift on each rebuild — check `build/SuperMonkeyIsland.sym` for current values. The ranges below are approximate.*
+
 ```
 Bank $7E:
 $0000-$1FFF    8 KB   Direct Page + CPU Stack
-$2000-$3FFF    8 KB   SCUMM Global Variables (800 × 2 bytes = 1600B, plus padding)
-$4000-$47FF    2 KB   Actor State Table (16 actors × 128 bytes)
-                       - position, costume, animation frame, walk target
-                       - direction, elevation, scale, talk color
-                       - walk speed, current box, moving flag
-$4800-$4FFF    2 KB   Object State Table + Verb Definitions
-                       - MI1 has ~800 objects, but most are just ID+state (2 bytes)
-                       - Active room objects have position/size/name
-$5000-$53FF    1 KB   Inventory (owned object list, max ~50 items)
-$5400-$57FF    1 KB   VM Execution State
-                       - Script slot table (16 slots × 64 bytes)
-                       - Per-slot: PC, local vars, stack pointer, status
-$5800-$5FFF    2 KB   Sentence/Verb UI State, Cursor State, Input Buffer
-$6000-$9FFF   16 KB   Script Cache (currently loaded bytecode)
-                       - LRU eviction, reload from MSU-1
-$A000-$BFFF    8 KB   String Table (dialog text, object names for current room)
-$C000-$FFFF   16 KB   General Heap (pathfinding workspace, temp buffers)
+                       OOP ZP allocations (iteratorStruct, scriptStruct, hashPtrs)
+$2000-$5FFF   16 KB   Engine state (linker-placed ramsections):
+                       - OOP system: OopStack, OopClassLut, allocators
+                       - Room state: GLOBAL.room.idx, GLOBAL.room.hdr, scroll buffers
+                       - DMA queue, screen mode, input devices
+$6000-$6FFF    4 KB   SCUMM VM state (linker-placed ramsections):
+                       - SCUMM.globalVars: 800 × 2 bytes = 1600B ($7E:6000)
+                       - SCUMM.slots: 25 × 64 bytes = 1600B ($7E:6640)
+                         Per-slot: status, number, where, freezeCount, pc,
+                         cachePtr, cacheLen, delay, cutsceneOverride, localVars[25]
+                       - VM state: running, currentSlot, currentOpcode, resultVar,
+                         scriptSectionLo/Hi, globalIndexLo/Hi, roomIndexLo/Hi,
+                         globalSlots, roomSlots, cacheWritePtr, scratch regs
+$7000-$7FFF    4 KB   SCUMM.bitVars (2048 bits = 256 bytes, $7E:7D1A) + padding
+                       [Remaining space available for actor/object tables]
+$8000-$9FFF    8 KB   [Future: Actor State Table, Object State Table]
+$A000-$BFFF    8 KB   [Future: String Table, Inventory, Verb UI State]
+$C000-$FFFF   16 KB   [Future: General Heap, pathfinding workspace]
 
 Bank $7F:
-$0000-$7FFF   32 KB   Room Data Buffer
-                       - Full room tilemap (kept in WRAM for scroll streamer lookups)
-                       - Column tile index (which MSU-1 offset has each column's tiles)
-                       - VRAM tile cache tracking (which tiles are loaded, ring buffer pointers)
-                       - Walkbox data + pathfinding matrix
-                       - Object image positions (for click detection)
-                       - Z-plane / foreground layer metadata
-$8000-$BFFF   16 KB   Costume Decode Buffer
-                       - Decoded sprite tile data for active actors
-                       - Pre-converted to 4bpp SNES format by pipeline
-                       - Cache current frame + adjacent frames for smooth animation
-$C000-$FFFF   16 KB   DMA Staging Buffer
-                       - Prepared VRAM transfer blocks for VBlank
-                       - Tilemap updates, sprite tile updates
-                       - Double-buffered OAM table
+$0000-$4FFF   20 KB   Room Data Buffer (scroll streamer)
+                       - Full room tilemap mirror (for scroll lookups)
+                       - Column tile index, VRAM tile cache tracking
+                       - Ring buffer pointers, tile staging buffers
+$5000-$8FFF   16 KB   SCUMM Script Cache (bytecode from MSU-1)
+                       - Linear allocator, flushed on room change
+                       - Each script slot stores cachePtr + cacheLen
+                       - [Future: LRU eviction for long-running rooms]
+$9000-$BFFF   12 KB   [Future: Costume Decode Buffer]
+$C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 ```
 
 ---
 
 ## 5. Major Subsystems
 
-### 5.1 SCUMM v5 Bytecode Interpreter
+### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode.
+The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engine complete** (`src/object/scummvm/scummvm.{h,65816}`).
 
-**Architecture:**
-- Opcode dispatch via jump table: mask flag bits, index into 105-entry table
-- Parameter decoding: flag bits determine if params are constants or variable references
+**Architecture (implemented):**
+- ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
+- 256-entry dispatch table (not 105): `jsr (table,x)` with `x = opcode * 2`. Full byte-space table avoids mask+lookup overhead. Generated by `tools/gen_dispatch_table.py`.
+- Bytecode fetch via `[tmp],y` indirect long addressing: ZP pointer into $7F cache, Y register = SCUMM PC
+- Parameter decoding: flag bits in opcode byte select literal vs variable reference
 - 16-bit operations map naturally to 65816 native mode
-- Multiple concurrent script slots (MI1 uses up to ~15 simultaneously)
-- Round-robin scheduler: each script runs until `breakHere` opcode (yield point)
+- 25 concurrent script slots (MI1 uses up to ~15 simultaneously), per-frame round-robin
+- Each slot runs until `breakHere` (carry set = yield) or `stopObjectCode` (slot dies)
+- Script bytecode cached in $7F:5000 (16KB), loaded from MSU-1 on demand
 
 **Opcode categories (MI1-relevant subset):**
 
@@ -592,11 +593,10 @@ Input: monkey.000, monkey.001
     └────┬─────────────────────────┘
          │
     ┌────▼─────────────────────────┐
-    │  5. Script Packaging         │
-    │     - Extract raw bytecode   │
-    │     - Optional: patch coords │
-    │       for 256-wide viewport  │
-    │     - Build script index     │
+    │  5. Script Packaging ✅ DONE │
+    │     msu1_pack_scripts.py     │
+    │     748 scripts, 380KB       │
+    │     Global+room indexed      │
     └────┬─────────────────────────┘
          │
     ┌────▼─────────────────────────┐
@@ -640,7 +640,9 @@ Input: monkey.000, monkey.001
 | `scumm_extract.py` + `scumm/` package | ✅ Complete — extracts all MI1 resources |
 | `snes_room_converter.py` | ✅ Complete — 86/86 rooms converted |
 | `msu1_pack_rooms.py` | ✅ Complete — 2.52 MB MSU-1 pack |
+| `msu1_pack_scripts.py` | ✅ Complete — 748 scripts, 380KB bytecode |
 | `scumm_opcode_audit.py` + `scumm/opcodes_v5.py` | ✅ Complete — 103/105 opcodes cataloged |
+| `gen_dispatch_table.py` | ✅ Complete — 256-entry 65816 dispatch table |
 | `fxpak_push.py` / `fxpak_debug.py` / `fxpak_crash_dump.py` | ✅ Complete — real hardware tools |
 
 We're not starting from zero on understanding the data format. ScummVM has been reverse-engineering this for 20+ years.
@@ -716,12 +718,29 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - Total: 748 scripts, 380,629 bytes bytecode, MSU file: 2.89 MB
   - Pipeline order: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` (rooms create .msu, scripts append)
   - Byte-for-byte verified against source files
-- [ ] Implement opcode dispatch (jump table, flag bit parameter decoding)
-- [ ] Implement arithmetic, variables, flow control opcodes (~25 opcodes)
-- [ ] Implement script management opcodes (startScript, breakHere, etc.)
+- [x] Implement opcode dispatch engine
+  - `src/object/scummvm/scummvm.{h,65816}` — ScummVM OOP singleton class with init/play/kill
+  - `tools/gen_dispatch_table.py` → `src/object/scummvm/scummvm_dispatch_table.inc`
+  - 256-entry `jsr (table,x)` dispatch. `[tmp],y` indirect long bytecode fetch from $7F cache.
+  - Carry flag convention: clear = continue executing, set = yield to next slot.
+  - Per-frame scheduler iterates 25 SCUMM script slots (status/freeze/delay checks).
+  - 35 base opcodes implemented as real handlers, remaining 195 entries → `op_stub` (fatal error).
+  - Unimplemented opcodes added incrementally — just add handler label to Python map and regenerate.
+- [x] Implement arithmetic, variables, flow control opcodes
+  - Variable system: 800 global vars ($7E), 25 local vars per slot, 2048 bit vars
+  - Encoding: top 2 bits of 16-bit reference → global ($0xxx) / local ($4xxx) / bit ($8xxx)
+  - Parameter decoders: getVarOrDirectByte/Word (flag bit selects literal vs var ref), getResultPos
+  - Flow: jumpRelative, isEqual, isNotEqual, equalZero, notEqualZero, isGreater, isLess, isLessEqual, isGreaterEqual
+  - Arithmetic: add, subtract, increment, decrement, and, or, expression (RPN sub-interpreter)
+  - Assignment: move, setVarRange
+- [x] Implement script management opcodes
+  - startScript (find dead slot, load from MSU-1, init), stopScript (find by number, mark DEAD)
+  - breakHere (sec; rts — yield), stopObjectCode (mark slot DEAD, yield)
+  - chainScript, isScriptRunning, freezeScripts, stopObjectScript
+  - cutscene/endCutscene/override, delay/delayVariable
 - [ ] Implement room loading opcodes (loadRoom, initRoom)
 - [ ] Implement basic actor placement (putActor)
-- [ ] Resource loader: script cache with LRU eviction
+- [ ] Resource loader: extend script cache beyond linear allocator (LRU eviction)
 
 **Key findings from opcode audit:**
 - `startScript` is 19.4% of all opcodes — script spawning must be fast
@@ -729,6 +748,14 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - Only 2 opcodes unused (`getAnimCounter`, `getInventoryCount`) — no shortcuts
 - Complex sub-opcode opcodes (`actorOps`, `verbOps`, `roomOps`, `print`) appear frequently
 - Per-type distribution: LSCR scripts are the bulk (15,101 opcodes in 389 scripts)
+
+**Key architectural decisions made during Phase 1:**
+- **Single OOP object for VM**: ScummVM is a Singleton class. Its `play()` method runs the full 25-slot scheduler once per frame. This keeps the SCUMM world encapsulated — one object manages all script slots, variables, and cache state.
+- **256-entry dispatch table (not 105)**: The opcode byte space is irregular — flag bits are mixed with the base opcode. A full 256-entry table (512 bytes ROM) avoids the mask+lookup overhead on every opcode. Python tool generates it; updating is trivial.
+- **$7F:5000 script cache (16KB)**: Linear allocator, flushed on room change. Bytecode read byte-by-byte from MSU-1 (MSU_DATA port is single-byte). Cache pointer stored per slot. Simple and sufficient for boot; LRU eviction can be added later without changing the slot structure.
+- **WRAM layout**: ~3.6KB in bank $7E for VM state. Struct-based slot layout (64 bytes/slot × 25 = 1600B). Global vars at $7E:6000, bit vars at $7E:7D1A, slots at $7E:6640. All addresses resolved by wla-dx linker — no hardcoded offsets.
+- **XBA word-read pattern for MSU-1**: Reading 16-bit LE values from MSU_DATA one byte at a time: `sep #$20; lda MSU_DATA; xba; lda MSU_DATA; xba; rep #$20` builds a 16-bit word. Avoids wla-dx ramsection `symbol+1` arithmetic (which evaluates full 24-bit address → linker error).
+- **level1.script replaced**: The Phase 0 room browser test harness is gone. Boot now creates ScummVM object, which reads MSU-1 script headers and starts MI1 boot script 1.
 
 **Success Criteria:** ROM boots, runs MI1's boot script (script 1), loads the intro sequence rooms, places actors at initial positions. Rooms display correctly with actors as static sprites.
 

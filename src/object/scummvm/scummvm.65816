@@ -1,0 +1,1441 @@
+;
+; SCUMM v5 Bytecode Interpreter for SNES
+;
+; OOP class that runs MI1's SCUMM scripts. One object manages all
+; 25 SCUMM script slots. play() runs the scheduler once per frame.
+;
+; Bytecode fetch: [dp:tmp],y where tmp holds 24-bit pointer into
+; $7F script cache, Y is the SCUMM PC offset within the script.
+;
+; Dispatch: 256-entry jsr (table,x) jump table. Handler returns
+; with carry clear = continue, carry set = yield.
+;
+
+.include "src/object/scummvm/scummvm.h"
+
+.section "scummvm class" superfree
+
+;===================================================================
+; METHOD: init
+; Read MSU-1 script section header, zero all state, start script 1
+;===================================================================
+  METHOD init
+  rep #$31
+
+  ;--- Zero all WRAM state ---
+  ;zero script slots (25 * 64 = 1600 bytes)
+  ldx #0
+  lda #0
+_init.zeroSlots:
+  sta.w SCUMM.slots,x
+  inx
+  inx
+  cpx #_sizeof_scummSlot * SCUMM_MAX_SLOTS
+  bcc _init.zeroSlots
+
+  ;zero global variables (800 * 2 = 1600 bytes)
+  ldx #0
+_init.zeroGlobals:
+  sta.w SCUMM.globalVars,x
+  inx
+  inx
+  cpx #SCUMM_MAX_GLOBALS * 2
+  bcc _init.zeroGlobals
+
+  ;zero bit variables (256 bytes)
+  ldx #0
+_init.zeroBits:
+  sta.w SCUMM.bitVars,x
+  inx
+  inx
+  cpx #256
+  bcc _init.zeroBits
+
+  ;zero VM state
+  stz.w SCUMM.running
+  stz.w SCUMM.currentSlot
+  stz.w SCUMM.currentSlotPtr
+  stz.w SCUMM.currentOpcode
+  stz.w SCUMM.resultVar
+  stz.w SCUMM.scratch
+  stz.w SCUMM.scratch2
+  stz.w SCUMM.cacheWritePtr
+  stz.w SCUMM.cutsceneNest
+
+  ;zero script cache in $7F
+  ldx #0
+  lda #0
+_init.zeroCache:
+  sta.l SCUMM_CACHE_WRAM,x
+  inx
+  inx
+  cpx #SCUMM_CACHE_SIZE
+  bcc _init.zeroCache
+
+  ;--- Read script section offset from MSU-1 header ---
+  ; MSU header at offset $0024 has 32-bit script section offset
+  lda.w #SCUMM_MSU_SCRIPT_HDR_OFFSET
+  ldx #0
+  jsr room.msu1Seek
+
+  ; Read LE32 into scriptSectionLo/Hi using XBA word-read pattern
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.scriptSectionLo
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.scriptSectionHi
+
+  ; Check that script section exists
+  lda.w SCUMM.scriptSectionLo
+  ora.w SCUMM.scriptSectionHi
+  bne +
+    TRIGGER_ERROR E_ScummVmBadOpcode
++
+
+  ;--- Seek to script section and read 32-byte header ---
+  lda.w SCUMM.scriptSectionLo
+  ldx.w SCUMM.scriptSectionHi
+  jsr room.msu1Seek
+
+  ; Skip magic (4 bytes) + version (1) + reserved (1) = 6 bytes
+  sep #$20
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  rep #$20
+
+  ; Read global_slots (LE16) -- XBA word-read
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.globalSlots
+
+  ; Read room_slots (LE16) -- XBA word-read
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomSlots
+
+  ; Skip 6 reserved bytes (bytes 10-15)
+  sep #$20
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  rep #$20
+
+  ; Read global_index_offset (LE32, bytes 16-19) -- XBA word-read
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.globalIndexLo
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.globalIndexHi
+
+  ; Read room_index_offset (LE32, bytes 20-23) -- XBA word-read
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomIndexLo
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomIndexHi
+
+  ;--- Start MI1 boot script (script 1) ---
+  lda #1
+  jsr _scummvm.startScriptSlot
+
+  ;--- Mark VM as running ---
+  lda #1
+  sta.w SCUMM.running
+
+  rts
+
+
+;===================================================================
+; METHOD: play -- per-frame SCUMM scheduler
+; Iterates all 25 slots, runs RUNNING slots until they yield.
+;===================================================================
+  METHOD play
+  rep #$31
+
+  lda.w SCUMM.running
+  beq _play.done
+
+  ; Iterate slots 0..24
+  stz.w SCUMM.currentSlot
+  stz.w SCUMM.currentSlotPtr
+
+_play.slotLoop:
+  ldx.w SCUMM.currentSlotPtr
+
+  ; Check status == RUNNING
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_RUNNING
+  bne _play.nextSlot
+
+  ; Check freezeCount == 0
+  lda.w SCUMM.slots.freezeCount,x
+  and #$00FF
+  bne _play.nextSlot
+
+  ; Check delay > 0
+  lda.w SCUMM.slots.delay,x
+  beq _play.runSlot
+
+  ; Decrement delay
+  dec a
+  sta.w SCUMM.slots.delay,x
+  bra _play.nextSlot
+
+_play.runSlot:
+  jsr _scummvm.executeSlot
+
+_play.nextSlot:
+  ; Advance to next slot
+  lda.w SCUMM.currentSlotPtr
+  clc
+  adc #_sizeof_scummSlot
+  sta.w SCUMM.currentSlotPtr
+
+  lda.w SCUMM.currentSlot
+  inc a
+  sta.w SCUMM.currentSlot
+  cmp #SCUMM_MAX_SLOTS
+  bcc _play.slotLoop
+
+_play.done:
+  rts
+
+
+;===================================================================
+; METHOD: kill
+;===================================================================
+  METHOD kill
+  rep #$31
+  stz.w SCUMM.running
+  rts
+
+
+;===================================================================
+; _scummvm.executeSlot -- run opcodes for current slot until yield
+;
+; Sets up [tmp] pointing into $7F cache and Y = slot.pc,
+; then loops: fetch opcode, dispatch via jsr (table,x).
+; Handler returns carry set to yield, carry clear to continue.
+;===================================================================
+_scummvm.executeSlot:
+  rep #$31
+
+  ; Set up tmp (ZP) as 24-bit pointer to script bytecode
+  ; tmp+0,1 = SCUMM_CACHE_BASE + slot.cachePtr (low 16)
+  ; tmp+2   = $7F
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.cachePtr,x
+  clc
+  adc #SCUMM_CACHE_BASE
+  sta.b tmp
+  sep #$20
+  lda #$7F
+  sta.b tmp+2
+  rep #$20
+
+  ; Y = slot.pc
+  ldx.w SCUMM.currentSlotPtr
+  ldy.w SCUMM.slots.pc,x
+
+_scummvm.fetchLoop:
+  ; Read opcode byte (16-bit load, mask to 8-bit)
+  lda [tmp],y
+  and #$00FF
+  sta.w SCUMM.currentOpcode
+  iny                       ; advance PC past opcode byte
+
+  ; Dispatch: opcode * 2 for word-indexed table
+  asl a
+  tax
+  jsr (_scummvm.dispatchTable,x)
+  bcc _scummvm.fetchLoop    ; carry clear = keep going
+
+  ; Carry set = yield. Save Y back to slot.pc
+  ldx.w SCUMM.currentSlotPtr
+  tya
+  sta.w SCUMM.slots.pc,x
+  rts
+
+
+;===================================================================
+; Parameter Decoder Helpers
+;
+; These read parameters from the bytecode stream.
+; Y = SCUMM PC (advanced as bytes are consumed).
+; [tmp] = bytecode pointer.
+;===================================================================
+
+;-------------------------------------------------------------------
+; _scummvm.fetchByte -- read next byte, zero-extend to 16-bit
+; Returns: A = byte value, Y advanced by 1
+;-------------------------------------------------------------------
+_scummvm.fetchByte:
+  lda [tmp],y
+  and #$00FF
+  iny
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.fetchWord -- read next 16-bit LE word
+; Returns: A = word value, Y advanced by 2
+;-------------------------------------------------------------------
+_scummvm.fetchWord:
+  lda [tmp],y
+  iny
+  iny
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getVarOrDirectWord -- decode p16 parameter
+; Input: A = flag bitmask to test against currentOpcode
+; If flag SET in opcode: FETCH_WORD -> readVariable (var reference)
+; If flag CLEAR: FETCH_WORD (literal value)
+; Returns: A = resolved value
+;-------------------------------------------------------------------
+_scummvm.getVarOrDirectWord:
+  pha
+  lda.w SCUMM.currentOpcode
+  and 1,s
+  pla
+  beq +
+    ; Flag set: word is a variable reference
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  ; Flag clear: word is literal
+  jsr _scummvm.fetchWord
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getVarOrDirectByte -- decode p8 parameter
+; Input: A = flag bitmask to test against currentOpcode
+; If flag SET: FETCH_WORD -> readVariable (2-byte var ref)
+; If flag CLEAR: FETCH_BYTE (1-byte literal)
+; Returns: A = resolved value
+;-------------------------------------------------------------------
+_scummvm.getVarOrDirectByte:
+  pha
+  lda.w SCUMM.currentOpcode
+  and 1,s
+  pla
+  beq +
+    ; Flag set: read variable reference (2 bytes)
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  ; Flag clear: literal byte
+  jsr _scummvm.fetchByte
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getResultPos -- read result variable position
+; Reads 2-byte variable reference, stores in SCUMM.resultVar
+;-------------------------------------------------------------------
+_scummvm.getResultPos:
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.resultVar
+  rts
+
+
+;===================================================================
+; Variable System
+;===================================================================
+
+;-------------------------------------------------------------------
+; _scummvm.readVariable -- read a SCUMM variable
+; Input: A = raw variable encoding (16-bit)
+; Returns: A = variable value (16-bit)
+;-------------------------------------------------------------------
+_scummvm.readVariable:
+  sta.w SCUMM.scratch
+  and #SCUMM_VAR_TYPE_MASK
+  beq _readVar.global
+
+  cmp #SCUMM_VAR_LOCAL_MASK
+  beq _readVar.local
+
+  ; Bit variable ($8000-$BFFF)
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tax
+  pla
+  and #$0007
+  pha
+  lda #1
+  sta.w SCUMM.scratch2
+  pla
+  beq _readBit.test
+_readBit.shift:
+  asl.w SCUMM.scratch2
+  dec a
+  bne _readBit.shift
+_readBit.test:
+  lda.w SCUMM.bitVars,x
+  and #$00FF
+  and.w SCUMM.scratch2
+  beq +
+    lda #1
++
+  rts
+
+_readVar.global:
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  tax
+  lda.w SCUMM.globalVars,x
+  rts
+
+_readVar.local:
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  clc
+  adc.w SCUMM.currentSlotPtr
+  tax
+  lda.w SCUMM.slots.localVars,x
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.writeVariable -- write a SCUMM variable
+; Input: A = value to write
+;        SCUMM.resultVar = target variable encoding
+;-------------------------------------------------------------------
+_scummvm.writeVariable:
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_TYPE_MASK
+  beq _writeVar.global
+
+  cmp #SCUMM_VAR_LOCAL_MASK
+  beq _writeVar.local
+
+  ; Bit variable
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tax
+  pla
+  and #$0007
+  pha
+  lda #1
+  sta.w SCUMM.scratch
+  pla
+  beq _writeBit.apply
+_writeBit.shift:
+  asl.w SCUMM.scratch
+  dec a
+  bne _writeBit.shift
+_writeBit.apply:
+  lda.w SCUMM.scratch2
+  beq _writeBit.clear
+    sep #$20
+    lda.w SCUMM.bitVars,x
+    ora.w SCUMM.scratch
+    sta.w SCUMM.bitVars,x
+    rep #$20
+    rts
+_writeBit.clear:
+    sep #$20
+    lda.w SCUMM.scratch
+    eor #$FF
+    and.w SCUMM.bitVars,x
+    sta.w SCUMM.bitVars,x
+    rep #$20
+    rts
+
+_writeVar.global:
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  tax
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.globalVars,x
+  rts
+
+_writeVar.local:
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  clc
+  adc.w SCUMM.currentSlotPtr
+  tax
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.slots.localVars,x
+  rts
+
+
+;===================================================================
+; Script Loader -- MSU-1 -> $7F Cache
+;===================================================================
+
+;-------------------------------------------------------------------
+; _scummvm.loadGlobalScript -- load a global script into cache
+; Input: A = script number (0-based)
+; Output: A = cachePtr (offset within cache), X = size
+;-------------------------------------------------------------------
+_scummvm.loadGlobalScript:
+  sta.w SCUMM.scratch
+
+  ; Compute index entry MSU offset: globalIndexOffset + scriptNum * 8
+  asl a
+  asl a
+  asl a
+  clc
+  adc.w SCUMM.globalIndexLo
+  sta.w SCUMM.scratch2
+  lda #0
+  adc.w SCUMM.globalIndexHi
+  tax
+  lda.w SCUMM.scratch2
+  jsr room.msu1Seek
+
+  ; Read 8-byte index entry: offset32 + size32
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  pha                        ;push offset_lo
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  pha                        ;push offset_hi
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  pha                        ;push size_lo
+  sep #$20
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  rep #$20
+
+  ; Stack: [size_lo] [offset_hi] [offset_lo]
+  ; Check for null entry (offset == 0)
+  lda 5,s
+  ora 3,s
+  bne _loadGlobal.exists
+
+  ; Script doesn't exist
+  pla
+  pla
+  pla
+  lda #0
+  tax
+  rts
+
+_loadGlobal.exists:
+  lda 1,s
+  sta.w SCUMM.scratch
+
+  ; Check cache space
+  lda.w SCUMM.cacheWritePtr
+  clc
+  adc.w SCUMM.scratch
+  cmp #SCUMM_CACHE_SIZE
+  bcc _loadGlobal.cacheOk
+
+  ; Cache full -- reset
+  stz.w SCUMM.cacheWritePtr
+
+_loadGlobal.cacheOk:
+  lda.w SCUMM.cacheWritePtr
+  pha                         ;push cachePtr
+
+  ; Seek to script data
+  lda 5,s
+  tax                 ;X = offset_hi (high 16 bits)
+  lda 7,s             ;A = offset_lo (low 16 bits)
+  jsr room.msu1Seek
+
+  ; Read bytecode into $7F cache
+  lda 1,s
+  tax
+  lda.w SCUMM.scratch
+  sta.w SCUMM.scratch2
+
+_loadGlobal.copyLoop:
+  lda.w SCUMM.scratch2
+  beq _loadGlobal.copyDone
+  dec a
+  sta.w SCUMM.scratch2
+  sep #$20
+  lda.l MSU_DATA
+  sta.l SCUMM_CACHE_WRAM,x
+  rep #$20
+  inx
+  bra _loadGlobal.copyLoop
+
+_loadGlobal.copyDone:
+  rep #$20
+
+  ; Update cacheWritePtr
+  pla
+  pha
+  clc
+  adc.w SCUMM.scratch
+  sta.w SCUMM.cacheWritePtr
+
+  ; Clean up stack and return
+  pla
+  sta.w SCUMM.scratch2
+  pla
+  pla
+  pla
+
+  lda.w SCUMM.scratch2
+  ldx.w SCUMM.scratch
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.startScriptSlot -- find dead slot, load script, init it
+; Input: A = script number to start
+;-------------------------------------------------------------------
+_scummvm.startScriptSlot:
+  sta.w SCUMM.scratch
+
+  ; Find a dead slot
+  ldx #0
+  ldy #0
+_startScript.findSlot:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _startScript.foundSlot
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _startScript.findSlot
+
+  ; No free slot
+  rts
+
+_startScript.foundSlot:
+  phx
+
+  ; Load the script into cache
+  lda.w SCUMM.scratch
+  phy
+  jsr _scummvm.loadGlobalScript
+  ply
+
+  ; Check if script was found
+  cpx #0
+  bne _startScript.init
+
+  plx
+  rts
+
+_startScript.init:
+  sta.w SCUMM.scratch2
+  plx
+
+  ; Initialize slot
+  sep #$20
+  lda #SCUMM_SLOT_RUNNING
+  sta.w SCUMM.slots.status,x
+  lda.w SCUMM.scratch
+  sta.w SCUMM.slots.number,x
+  lda #0
+  sta.w SCUMM.slots.where,x
+  sta.w SCUMM.slots.freezeCount,x
+  sta.w SCUMM.slots.cutsceneOverride,x
+  rep #$20
+
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.slots.cachePtr,x
+  lda.w SCUMM.cacheWritePtr
+  sec
+  sbc.w SCUMM.scratch2
+  sta.w SCUMM.slots.cacheLen,x
+
+  lda #0
+  sta.w SCUMM.slots.pc,x
+  sta.w SCUMM.slots.delay,x
+
+  ; Zero local variables
+  phx
+  ldy #0
+_startScript.zeroLocals:
+  sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  cpy #SCUMM_MAX_LOCALS
+  bcc _startScript.zeroLocals
+  plx
+
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.findSlotByNumber -- find slot running script N
+; Input: A = script number
+; Output: X = slot byte offset, carry set if found
+;-------------------------------------------------------------------
+_scummvm.findSlotByNumber:
+  sta.w SCUMM.scratch
+  ldx #0
+  ldy #0
+_findSlot.loop:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _findSlot.next
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  cmp.w SCUMM.scratch
+  beq _findSlot.found
+_findSlot.next:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _findSlot.loop
+  clc
+  rts
+_findSlot.found:
+  sec
+  rts
+
+
+;===================================================================
+; 256-Entry Dispatch Table
+;===================================================================
+.include "src/object/scummvm/scummvm_dispatch_table.inc"
+
+
+;===================================================================
+; Opcode Handlers
+;
+; Register conventions:
+;   Y = SCUMM PC (bytecode offset). Advance as bytes consumed.
+;   A = scratch. SCUMM.currentOpcode has original byte.
+;   X = scratch (not preserved).
+;   [tmp] = 24-bit bytecode ptr. Do NOT clobber.
+;   Carry on return: clear=continue, set=yield.
+;   All handlers assume rep #$31 (16-bit A/X/Y).
+;===================================================================
+
+;-------------------------------------------------------------------
+; op_stub -- unimplemented opcode, fatal error
+;-------------------------------------------------------------------
+op_stub:
+  ldx.w SCUMM.currentSlotPtr
+  tya
+  sta.w SCUMM.slots.pc,x
+  TRIGGER_ERROR E_ScummVmBadOpcode
+
+
+;-------------------------------------------------------------------
+; Tier 1 -- Boot critical opcodes
+;-------------------------------------------------------------------
+
+; stopObjectCode ($00, $A0)
+op_stopObjectCode:
+  ldx.w SCUMM.currentSlotPtr
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  sec
+  rts
+
+; breakHere ($80)
+op_breakHere:
+  sec
+  rts
+
+; jumpRelative ($18) -- 2-byte absolute offset
+op_jumpRelative:
+  jsr _scummvm.fetchWord
+  tay
+  clc
+  rts
+
+; move ($1A, $9A)
+op_move:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; startScript ($0A, $2A, $4A, $6A, $8A, $AA, $CA, $EA)
+op_startScript:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  pha
+_opStartScript.skipArgs:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  bne _opStartScript.skipArgs
+  pla
+  jsr _scummvm.startScriptSlot
+  clc
+  rts
+
+; stopScript ($62, $E2)
+op_stopScript:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  and #$00FF
+  beq _stopScript.self
+  jsr _scummvm.findSlotByNumber
+  bcc _stopScript.done
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+_stopScript.done:
+  clc
+  rts
+_stopScript.self:
+  ldx.w SCUMM.currentSlotPtr
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  sec
+  rts
+
+
+;-------------------------------------------------------------------
+; Tier 2 -- Conditional branches
+;-------------------------------------------------------------------
+
+; isEqual ($48, $C8)
+op_isEqual:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  bne +
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+; isNotEqual ($08, $88)
+op_isNotEqual:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  beq +
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+; notEqualZero ($A8)
+op_notEqualZero:
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  pha
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch
+  pla
+  cmp #0
+  beq +
+    ldy.w SCUMM.scratch
++
+  clc
+  rts
+
+; equalZero ($28)
+op_equalZero:
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  pha
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch
+  pla
+  cmp #0
+  bne +
+    ldy.w SCUMM.scratch
++
+  clc
+  rts
+
+; isGreater ($78, $F8)
+op_isGreater:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  beq +
+  bcc +
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+; isLess ($44, $C4)
+op_isLess:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  bcs +
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+; isLessEqual ($38, $B8)
+op_isLessEqual:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  beq _isLessEqual.jump
+  bcs +
+_isLessEqual.jump:
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+; isGreaterEqual ($04, $84)
+op_isGreaterEqual:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  pha
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2
+  pla
+  cmp.w SCUMM.scratch
+  bcc +
+    ldy.w SCUMM.scratch2
++
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; Tier 3 -- Arithmetic opcodes
+;-------------------------------------------------------------------
+
+; add ($5A, $DA)
+op_add:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  pha
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  clc
+  adc 1,s
+  sta.w SCUMM.scratch
+  pla
+  lda.w SCUMM.scratch
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; subtract ($3A, $BA)
+op_subtract:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  pha
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  sec
+  sbc 1,s
+  sta.w SCUMM.scratch
+  pla
+  lda.w SCUMM.scratch
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; increment ($46)
+op_increment:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  inc a
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; decrement ($C6)
+op_decrement:
+  jsr _scummvm.getResultPos
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  dec a
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; Misc opcodes for boot path
+;-------------------------------------------------------------------
+
+; setVarRange ($26, $A6)
+op_setVarRange:
+  jsr _scummvm.getResultPos
+  jsr _scummvm.fetchByte
+  sta.w SCUMM.scratch
+
+  lda.w SCUMM.currentOpcode
+  and #SCUMM_FLAG_BIT5
+  bne _setVarRange.wordMode
+
+_setVarRange.byteMode:
+  lda.w SCUMM.scratch
+  beq _setVarRange.done
+_setVarRange.byteLoop:
+  jsr _scummvm.fetchByte
+  jsr _scummvm.writeVariable
+  lda.w SCUMM.resultVar
+  inc a
+  sta.w SCUMM.resultVar
+  lda.w SCUMM.scratch
+  dec a
+  sta.w SCUMM.scratch
+  bne _setVarRange.byteLoop
+  bra _setVarRange.done
+
+_setVarRange.wordMode:
+  lda.w SCUMM.scratch
+  beq _setVarRange.done
+_setVarRange.wordLoop:
+  jsr _scummvm.fetchWord
+  jsr _scummvm.writeVariable
+  lda.w SCUMM.resultVar
+  inc a
+  sta.w SCUMM.resultVar
+  lda.w SCUMM.scratch
+  dec a
+  sta.w SCUMM.scratch
+  bne _setVarRange.wordLoop
+
+_setVarRange.done:
+  clc
+  rts
+
+; delay ($2E) -- 3-byte LE delay value
+op_delay:
+  jsr _scummvm.fetchByte
+  sta.w SCUMM.scratch
+  jsr _scummvm.fetchByte
+  xba
+  ora.w SCUMM.scratch
+  ldx.w SCUMM.currentSlotPtr
+  sta.w SCUMM.slots.delay,x
+  jsr _scummvm.fetchByte
+  sec
+  rts
+
+; delayVariable ($2B)
+op_delayVariable:
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  ldx.w SCUMM.currentSlotPtr
+  sta.w SCUMM.slots.delay,x
+  sec
+  rts
+
+; dummy ($A7)
+op_dummy:
+  clc
+  rts
+
+; cutscene ($40) -- read arg list, increment nest level
+op_cutscene:
+_cutscene.skipArgs:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  bne _cutscene.skipArgs
+  lda.w SCUMM.cutsceneNest
+  inc a
+  sta.w SCUMM.cutsceneNest
+  ldx.w SCUMM.currentSlotPtr
+  sep #$20
+  lda.w SCUMM.slots.cutsceneOverride,x
+  inc a
+  sta.w SCUMM.slots.cutsceneOverride,x
+  rep #$20
+  clc
+  rts
+
+; endCutscene ($C0)
+op_endCutscene:
+  lda.w SCUMM.cutsceneNest
+  beq +
+  dec a
+  sta.w SCUMM.cutsceneNest
++
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.cutsceneOverride,x
+  and #$00FF
+  beq +
+  dec a
+  sep #$20
+  sta.w SCUMM.slots.cutsceneOverride,x
+  rep #$20
++
+  clc
+  rts
+
+; override ($58)
+op_override:
+  jsr _scummvm.fetchWord
+  clc
+  rts
+
+; freezeScripts ($60, $E0)
+op_freezeScripts:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  sta.w SCUMM.scratch
+  ldx #0
+  ldy #0
+_freeze.loop:
+  cpx.w SCUMM.currentSlotPtr
+  beq _freeze.next
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_RUNNING
+  bne _freeze.next
+
+  lda.w SCUMM.scratch
+  beq _freeze.unfreeze
+  lda.w SCUMM.slots.freezeCount,x
+  and #$00FF
+  inc a
+  sep #$20
+  sta.w SCUMM.slots.freezeCount,x
+  rep #$20
+  bra _freeze.next
+_freeze.unfreeze:
+  lda.w SCUMM.slots.freezeCount,x
+  and #$00FF
+  beq _freeze.next
+  dec a
+  sep #$20
+  sta.w SCUMM.slots.freezeCount,x
+  rep #$20
+
+_freeze.next:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _freeze.loop
+  clc
+  rts
+
+; stopObjectScript ($6E, $EE)
+op_stopObjectScript:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  clc
+  rts
+
+; isScriptRunning ($68, $E8)
+op_isScriptRunning:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  jsr _scummvm.findSlotByNumber
+  bcs +
+    lda #0
+    bra _isScriptRunning.write
++
+    lda #1
+_isScriptRunning.write:
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; debug ($6B, $EB)
+op_debug:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  clc
+  rts
+
+; and ($17, $97)
+op_and:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  pha
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  and 1,s
+  sta.w SCUMM.scratch
+  pla
+  lda.w SCUMM.scratch
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; or ($57, $D7)
+op_or:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  pha
+  lda.w SCUMM.resultVar
+  jsr _scummvm.readVariable
+  ora 1,s
+  sta.w SCUMM.scratch
+  pla
+  lda.w SCUMM.scratch
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; expression ($AC) -- stack-based expression evaluator
+op_expression:
+  jsr _scummvm.getResultPos
+_expression.loop:
+  jsr _scummvm.fetchByte
+  cmp #$FF
+  beq _expression.end
+  sta.w SCUMM.scratch
+
+  lda.w SCUMM.scratch
+  and #$001F
+  cmp #$06
+  beq _expression.number
+  cmp #$01
+  beq _expression.add
+  cmp #$02
+  beq _expression.sub
+  cmp #$03
+  beq _expression.mul
+  cmp #$04
+  beq _expression.div
+  cmp #$05
+  beq _expression.end
+  bra _expression.loop
+
+_expression.number:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  pha
+  bra _expression.loop
+
+_expression.add:
+  pla
+  sta.w SCUMM.scratch2
+  pla
+  clc
+  adc.w SCUMM.scratch2
+  pha
+  bra _expression.loop
+
+_expression.sub:
+  pla
+  sta.w SCUMM.scratch2
+  pla
+  sec
+  sbc.w SCUMM.scratch2
+  pha
+  bra _expression.loop
+
+_expression.mul:
+  ; Placeholder: pop both, push product (just do 0 for now)
+  pla
+  sta.w SCUMM.scratch2
+  pla
+  pha
+  bra _expression.loop
+
+_expression.div:
+  pla
+  sta.w SCUMM.scratch2
+  pla
+  ldx.w SCUMM.scratch2
+  beq _expression.divZero
+  pha
+  bra _expression.loop
+_expression.divZero:
+  lda #0
+  pha
+  bra _expression.loop
+
+_expression.end:
+  pla
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; chainScript ($42, $C2)
+op_chainScript:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  pha
+_chainScript.skipArgs:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  bne _chainScript.skipArgs
+  ldx.w SCUMM.currentSlotPtr
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  pla
+  jsr _scummvm.startScriptSlot
+  sec
+  rts
+
+; cursorCommand ($2C) -- subop-based, consume parameters
+op_cursorCommand:
+  jsr _scummvm.fetchWord
+  and #$001F
+  cmp #$0A
+  beq _cursor.twoArgs
+  cmp #$0B
+  beq _cursor.twoArgs
+  cmp #$0C
+  beq _cursor.oneArg
+  cmp #$0D
+  beq _cursor.oneArg
+  cmp #$0E
+  beq _cursor.argList
+  ; Default: no args
+  clc
+  rts
+_cursor.twoArgs:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectByte
+  clc
+  rts
+_cursor.oneArg:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  clc
+  rts
+_cursor.argList:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  bne _cursor.argList
+  clc
+  rts
+
+; systemOps ($98)
+op_systemOps:
+  jsr _scummvm.fetchByte
+  clc
+  rts
+
+  CLASS ScummVM
+
+.ends

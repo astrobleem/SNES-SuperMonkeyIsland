@@ -728,6 +728,17 @@ T_menu_main:
     .dw $286
     .db " START GAME",TC_end
 
+T_EXCP_E_ScummVmBadOpcode:
+    .db TC_pos
+    .dw $102
+    .db "Unimplemented SCUMM opcode.",TC_end
+
+T_EXCP_E_ScummVmCacheFull:
+    .db TC_pos
+    .dw $102
+    .db "SCUMM script cache full.",TC_end
+
+
 ;stub labels for removed DL strings (needed by LUT in textstrings.h)
 T_EXCP_E_ScoreTest:
 T_hallOfFame:

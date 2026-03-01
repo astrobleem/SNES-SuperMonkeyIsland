@@ -42,6 +42,7 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | `msu1_pack_rooms.py` | Pack all converted rooms into MSU-1 data file |
 | `msu1_pack_scripts.py` | Pack all script bytecode into MSU-1 data file (appends to room pack) |
 | `scumm_opcode_audit.py` | Walk all 748 script files, decode bytecode, report opcode coverage |
+| `gen_dispatch_table.py` | Generate 256-entry 65816 opcode dispatch table from Python opcode map |
 | `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
@@ -76,4 +77,9 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - Full opcode table with variable-length parameter decoders built (`tools/scumm/opcodes_v5.py`)
 - All 748 scripts packed into MSU-1 data (380 KB bytecode, indexed by script number and room)
 - Pipeline: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` → 2.89 MB data pack
-- Next: 65816 opcode dispatch and script execution engine
+- **Dispatch engine built** — 256-entry jump table, per-frame scheduler for 25 concurrent script slots
+- ~35 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables
+- Variable system: 800 global vars, 25 local vars per slot, 2048 bit vars
+- 16 KB script cache in bank $7F with MSU-1 on-demand loading
+- ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
+- Next: Mesen boot testing, then implement remaining opcodes as MI1 scripts hit them

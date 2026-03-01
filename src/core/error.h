@@ -79,6 +79,8 @@ E_BadIrq db
 E_NoIrqCallback db
 E_BadIrqCallback db
 E_SramBad db
+E_ScummVmBadOpcode db
+E_ScummVmCacheFull db
 E_MaxException ds 0
 .ende
 
@@ -213,6 +215,8 @@ ExcFontPal:
         .db T_EXCP_E_NoIrqCallback.PTR
         .db T_EXCP_E_BadIrqCallback.PTR
         .db T_EXCP_E_SramBad.PTR
+        .db T_EXCP_E_ScummVmBadOpcode.PTR
+        .db T_EXCP_E_ScummVmCacheFull.PTR
 
 .ends
 

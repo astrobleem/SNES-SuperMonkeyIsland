@@ -518,6 +518,49 @@ _scummvm.skipWordVararg:
   rts
 
 
+;-------------------------------------------------------------------
+; _scummvm.skipP8fromScratch -- skip one p8 param using SCUMM.scratch
+; Input: A = flag bitmask to test against SCUMM.scratch
+; If flag SET: fetchWord (2-byte var ref), else fetchByte (literal)
+;-------------------------------------------------------------------
+_scummvm.skipP8fromScratch:
+  and.w SCUMM.scratch
+  beq +
+  jmp _scummvm.fetchWord
++
+  jmp _scummvm.fetchByte
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipNullString -- skip bytes until $00 terminator
+;-------------------------------------------------------------------
+_scummvm.skipNullString:
+-
+  jsr _scummvm.fetchByte
+  cmp #0
+  bne -
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipPrintString -- skip SCUMM print string
+; Bytes $01-$08 are embedded var references (2 extra bytes each).
+; $00 terminates the string.
+;-------------------------------------------------------------------
+_scummvm.skipPrintString:
+-
+  jsr _scummvm.fetchByte
+  cmp #0
+  beq +                            ; $00 = end of string
+  cmp #$0009
+  bcs -                            ; >= $09 = normal char, loop
+  ; $01-$08: embedded var ref, consume 2 extra bytes
+  jsr _scummvm.fetchWord
+  bra -
++
+  rts
+
+
 ;===================================================================
 ; Variable System
 ;===================================================================
@@ -2618,6 +2661,262 @@ _drawObj.setXY:
 
 _drawObj.setState:
   jsr _scummvm.fetchWord             ; state
+  clc
+  rts
+
+
+;===================================================================
+; Print / Verb / Sentence / Object / String opcode stubs
+; Correctly consume all bytecode parameters without behavior.
+;===================================================================
+
+;-------------------------------------------------------------------
+; print ($14, $94) -- actor + sub-opcode loop, no-op
+; Format: getVarOrDirectByte(BIT7) actor, then sub-opcode loop
+;-------------------------------------------------------------------
+op_print:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; actor
+_print.subLoop:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq _print.done
+  sta.w SCUMM.scratch                ; save sub-opcode for flag testing
+  and #$000F                         ; sub-key is low 4 bits
+  cmp #$00
+  beq _print.pos                     ; $00: pos (2x p16)
+  cmp #$01
+  beq _print.color                   ; $01: color (p8[7])
+  cmp #$02
+  beq _print.clipping                ; $02: clipping (p16)
+  cmp #$0F
+  beq _print.text                    ; $0F: text (print string)
+  ; $03,$04,$06,$07,$08: no params
+  jmp _print.subLoop
+
+_print.pos:
+  jsr _scummvm.fetchWord             ; x
+  jsr _scummvm.fetchWord             ; y
+  jmp _print.subLoop
+
+_print.color:
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch
+  jmp _print.subLoop
+
+_print.clipping:
+  jsr _scummvm.fetchWord             ; right
+  jmp _print.subLoop
+
+_print.text:
+  jsr _scummvm.skipPrintString
+  jmp _print.subLoop
+
+_print.done:
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; printEgo ($D8) -- same sub-opcode loop as print, no actor param
+;-------------------------------------------------------------------
+op_printEgo:
+  jmp _print.subLoop
+
+
+;-------------------------------------------------------------------
+; verbOps ($7A, $FA) -- verb + sub-opcode loop, no-op
+;-------------------------------------------------------------------
+op_verbOps:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; verb
+_verbOps.subLoop:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq _verbOps.done
+  sta.w SCUMM.scratch                ; save sub-opcode for flag testing
+  and #$001F                         ; sub-key is low 5 bits
+
+  ; $01: image (p16)
+  cmp #$01
+  beq _verbOps.p16
+
+  ; $02: name (null-terminated string)
+  cmp #$02
+  beq _verbOps.string
+
+  ; $03,$04: p8 range — color, hiColor
+  cmp #$03
+  bcc _verbOps.noParams              ; < $03 shouldn't happen (already checked $01,$02)
+  cmp #$05
+  bcc _verbOps.p8_7                  ; $03, $04: p8[7]
+
+  ; $05: setXY (2x p16)
+  cmp #$05
+  beq _verbOps.setXY
+
+  ; $06-$09: no params (on, off, delete, new)
+  cmp #$0A
+  bcc _verbOps.noParams
+
+  ; $10: dimColor (p8) — range $10-$1F except explicit checks
+  cmp #$11
+  beq _verbOps.noParams              ; $11: dimmed — no params
+  cmp #$13
+  beq _verbOps.noParams              ; $13: key — no params
+
+  ; $14: center (p16)
+  cmp #$14
+  beq _verbOps.p16
+
+  ; $16: setToString (p16 + p8[7])
+  cmp #$16
+  beq _verbOps.p16_p8
+
+  ; $17: setToObject (p16)
+  cmp #$17
+  beq _verbOps.p16
+
+  ; default: p8[7] ($10, $12, and others)
+  bra _verbOps.p8_7
+
+_verbOps.noParams:
+  jmp _verbOps.subLoop
+
+_verbOps.p16:
+  jsr _scummvm.fetchWord
+  jmp _verbOps.subLoop
+
+_verbOps.string:
+  jsr _scummvm.skipNullString
+  jmp _verbOps.subLoop
+
+_verbOps.p8_7:
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch
+  jmp _verbOps.subLoop
+
+_verbOps.setXY:
+  jsr _scummvm.fetchWord             ; x
+  jsr _scummvm.fetchWord             ; y
+  jmp _verbOps.subLoop
+
+_verbOps.p16_p8:
+  jsr _scummvm.fetchWord             ; stringId
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; charset
+  jmp _verbOps.subLoop
+
+_verbOps.done:
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; doSentence ($19,$39,$59,$79,$99,$B9,$D9,$F9)
+; verb + objectA + objectB, with special sentinels $FE/$FC
+;-------------------------------------------------------------------
+op_doSentence:
+  lda.w SCUMM.currentOpcode
+  and #$0080
+  bne _doSentence.verbVar
+  ; bit7 clear: verb is literal byte
+  jsr _scummvm.fetchByte
+  cmp #$00FE
+  beq _doSentence.done               ; $FE = stop sentence, no more params
+  cmp #$00FC
+  beq _doSentence.done               ; $FC = stop sentence (v5 alt)
+  bra _doSentence.readObjects
+
+_doSentence.verbVar:
+  jsr _scummvm.fetchWord             ; verb as variable reference
+  jsr _scummvm.readVariable
+
+_doSentence.readObjects:
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectWord    ; objectA
+  lda #SCUMM_FLAG_BIT5
+  jsr _scummvm.getVarOrDirectWord    ; objectB
+
+_doSentence.done:
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; startObject ($37,$77,$B7,$F7) -- p16 object + p8[6] script + varargs
+;-------------------------------------------------------------------
+op_startObject:
+  jsr _scummvm.fetchWord             ; object ID (always p16)
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectByte    ; script number
+  jsr _scummvm.skipWordVararg        ; variable args
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; stringOps ($27) -- sub-opcode dispatch, no-op
+;-------------------------------------------------------------------
+op_stringOps:
+  jsr _scummvm.fetchByte             ; sub-opcode byte
+  sta.w SCUMM.scratch
+  and #$001F
+
+  cmp #$01
+  beq _stringOps.putCode             ; putCodeInString: p8[7] + null string
+  cmp #$04
+  beq _stringOps.getChar             ; getStringChar: result + p8[7] + p8[6]
+  cmp #$03
+  beq _stringOps.threeP8             ; setStringChar: p8[7] + p8[6] + p8[5]
+
+  ; $02 (copyString), $05 (createString): p8[7] + p8[6]
+  bra _stringOps.twoP8
+
+_stringOps.putCode:
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; stringId
+  jsr _scummvm.skipNullString         ; string data
+  clc
+  rts
+
+_stringOps.getChar:
+  jsr _scummvm.fetchWord             ; result variable
+  ; fall through to twoP8
+
+_stringOps.twoP8:
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; param1
+  lda #$0040
+  jsr _scummvm.skipP8fromScratch     ; param2
+  clc
+  rts
+
+_stringOps.threeP8:
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; param1
+  lda #$0040
+  jsr _scummvm.skipP8fromScratch     ; param2
+  lda #$0020
+  jsr _scummvm.skipP8fromScratch     ; param3
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; saveRestoreVerbs ($AB) -- 3x p8 params for all sub-ops
+;-------------------------------------------------------------------
+op_saveRestoreVerbs:
+  jsr _scummvm.fetchByte             ; sub-opcode byte
+  sta.w SCUMM.scratch                ; save for flag testing
+  ; All sub-ops (save=$01, restore=$02, delete=$03) take:
+  ; p8[7] + p8[6] + p8[5]
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; param1 (begin verb)
+  lda #$0040
+  jsr _scummvm.skipP8fromScratch     ; param2 (end verb)
+  lda #$0020
+  jsr _scummvm.skipP8fromScratch     ; param3 (mode)
   clc
   rts
 

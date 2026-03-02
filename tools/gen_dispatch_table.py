@@ -76,6 +76,14 @@ IMPLEMENTED = {
     'getActorX':        'op_getActorX',
     'getActorY':        'op_getActorY',
     'actorOps':         'op_actorOps',
+    # Print/verb/sentence/object/string stubs (consume params, no-op)
+    'print':            'op_print',
+    'printEgo':         'op_printEgo',
+    'verbOps':          'op_verbOps',
+    'doSentence':       'op_doSentence',
+    'startObject':      'op_startObject',
+    'stringOps':        'op_stringOps',
+    'saveRestoreVerbs': 'op_saveRestoreVerbs',
 }
 
 

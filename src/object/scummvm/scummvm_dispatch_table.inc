@@ -23,12 +23,12 @@ _scummvm.dispatchTable:
   .dw op_animateActor                ; $11 animateActor
   .dw op_panCameraTo               ; $12 panCameraTo
   .dw op_actorOps                  ; $13 actorOps
-  .dw op_stub                      ; $14 print
+  .dw op_print                     ; $14 print
   .dw op_stub                      ; $15 actorFromPos
   .dw op_stub                      ; $16 getRandomNr
   .dw op_and                       ; $17 and
   .dw op_jumpRelative              ; $18 jumpRelative
-  .dw op_stub                      ; $19 doSentence
+  .dw op_doSentence                ; $19 doSentence
   .dw op_move                      ; $1A move
   .dw op_stub                      ; $1B multiply
   .dw op_startSound                 ; $1C startSound
@@ -42,7 +42,7 @@ _scummvm.dispatchTable:
   .dw op_loadRoomWithEgo             ; $24 loadRoomWithEgo
   .dw op_stub                      ; $25 pickupObject
   .dw op_setVarRange               ; $26 setVarRange
-  .dw op_stub                      ; $27 stringOps
+  .dw op_stringOps                 ; $27 stringOps
   .dw op_equalZero                 ; $28 equalZero
   .dw op_setOwnerOf                ; $29 setOwnerOf
   .dw op_startScript               ; $2A startScript
@@ -58,9 +58,9 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $34 getDist
   .dw op_stub                      ; $35 findObject
   .dw op_stub                      ; $36 walkActorToObject
-  .dw op_stub                      ; $37 startObject
+  .dw op_startObject               ; $37 startObject
   .dw op_isLessEqual               ; $38 isLessEqual
-  .dw op_stub                      ; $39 doSentence
+  .dw op_doSentence                ; $39 doSentence
   .dw op_subtract                  ; $3A subtract
   .dw op_stub                      ; $3B getActorScale
   .dw op_stopSound                  ; $3C stopSound
@@ -92,7 +92,7 @@ _scummvm.dispatchTable:
   .dw op_getActorMoving            ; $56 getActorMoving
   .dw op_or                        ; $57 or
   .dw op_override                  ; $58 override
-  .dw op_stub                      ; $59 doSentence
+  .dw op_doSentence                ; $59 doSentence
   .dw op_add                       ; $5A add
   .dw op_stub                      ; $5B divide
   .dw op_stub                      ; $5C oldRoomEffect
@@ -122,10 +122,10 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $74 getDist
   .dw op_stub                      ; $75 findObject
   .dw op_stub                      ; $76 walkActorToObject
-  .dw op_stub                      ; $77 startObject
+  .dw op_startObject               ; $77 startObject
   .dw op_isGreater                 ; $78 isGreater
-  .dw op_stub                      ; $79 doSentence
-  .dw op_stub                      ; $7A verbOps
+  .dw op_doSentence                ; $79 doSentence
+  .dw op_verbOps                   ; $7A verbOps
   .dw op_stub                      ; $7B getActorWalkBox
   .dw op_isSoundRunning              ; $7C isSoundRunning
   .dw op_stub                      ; $7D findInventory
@@ -151,12 +151,12 @@ _scummvm.dispatchTable:
   .dw op_animateActor                ; $91 animateActor
   .dw op_panCameraTo               ; $92 panCameraTo
   .dw op_actorOps                  ; $93 actorOps
-  .dw op_stub                      ; $94 print
+  .dw op_print                     ; $94 print
   .dw op_stub                      ; $95 actorFromPos
   .dw op_stub                      ; $96 getRandomNr
   .dw op_and                       ; $97 and
   .dw op_systemOps                 ; $98 systemOps
-  .dw op_stub                      ; $99 doSentence
+  .dw op_doSentence                ; $99 doSentence
   .dw op_move                      ; $9A move
   .dw op_stub                      ; $9B multiply
   .dw op_startSound                 ; $9C startSound
@@ -174,7 +174,7 @@ _scummvm.dispatchTable:
   .dw op_notEqualZero              ; $A8 notEqualZero
   .dw op_setOwnerOf                ; $A9 setOwnerOf
   .dw op_startScript               ; $AA startScript
-  .dw op_stub                      ; $AB saveRestoreVerbs
+  .dw op_saveRestoreVerbs          ; $AB saveRestoreVerbs
   .dw op_expression                ; $AC expression
   .dw op_putActorInRoom            ; $AD putActorInRoom
   .dw op_wait                       ; $AE wait
@@ -186,9 +186,9 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $B4 getDist
   .dw op_stub                      ; $B5 findObject
   .dw op_stub                      ; $B6 walkActorToObject
-  .dw op_stub                      ; $B7 startObject
+  .dw op_startObject               ; $B7 startObject
   .dw op_isLessEqual               ; $B8 isLessEqual
-  .dw op_stub                      ; $B9 doSentence
+  .dw op_doSentence                ; $B9 doSentence
   .dw op_subtract                  ; $BA subtract
   .dw op_stub                      ; $BB getActorScale
   .dw op_stopSound                  ; $BC stopSound
@@ -219,8 +219,8 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $D5 actorFromPos
   .dw op_getActorMoving            ; $D6 getActorMoving
   .dw op_or                        ; $D7 or
-  .dw op_stub                      ; $D8 printEgo
-  .dw op_stub                      ; $D9 doSentence
+  .dw op_printEgo                  ; $D8 printEgo
+  .dw op_doSentence                ; $D9 doSentence
   .dw op_add                       ; $DA add
   .dw op_stub                      ; $DB divide
   .dw op_stub                      ; $DC oldRoomEffect
@@ -250,10 +250,10 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $F4 getDist
   .dw op_stub                      ; $F5 findObject
   .dw op_stub                      ; $F6 walkActorToObject
-  .dw op_stub                      ; $F7 startObject
+  .dw op_startObject               ; $F7 startObject
   .dw op_isGreater                 ; $F8 isGreater
-  .dw op_stub                      ; $F9 doSentence
-  .dw op_stub                      ; $FA verbOps
+  .dw op_doSentence                ; $F9 doSentence
+  .dw op_verbOps                   ; $FA verbOps
   .dw op_stub                      ; $FB getActorWalkBox
   .dw op_isSoundRunning              ; $FC isSoundRunning
   .dw op_stub                      ; $FD findInventory

@@ -106,6 +106,9 @@ SCUMM.roomIndexHi         dw      ;MSU-1 room index offset (high 16)
 SCUMM.globalSlots         dw      ;number of global index slots
 SCUMM.roomSlots           dw      ;number of room index slots
 SCUMM.cutsceneNest        dw      ;cutscene nesting depth
+SCUMM.currentRoom         dw      ;current room number (0=none)
+SCUMM.newRoom             dw      ;pending room to load (0=none)
+SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
 .ends
 
 ;---------------------------------------------------------------------------

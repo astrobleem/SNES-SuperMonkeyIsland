@@ -40,8 +40,10 @@
   stz.w windowMainscreen
   rep #$31
 
-  ;--- Create Brightness object ---
+  ;--- Create Brightness object and set to full ---
   NEW Brightness.CLS.PTR objBrightness
+  lda #BRIGHTNESS.FULL
+  CALL Brightness.set.MTD objBrightness
 
   ;--- Create ScummVM interpreter object ---
   ; ScummVM.init reads MSU-1 script headers and starts boot script 1

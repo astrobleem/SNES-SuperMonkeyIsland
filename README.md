@@ -70,7 +70,7 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
 - 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit tile IDs
 
-**Phase 1 in progress** — SCUMM v5 bytecode interpreter.
+**Phase 1 in progress** — SCUMM v5 bytecode interpreter boots MI1.
 
 - Opcode audit complete: 103 of 105 base opcodes used by MI1 (only `getAnimCounter` and `getInventoryCount` unused)
 - 748 scripts analyzed (30,066 opcodes decoded, 0 decode errors)
@@ -78,8 +78,9 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - All 748 scripts packed into MSU-1 data (380 KB bytecode, indexed by script number and room)
 - Pipeline: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` → 2.89 MB data pack
 - **Dispatch engine built** — 256-entry jump table, per-frame scheduler for 25 concurrent script slots
-- ~35 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables
+- 51 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables, room loading, actor stubs, resource stubs, and more
 - Variable system: 800 global vars, 25 local vars per slot, 2048 bit vars
 - 16 KB script cache in bank $7F with MSU-1 on-demand loading
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
-- Next: Mesen boot testing, then implement remaining opcodes as MI1 scripts hit them
+- **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly with 0 unimplemented opcode hits
+- Next: room scripts (ENCD/EXCD/LSCR), actor system, verb bar

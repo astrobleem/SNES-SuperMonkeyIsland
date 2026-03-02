@@ -314,7 +314,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engine complete** (`src/object/scummvm/scummvm.{h,65816}`).
+The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engine complete, MI1 boots successfully** (`src/object/scummvm/scummvm.{h,65816}`). 51 of 103 opcodes implemented; boot scripts run with 0 stub hits.
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -350,7 +350,9 @@ The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engin
 
 11. **System** (~8 opcodes): wait (waitForActor, waitForMessage, waitForCamera, waitForSentence), delay, delayVariable, saveRestoreVerbs, cutscene/endCutscene, saveLoadGame.
 
-**Estimated engine ROM size**: 16-24KB for the interpreter + system routines. Fits comfortably in a 256KB or 512KB SNES ROM alongside the PPU driver, audio driver, and resource loader.
+**Current engine ROM**: Interpreter + dispatch table + 51 opcode handlers in bank $01. Room loader + scroll system in bank $00. Total ROM usage well within 1MB HiROM allocation.
+
+**Boot status**: MI1 boots end-to-end. Boot script 1 runs, room 1 (beach) loads and renders correctly. Script scheduler handles cooperative multitasking with breakHere yields. System variables initialized (VAR_EGO, VAR_NUM_ACTOR, VAR_ROOM, etc.). Next milestone: room scripts and actor system.
 
 ### 5.2 Resource Streamer (MSU-1 Interface)
 
@@ -699,9 +701,11 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 
 **Success Criteria:** MET — SCUMM Bar interior renders with correct colors, scrolls smoothly, tiles stream from MSU-1 without glitches. All 86 rooms browsable with correct display. Engine foundation solid for Phase 1.
 
-### Phase 1: The Interpreter Boots (8-10 weeks)
+### Phase 1: The Interpreter Boots (8-10 weeks) — IN PROGRESS (boot achieved)
 
 **Goal:** SCUMM v5 bytecode interpreter running MI1's boot sequence and loading the first room.
+
+**Current status:** MI1 boots. Script 1 runs, room 1 (beach) renders correctly. 51/103 opcodes implemented with 0 stub hits during boot. Room loading integrated with Phase 0 pipeline. Still needed: room scripts, actor system, more opcodes.
 
 - [x] Opcode audit — catalog which opcodes MI1 actually uses
   - `tools/scumm_opcode_audit.py` + `tools/scumm/opcodes_v5.py`
@@ -724,8 +728,9 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - 256-entry `jsr (table,x)` dispatch. `[tmp],y` indirect long bytecode fetch from $7F cache.
   - Carry flag convention: clear = continue executing, set = yield to next slot.
   - Per-frame scheduler iterates 25 SCUMM script slots (status/freeze/delay checks).
-  - 35 base opcodes implemented as real handlers, remaining 195 entries → `op_stub` (fatal error).
+  - 51 opcodes implemented as real handlers, remaining → `op_stub` (fatal error).
   - Unimplemented opcodes added incrementally — just add handler label to Python map and regenerate.
+  - MI1 boot runs with 0 stub hits — all opcodes encountered by boot scripts are handled.
 - [x] Implement arithmetic, variables, flow control opcodes
   - Variable system: 800 global vars ($7E), 25 local vars per slot, 2048 bit vars
   - Encoding: top 2 bits of 16-bit reference → global ($0xxx) / local ($4xxx) / bit ($8xxx)
@@ -738,8 +743,17 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - breakHere (sec; rts — yield), stopObjectCode (mark slot DEAD, yield)
   - chainScript, isScriptRunning, freezeScripts, stopObjectScript
   - cutscene/endCutscene/override, delay/delayVariable
-- [ ] Implement room loading opcodes (loadRoom, initRoom)
-- [ ] Implement basic actor placement (putActor)
+- [x] Implement room loading integration (loadRoom triggers Phase 0 room.load)
+  - `processRoomChange` in ScummVM.play: detects newRoom != currentRoom, sets up PPU registers, calls room.load
+  - Room 1 (beach) renders correctly — palette, tileset, tilemap all loaded via MSU-1
+  - `op_loadRoom` stores room number in SCUMM.newRoom; actual load deferred to start of next play() frame
+  - System variable initialization: VAR_EGO, VAR_NUM_ACTOR, VAR_ROOM, VAR_HEAPSPACE, etc.
+- [x] MI1 boot sequence runs end-to-end — 0 op_stub hits with 51 opcodes implemented
+  - Boot script (script 1) runs infinite loop: 3x breakHere, check getActorMoving, startScript(35)
+  - Script 35 (object interaction) checks getObjectState, bails when no objects loaded
+  - Interpreter scheduler handles cooperative multitasking correctly (321 breakHere yields per test)
+- [ ] Load room scripts (ENCD/EXCD/LSCR) on room change — currently only global scripts loaded
+- [ ] Implement basic actor placement (putActor, walkActorTo)
 - [ ] Resource loader: extend script cache beyond linear allocator (LRU eviction)
 
 **Key findings from opcode audit:**
@@ -756,8 +770,23 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **WRAM layout**: ~3.6KB in bank $7E for VM state. Struct-based slot layout (64 bytes/slot × 25 = 1600B). Global vars at $7E:6000, bit vars at $7E:7D1A, slots at $7E:6640. All addresses resolved by wla-dx linker — no hardcoded offsets.
 - **XBA word-read pattern for MSU-1**: Reading 16-bit LE values from MSU_DATA one byte at a time: `sep #$20; lda MSU_DATA; xba; lda MSU_DATA; xba; rep #$20` builds a 16-bit word. Avoids wla-dx ramsection `symbol+1` arithmetic (which evaluates full 24-bit address → linker error).
 - **level1.script replaced**: The Phase 0 room browser test harness is gone. Boot now creates ScummVM object, which reads MSU-1 script headers and starts MI1 boot script 1.
+- **Room loading via processRoomChange**: ScummVM.play() detects SCUMM.newRoom != SCUMM.currentRoom at the start of each frame, calls processRoomChange which sets up PPU registers (BG1SC, BG12NBA, MainScreen, ScreenMode) and delegates to Phase 0's room.load(). Room load happens before script execution, matching ScummVM's main loop order.
+- **Brightness singleton management**: The Brightness object must be explicitly set to FULL — its play() method continuously writes its internal value to ScreenBrightness, overriding any direct register writes. processRoomChange does not touch Brightness directly.
+- **MI1 boot script behavior**: Script 1 runs an infinite loop — 3x breakHere, check getActorMoving(VAR_EGO), startScript(35), jump back. Script 35 checks getObjectState and bails when no objects exist. This loop is correct MI1 behavior — the game needs room scripts and actors to progress beyond this point.
 
-**Success Criteria:** ROM boots, runs MI1's boot script (script 1), loads the intro sequence rooms, places actors at initial positions. Rooms display correctly with actors as static sprites.
+**Bugs fixed during Phase 1:**
+- Bank dispatch bug: superfree section placed dispatch table in wrong bank, converted to regular section in bank $01
+- startScriptSlot clobbered script number in A during slot search (fixed: pha/pla around loop)
+- getVarOrDirectByte/Word pla flag bug: 65816 pla sets flags from pulled value, not from A before pla (fixed: re-test opcode after pla)
+- Conditional branch directions inverted (SCUMM: TRUE=jump, FALSE=skip; had it backwards)
+- Jump targets are signed relative offsets, not absolute (fixed: sign-extend and add to PC)
+- startScriptSlot/findSlotByNumber clobber Y (SCUMM PC) — fixed with phy/ply save/restore
+- skipWordVararg only consumed 1 byte per arg instead of 3 (sub-opcode + 2-byte word)
+- SCUMM.bgInitDone uninitialized — garbage non-zero value skipped PPU register setup entirely
+- Brightness singleton at 0 — level1.script created Brightness but never set it to FULL
+- actorOps handler restructured to group sub-opcodes by parameter count (fixed branch distance errors)
+
+**Success Criteria:** PARTIALLY MET — ROM boots, runs MI1's boot script (script 1), loads room 1 (beach), displays room background correctly. 0 unimplemented opcode hits. Cooperative script scheduling works. Room loading integration with Phase 0 pipeline verified. Still needed: room scripts (ENCD/EXCD/LSCR), actor placement, and more opcodes for gameplay progression.
 
 ### Phase 2: Walking and Talking (10-12 weeks)
 

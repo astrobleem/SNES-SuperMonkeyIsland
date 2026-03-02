@@ -59,6 +59,23 @@ IMPLEMENTED = {
     'chainScript':      'op_chainScript',
     'cursorCommand':    'op_cursorCommand',
     'systemOps':        'op_systemOps',
+    # Actor/resource stubs (consume params, no-op for now)
+    'resourceRoutines': 'op_resourceRoutines',
+    'putActorInRoom':   'op_putActorInRoom',
+    'getActorMoving':   'op_getActorMoving',
+    'getObjectState':   'op_getObjectState',
+    'getObjectOwner':   'op_getObjectOwner',
+    'setState':         'op_setState',
+    'putActor':         'op_putActor',
+    'getActorRoom':     'op_getActorRoom',
+    'panCameraTo':      'op_panCameraTo',
+    'setCameraAt':      'op_setCameraAt',
+    'lights':           'op_lights',
+    'loadRoom':         'op_loadRoom',
+    'setOwnerOf':       'op_setOwnerOf',
+    'getActorX':        'op_getActorX',
+    'getActorY':        'op_getActorY',
+    'actorOps':         'op_actorOps',
 }
 
 

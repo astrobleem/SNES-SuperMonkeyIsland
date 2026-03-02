@@ -2,6 +2,11 @@
 
 A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nintendo, using MSU-1 for asset streaming.
 
+| | |
+|:---:|:---:|
+| ![Melee Island beach](screenshots/room01_beach.png) | ![Melee Island town](screenshots/room35_town.png) |
+| ![Governor's mansion](screenshots/room07_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
+
 ## Architecture
 
 - **Language**: 65816 assembly with a custom OOP framework
@@ -78,11 +83,12 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - All 748 scripts packed into MSU-1 data (380 KB bytecode, indexed by script number and room)
 - Pipeline: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` → 2.89 MB data pack
 - **Dispatch engine built** — 256-entry jump table, per-frame scheduler for 25 concurrent script slots
-- 67 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables, room loading, sound stubs, actor stubs, object/room stubs, and more
+- **All 105 base opcodes implemented** — control flow, conditionals, arithmetic, script management, variables, room/object/actor/sound/verb operations, print/string handling, expression evaluation, and more
 - Variable system: 800 global vars, 25 local vars per slot, 2048 bit vars
 - 32 KB script cache in bank $7F with MSU-1 on-demand loading
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
-- **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly with 0 unimplemented opcode hits
-- **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Room 1 verified: ENCD 366B, EXCD 74B, LSCR 200 (89B), LSCR 201 (300B). Local scripts (200+) routed via LSCR table lookup in startScriptSlot.
-- **ENCD/LSCR execute to completion** — 16 new opcode stubs (sound, actor, object, room) allow room 1 scripts to run with 0 stub hits
-- Next: implement remaining opcodes for room transitions, verb bar, actor system
+- **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly
+- **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Local scripts (200+) routed via LSCR table lookup.
+- **Multi-room smoke test** (`distribution/test_multiroom.lua`) — rooms 1, 2, 3 PASS with room scripts executing to completion
+- Known issue: room 4 E_Brk crash (expression handler stack corruption after room 83 scripts)
+- Next: debug expression handler, actor placement, verb bar

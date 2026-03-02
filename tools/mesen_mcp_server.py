@@ -4,7 +4,6 @@
 Runs on Windows Python (NOT WSL). Calls into WSL only for make.
 """
 
-import base64
 import re
 import struct
 import subprocess
@@ -260,36 +259,24 @@ def _argb_to_png(width: int, height: int, argb_lines: list[str]) -> bytes:
     return png
 
 
-# Lua base64 encoder + screenshot script template.
-# Two strategies: try emu.takeScreenshot() first (returns PNG binary),
-# fall back to emu.getScreenBuffer() (returns ARGB pixel array).
-_SCREENSHOT_LUA = r"""
--- Pure-Lua base64 encoder
-local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-local function b64encode(data)
-    local out = {}
-    local len = #data
-    for i = 1, len, 3 do
-        local a = string.byte(data, i) or 0
-        local b = (i + 1 <= len) and string.byte(data, i + 1) or 0
-        local c = (i + 2 <= len) and string.byte(data, i + 2) or 0
-        local n = a * 65536 + b * 256 + c
-        out[#out + 1] = string.sub(b64chars, math.floor(n / 262144) + 1, math.floor(n / 262144) + 1)
-        out[#out + 1] = string.sub(b64chars, math.floor(n / 4096) % 64 + 1, math.floor(n / 4096) % 64 + 1)
-        if i + 1 <= len then
-            out[#out + 1] = string.sub(b64chars, math.floor(n / 64) % 64 + 1, math.floor(n / 64) % 64 + 1)
-        else
-            out[#out + 1] = "="
-        end
-        if i + 2 <= len then
-            out[#out + 1] = string.sub(b64chars, n % 64 + 1, n % 64 + 1)
-        else
-            out[#out + 1] = "="
-        end
+# Default menu-skip preamble: injects Start every 15 frames for the first
+# 600 frames to skip splash/title screens and reach the SCUMM interpreter.
+# Uses emu.setInput() via inputPolled — no sym lookup needed.
+_MENU_SKIP_PREAMBLE = r"""
+-- Auto-skip menus: inject Start button during boot sequence
+emu.addEventCallback(function()
+    local frame = emu.getState()["ppu.frameCount"]
+    if frame < 600 and frame % 15 == 0 then
+        emu.setInput({start = true})
+    else
+        emu.setInput({})
     end
-    return table.concat(out)
-end
+end, emu.eventType.inputPolled)
+"""
 
+# Lua screenshot script template.
+# Uses getScreenBuffer() ARGB array (reliable across Mesen versions).
+_SCREENSHOT_LUA = r"""
 local TARGET_FRAME = {target_frame}
 local screenshotDone = false
 
@@ -301,22 +288,6 @@ emu.addEventCallback(function()
     if frame < TARGET_FRAME then return end
     screenshotDone = true
 
-    -- Strategy 1: try emu.takeScreenshot() (returns PNG binary string)
-    local ok, pngData = pcall(emu.takeScreenshot)
-    if ok and pngData and #pngData > 0 then
-        print("SCREENSHOT_PNG_BASE64_START")
-        -- Print in chunks to avoid line-length issues
-        local encoded = b64encode(pngData)
-        local chunkSize = 4000
-        for i = 1, #encoded, chunkSize do
-            print(string.sub(encoded, i, i + chunkSize - 1))
-        end
-        print("SCREENSHOT_PNG_BASE64_END")
-        emu.stop()
-        return
-    end
-
-    -- Strategy 2: fall back to getScreenBuffer() ARGB array
     local buf = emu.getScreenBuffer()
     if not buf or #buf == 0 then
         print("SCREENSHOT_ERROR: no screen buffer available")
@@ -328,7 +299,6 @@ emu.addEventCallback(function()
     local h = size.height or 224
 
     print(string.format("SCREENSHOT_ARGB_START %d %d", w, h))
-    -- Print 16 hex values per line to keep output manageable
     local line = {}
     for i = 1, #buf do
         line[#line + 1] = string.format("%08X", buf[i])
@@ -348,27 +318,37 @@ end, emu.eventType.endFrame)
 
 @mcp.tool()
 def take_screenshot(
-    wait_frames: int = 600,
+    wait_frames: int = 800,
     lua_preamble: str = "",
+    skip_menus: bool = True,
     timeout: int = 60,
 ) -> str:
     """Take a screenshot of the emulator at a specific PPU frame.
 
     Runs a Lua script in Mesen that waits until the target frame, captures the
-    screen, base64-encodes it, and prints to stdout. The PNG is saved to the
-    distribution directory and the file path is returned.
+    screen buffer, converts to PNG, and saves to the distribution directory.
+
+    By default, injects Start button presses during the first 600 frames to
+    skip splash/title screens and reach the SCUMM interpreter.
 
     Args:
-        wait_frames: PPU frame number at which to capture (default 600 = ~after boot).
+        wait_frames: PPU frame number at which to capture (default 800 = after boot + SCUMM init).
         lua_preamble: Optional Lua code inserted before the screenshot logic
-                      (e.g., input injection for room cycling).
+                      (e.g., input injection for room cycling). Overrides skip_menus.
+        skip_menus: Auto-inject Start presses to skip splash/title screens (default True).
+                    Ignored if lua_preamble is provided.
         timeout: Max seconds to wait for Mesen.
 
     Returns:
         Path to the saved PNG file, or an error message.
     """
+    # Build preamble: explicit preamble takes priority, then auto menu-skip
+    effective_preamble = lua_preamble
+    if not effective_preamble and skip_menus:
+        effective_preamble = _MENU_SKIP_PREAMBLE
+
     lua_code = _SCREENSHOT_LUA.replace("{target_frame}", str(wait_frames))
-    lua_code = lua_code.replace("{lua_preamble}", lua_preamble)
+    lua_code = lua_code.replace("{lua_preamble}", effective_preamble)
 
     script_path = SFC_DIR / "_mcp_screenshot.lua"
     script_path.write_text(lua_code)
@@ -389,19 +369,7 @@ def take_screenshot(
     output = out_file.read_text()
     png_path = SFC_DIR / "screenshot.png"
 
-    # Strategy 1: PNG via takeScreenshot()
-    if "SCREENSHOT_PNG_BASE64_START" in output and "SCREENSHOT_PNG_BASE64_END" in output:
-        start = output.index("SCREENSHOT_PNG_BASE64_START") + len("SCREENSHOT_PNG_BASE64_START")
-        end = output.index("SCREENSHOT_PNG_BASE64_END")
-        b64_data = output[start:end].replace("\n", "").replace("\r", "").strip()
-        try:
-            png_bytes = base64.b64decode(b64_data)
-            png_path.write_bytes(png_bytes)
-            return f"Screenshot saved: {png_path} ({len(png_bytes)} bytes)"
-        except Exception as e:
-            return f"ERROR decoding PNG base64: {e}\nFirst 200 chars: {b64_data[:200]}"
-
-    # Strategy 2: ARGB pixel buffer
+    # Parse ARGB pixel buffer from Lua output
     if "SCREENSHOT_ARGB_START" in output and "SCREENSHOT_ARGB_END" in output:
         header_line = output[output.index("SCREENSHOT_ARGB_START"):].split("\n")[0]
         parts = header_line.split()

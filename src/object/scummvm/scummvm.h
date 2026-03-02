@@ -29,8 +29,17 @@
 
 ; Script cache in bank $7F (after scroll system buffers)
 .define SCUMM_CACHE_BASE    $5000   ;offset within bank $7F
-.define SCUMM_CACHE_SIZE    $4000   ;16KB cache
+.define SCUMM_CACHE_SIZE    $8000   ;32KB cache ($7F5000-$7FCFFF)
 .define SCUMM_CACHE_WRAM    $7F5000 ;long address
+
+; Script WHERE constants (for slot.where field)
+.define SCUMM_WHERE_GLOBAL  0
+.define SCUMM_WHERE_LOCAL   1
+.define SCUMM_WHERE_ROOM    2
+
+; LSCR table dimensions
+.define SCUMM_LSCR_BASE     200     ;LSCR numbers are 200-255
+.define SCUMM_LSCR_MAX      56      ;table entries (200..255)
 
 ; MSU-1 header offsets for script section
 .define SCUMM_MSU_SCRIPT_HDR_OFFSET $0024   ;32-bit pointer in MSU header
@@ -67,6 +76,14 @@
   localVars       ds 50   ; 25 local vars x 2 bytes
 .endst
 ; _sizeof_scummSlot = 64 bytes per slot
+
+;---------------------------------------------------------------------------
+; LSCR table entry (local room scripts 200-255)
+;---------------------------------------------------------------------------
+.struct lscrEntry
+  cachePtr  dw    ; offset in $7F cache (0 = not loaded)
+  cacheLen  dw    ; bytecode length
+.endst
 
 ;---------------------------------------------------------------------------
 ; WRAM sections — Bank $7E (auto-placed by linker)
@@ -109,6 +126,16 @@ SCUMM.cutsceneNest        dw      ;cutscene nesting depth
 SCUMM.currentRoom         dw      ;current room number (0=none)
 SCUMM.newRoom             dw      ;pending room to load (0=none)
 SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
+.ends
+
+; Room script tracking (ENCD/EXCD/LSCR)
+.ramsection "scumm room scripts" bank 0 slot 1
+SCUMM.roomEncdPtr    dw      ; cache offset for ENCD (0 = none)
+SCUMM.roomEncdLen    dw      ; ENCD bytecode length
+SCUMM.roomExcdPtr    dw      ; cache offset for EXCD (0 = none)
+SCUMM.roomExcdLen    dw      ; EXCD bytecode length
+SCUMM.roomLscrCount  dw      ; number of LSCR entries loaded
+SCUMM.roomLscrTable  INSTANCEOF lscrEntry SCUMM_LSCR_MAX  ; 56 x 4 = 224B
 .ends
 
 ;---------------------------------------------------------------------------

@@ -314,7 +314,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engine complete, MI1 boots successfully** (`src/object/scummvm/scummvm.{h,65816}`). 51 of 103 opcodes implemented; boot scripts run with 0 stub hits.
+The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engine complete, MI1 boots successfully** (`src/object/scummvm/scummvm.{h,65816}`). 51 of 103 opcodes implemented; boot scripts run with 0 stub hits. Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started.
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -324,7 +324,7 @@ The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engin
 - 16-bit operations map naturally to 65816 native mode
 - 25 concurrent script slots (MI1 uses up to ~15 simultaneously), per-frame round-robin
 - Each slot runs until `breakHere` (carry set = yield) or `stopObjectCode` (slot dies)
-- Script bytecode cached in $7F:5000 (16KB), loaded from MSU-1 on demand
+- Script bytecode cached in $7F:5000 (32KB), loaded from MSU-1 on demand
 
 **Opcode categories (MI1-relevant subset):**
 
@@ -352,7 +352,7 @@ The heart of the engine. Interprets MI1's script bytecode. **Core dispatch engin
 
 **Current engine ROM**: Interpreter + dispatch table + 51 opcode handlers in bank $01. Room loader + scroll system in bank $00. Total ROM usage well within 1MB HiROM allocation.
 
-**Boot status**: MI1 boots end-to-end. Boot script 1 runs, room 1 (beach) loads and renders correctly. Script scheduler handles cooperative multitasking with breakHere yields. System variables initialized (VAR_EGO, VAR_NUM_ACTOR, VAR_ROOM, etc.). Next milestone: room scripts and actor system.
+**Boot status**: MI1 boots end-to-end. Boot script 1 runs, room 1 (beach) loads and renders correctly. Script scheduler handles cooperative multitasking with breakHere yields. System variables initialized (VAR_EGO, VAR_NUM_ACTOR, VAR_ROOM, etc.). Room scripts (ENCD/EXCD/LSCR) loaded from MSU-1 on room change; ENCD auto-started in a script slot. Room 1 ENCD (366B) begins executing — first new stub hit is `stopSound` (0x3C). Next milestone: implement sound stubs and actor system so ENCD can progress further.
 
 ### 5.2 Resource Streamer (MSU-1 Interface)
 
@@ -397,10 +397,10 @@ $2E3800+        [Reserved for future sections: costumes, sounds, charsets]
 5. Load foreground layer tiles + tilemap → VRAM BG2 area
 6. Load walkbox data → WRAM pathfinding area
 7. Load room palette → CGRAM
-8. Load room scripts → script cache (evict old scripts if needed)
+8. Load room scripts → script cache **(IMPLEMENTED)**: kill non-global slots, flush cache, load ENCD/EXCD/LSCR from MSU-1 room script block, auto-start ENCD
 9. Load room object table → WRAM object state area
 10. Initialize scroll streamer state (camera position, ring buffer pointers)
-11. Start room entry script
+11. Start room entry script **(IMPLEMENTED)**: ENCD auto-started as part of step 8
 
 Bulk load time: ~2-4 frames at MSU-1's ~10MB/s throughput. Near-instant transitions.
 
@@ -705,7 +705,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 
 **Goal:** SCUMM v5 bytecode interpreter running MI1's boot sequence and loading the first room.
 
-**Current status:** MI1 boots. Script 1 runs, room 1 (beach) renders correctly. 51/103 opcodes implemented with 0 stub hits during boot. Room loading integrated with Phase 0 pipeline. Still needed: room scripts, actor system, more opcodes.
+**Current status:** MI1 boots. Script 1 runs, room 1 (beach) renders correctly. 51/103 opcodes implemented. Room loading integrated with Phase 0 pipeline. Room scripts (ENCD/EXCD/LSCR) now loaded from MSU-1 on room change, with ENCD auto-started. ENCD runs until it hits `stopSound` (0x3C) — first new opcode needed beyond boot. Still needed: sound stubs, actor system, more opcodes.
 
 - [x] Opcode audit — catalog which opcodes MI1 actually uses
   - `tools/scumm_opcode_audit.py` + `tools/scumm/opcodes_v5.py`
@@ -752,7 +752,17 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - Boot script (script 1) runs infinite loop: 3x breakHere, check getActorMoving, startScript(35)
   - Script 35 (object interaction) checks getObjectState, bails when no objects loaded
   - Interpreter scheduler handles cooperative multitasking correctly (321 breakHere yields per test)
-- [ ] Load room scripts (ENCD/EXCD/LSCR) on room change — currently only global scripts loaded
+- [x] Load room scripts (ENCD/EXCD/LSCR) on room change
+  - `loadRoomScripts`: seeks room script block in MSU-1, parses mini-header (ENCD/EXCD sizes, LSCR count+numbers+sizes), copies all bytecodes into $7F cache via `copyMsuToCache` helper
+  - `killRoomScripts`: kills all non-GLOBAL slots on room change (iterates 25 slots, checks `where` field)
+  - `startEncdSlot`: auto-starts ENCD in a dead slot with `where=ROOM`
+  - `startScriptSlot` extended: scripts >= 200 routed to LSCR table lookup instead of MSU-1 global index
+  - LSCR table: 56 entries (scripts 200-255), each with cachePtr + cacheLen, populated from block header
+  - processRoomChange flow: room.load → killRoomScripts → flush cache → loadRoomScripts → startEncdSlot
+  - Cache expanded 16→32KB ($7F:5000-$7F:CFFF) — room 35's script block is 19KB
+  - Cache flush on room change: acceptable for now (ENCD re-launches needed globals via startScript)
+  - Verified: room 1 ENCD=366B, EXCD=74B, 2 LSCRs (200=89B, 201=300B), ENCD running in slot
+  - First new stub hit: `stopSound` (0x3C) — ENCD tries to stop a sound on room entry
 - [ ] Implement basic actor placement (putActor, walkActorTo)
 - [ ] Resource loader: extend script cache beyond linear allocator (LRU eviction)
 
@@ -766,7 +776,9 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 **Key architectural decisions made during Phase 1:**
 - **Single OOP object for VM**: ScummVM is a Singleton class. Its `play()` method runs the full 25-slot scheduler once per frame. This keeps the SCUMM world encapsulated — one object manages all script slots, variables, and cache state.
 - **256-entry dispatch table (not 105)**: The opcode byte space is irregular — flag bits are mixed with the base opcode. A full 256-entry table (512 bytes ROM) avoids the mask+lookup overhead on every opcode. Python tool generates it; updating is trivial.
-- **$7F:5000 script cache (16KB)**: Linear allocator, flushed on room change. Bytecode read byte-by-byte from MSU-1 (MSU_DATA port is single-byte). Cache pointer stored per slot. Simple and sufficient for boot; LRU eviction can be added later without changing the slot structure.
+- **$7F:5000 script cache (32KB)**: Linear allocator, flushed on room change. Bytecode read byte-by-byte from MSU-1 (MSU_DATA port is single-byte). Cache pointer stored per slot. Expanded from 16→32KB to accommodate room 35's 19KB script block. Simple and sufficient; LRU eviction can be added later without changing the slot structure.
+- **Room script loading on room change**: processRoomChange kills non-global slots, flushes the script cache, then loads room scripts (ENCD/EXCD/LSCR) from MSU-1. ENCD auto-starts. Cache flush means global scripts must be re-loaded on demand — acceptable because ENCD typically calls `startScript()` to re-launch needed globals. EXCD execution on room exit deferred for now.
+- **Slot WHERE tracking**: Each slot has a `where` byte: 0=GLOBAL, 1=LOCAL, 2=ROOM. Used by `killRoomScripts` to selectively kill room/local scripts while preserving globals. `startScriptSlot` routes scripts >= 200 to the LSCR table lookup path.
 - **WRAM layout**: ~3.6KB in bank $7E for VM state. Struct-based slot layout (64 bytes/slot × 25 = 1600B). Global vars at $7E:6000, bit vars at $7E:7D1A, slots at $7E:6640. All addresses resolved by wla-dx linker — no hardcoded offsets.
 - **XBA word-read pattern for MSU-1**: Reading 16-bit LE values from MSU_DATA one byte at a time: `sep #$20; lda MSU_DATA; xba; lda MSU_DATA; xba; rep #$20` builds a 16-bit word. Avoids wla-dx ramsection `symbol+1` arithmetic (which evaluates full 24-bit address → linker error).
 - **level1.script replaced**: The Phase 0 room browser test harness is gone. Boot now creates ScummVM object, which reads MSU-1 script headers and starts MI1 boot script 1.
@@ -785,8 +797,9 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - SCUMM.bgInitDone uninitialized — garbage non-zero value skipped PPU register setup entirely
 - Brightness singleton at 0 — level1.script created Brightness but never set it to FULL
 - actorOps handler restructured to group sub-opcodes by parameter count (fixed branch distance errors)
+- loadGlobalScript refactored: extracted `copyMsuToCache` helper (reused by room script loader). loadGlobalScript's inline copy loop replaced with helper call, stack cleanup simplified.
 
-**Success Criteria:** PARTIALLY MET — ROM boots, runs MI1's boot script (script 1), loads room 1 (beach), displays room background correctly. 0 unimplemented opcode hits. Cooperative script scheduling works. Room loading integration with Phase 0 pipeline verified. Still needed: room scripts (ENCD/EXCD/LSCR), actor placement, and more opcodes for gameplay progression.
+**Success Criteria:** PARTIALLY MET — ROM boots, runs MI1's boot script (script 1), loads room 1 (beach), displays room background correctly. Cooperative script scheduling works. Room loading integration with Phase 0 pipeline verified. Room scripts (ENCD/EXCD/LSCR) loaded from MSU-1 on room change; ENCD auto-starts and runs until `stopSound` stub. Still needed: sound stubs, actor placement, and more opcodes for full room initialization.
 
 ### Phase 2: Walking and Talking (10-12 weeks)
 

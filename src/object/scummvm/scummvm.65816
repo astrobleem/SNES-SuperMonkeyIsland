@@ -64,6 +64,21 @@ _init.zeroBits:
   stz.w SCUMM.currentRoom
   stz.w SCUMM.newRoom
   stz.w SCUMM.bgInitDone
+  stz.w SCUMM.roomEncdPtr
+  stz.w SCUMM.roomEncdLen
+  stz.w SCUMM.roomExcdPtr
+  stz.w SCUMM.roomExcdLen
+  stz.w SCUMM.roomLscrCount
+
+  ;zero LSCR table (56 * 4 = 224 bytes)
+  ldx #0
+  lda #0
+_init.zeroLscr:
+  sta.w SCUMM.roomLscrTable,x
+  inx
+  inx
+  cpx #_sizeof_lscrEntry * SCUMM_LSCR_MAX
+  bcc _init.zeroLscr
 
   ;zero script cache in $7F
   ldx #0
@@ -322,6 +337,23 @@ _prc.bgReady:
   lda.w SCUMM.newRoom
   jsr room.load
   bcc _prc.failed
+
+  ; Kill old room/local script slots
+  jsr _scummvm.killRoomScripts
+
+  ; Flush cache (global scripts reload on demand)
+  stz.w SCUMM.cacheWritePtr
+
+  ; Load room scripts (ENCD/EXCD/LSCR) from MSU-1
+  lda.w SCUMM.newRoom
+  jsr _scummvm.loadRoomScripts
+  bcc _prc.noEncd
+
+  ; Auto-start ENCD if present
+  lda.w SCUMM.roomEncdLen
+  beq _prc.noEncd
+  jsr _scummvm.startEncdSlot
+_prc.noEncd:
 
   ; Update current room + SCUMM variable
   lda.w SCUMM.newRoom
@@ -627,6 +659,51 @@ _writeVar.local:
 ;===================================================================
 
 ;-------------------------------------------------------------------
+; _scummvm.copyMsuToCache -- copy bytes from MSU-1 into $7F cache
+; Input: A = byte count to copy
+; Assumes: MSU-1 data port is already seeked to correct position
+; Uses cacheWritePtr as destination offset (updated on return)
+; Output: A = cachePtr where data was written, X = byte count
+; Clobbers: SCUMM.scratch, SCUMM.scratch2
+;-------------------------------------------------------------------
+_scummvm.copyMsuToCache:
+  sta.w SCUMM.scratch           ; scratch = byte count
+
+  ; Save starting cacheWritePtr (= destination offset)
+  lda.w SCUMM.cacheWritePtr
+  sta.w SCUMM.scratch2          ; scratch2 = cachePtr result
+
+  ; X = destination offset into $7F bank
+  ldx.w SCUMM.cacheWritePtr
+
+  ; Copy loop: read MSU_DATA byte-by-byte into $7F cache
+  phy
+  ldy.w SCUMM.scratch           ; Y = remaining count
+  beq _copyMsu.done
+_copyMsu.loop:
+  sep #$20
+  lda.l MSU_DATA
+  sta.l SCUMM_CACHE_WRAM,x
+  rep #$20
+  inx
+  dey
+  bne _copyMsu.loop
+_copyMsu.done:
+  ply
+
+  ; Update cacheWritePtr
+  lda.w SCUMM.cacheWritePtr
+  clc
+  adc.w SCUMM.scratch
+  sta.w SCUMM.cacheWritePtr
+
+  ; Return: A = cachePtr, X = byte count
+  lda.w SCUMM.scratch2
+  ldx.w SCUMM.scratch
+  rts
+
+
+;-------------------------------------------------------------------
 ; _scummvm.loadGlobalScript -- load a global script into cache
 ; Input: A = script number (0-based)
 ; Output: A = cachePtr (offset within cache), X = size
@@ -703,45 +780,18 @@ _loadGlobal.exists:
   stz.w SCUMM.cacheWritePtr
 
 _loadGlobal.cacheOk:
-  lda.w SCUMM.cacheWritePtr
-  pha                         ;push cachePtr
-
   ; Seek to script data
-  lda 5,s
+  lda 3,s
   tax                 ;X = offset_hi (high 16 bits)
-  lda 7,s             ;A = offset_lo (low 16 bits)
+  lda 5,s             ;A = offset_lo (low 16 bits)
   jsr room.msu1Seek
 
-  ; Read bytecode into $7F cache
-  lda 1,s
-  tax
+  ; Copy bytecode from MSU-1 into cache via helper
   lda.w SCUMM.scratch
-  sta.w SCUMM.scratch2
+  jsr _scummvm.copyMsuToCache
+  ; A = cachePtr, X = byte count
 
-_loadGlobal.copyLoop:
-  lda.w SCUMM.scratch2
-  beq _loadGlobal.copyDone
-  dec a
-  sta.w SCUMM.scratch2
-  sep #$20
-  lda.l MSU_DATA
-  sta.l SCUMM_CACHE_WRAM,x
-  rep #$20
-  inx
-  bra _loadGlobal.copyLoop
-
-_loadGlobal.copyDone:
-  rep #$20
-
-  ; Update cacheWritePtr
-  pla
-  pha
-  clc
-  adc.w SCUMM.scratch
-  sta.w SCUMM.cacheWritePtr
-
-  ; Clean up stack and return
-  pla
+  ; Clean up stack (size_lo, offset_hi, offset_lo)
   sta.w SCUMM.scratch2
   pla
   pla
@@ -779,9 +829,14 @@ _startScript.findSlot:
   rts
 
 _startScript.foundSlot:
-  phx
+  phx                             ; save slot offset
 
-  ; Save script number (loadGlobalScript clobbers SCUMM.scratch)
+  ; Check if LSCR (script number >= 200)
+  lda.w SCUMM.scratch
+  cmp #SCUMM_LSCR_BASE
+  bcs _startScript.local
+
+  ;--- Global script path ---
   lda.w SCUMM.scratch
   pha                           ;push script number
 
@@ -792,35 +847,65 @@ _startScript.foundSlot:
 
   ; Check if script was found
   cpx #0
-  bne _startScript.init
+  bne _startScript.globalInit
 
   pla                           ;discard saved script number
   plx
   rts
 
-_startScript.init:
-  sta.w SCUMM.scratch2
+_startScript.globalInit:
+  ; A = cachePtr, X = size (from loadGlobalScript)
+  sta.w SCUMM.scratch2          ; scratch2 = cachePtr
+  stx.w SCUMM.scratch           ; scratch = cacheLen
   pla                           ;A = saved script number
-  sta.w SCUMM.scratch           ;restore script number
-  plx
+  plx                           ;X = slot offset
+  ldy #SCUMM_WHERE_GLOBAL
+  bra _startScript.initSlot
 
-  ; Initialize slot
+  ;--- Local (LSCR) script path ---
+_startScript.local:
+  ; SCUMM.scratch = script number (>= 200)
+  lda.w SCUMM.scratch
+  pha                           ;push script number (for initSlot)
+  sec
+  sbc #SCUMM_LSCR_BASE          ; table index (0-55)
+  asl a
+  asl a                          ; * 4 = byte offset into lscrEntry table
+  tax
+  lda.w SCUMM.roomLscrTable.cacheLen,x
+  beq _startScript.localNone     ; cacheLen == 0 → not loaded, bail
+  sta.w SCUMM.scratch            ; scratch = cacheLen
+  lda.w SCUMM.roomLscrTable.cachePtr,x
+  sta.w SCUMM.scratch2           ; scratch2 = cachePtr
+
+  pla                            ;A = script number
+  plx                            ;X = slot offset (from foundSlot push)
+  ldy #SCUMM_WHERE_LOCAL
+  bra _startScript.initSlot
+
+_startScript.localNone:
+  pla                            ; discard script number
+  plx                            ; discard slot offset
+  rts
+
+  ;--- Common slot initialization ---
+  ; A = script number, X = slot byte offset, Y = WHERE value
+  ; SCUMM.scratch2 = cachePtr, SCUMM.scratch = cacheLen
+_startScript.initSlot:
   sep #$20
+  sta.w SCUMM.slots.number,x
   lda #SCUMM_SLOT_RUNNING
   sta.w SCUMM.slots.status,x
-  lda.w SCUMM.scratch
-  sta.w SCUMM.slots.number,x
-  lda #0
+  tya
   sta.w SCUMM.slots.where,x
+  lda #0
   sta.w SCUMM.slots.freezeCount,x
   sta.w SCUMM.slots.cutsceneOverride,x
   rep #$20
 
   lda.w SCUMM.scratch2
   sta.w SCUMM.slots.cachePtr,x
-  lda.w SCUMM.cacheWritePtr
-  sec
-  sbc.w SCUMM.scratch2
+  lda.w SCUMM.scratch
   sta.w SCUMM.slots.cacheLen,x
 
   lda #0
@@ -840,6 +925,278 @@ _startScript.zeroLocals:
   plx
 
   rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.killRoomScripts -- kill all slots with where != GLOBAL
+; Preserves Y (SCUMM PC)
+;-------------------------------------------------------------------
+_scummvm.killRoomScripts:
+  phx
+  phy
+  ldx #0
+  ldy #0
+_killRoom.loop:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _killRoom.next
+  lda.w SCUMM.slots.where,x
+  and #$00FF
+  beq _killRoom.next             ; where == 0 (GLOBAL) → keep
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+_killRoom.next:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _killRoom.loop
+  ply
+  plx
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.loadRoomScripts -- load ENCD/EXCD/LSCR from MSU-1
+; Input: A = room number
+; Output: carry set = scripts loaded, carry clear = none
+; Clobbers: A, X, scratch/scratch2
+;-------------------------------------------------------------------
+_scummvm.loadRoomScripts:
+  rep #$31
+  sta.w SCUMM.scratch
+
+  ;--- Zero LSCR table + ENCD/EXCD pointers ---
+  stz.w SCUMM.roomEncdPtr
+  stz.w SCUMM.roomEncdLen
+  stz.w SCUMM.roomExcdPtr
+  stz.w SCUMM.roomExcdLen
+  stz.w SCUMM.roomLscrCount
+  phx
+  ldx #0
+  lda #0
+_loadRoom.zeroTable:
+  sta.w SCUMM.roomLscrTable,x
+  inx
+  inx
+  cpx #_sizeof_lscrEntry * SCUMM_LSCR_MAX
+  bcc _loadRoom.zeroTable
+  plx
+
+  ;--- Seek to room index entry: roomIndexOffset + room * 8 ---
+  lda.w SCUMM.scratch
+  asl a
+  asl a
+  asl a                          ; room * 8
+  clc
+  adc.w SCUMM.roomIndexLo
+  sta.w SCUMM.scratch2
+  lda #0
+  adc.w SCUMM.roomIndexHi
+  tax
+  lda.w SCUMM.scratch2
+  phy
+  jsr room.msu1Seek
+  ply
+
+  ;--- Read 8-byte index entry: offset32 + size32 ---
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  pha                            ;push offset_lo
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  pha                            ;push offset_hi
+  ; Read size32 (discard — we parse the block header instead)
+  sep #$20
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  lda.l MSU_DATA
+  rep #$20
+
+  ; Stack: [offset_hi] [offset_lo]
+  ; Check for null entry (offset == 0)
+  lda 3,s
+  ora 1,s
+  bne _loadRoom.exists
+
+  ; No scripts for this room
+  pla
+  pla
+  clc
+  rts
+
+_loadRoom.exists:
+  ;--- Seek to room script block ---
+  lda 1,s                        ;offset_hi
+  tax
+  lda 3,s                        ;offset_lo
+  phy
+  jsr room.msu1Seek
+  ply
+  pla                            ;discard offset_hi
+  pla                            ;discard offset_lo
+
+  ;--- Read block header ---
+  ; encd_size (LE16)
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomEncdLen
+
+  ; excd_size (LE16)
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomExcdLen
+
+  ; lscr_count (u8) + reserved (u8)
+  sep #$20
+  lda.l MSU_DATA
+  rep #$20
+  and #$00FF
+  sta.w SCUMM.roomLscrCount
+  sep #$20
+  lda.l MSU_DATA                 ;drain reserved byte
+  rep #$20
+
+  ;--- Read per-LSCR header entries ---
+  ; For each LSCR: number(u8) + size(LE16) → store in table
+  lda.w SCUMM.roomLscrCount
+  beq _loadRoom.copyEncd
+  pha                            ;push remaining count
+_loadRoom.lscrHdr:
+  ; Read lscr_number (u8)
+  sep #$20
+  lda.l MSU_DATA
+  rep #$20
+  and #$00FF
+  sec
+  sbc #SCUMM_LSCR_BASE           ; table index (0-55)
+  asl a
+  asl a                           ; * 4 byte offset
+  tax
+
+  ; Read lscr_size (LE16)
+  sep #$20
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+  sta.w SCUMM.roomLscrTable.cacheLen,x
+
+  lda 1,s
+  dec a
+  sta 1,s
+  bne _loadRoom.lscrHdr
+  pla                            ;discard count
+
+_loadRoom.copyEncd:
+  ;--- Copy ENCD from MSU → cache ---
+  lda.w SCUMM.roomEncdLen
+  beq _loadRoom.copyExcd
+  lda.w SCUMM.cacheWritePtr
+  sta.w SCUMM.roomEncdPtr
+  lda.w SCUMM.roomEncdLen
+  jsr _scummvm.copyMsuToCache
+
+_loadRoom.copyExcd:
+  ;--- Copy EXCD from MSU → cache ---
+  lda.w SCUMM.roomExcdLen
+  beq _loadRoom.copyLscr
+  lda.w SCUMM.cacheWritePtr
+  sta.w SCUMM.roomExcdPtr
+  lda.w SCUMM.roomExcdLen
+  jsr _scummvm.copyMsuToCache
+
+_loadRoom.copyLscr:
+  ;--- Copy LSCR bytecodes from MSU → cache ---
+  ; LSCRs are stored in number-ascending order in MSU, matching table iteration
+  phx
+  ldx #0
+_loadRoom.lscrLoop:
+  cpx #_sizeof_lscrEntry * SCUMM_LSCR_MAX
+  bcs _loadRoom.lscrDone
+  lda.w SCUMM.roomLscrTable.cacheLen,x
+  beq _loadRoom.lscrNext          ; no entry at this index
+  ; Save table offset, copy this LSCR
+  phx
+  lda.w SCUMM.cacheWritePtr
+  sta.w SCUMM.scratch2            ; save cachePtr for this entry
+  lda.w SCUMM.roomLscrTable.cacheLen,x
+  jsr _scummvm.copyMsuToCache
+  ; Write cachePtr back into the table
+  plx
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.roomLscrTable.cachePtr,x
+_loadRoom.lscrNext:
+  inx
+  inx
+  inx
+  inx                              ; next lscrEntry (4 bytes)
+  bra _loadRoom.lscrLoop
+_loadRoom.lscrDone:
+  plx
+
+  sec                              ; success
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.startEncdSlot -- start ENCD script in a new slot
+; Uses roomEncdPtr/roomEncdLen. Finds dead slot, inits as ROOM.
+;-------------------------------------------------------------------
+_scummvm.startEncdSlot:
+  rep #$31
+
+  ; Find a dead slot
+  ldx #0
+  ldy #0
+_startEncd.findSlot:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _startEncd.found
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _startEncd.findSlot
+  rts                              ; no free slot
+
+_startEncd.found:
+  ; X = slot byte offset
+  ; Set up SCUMM.scratch2 = cachePtr, SCUMM.scratch = cacheLen
+  lda.w SCUMM.roomEncdPtr
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.roomEncdLen
+  sta.w SCUMM.scratch
+  ; A = 0 (ENCD script number), Y = WHERE_ROOM
+  lda #0
+  ldy #SCUMM_WHERE_ROOM
+  jmp _startScript.initSlot
 
 
 ;-------------------------------------------------------------------

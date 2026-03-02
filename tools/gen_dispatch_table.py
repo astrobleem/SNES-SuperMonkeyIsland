@@ -76,6 +76,28 @@ IMPLEMENTED = {
     'getActorX':        'op_getActorX',
     'getActorY':        'op_getActorY',
     'actorOps':         'op_actorOps',
+    # Sound stubs (no-op, consume params)
+    'stopSound':        'op_stopSound',
+    'startSound':       'op_startSound',
+    'startMusic':       'op_startMusic',
+    'stopMusic':        'op_stopMusic',
+    'isSoundRunning':   'op_isSoundRunning',
+    'soundKludge':      'op_soundKludge',
+    # Object stubs
+    'setClass':         'op_setClass',
+    'drawObject':       'op_drawObject',
+    # Room stubs
+    'matrixOps':        'op_matrixOps',
+    'roomOps':          'op_roomOps',
+    'loadRoomWithEgo':  'op_loadRoomWithEgo',
+    # Actor stubs
+    'animateActor':     'op_animateActor',
+    'faceActor':        'op_faceActor',
+    'walkActorToActor': 'op_walkActorToActor',
+    'walkActorTo':      'op_walkActorTo',
+    'isActorInBox':     'op_isActorInBox',
+    # Wait stub
+    'wait':             'op_wait',
     # Print/verb/sentence/object/string stubs (consume params, no-op)
     'print':            'op_print',
     'printEgo':         'op_printEgo',
@@ -84,6 +106,42 @@ IMPLEMENTED = {
     'startObject':      'op_startObject',
     'stringOps':        'op_stringOps',
     'saveRestoreVerbs': 'op_saveRestoreVerbs',
+    # Conditional stubs
+    'ifState':          'op_ifState',
+    'ifNotState':       'op_ifNotState',
+    # Getter stubs (result + p8[7] → return 0)
+    'getActorElevation':  'op_getActorElevation',
+    'getAnimCounter':     'op_getAnimCounter',
+    'getActorScale':      'op_getActorScale',
+    'getActorFacing':     'op_getActorFacing',
+    'getActorWidth':      'op_getActorWidth',
+    'getActorCostume':    'op_getActorCostume',
+    'getActorWalkBox':    'op_getActorWalkBox',
+    'getInventoryCount':  'op_getInventoryCount',
+    'getRandomNr':        'op_getRandomNr',
+    'getStringWidth':     'op_getStringWidth',
+    # Getter stubs (other patterns)
+    'getClosestObjActor': 'op_getClosestObjActor',
+    'getDist':            'op_getDist',
+    'getVerbEntrypoint':  'op_getVerbEntrypoint',
+    'actorFromPos':       'op_actorFromPos',
+    'findObject':         'op_findObject',
+    'findInventory':      'op_findInventory',
+    # Actor action stubs
+    'actorFollowCamera':  'op_actorFollowCamera',
+    'putActorAtObject':   'op_putActorAtObject',
+    'walkActorToObject':  'op_walkActorToObject',
+    'pickupObject':       'op_pickupObject',
+    'pickupObjectOld':    'op_pickupObjectOld',
+    # Arithmetic stubs
+    'multiply':           'op_multiply',
+    'divide':             'op_divide',
+    # Complex stubs
+    'ifClassOfIs':        'op_ifClassOfIs',
+    'setObjectName':      'op_setObjectName',
+    'drawBox':            'op_drawBox',
+    'oldRoomEffect':      'op_oldRoomEffect',
+    'pseudoRoom':         'op_pseudoRoom',
 }
 
 

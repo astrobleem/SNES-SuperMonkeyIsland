@@ -78,10 +78,11 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - All 748 scripts packed into MSU-1 data (380 KB bytecode, indexed by script number and room)
 - Pipeline: `msu1_pack_rooms.py` → `msu1_pack_scripts.py` → 2.89 MB data pack
 - **Dispatch engine built** — 256-entry jump table, per-frame scheduler for 25 concurrent script slots
-- 51 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables, room loading, actor stubs, resource stubs, and more
+- 67 opcode handlers implemented: control flow, conditionals, arithmetic, script management, variables, room loading, sound stubs, actor stubs, object/room stubs, and more
 - Variable system: 800 global vars, 25 local vars per slot, 2048 bit vars
 - 32 KB script cache in bank $7F with MSU-1 on-demand loading
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
 - **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly with 0 unimplemented opcode hits
 - **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Room 1 verified: ENCD 366B, EXCD 74B, LSCR 200 (89B), LSCR 201 (300B). Local scripts (200+) routed via LSCR table lookup in startScriptSlot.
-- Next: implement `stopSound` opcode (first ENCD stub hit), actor system, verb bar
+- **ENCD/LSCR execute to completion** — 16 new opcode stubs (sound, actor, object, room) allow room 1 scripts to run with 0 stub hits
+- Next: implement remaining opcodes for room transitions, verb bar, actor system

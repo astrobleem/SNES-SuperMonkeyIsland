@@ -5,22 +5,22 @@
 _scummvm.dispatchTable:
   .dw op_stopObjectCode            ; $00 stopObjectCode
   .dw op_putActor                  ; $01 putActor
-  .dw op_stub                      ; $02 startMusic
+  .dw op_startMusic                 ; $02 startMusic
   .dw op_getActorRoom              ; $03 getActorRoom
   .dw op_isGreaterEqual            ; $04 isGreaterEqual
-  .dw op_stub                      ; $05 drawObject
+  .dw op_drawObject                 ; $05 drawObject
   .dw op_stub                      ; $06 getActorElevation
   .dw op_setState                  ; $07 setState
   .dw op_isNotEqual                ; $08 isNotEqual
-  .dw op_stub                      ; $09 faceActor
+  .dw op_faceActor                  ; $09 faceActor
   .dw op_startScript               ; $0A startScript
   .dw op_stub                      ; $0B getVerbEntrypoint
   .dw op_resourceRoutines          ; $0C resourceRoutines
-  .dw op_stub                      ; $0D walkActorToActor
+  .dw op_walkActorToActor            ; $0D walkActorToActor
   .dw op_stub                      ; $0E putActorAtObject
   .dw op_getObjectState            ; $0F getObjectState
   .dw op_getObjectOwner            ; $10 getObjectOwner
-  .dw op_stub                      ; $11 animateActor
+  .dw op_animateActor                ; $11 animateActor
   .dw op_panCameraTo               ; $12 panCameraTo
   .dw op_actorOps                  ; $13 actorOps
   .dw op_stub                      ; $14 print
@@ -31,15 +31,15 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $19 doSentence
   .dw op_move                      ; $1A move
   .dw op_stub                      ; $1B multiply
-  .dw op_stub                      ; $1C startSound
+  .dw op_startSound                 ; $1C startSound
   .dw op_stub                      ; $1D ifClassOfIs
-  .dw op_stub                      ; $1E walkActorTo
-  .dw op_stub                      ; $1F isActorInBox
-  .dw op_stub                      ; $20 stopMusic
+  .dw op_walkActorTo                 ; $1E walkActorTo
+  .dw op_isActorInBox                ; $1F isActorInBox
+  .dw op_stopMusic                  ; $20 stopMusic
   .dw op_putActor                  ; $21 putActor
   .dw op_stub                      ; $22 getAnimCounter
   .dw op_getActorY                 ; $23 getActorY
-  .dw op_stub                      ; $24 loadRoomWithEgo
+  .dw op_loadRoomWithEgo             ; $24 loadRoomWithEgo
   .dw op_stub                      ; $25 pickupObject
   .dw op_setVarRange               ; $26 setVarRange
   .dw op_stub                      ; $27 stringOps
@@ -51,10 +51,10 @@ _scummvm.dispatchTable:
   .dw op_putActorInRoom            ; $2D putActorInRoom
   .dw op_delay                     ; $2E delay
   .dw op_stub                      ; $2F ifNotState
-  .dw op_stub                      ; $30 matrixOps
+  .dw op_matrixOps                  ; $30 matrixOps
   .dw op_stub                      ; $31 getInventoryCount
   .dw op_setCameraAt               ; $32 setCameraAt
-  .dw op_stub                      ; $33 roomOps
+  .dw op_roomOps                    ; $33 roomOps
   .dw op_stub                      ; $34 getDist
   .dw op_stub                      ; $35 findObject
   .dw op_stub                      ; $36 walkActorToObject
@@ -63,28 +63,28 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $39 doSentence
   .dw op_subtract                  ; $3A subtract
   .dw op_stub                      ; $3B getActorScale
-  .dw op_stub                      ; $3C stopSound
+  .dw op_stopSound                  ; $3C stopSound
   .dw op_stub                      ; $3D findInventory
-  .dw op_stub                      ; $3E walkActorTo
+  .dw op_walkActorTo                 ; $3E walkActorTo
   .dw op_stub                      ; $3F drawBox
   .dw op_cutscene                  ; $40 cutscene
   .dw op_putActor                  ; $41 putActor
   .dw op_chainScript               ; $42 chainScript
   .dw op_getActorX                 ; $43 getActorX
   .dw op_isLess                    ; $44 isLess
-  .dw op_stub                      ; $45 drawObject
+  .dw op_drawObject                 ; $45 drawObject
   .dw op_increment                 ; $46 increment
   .dw op_setState                  ; $47 setState
   .dw op_isEqual                   ; $48 isEqual
-  .dw op_stub                      ; $49 faceActor
+  .dw op_faceActor                  ; $49 faceActor
   .dw op_startScript               ; $4A startScript
   .dw op_stub                      ; $4B getVerbEntrypoint
-  .dw op_stub                      ; $4C soundKludge
-  .dw op_stub                      ; $4D walkActorToActor
+  .dw op_soundKludge                ; $4C soundKludge
+  .dw op_walkActorToActor            ; $4D walkActorToActor
   .dw op_stub                      ; $4E putActorAtObject
   .dw op_stub                      ; $4F ifState
   .dw op_stub                      ; $50 pickupObjectOld
-  .dw op_stub                      ; $51 animateActor
+  .dw op_animateActor                ; $51 animateActor
   .dw op_stub                      ; $52 actorFollowCamera
   .dw op_actorOps                  ; $53 actorOps
   .dw op_stub                      ; $54 setObjectName
@@ -96,14 +96,14 @@ _scummvm.dispatchTable:
   .dw op_add                       ; $5A add
   .dw op_stub                      ; $5B divide
   .dw op_stub                      ; $5C oldRoomEffect
-  .dw op_stub                      ; $5D setClass
-  .dw op_stub                      ; $5E walkActorTo
-  .dw op_stub                      ; $5F isActorInBox
+  .dw op_setClass                   ; $5D setClass
+  .dw op_walkActorTo                 ; $5E walkActorTo
+  .dw op_isActorInBox                ; $5F isActorInBox
   .dw op_freezeScripts             ; $60 freezeScripts
   .dw op_putActor                  ; $61 putActor
   .dw op_stopScript                ; $62 stopScript
   .dw op_stub                      ; $63 getActorFacing
-  .dw op_stub                      ; $64 loadRoomWithEgo
+  .dw op_loadRoomWithEgo             ; $64 loadRoomWithEgo
   .dw op_stub                      ; $65 pickupObject
   .dw op_stub                      ; $66 getClosestObjActor
   .dw op_stub                      ; $67 getStringWidth
@@ -118,7 +118,7 @@ _scummvm.dispatchTable:
   .dw op_lights                    ; $70 lights
   .dw op_stub                      ; $71 getActorCostume
   .dw op_loadRoom                  ; $72 loadRoom
-  .dw op_stub                      ; $73 roomOps
+  .dw op_roomOps                    ; $73 roomOps
   .dw op_stub                      ; $74 getDist
   .dw op_stub                      ; $75 findObject
   .dw op_stub                      ; $76 walkActorToObject
@@ -127,28 +127,28 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $79 doSentence
   .dw op_stub                      ; $7A verbOps
   .dw op_stub                      ; $7B getActorWalkBox
-  .dw op_stub                      ; $7C isSoundRunning
+  .dw op_isSoundRunning              ; $7C isSoundRunning
   .dw op_stub                      ; $7D findInventory
-  .dw op_stub                      ; $7E walkActorTo
+  .dw op_walkActorTo                 ; $7E walkActorTo
   .dw op_stub                      ; $7F drawBox
   .dw op_breakHere                 ; $80 breakHere
   .dw op_putActor                  ; $81 putActor
-  .dw op_stub                      ; $82 startMusic
+  .dw op_startMusic                 ; $82 startMusic
   .dw op_getActorRoom              ; $83 getActorRoom
   .dw op_isGreaterEqual            ; $84 isGreaterEqual
-  .dw op_stub                      ; $85 drawObject
+  .dw op_drawObject                 ; $85 drawObject
   .dw op_stub                      ; $86 getActorElevation
   .dw op_setState                  ; $87 setState
   .dw op_isNotEqual                ; $88 isNotEqual
-  .dw op_stub                      ; $89 faceActor
+  .dw op_faceActor                  ; $89 faceActor
   .dw op_startScript               ; $8A startScript
   .dw op_stub                      ; $8B getVerbEntrypoint
   .dw op_resourceRoutines          ; $8C resourceRoutines
-  .dw op_stub                      ; $8D walkActorToActor
+  .dw op_walkActorToActor            ; $8D walkActorToActor
   .dw op_stub                      ; $8E putActorAtObject
   .dw op_getObjectState            ; $8F getObjectState
   .dw op_getObjectOwner            ; $90 getObjectOwner
-  .dw op_stub                      ; $91 animateActor
+  .dw op_animateActor                ; $91 animateActor
   .dw op_panCameraTo               ; $92 panCameraTo
   .dw op_actorOps                  ; $93 actorOps
   .dw op_stub                      ; $94 print
@@ -159,15 +159,15 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $99 doSentence
   .dw op_move                      ; $9A move
   .dw op_stub                      ; $9B multiply
-  .dw op_stub                      ; $9C startSound
+  .dw op_startSound                 ; $9C startSound
   .dw op_stub                      ; $9D ifClassOfIs
-  .dw op_stub                      ; $9E walkActorTo
-  .dw op_stub                      ; $9F isActorInBox
+  .dw op_walkActorTo                 ; $9E walkActorTo
+  .dw op_isActorInBox                ; $9F isActorInBox
   .dw op_stopObjectCode            ; $A0 stopObjectCode
   .dw op_putActor                  ; $A1 putActor
   .dw op_stub                      ; $A2 getAnimCounter
   .dw op_getActorY                 ; $A3 getActorY
-  .dw op_stub                      ; $A4 loadRoomWithEgo
+  .dw op_loadRoomWithEgo             ; $A4 loadRoomWithEgo
   .dw op_stub                      ; $A5 pickupObject
   .dw op_setVarRange               ; $A6 setVarRange
   .dw op_dummy                     ; $A7 dummy
@@ -177,12 +177,12 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $AB saveRestoreVerbs
   .dw op_expression                ; $AC expression
   .dw op_putActorInRoom            ; $AD putActorInRoom
-  .dw op_stub                      ; $AE wait
+  .dw op_wait                       ; $AE wait
   .dw op_stub                      ; $AF ifNotState
-  .dw op_stub                      ; $B0 matrixOps
+  .dw op_matrixOps                  ; $B0 matrixOps
   .dw op_stub                      ; $B1 getInventoryCount
   .dw op_setCameraAt               ; $B2 setCameraAt
-  .dw op_stub                      ; $B3 roomOps
+  .dw op_roomOps                    ; $B3 roomOps
   .dw op_stub                      ; $B4 getDist
   .dw op_stub                      ; $B5 findObject
   .dw op_stub                      ; $B6 walkActorToObject
@@ -191,28 +191,28 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $B9 doSentence
   .dw op_subtract                  ; $BA subtract
   .dw op_stub                      ; $BB getActorScale
-  .dw op_stub                      ; $BC stopSound
+  .dw op_stopSound                  ; $BC stopSound
   .dw op_stub                      ; $BD findInventory
-  .dw op_stub                      ; $BE walkActorTo
+  .dw op_walkActorTo                 ; $BE walkActorTo
   .dw op_stub                      ; $BF drawBox
   .dw op_endCutscene               ; $C0 endCutscene
   .dw op_putActor                  ; $C1 putActor
   .dw op_chainScript               ; $C2 chainScript
   .dw op_getActorX                 ; $C3 getActorX
   .dw op_isLess                    ; $C4 isLess
-  .dw op_stub                      ; $C5 drawObject
+  .dw op_drawObject                 ; $C5 drawObject
   .dw op_decrement                 ; $C6 decrement
   .dw op_setState                  ; $C7 setState
   .dw op_isEqual                   ; $C8 isEqual
-  .dw op_stub                      ; $C9 faceActor
+  .dw op_faceActor                  ; $C9 faceActor
   .dw op_startScript               ; $CA startScript
   .dw op_stub                      ; $CB getVerbEntrypoint
   .dw op_stub                      ; $CC pseudoRoom
-  .dw op_stub                      ; $CD walkActorToActor
+  .dw op_walkActorToActor            ; $CD walkActorToActor
   .dw op_stub                      ; $CE putActorAtObject
   .dw op_stub                      ; $CF ifState
   .dw op_stub                      ; $D0 pickupObjectOld
-  .dw op_stub                      ; $D1 animateActor
+  .dw op_animateActor                ; $D1 animateActor
   .dw op_stub                      ; $D2 actorFollowCamera
   .dw op_actorOps                  ; $D3 actorOps
   .dw op_stub                      ; $D4 setObjectName
@@ -224,14 +224,14 @@ _scummvm.dispatchTable:
   .dw op_add                       ; $DA add
   .dw op_stub                      ; $DB divide
   .dw op_stub                      ; $DC oldRoomEffect
-  .dw op_stub                      ; $DD setClass
-  .dw op_stub                      ; $DE walkActorTo
-  .dw op_stub                      ; $DF isActorInBox
+  .dw op_setClass                   ; $DD setClass
+  .dw op_walkActorTo                 ; $DE walkActorTo
+  .dw op_isActorInBox                ; $DF isActorInBox
   .dw op_freezeScripts             ; $E0 freezeScripts
   .dw op_putActor                  ; $E1 putActor
   .dw op_stopScript                ; $E2 stopScript
   .dw op_stub                      ; $E3 getActorFacing
-  .dw op_stub                      ; $E4 loadRoomWithEgo
+  .dw op_loadRoomWithEgo             ; $E4 loadRoomWithEgo
   .dw op_stub                      ; $E5 pickupObject
   .dw op_stub                      ; $E6 getClosestObjActor
   .dw op_stub                      ; $E7 getStringWidth
@@ -246,7 +246,7 @@ _scummvm.dispatchTable:
   .dw op_lights                    ; $F0 lights
   .dw op_stub                      ; $F1 getActorCostume
   .dw op_loadRoom                  ; $F2 loadRoom
-  .dw op_stub                      ; $F3 roomOps
+  .dw op_roomOps                    ; $F3 roomOps
   .dw op_stub                      ; $F4 getDist
   .dw op_stub                      ; $F5 findObject
   .dw op_stub                      ; $F6 walkActorToObject
@@ -255,8 +255,8 @@ _scummvm.dispatchTable:
   .dw op_stub                      ; $F9 doSentence
   .dw op_stub                      ; $FA verbOps
   .dw op_stub                      ; $FB getActorWalkBox
-  .dw op_stub                      ; $FC isSoundRunning
+  .dw op_isSoundRunning              ; $FC isSoundRunning
   .dw op_stub                      ; $FD findInventory
-  .dw op_stub                      ; $FE walkActorTo
+  .dw op_walkActorTo                 ; $FE walkActorTo
   .dw op_stub                      ; $FF drawBox
 

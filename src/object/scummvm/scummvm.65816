@@ -822,8 +822,8 @@ _loadGlobal.exists:
   cmp #SCUMM_CACHE_SIZE
   bcc _loadGlobal.cacheOk
 
-  ; Cache full -- reset
-  stz.w SCUMM.cacheWritePtr
+  ; Cache full -- fatal (was silent corruption)
+  TRIGGER_ERROR E_ScummVmCacheFull
 
 _loadGlobal.cacheOk:
   ; Seek to script data
@@ -1895,30 +1895,38 @@ op_expression:
 _expression.loop:
   jsr _scummvm.fetchByte
   cmp #$FF
-  beq _expression.end
+  bne _expression.notEnd
+  jmp _expression.end
+_expression.notEnd:
   sta.w SCUMM.scratch
 
   lda.w SCUMM.scratch
   and #$001F
-  cmp #$06
-  beq _expression.number
   cmp #$01
-  beq _expression.add
+  beq _expression.number         ; 0x01 = PUSH value
   cmp #$02
-  beq _expression.sub
+  beq _expression.add            ; 0x02 = ADD
   cmp #$03
-  beq _expression.mul
+  beq _expression.sub            ; 0x03 = SUB
   cmp #$04
-  beq _expression.div
+  beq _expression.mul            ; 0x04 = MUL
   cmp #$05
-  beq _expression.end
-  bra _expression.loop
+  beq _expression.div            ; 0x05 = DIV
+  bra _expression.loop           ; unknown sub-op → skip
 
 _expression.number:
+  lda.w SCUMM.currentOpcode
+  pha                              ; save real opcode
+  lda.w SCUMM.scratch
+  sta.w SCUMM.currentOpcode        ; set sub-opcode for flag check
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord
-  pha
-  bra _expression.loop
+  sta.w SCUMM.scratch2             ; save result
+  pla
+  sta.w SCUMM.currentOpcode        ; restore real opcode
+  lda.w SCUMM.scratch2
+  pha                              ; push value onto RPN stack
+  jmp _expression.loop
 
 _expression.add:
   pla
@@ -1927,7 +1935,7 @@ _expression.add:
   clc
   adc.w SCUMM.scratch2
   pha
-  bra _expression.loop
+  jmp _expression.loop
 
 _expression.sub:
   pla
@@ -1936,28 +1944,29 @@ _expression.sub:
   sec
   sbc.w SCUMM.scratch2
   pha
-  bra _expression.loop
+  jmp _expression.loop
 
 _expression.mul:
-  ; Placeholder: pop both, push product (just do 0 for now)
-  pla
+  pla                              ; B (second operand)
   sta.w SCUMM.scratch2
-  pla
+  pla                              ; A (first operand)
+  jsr _scummvm.mul16
   pha
-  bra _expression.loop
+  jmp _expression.loop
 
 _expression.div:
-  pla
+  pla                              ; divisor
   sta.w SCUMM.scratch2
-  pla
+  pla                              ; dividend
   ldx.w SCUMM.scratch2
   beq _expression.divZero
+  jsr _scummvm.div16
   pha
-  bra _expression.loop
+  jmp _expression.loop
 _expression.divZero:
   lda #0
   pha
-  bra _expression.loop
+  jmp _expression.loop
 
 _expression.end:
   pla
@@ -3309,6 +3318,131 @@ _pseudoRoom.done:
   clc
   rts
 
+
+;-------------------------------------------------------------------
+; _scummvm.mul16 -- signed 16x16 → 16 multiply (truncated)
+; Input: A = multiplicand, SCUMM.scratch2 = multiplier
+; Output: A = product (low 16 bits, signed)
+; Clobbers: SCUMM.scratch, SCUMM.scratch2
+;-------------------------------------------------------------------
+_scummvm.mul16:
+  phx
+  ; Sign = (A ^ scratch2) bit 15
+  sta.w SCUMM.scratch              ; save multiplicand
+  eor.w SCUMM.scratch2
+  and #$8000
+  tax                              ; X = sign flag (0 or $8000)
+  ; |multiplicand|
+  lda.w SCUMM.scratch
+  bpl _mul16.mndPos
+  eor #$FFFF
+  inc a
+_mul16.mndPos:
+  pha                              ; push |multiplicand| on stack
+  ; |multiplier|
+  lda.w SCUMM.scratch2
+  bpl _mul16.mplPos
+  eor #$FFFF
+  inc a
+_mul16.mplPos:
+  sta.w SCUMM.scratch2             ; scratch2 = |multiplier| (shifts right)
+  ; result = 0
+  stz.w SCUMM.scratch              ; scratch = result accumulator
+  ; Shift-and-add loop
+_mul16.loop:
+  lda.w SCUMM.scratch2
+  beq _mul16.done                  ; multiplier == 0, done
+  lsr a
+  sta.w SCUMM.scratch2             ; multiplier >>= 1, carry = old bit 0
+  bcc _mul16.noadd                 ; bit was 0, skip addition
+  lda.w SCUMM.scratch              ; result
+  clc
+  adc 1,s                          ; + multiplicand (on stack)
+  sta.w SCUMM.scratch
+_mul16.noadd:
+  lda 1,s                          ; multiplicand
+  asl a
+  sta 1,s                          ; multiplicand <<= 1
+  bra _mul16.loop
+_mul16.done:
+  pla                              ; discard multiplicand from stack
+  lda.w SCUMM.scratch              ; A = |result|
+  ; Apply sign
+  cpx #0
+  beq _mul16.pos
+  eor #$FFFF
+  inc a
+_mul16.pos:
+  plx
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.div16 -- signed 16÷16 → 16 divide (truncated toward zero)
+; Input: A = dividend, SCUMM.scratch2 = divisor (non-zero)
+; Output: A = quotient
+; Clobbers: Y, SCUMM.scratch, SCUMM.scratch2
+;-------------------------------------------------------------------
+_scummvm.div16:
+  phx
+  phy
+  ; Sign = (A ^ scratch2) bit 15
+  sta.w SCUMM.scratch              ; save dividend
+  eor.w SCUMM.scratch2
+  and #$8000
+  tax                              ; X = sign flag
+  ; |dividend|
+  lda.w SCUMM.scratch
+  bpl _div16.dvdPos
+  eor #$FFFF
+  inc a
+_div16.dvdPos:
+  sta.w SCUMM.scratch              ; scratch = |dividend| (shifts left, becomes quotient)
+  ; |divisor|
+  lda.w SCUMM.scratch2
+  bpl _div16.dvsPos
+  eor #$FFFF
+  inc a
+_div16.dvsPos:
+  sta.w SCUMM.scratch2             ; scratch2 = |divisor|
+  ; Restoring division: 16 iterations
+  ; scratch = dividend/quotient, scratch2 = divisor, stack = remainder
+  lda #0
+  pha                              ; push remainder (0)
+  ldy #16                          ; loop counter
+_div16.loop:
+  ; remainder = (remainder << 1) | bit 15 of dividend
+  lda.w SCUMM.scratch
+  asl a
+  sta.w SCUMM.scratch              ; dividend <<= 1, carry = old bit 15
+  lda 1,s                          ; remainder
+  rol a                            ; (remainder << 1) | carry
+  ; if remainder >= divisor
+  cmp.w SCUMM.scratch2
+  bcc _div16.less
+  ; remainder -= divisor, set quotient bit
+  sec
+  sbc.w SCUMM.scratch2
+  sta 1,s                          ; update remainder
+  lda.w SCUMM.scratch
+  ora #$0001                       ; set bit 0 of quotient
+  sta.w SCUMM.scratch
+  bra _div16.next
+_div16.less:
+  sta 1,s                          ; update remainder (shifted only)
+_div16.next:
+  dey
+  bne _div16.loop
+  pla                              ; discard remainder
+  lda.w SCUMM.scratch              ; A = |quotient|
+  ; Apply sign
+  cpx #0
+  beq _div16.pos
+  eor #$FFFF
+  inc a
+_div16.pos:
+  ply
+  plx
+  rts
 
   CLASS ScummVM
 

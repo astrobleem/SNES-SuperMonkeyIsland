@@ -86,11 +86,12 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - **Dispatch engine built** — 256-entry jump table, per-frame scheduler for 25 concurrent script slots
 - **All 105 base opcodes implemented** — control flow, conditionals, arithmetic, script management, variables, room/object/actor/sound/verb operations, print/string handling, expression evaluation, and more
 - Variable system: 800 global vars, 25 local vars per slot, 2048 bit vars
-- 32 KB script cache in bank $7F with MSU-1 on-demand loading
+- 44 KB script cache in bank $7F with MSU-1 on-demand loading
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
 - **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly
 - **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Local scripts (200+) routed via LSCR table lookup.
-- **Multi-room navigation works** — 9/9 rooms pass smoke test (rooms 1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20)
+- **Multi-room navigation works** — 15/15 rooms pass smoke test (rooms 1, 2, 3, 4, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50)
+- **Expression evaluator fixed** — stack-based RPN expression handler with correct sub-opcode dispatch, signed 16-bit multiply/divide
 - **Global script cache reload on room change** — surviving GLOBAL script slots get fresh cache positions after cache flush, preventing stale pointer crashes
 - **Audio engine integrated** — Terrific Audio Driver (TAD) v0.2.0 replaces legacy SPC700 MOD player
   - TAD init at boot, per-frame processing in main loop, SPC700 driver active and playing

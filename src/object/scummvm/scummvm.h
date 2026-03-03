@@ -38,7 +38,7 @@
 
 ; Script cache in bank $7F (after scroll system buffers)
 .define SCUMM_CACHE_BASE    $5000   ;offset within bank $7F
-.define SCUMM_CACHE_SIZE    $8000   ;32KB cache ($7F5000-$7FCFFF)
+.define SCUMM_CACHE_SIZE    $B000   ;44KB cache ($7F5000-$7FFFFF)
 .define SCUMM_CACHE_WRAM    $7F5000 ;long address
 
 ; Script WHERE constants (for slot.where field)

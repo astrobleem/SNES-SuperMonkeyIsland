@@ -314,7 +314,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented — 0 stubs remaining** (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Multi-room smoke test: 9/9 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20). Room 15 has a separate E_Brk crash under investigation.
+The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented — 0 stubs remaining** (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50).
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -324,7 +324,7 @@ The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcode
 - 16-bit operations map naturally to 65816 native mode
 - 25 concurrent script slots (MI1 uses up to ~15 simultaneously), per-frame round-robin
 - Each slot runs until `breakHere` (carry set = yield) or `stopObjectCode` (slot dies)
-- Script bytecode cached in $7F:5000 (32KB), loaded from MSU-1 on demand
+- Script bytecode cached in $7F:5000 (44KB), loaded from MSU-1 on demand
 
 **Opcode categories (MI1-relevant subset):**
 
@@ -719,7 +719,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 
 **Goal:** SCUMM v5 bytecode interpreter running MI1's boot sequence and loading the first room.
 
-**Current status:** MI1 boots. All 105 base opcodes implemented (0 stubs in dispatch table). Room loading integrated with Phase 0 pipeline. Global script cache reloaded on room transitions (reloadGlobalScripts). Multi-room smoke test: 9/9 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20). Sound opcodes wired to TAD audio driver with MSU-1 PCM fallback. Room 15 has a separate E_Brk crash under investigation. Next: actor placement.
+**Current status:** MI1 boots. All 105 base opcodes implemented (0 stubs in dispatch table). Room loading integrated with Phase 0 pipeline. Global script cache reloaded on room transitions (reloadGlobalScripts). Expression evaluator fixed with correct sub-opcode dispatch and signed 16-bit multiply/divide. Script cache expanded to 44KB. Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). Sound opcodes wired to TAD audio driver with MSU-1 PCM fallback. Next: actor placement.
 
 - [x] Opcode audit — catalog which opcodes MI1 actually uses
   - `tools/scumm_opcode_audit.py` + `tools/scumm/opcodes_v5.py`
@@ -814,17 +814,21 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - 10 getter stubs (result+p8→return 0): getActorElevation/Scale/Facing/Width/Costume/WalkBox, getAnimCounter, getInventoryCount, getRandomNr, getStringWidth
   - Getter stubs (other patterns): getClosestObjActor (result+p16→0), getDist/getVerbEntrypoint/actorFromPos (result+p16+p16→0), findObject/findInventory (result+p8+p8→0)
   - Actor action stubs: actorFollowCamera, putActorAtObject, walkActorToObject, pickupObject, pickupObjectOld
-  - Arithmetic stubs: multiply, divide (return 0 — to be implemented with real math later)
+  - Arithmetic: multiply, divide (signed 16-bit software implementations: shift-and-add mul, restoring division)
   - Complex stubs: ifClassOfIs (vararg loop, always false), setObjectName (skip null string), drawBox, oldRoomEffect, pseudoRoom (byte-pair loop)
 - [x] Multi-room smoke test (`distribution/test_multiroom.lua`)
   - Mesen Lua state machine: BOOT → STABLE → TESTING → DONE
   - FrameCounter-based crash detection (NMI liveness check, not PC comparison)
   - Room redirect handling: ENCD loadRoomWithEgo redirects logged as PASS
-  - Results: 9/9 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20)
+  - Results: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50)
 - [x] Fix room 4 E_Brk crash — stale global script cache pointers after room change
   - Root cause: cache flush zeroed cacheWritePtr but surviving GLOBAL slots kept stale cachePtr → read ENCD bytes as script bytecode → stack corruption → BRK
   - Fix: `reloadGlobalScripts` subroutine iterates all live GLOBAL slots after room script load, calls `loadGlobalScript` to re-fetch each at fresh cache offset; updates cachePtr/cacheLen, preserves slot.pc
-- [ ] Investigate room 15 E_Brk crash (separate from cache pointer bug)
+- [x] Fix room 15 E_Brk crash — expression sub-opcode dispatch + cache size
+  - Root cause: expression handler ($AC) sub-opcode numbering off-by-one (0x01=ADD instead of PUSH). Room 15's ENCD expression PUSH sub-op triggered ADD → two pla's on empty RPN stack → pulled jsr return address → wild jump → BRK
+  - Secondary: PUSH flag bit checked main opcode byte ($AC & $80 = always set) instead of sub-opcode byte → always took var-ref path
+  - Also: script cache expanded 32→44KB ($7F5000-$7FFFFF) — room 15 + globals overflowed 32KB. Cache-full path changed from silent wrap to TRIGGER_ERROR E_ScummVmCacheFull.
+  - Also: implemented real signed 16-bit multiply (shift-and-add) and divide (restoring division)
 - [ ] Implement basic actor placement (putActor, walkActorTo)
 - [ ] Resource loader: extend script cache beyond linear allocator (LRU eviction)
 
@@ -838,7 +842,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 **Key architectural decisions made during Phase 1:**
 - **Single OOP object for VM**: ScummVM is a Singleton class. Its `play()` method runs the full 25-slot scheduler once per frame. This keeps the SCUMM world encapsulated — one object manages all script slots, variables, and cache state.
 - **256-entry dispatch table (not 105)**: The opcode byte space is irregular — flag bits are mixed with the base opcode. A full 256-entry table (512 bytes ROM) avoids the mask+lookup overhead on every opcode. Python tool generates it; updating is trivial.
-- **$7F:5000 script cache (32KB)**: Linear allocator, flushed on room change. Bytecode read byte-by-byte from MSU-1 (MSU_DATA port is single-byte). Cache pointer stored per slot. Expanded from 16→32KB to accommodate room 35's 19KB script block. Simple and sufficient; LRU eviction can be added later without changing the slot structure.
+- **$7F:5000 script cache (44KB)**: Linear allocator, flushed on room change. Bytecode read byte-by-byte from MSU-1 (MSU_DATA port is single-byte). Cache pointer stored per slot. Expanded 16→32→44KB to accommodate large room script blocks + concurrent globals. Cache-full path triggers TRIGGER_ERROR E_ScummVmCacheFull (was silent wrap corruption). LRU eviction can be added later without changing the slot structure.
 - **Room script loading on room change**: processRoomChange kills non-global slots, flushes the script cache, loads room scripts (ENCD/EXCD/LSCR) from MSU-1, then calls `reloadGlobalScripts` to re-fetch all surviving GLOBAL slots' bytecode at fresh cache positions (cachePtr/cacheLen updated, slot.pc preserved). ENCD auto-starts. EXCD execution on room exit deferred for now.
 - **Slot WHERE tracking**: Each slot has a `where` byte: 0=GLOBAL, 1=LOCAL, 2=ROOM. Used by `killRoomScripts` to selectively kill room/local scripts while preserving globals. `startScriptSlot` routes scripts >= 200 to the LSCR table lookup path.
 - **WRAM layout**: ~3.6KB in bank $7E for VM state. Struct-based slot layout (64 bytes/slot × 25 = 1600B). Global vars at $7E:6000, bit vars at $7E:7D1A, slots at $7E:6640. All addresses resolved by wla-dx linker — no hardcoded offsets.
@@ -862,16 +866,15 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - loadGlobalScript refactored: extracted `copyMsuToCache` helper (reused by room script loader). loadGlobalScript's inline copy loop replaced with helper call, stack cleanup simplified.
 - TAD spinlock deadlock: `sta.b (PORT & $ff)` generated STA (dp) indirect ($92) instead of STA dp ($85) — WLA-DX parses parentheses as indirect addressing, not expression grouping. CPU wrote through random pointers instead of to APU IO ports → SPC700 never received data → deadlock. Fix: remove parentheses from all DP port accesses in transfer inner loop.
 - **Fixed**: Room 4 E_Brk crash — stale global script cache pointers, not expression handler bug. See `reloadGlobalScripts` above.
-- **Known open bug**: Room 15 E_Brk crash (excErr=13, excPc=$C0:8046) — separate from cache pointer issue, needs investigation.
+- **Fixed**: Room 15 E_Brk crash — expression sub-opcode dispatch numbering was wrong (0x01 dispatched ADD instead of PUSH), causing stack corruption. Also expanded script cache 32→44KB. See fix details above.
 
-**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 9/9 rooms. Global script cache reload on room transitions prevents stale pointer crashes. Sound opcodes wired to TAD audio driver. Still needed: actor placement, resource cache eviction, room 15 crash investigation.
+**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. Still needed: actor placement, resource cache eviction.
 
 **Room 4 crash — RESOLVED:**
 Root cause was stale global script cache pointers, not expression handler corruption. `processRoomChange` flushed the cache (`stz cacheWritePtr`) then loaded room scripts at offset 0, but surviving GLOBAL slots kept their stale `cachePtr=0` — reading room ENCD bytes as their own bytecode. Fix: `reloadGlobalScripts` subroutine re-fetches each live GLOBAL slot's bytecode from MSU-1 into a fresh cache position after room scripts are loaded.
 
-**Next investigation — Room 15 E_Brk crash:**
-- **Symptom**: excErr=13 (E_Brk), excPc=$C0:8046, currentRoom=15. CPU halts within ~37 frames of room 15 load.
-- **Not related to cache pointer fix** — room 15 is the first room load (from room 1), so no accumulated state. Likely an unimplemented opcode behavior or script logic hitting a stub that returns wrong data.
+**Room 15 crash — RESOLVED:**
+Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-by-one: 0x01 dispatched ADD instead of PUSH, 0x02 dispatched SUB instead of ADD, etc. Room 15's ENCD contains an expression whose first sub-opcode (0x01 = PUSH in ScummVM) triggered ADD, doing two `pla`s on an empty RPN stack — pulling the `jsr` return address off the CPU stack. Corrupted return address caused wild jump → BRK. Secondary fix: PUSH handler checked main opcode byte's bit 7 ($AC & $80 = always set) instead of the sub-opcode byte, always taking the variable-reference path. Also expanded script cache from 32KB to 44KB — room 15's globals + room scripts overflowed the old 32KB cache. Cache-full path changed from silent wrap-around (which corrupted room scripts) to TRIGGER_ERROR E_ScummVmCacheFull.
 
 ### Phase 2: Walking and Talking (10-12 weeks)
 

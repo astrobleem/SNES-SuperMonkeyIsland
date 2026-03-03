@@ -1,0 +1,845 @@
+;; Terrific Audio Driver (TAD) v0.2.0 — WLA-DX API Implementation
+;;
+;; Ported from the official ca65/64tass API by undisbeliever (Marcus Rowe).
+;; Original license: Zlib. See tools/tad/TAD_LICENSE.md.
+;;
+;; All public functions are JSL/RTL (callable from any bank).
+;; Register requirements: A8, I16, D=0, DB accesses lowram ($7E or $00-$3F or $80-$BF).
+;; Exception: Tad_Init must be called with interrupts disabled, after S-SMP reset.
+
+.include "src/object/audio/tad_interface.h"
+
+
+; ===================================
+; LoadAudioData callback (superfree)
+; ===================================
+;
+; Called by Tad_Process via JSL when audio data needs to be loaded.
+; Works with non-bank-aligned data by adding the binary base address
+; to the relative offsets in the data table.
+;
+; IN:  A = 0 → common audio data (MUST return carry set)
+; IN:  A >= 1 → song ID
+; OUT: carry set = valid input, A:X = far address, Y = data size
+; OUT: carry clear = invalid song ID
+;
+; A8, I16, DB = $80 (register bank)
+
+.base BSL
+.section "TAD LoadAudioData" superfree
+Tad_LoadAudioData:
+    cmp.b #TAD_N_DATA_ITEMS
+    bcc _lad_valid
+      clc
+      rtl
+
+_lad_valid:
+    rep #$30
+    and.w #$00FF
+
+    ; Compute table index: A * 3 (each entry is 3 bytes)
+    pha
+    asl a
+    clc
+    adc 1,s         ; A = index * 3
+    tax
+
+    ; Size = next_entry_lo16 - current_entry_lo16
+    lda.l Tad_DataTable+3,x
+    sec
+    sbc.l Tad_DataTable,x
+    tay             ; Y = size
+
+    ; Absolute address = binary_base + table_offset
+    lda.l Tad_DataTable,x      ; offset lo16
+    clc
+    adc.w #Tad_AudioData & $ffff  ; + binary base lo16
+    sta 1,s                     ; save computed lo16
+
+    sep #$20        ; A8
+    lda.l Tad_DataTable+2,x   ; offset bank byte
+    adc.b #:Tad_AudioData     ; + binary base bank (carry from 16-bit add)
+
+    plx             ; X = computed lo16
+    sec             ; return true
+    rtl
+
+; Blank song data: a single zero byte
+Tad_BlankSongData:
+    .db $00
+
+.ends
+
+
+; ============================
+; TAD API Functions (superfree)
+; ============================
+
+.base BSL
+.section "TAD API" superfree
+
+
+; -------------------------------------------------------
+; Tad_Init — Initialize the audio driver
+; -------------------------------------------------------
+;
+; Uploads the loader via IPL, uploads the audio driver,
+; initializes state, queues common audio data transfer.
+;
+; TIMING: Call ONCE, with interrupts disabled, after S-SMP reset.
+;         Must be called before any other Tad_* function.
+;
+; JSL/RTL. A8, I16, DB unknown.
+
+Tad_Init:
+    phb
+    lda.b #$80
+    pha
+    plb
+    ; DB = $80 (register bank — accesses APU IO + lowram)
+
+    ; === Transfer loader via IPL ===
+    ; Wait for IPL ready signal ($BBAA on APUIO0)
+    stz.w APUIO0
+
+    ldy.w #$bbaa
+-
+      cpy.w APUIO0
+      bne -
+
+    ; Send destination address and start transfer
+    ldx.w #TAD_LOADER_ARAM_ADDR
+    lda.b #$cc
+    stx.w APUIO2        ; destination ARAM address
+    sta.w APUIO1        ; non-zero = write data
+    sta.w APUIO0        ; new data command
+-
+      cmp.w APUIO0
+      bne -
+
+    ; Transfer loader bytes via IPL (8-bit index)
+    sep #$10
+    ldx.b #0
+  _ipl_loop:
+      lda.l Tad_Loader_Bin,x
+      sta.w APUIO1
+      stx.w APUIO0
+-
+        cpx.w APUIO0
+        bne -
+      inx
+      cpx.b #TAD_LOADER_SIZE
+      bcc _ipl_loop
+
+    rep #$10
+    ; I16 again
+
+    ; Execute the loader
+    ldx.w #TAD_LOADER_ARAM_ADDR
+    stx.w APUIO2
+    stz.w APUIO1        ; zero = execute program
+    lda.b #TAD_LOADER_SIZE + 2
+    sta.w APUIO0
+
+    ; === Initialize TAD state ===
+    ldx.w #TAD_DEFAULT_FLAGS | (TAD_DEFAULT_AUDIO_MODE << 8)
+    stx.w Tad_flags              ; also sets Tad_audioMode (adjacent byte)
+
+    ldx.w #TAD_DEFAULT_TRANSFER_PER_FRAME
+    stx.w TadPriv_bytesPerFrame
+
+    ; Set up audio driver binary for transfer
+    lda.b #:Tad_AudioDriver_Bin
+    ldx.w #Tad_AudioDriver_Bin & $ffff
+    ldy.w #TAD_AUDIO_DRIVER_SIZE
+    jsr _Tad_SetDataToTransfer
+
+    lda.b #$ff
+    sta.w TadPriv_nextCmd_id
+    sta.w Tad_sfxQueue_sfx
+
+    stz.w TadPriv_nextSong
+
+    ; Wait for loader ready and send CODE data type
+  _init_dtype_loop:
+      lda.b #TadLoaderDataType_CODE
+      jsr _Tad_CheckReadyAndSendDataType
+      bcc _init_dtype_loop
+
+    ; Transfer all audio driver data
+  _init_xfer_loop:
+      jsr _Tad_TransferData
+      bcc _init_xfer_loop
+
+    lda.b #TadState_WAITING_FOR_LOADER_COMMON
+    sta.w TadPriv_state
+
+    plb
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_Process — Per-frame audio processing
+; -------------------------------------------------------
+;
+; Handles one of: data transfer, loader wait, command send, SFX send.
+; Call once per frame after game logic.
+;
+; JSL/RTL. A8, I16, DB accesses lowram.
+
+Tad_Process:
+    lda.w TadPriv_state
+    bpl _proc_not_loaded
+
+    ; === Playing or Paused state (state >= $80) ===
+    sep #$10
+    tax
+
+    lda.w TadPriv_previousCommand
+    cmp.l TadIO_COMMAND_ACK_PORT
+    bne _proc_return_i8
+        ; Previous command acknowledged — check queues
+        ldy.w TadPriv_nextCmd_id
+        bpl _proc_send_command
+
+        ; Check if playing (state > $80)
+        dex
+        bpl _proc_return_i8
+            ; Playing state — check SFX queue
+            lda.w Tad_sfxQueue_sfx
+            cmp.b #$ff
+            beq _proc_return_i8
+                jsr _Tad_SendSfxCommand
+                bra _proc_return_i8
+
+  _proc_return_i8:
+      rep #$10
+      rtl
+
+  _proc_send_command:
+      jsr _Tad_SendCommand
+      rep #$10
+      rtl
+
+  _proc_not_loaded:
+      ; Song not loaded — check WAITING/LOADING states
+      cmp.b #TAD__FIRST_LOADING_STATE
+      bcc +
+          jmp _Tad_ProcessLoading
++
+      cmp.b #TAD__FIRST_WAITING_STATE
+      bcc +
+          jmp _Tad_ProcessWaitingForLoader
++
+      ; TadState is NULL
+      rtl
+
+
+; -------------------------------------------------------
+; Tad_FinishLoadingData — Block until loader completes
+; -------------------------------------------------------
+;
+; Keeps calling TransferData until the loader finishes.
+; Safe to call from LoadAudioData callback.
+;
+; JSL/RTL. A8, I16, DB accesses lowram.
+
+Tad_FinishLoadingData:
+  _fld_loop:
+      ; Check if state is LOADING_*
+      lda.w TadPriv_state
+      and.b #$7f
+      cmp.b #TAD__FIRST_LOADING_STATE
+      bcc _fld_done
+          jsl _Tad_ProcessLoading
+          bra _fld_loop
+  _fld_done:
+      rtl
+
+
+; -------------------------------------------------------
+; Tad_QueueCommand — Add command to queue (if empty)
+; -------------------------------------------------------
+;
+; IN: A = TadCommand value
+; IN: X = parameter 0 (lo8 only)
+; IN: Y = parameter 1 (lo8 only)
+; OUT: carry set if queued
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram.
+
+Tad_QueueCommand:
+    bit.w TadPriv_nextCmd_id
+    bpl _qc_full
+  _qc_write:
+      and.b #TadIO_COMMAND_MASK
+      sta.w TadPriv_nextCmd_id
+      txa
+      sta.w TadPriv_nextCmd_p0
+      tya
+      sta.w TadPriv_nextCmd_p1
+      sec
+      rtl
+  _qc_full:
+      clc
+      rtl
+
+
+; -------------------------------------------------------
+; Tad_QueueCommandOverride — Force command into queue
+; -------------------------------------------------------
+;
+; Same as Tad_QueueCommand but overwrites any pending command.
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram.
+
+Tad_QueueCommandOverride:
+    bra _qc_write
+
+
+; -------------------------------------------------------
+; Tad_QueueSoundEffect — Queue SFX with center pan
+; -------------------------------------------------------
+;
+; IN: A = sfx id
+; Lower IDs take priority.
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram. KEEP: X, Y.
+
+Tad_QueueSoundEffect:
+    cmp.w Tad_sfxQueue_sfx
+    bcs _qsfx_skip
+        sta.w Tad_sfxQueue_sfx
+        pha
+        lda.b #TAD_CENTER_PAN
+        sta.w Tad_sfxQueue_pan
+        pla
+  _qsfx_skip:
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_QueuePannedSoundEffect — Queue SFX with specific pan
+; -------------------------------------------------------
+;
+; IN: A = sfx id, X = pan (lo8, 0-128)
+; Lower IDs take priority.
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram. KEEP: X, Y.
+
+Tad_QueuePannedSoundEffect:
+    cmp.w Tad_sfxQueue_sfx
+    bcs _qpsfx_skip
+        sta.w Tad_sfxQueue_sfx
+        txa
+        sta.w Tad_sfxQueue_pan
+  _qpsfx_skip:
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_LoadSong — Start loading a song
+; -------------------------------------------------------
+;
+; IN: A = 0 (silence) or >= 1 (song ID)
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram.
+
+Tad_LoadSong:
+    sta.w TadPriv_nextSong
+
+    lda.b #TadFlags_RELOAD_COMMON_AUDIO_DATA
+    trb.w Tad_flags
+    beq _ls_song_requested
+        ; Common audio data reload requested
+        lda.b #TadState_WAITING_FOR_LOADER_COMMON
+        bra _ls_set_state
+
+  _ls_song_requested:
+    lda.w TadPriv_state
+    cmp.b #TAD__FIRST_LOADING_SONG_STATE
+    bcc _ls_return
+        lda.b #TadState_WAITING_FOR_LOADER_SONG
+
+  _ls_set_state:
+      sta.w TadPriv_state
+      ; Send switch-to-loader command
+      lda.b #TadIO_SWITCH_TO_LOADER
+      sta.l TadIO_SWITCH_TO_LOADER_PORT
+
+  _ls_return:
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_LoadSongIfChanged — Load only if song ID differs
+; -------------------------------------------------------
+;
+; IN: A = song ID
+; OUT: carry set if Tad_LoadSong was called
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram.
+
+Tad_LoadSongIfChanged:
+    cmp.w TadPriv_nextSong
+    beq +
+        jsl Tad_LoadSong
+        sec
+        rtl
++
+    clc
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_GetSong — Get current song ID
+; -------------------------------------------------------
+;
+; OUT: A = song ID from last Tad_LoadSong call
+;
+; JSL/RTL. A8, I unknown, DB accesses lowram.
+
+Tad_GetSong:
+    lda.w TadPriv_nextSong
+    rtl
+
+
+; -------------------------------------------------------
+; Flag manipulation functions
+; -------------------------------------------------------
+
+Tad_ReloadCommonAudioData:
+    lda.b #TadFlags_RELOAD_COMMON_AUDIO_DATA
+    tsb.w Tad_flags
+    rtl
+
+Tad_SongsStartImmediately:
+    lda.b #TadFlags_PLAY_SONG_IMMEDIATELY
+    tsb.w Tad_flags
+    rtl
+
+Tad_SongsStartPaused:
+    lda.b #TadFlags_PLAY_SONG_IMMEDIATELY
+    trb.w Tad_flags
+    rtl
+
+Tad_GlobalVolumesResetOnSongStart:
+    lda.b #TadFlags_RESET_GLOBAL_VOLUMES
+    tsb.w Tad_flags
+    rtl
+
+Tad_GlobalVolumesPersist:
+    lda.b #TadFlags_RESET_GLOBAL_VOLUMES
+    trb.w Tad_flags
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_SetTransferSize — Set bytes transferred per frame
+; -------------------------------------------------------
+;
+; IN: X = bytes per frame (clamped to MIN..MAX)
+;
+; JSL/RTL. A unknown, I16, DB accesses lowram.
+
+Tad_SetTransferSize:
+    cpx.w #TAD_MAX_TRANSFER_PER_FRAME
+    bcc +
+        ldx.w #TAD_MAX_TRANSFER_PER_FRAME
++
+    cpx.w #TAD_MIN_TRANSFER_PER_FRAME
+    bcs +
+        ldx.w #TAD_MIN_TRANSFER_PER_FRAME
++
+    stx.w TadPriv_bytesPerFrame
+    rtl
+
+
+; -------------------------------------------------------
+; Status query functions
+; -------------------------------------------------------
+
+; OUT: carry set if state is LOADING_*
+Tad_IsLoaderActive:
+    lda.w TadPriv_state
+    and.b #$7f
+    cmp.b #TAD__FIRST_LOADING_STATE
+    rtl
+
+; OUT: carry set if state >= PAUSED (song in Audio-RAM)
+Tad_IsSongLoaded:
+    lda.w TadPriv_state
+    cmp.b #TadState_PAUSED
+    rtl
+
+; OUT: carry set if state >= PLAYING_SFX
+Tad_IsSfxPlaying:
+    lda.w TadPriv_state
+    cmp.b #TadState_PLAYING_SFX
+    rtl
+
+; OUT: carry set if state == PLAYING
+Tad_IsSongPlaying:
+    lda.w TadPriv_state
+    cmp.b #TadState_PLAYING
+    rtl
+
+
+; =============================
+; Private implementation helpers
+; =============================
+
+
+; --- Set data to transfer ---
+; IN: A:X = far address (A=bank, X=lo16), Y = size
+; A8, I16
+_Tad_SetDataToTransfer:
+    stx.w TadPriv_xfer_addr
+    sta.w TadPriv_xfer_bank
+    sty.w TadPriv_xfer_size
+    rts
+
+
+; --- Check loader ready and send data type ---
+; IN: A = TadLoaderDataType value
+; OUT: carry set if ready and sent
+; A8, I16, DB=$80
+_Tad_CheckReadyAndSendDataType:
+    ldx.w #TadIO_LI_LOADER_READY_HL
+    cpx.w TadIO_LI_READY_PORT_HL
+    bne _crsd_not_ready
+        ; Loader is ready — send data type + handshake
+        sta.w TadIO_LI_DATA_TYPE_PORT
+        lda.b #TadIO_LI_LOADER_READY_L
+        sta.w TadIO_LI_READY_PORT_L
+        lda.b #TadIO_LI_LOADER_READY_H
+        sta.w TadIO_LI_READY_PORT_H
+        stz.w TadPriv_xfer_prevSpin
+        sec
+        rts
+  _crsd_not_ready:
+    clc
+    rts
+
+
+; --- Transfer data to Audio-RAM loader ---
+;
+; Sends up to TadPriv_bytesPerFrame bytes to the loader via spinlock protocol.
+; OUT: carry set if ALL data transferred (transfer complete)
+;
+; A8, I16, DB accesses lowram
+_Tad_TransferData:
+    ; Early exit if loader not ready (spinlock check)
+    lda.w TadPriv_xfer_prevSpin
+    cmp.l TadIO_LD_SPINLOCK_PORT
+    bne _xfer_ret_false
+
+    phd
+    phb
+
+    rep #$30
+    ; A16
+
+    ; Calculate number of words to transfer this frame
+    lda.w TadPriv_xfer_size
+    cmp.w TadPriv_bytesPerFrame
+    bcc +
+        lda.w TadPriv_bytesPerFrame
++
+    inc a               ; round up
+    lsr a               ; bytes → words
+    bne +
+        inc a           ; minimum 1 word
++
+    tax                 ; X = words to transfer
+
+    ; Subtract transferred bytes from remaining size (clamped to 0)
+    asl a               ; words → bytes
+    eor.w #$ffff
+    sec
+    adc.w TadPriv_xfer_size
+    bcs +
+        lda.w #0
++
+    sta.w TadPriv_xfer_size
+
+    ; Set D = $2100 for direct-page access to APU IO ports
+    lda.w #$2100
+    tcd
+
+    sep #$20
+    ; A8, D=$2100
+
+    lda.w TadPriv_xfer_bank
+    ldy.w TadPriv_xfer_addr
+
+    ; Set DB = data bank
+    pha
+    plb
+
+    ; Inner transfer loop
+    ; X = words remaining, Y = data address within bank
+    ; DB = data bank, D = $2100
+  _xfer_loop:
+      lda.w $0000,y
+      sta.b TadIO_LD_DATA_PORT_L & $ff
+
+      iny
+      beq _xfer_bank_overflow_1
+    _xfer_bo1_resume:
+
+      lda.w $0000,y
+      sta.b TadIO_LD_DATA_PORT_H & $ff
+
+      ; Increment spinlock value (lower 4 bits, never 0)
+      tya
+      and.b #7
+      inc a
+      sta.b TadIO_LD_SPINLOCK_PORT & $ff
+
+      iny
+      beq _xfer_bank_overflow_2
+    _xfer_bo2_resume:
+
+      dex
+      beq _xfer_end_loop
+
+      ; Wait for S-SMP to acknowledge
+-
+        cmp.b TadIO_LD_SPINLOCK_PORT & $ff
+        bne -
+      bra _xfer_loop
+
+  _xfer_end_loop:
+    plb
+    pld
+    ; D and DB restored
+
+    sty.w TadPriv_xfer_addr
+    sta.w TadPriv_xfer_prevSpin
+
+    ldy.w TadPriv_xfer_size
+    bne _xfer_ret_false
+        ; All data transferred — wait for final ack
+-
+          cmp.l TadIO_LD_SPINLOCK_PORT
+          bne -
+        lda.b #TadIO_LD_SPINLOCK_COMPLETE
+        sta.l TadIO_LD_SPINLOCK_PORT
+        sec
+        rts
+
+  _xfer_ret_false:
+    clc
+    rts
+
+  ; Bank overflow handlers (Y wrapped to 0, need next bank)
+  _xfer_bank_overflow_1:
+    jsr _Tad_GotoNextBank
+    bra _xfer_bo1_resume
+
+  _xfer_bank_overflow_2:
+    pha
+      jsr _Tad_GotoNextBank
+    pla
+    bra _xfer_bo2_resume
+
+
+; --- Advance to next ROM bank (HiROM) ---
+; DB = current data bank. Y = 0 (overflowed).
+; Sets DB = next bank, Y = 0 or $8000 (for register banks).
+; A8, I16, KEEP: X
+_Tad_GotoNextBank:
+    phb
+    pla
+    inc a
+    sta.l TadPriv_xfer_bank
+    pha
+    plb
+    ; DB = new bank
+
+    ; HiROM: if bank & $7F < $40, it's a register bank — start at $8000
+    and.b #$7f
+    cmp.b #$40
+    bcs +
+        ldy.w #$8000
++
+    rts
+
+
+; --- Send queued command to audio driver ---
+; IN: Y = TadPriv_nextCmd_id
+; A8, I8
+_Tad_SendCommand:
+    lda.w TadPriv_nextCmd_p0
+    sta.l TadIO_PARAMETER0_PORT
+
+    lda.w TadPriv_nextCmd_p1
+    sta.l TadIO_PARAMETER1_PORT
+
+    ; Build command byte: flip I bits, set C bits
+    lda.w TadPriv_previousCommand
+    and.b #TadIO_COMMAND_I_MASK
+    eor.b #TadIO_COMMAND_I_MASK
+    ora.w TadPriv_nextCmd_id
+    sta.l TadIO_COMMAND_PORT
+    sta.w TadPriv_previousCommand
+
+    ; Update state if pause/unpause command
+    cpy.b #TadCommand_UNPAUSE + 1
+    bcs _sc_not_pause
+        ; Derive state from command: (cmd >> 1) & 3 | $80
+        lsr a
+        and.b #3
+        ora.b #$80
+        sta.w TadPriv_state
+  _sc_not_pause:
+
+    ; Reset command queue
+    lda.b #$ff
+    sta.w TadPriv_nextCmd_id
+    rts
+
+
+; --- Send queued SFX to audio driver ---
+; IN: A = Tad_sfxQueue_sfx
+; A8, I8
+_Tad_SendSfxCommand:
+    sta.l TadIO_PARAMETER0_PORT
+
+    lda.w Tad_sfxQueue_pan
+    cmp.b #TAD_MAX_PAN + 1
+    bcc +
+        lda.b #TAD_CENTER_PAN
++
+    sta.l TadIO_PARAMETER1_PORT
+
+    ; Send play-sound-effect command
+    lda.w TadPriv_previousCommand
+    and.b #TadIO_COMMAND_I_MASK
+    eor.b #TadIO_COMMAND_I_MASK
+    ora.b #TadCommand_PLAY_SOUND_EFFECT
+    sta.l TadIO_COMMAND_PORT
+    sta.w TadPriv_previousCommand
+
+    ; Reset SFX queue
+    ldy.b #$ff
+    sty.w Tad_sfxQueue_sfx
+    sty.w Tad_sfxQueue_pan
+    rts
+
+
+; --- Process WAITING_FOR_LOADER_* states ---
+; Return via RTL.
+; A8, I16
+_Tad_ProcessWaitingForLoader:
+    phb
+
+    ; Set DB=$80 for register access
+    lda.b #$80
+    pha
+    plb
+
+    lda.w TadPriv_state
+    cmp.b #TadState_WAITING_FOR_LOADER_COMMON
+    bne _wfl_song_data
+        ; Common audio data
+        lda.b #TadLoaderDataType_COMMON_DATA
+        jsr _Tad_CheckReadyAndSendDataType
+        bcc _wfl_return
+
+        lda.b #TadState_LOADING_COMMON_AUDIO_DATA
+        pha             ; push next state
+
+        lda.b #0        ; A=0 → load common data
+        bra _wfl_load_data
+
+  _wfl_song_data:
+    ; Clear unused flag bits
+    lda.b #$ff ~ TAD_ALL_FLAGS
+    trb.w Tad_flags
+
+    ; Convert Tad_audioMode to loader data type flags
+    lda.w Tad_audioMode
+    inc a
+    and.b #3
+
+    ora.w Tad_flags
+    ora.b #TadLoaderDataType_SONG_DATA_FLAG
+    jsr _Tad_CheckReadyAndSendDataType
+    bcc _wfl_return
+
+    ; Determine next state from PLAY_SONG_IMMEDIATELY flag
+    lda.w Tad_flags
+    asl a
+    asl a
+    lda.b #0
+    ; carry = PLAY_SONG_IMMEDIATELY flag
+    adc.b #TadState_LOADING_SONG_DATA_PAUSED
+    pha             ; push next state
+
+    ; Load next song
+    lda.w TadPriv_nextSong
+    beq _wfl_use_blank_song
+
+  _wfl_load_data:
+    jsl Tad_LoadAudioData
+    bcs +
+  _wfl_use_blank_song:
+        ; Invalid song or song 0 → load blank song (1 zero byte)
+        ldy.w #1
+        lda.b #:Tad_BlankSongData
+        ldx.w #Tad_BlankSongData & $ffff
++
+
+    ; A:X = data address, Y = data size
+    jsr _Tad_SetDataToTransfer
+
+    ; Set state AFTER LoadAudioData call
+    pla
+    sta.w TadPriv_state
+
+  _wfl_return:
+    plb
+    rtl
+
+
+; --- Process LOADING_* states ---
+; Return via RTL.
+; A8, I16
+_Tad_ProcessLoading:
+    jsr _Tad_TransferData
+    bcc _pl_return
+        ; Data loaded successfully
+        lda.w TadPriv_state
+        cmp.b #TadState_LOADING_COMMON_AUDIO_DATA
+        bne _pl_song
+            ; Common data loaded → wait for song
+            lda.b #TadState_WAITING_FOR_LOADER_SONG
+            bra _pl_set_state
+
+      _pl_song:
+          ; Song loaded → audio driver active
+          stz.w TadPriv_previousCommand
+
+          ; Reset queues
+          lda.b #$ff
+          sta.w TadPriv_nextCmd_id
+          sta.w Tad_sfxQueue_sfx
+          sta.w Tad_sfxQueue_pan
+
+          ; Derive play/pause state from loading state
+          ; LOADING_SONG_DATA_PAUSED → PAUSED, LOADING_SONG_DATA_PLAY → PLAYING
+          lda.w TadPriv_state
+          and.b #1
+          asl a
+          ora.b #$80
+
+    _pl_set_state:
+        sta.w TadPriv_state
+
+  _pl_return:
+    rtl
+
+
+.ends

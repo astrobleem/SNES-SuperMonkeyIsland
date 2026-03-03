@@ -347,7 +347,10 @@ _prc.bgReady:
   ; Load room scripts (ENCD/EXCD/LSCR) from MSU-1
   lda.w SCUMM.newRoom
   jsr _scummvm.loadRoomScripts
-  bcc _prc.noEncd
+
+  ; Reload surviving global scripts into fresh cache positions
+  ; (must run even if room has no scripts — cache was flushed above)
+  jsr _scummvm.reloadGlobalScripts
 
   ; Auto-start ENCD if present
   lda.w SCUMM.roomEncdLen
@@ -999,6 +1002,61 @@ _killRoom.next:
   iny
   cpy #SCUMM_MAX_SLOTS
   bcc _killRoom.loop
+  ply
+  plx
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.reloadGlobalScripts -- reload all surviving GLOBAL slots
+; into fresh cache positions after cache flush + room script load.
+; Updates cachePtr/cacheLen for each slot; preserves slot.pc so
+; the script resumes at the same bytecode offset.
+;-------------------------------------------------------------------
+_scummvm.reloadGlobalScripts:
+  phx
+  phy
+  ldx #0
+  ldy #0
+_reloadGlobal.loop:
+  ; Skip dead slots
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _reloadGlobal.next
+  ; Skip non-GLOBAL slots (where != 0)
+  lda.w SCUMM.slots.where,x
+  and #$00FF
+  bne _reloadGlobal.next
+
+  ; This is a live GLOBAL slot — reload its script
+  phx
+  phy
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  jsr _scummvm.loadGlobalScript       ; A = new cachePtr, X = size
+  sta.w SCUMM.scratch2                ; scratch2 = new cachePtr
+  stx.w SCUMM.scratch                 ; scratch = new cacheLen
+  ply
+  plx
+
+  ; Update slot cache pointers (X = slot byte offset)
+  lda.w SCUMM.scratch                 ; was size 0? (script not found)
+  beq _reloadGlobal.next              ; shouldn't happen, but guard
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.slots.cachePtr,x
+  lda.w SCUMM.scratch
+  sta.w SCUMM.slots.cacheLen,x
+  ; slot.pc is NOT reset — bytecode is identical, just at new offset
+
+_reloadGlobal.next:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _reloadGlobal.loop
   ply
   plx
   rts
@@ -2237,46 +2295,110 @@ _actorOps.done:
 ;===================================================================
 
 ;-------------------------------------------------------------------
-; Sound stubs
+; Sound opcodes — wired to Terrific Audio Driver (TAD)
 ;-------------------------------------------------------------------
 
-; stopSound ($3C, $BC) -- p8[7], no-op
+; stopSound ($3C, $BC) -- p8[7] sound ID → stop all SFX
 op_stopSound:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
+  ; Stop all sound effects via TAD
+  phy
+  sep #$20
+  lda.b #TadCommand_STOP_SOUND_EFFECTS
+  ldx #0
+  ldy #0
+  jsl Tad_QueueCommand
+  rep #$31
+  ply
   clc
   rts
 
-; startSound ($1C, $9C) -- p8[7], no-op
+; startSound ($1C, $9C) -- p8[7] sound ID → queue SFX
 op_startSound:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
+  ; Queue sound effect via TAD (A = sfx id)
+  phy
+  sep #$20
+  jsl Tad_QueueSoundEffect
+  rep #$31
+  ply
   clc
   rts
 
-; startMusic ($02, $82) -- p8[7], no-op
+; startMusic ($02, $82) -- p8[7] song ID → load song
 op_startMusic:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
+  phy
+  pha                               ; save song ID
+  lda.w SCUMM.musicMode
+  bne _startMusic.msu1
+  ; TAD path
+  pla
+  sep #$20
+  jsl Tad_LoadSongIfChanged
+  rep #$31
+  ply
+  clc
+  rts
+_startMusic.msu1:
+  pla                               ; A = song ID
+  jsr _scummvm.msu1PlayTrack
+  ply
   clc
   rts
 
-; stopMusic ($20) -- no params, no-op
+; stopMusic ($20) -- no params → pause music
 op_stopMusic:
+  phy
+  lda.w SCUMM.musicMode
+  bne _stopMusic.msu1
+  ; TAD path
+  sep #$20
+  lda.b #TadCommand_PAUSE
+  ldx #0
+  ldy #0
+  jsl Tad_QueueCommand
+  rep #$31
+  ply
+  clc
+  rts
+_stopMusic.msu1:
+  jsr _scummvm.msu1StopTrack
+  ply
   clc
   rts
 
-; isSoundRunning ($7C, $FC) -- result + p8[7], always return 0
+; isSoundRunning ($7C, $FC) -- result + p8[7] → check TAD state
 op_isSoundRunning:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
-  lda #0
+  phy
+  lda.w SCUMM.musicMode
+  bne _isSoundRunning.msu1
+  ; TAD path
+  sep #$20
+  jsl Tad_IsSongPlaying
+  rep #$31
+  bra _isSoundRunning.result
+_isSoundRunning.msu1:
+  jsr _scummvm.msu1IsPlaying
+_isSoundRunning.result:
+  ply
+  bcs +
+    lda #0
+    bra ++
++
+    lda #1
+++
   jsr _scummvm.writeVariable
   clc
   rts
 
-; soundKludge ($4C, $CC) -- vararg list, skip all
+; soundKludge ($4C, $CC) -- iMUSE vararg, consume params (stub)
 op_soundKludge:
 -
   jsr _scummvm.fetchByte
@@ -2284,6 +2406,64 @@ op_soundKludge:
   beq +
   jsr _scummvm.fetchWord
   bra -
++
+  clc
+  rts
+
+
+;-------------------------------------------------------------------
+; MSU-1 Audio Helpers — used when musicMode = MSU-1
+;-------------------------------------------------------------------
+
+; Play MSU-1 audio track (A = track number, 16-bit)
+_scummvm.msu1PlayTrack:
+  sep #$20
+  sta.l MSU_TRACK
+  lda.b #0
+  sta.l MSU_TRACK+1
+  ; Wait for audio busy to clear
+- lda.l MSU_STATUS
+  and.b #MSU_STATUS_AUDIO_BUSY
+  bne -
+  ; Start playing with repeat (music loops)
+  lda.b #MSU_CONTROL_PLAY | MSU_CONTROL_REPEAT
+  sta.l MSU_CONTROL
+  ; Check for audio error (missing PCM file → graceful silence)
+  lda.l MSU_STATUS
+  and.b #MSU_STATUS_AUDIO_ERROR
+  beq +
+    lda.b #MSU_VOLUME_MUTE
+    sta.l MSU_VOLUME
+    lda.b #0
+    sta.l MSU_CONTROL
+    rep #$20
+    rts
++
+  ; Set volume to full (after play start, prevents DC offset click)
+  lda.b #MSU_VOLUME_FULL
+  sta.l MSU_VOLUME
+  rep #$20
+  rts
+
+; Stop MSU-1 audio track
+_scummvm.msu1StopTrack:
+  sep #$20
+  lda.b #MSU_VOLUME_MUTE
+  sta.l MSU_VOLUME
+  lda.b #0
+  sta.l MSU_CONTROL
+  rep #$20
+  rts
+
+; Check if MSU-1 audio is playing (carry set = playing)
+_scummvm.msu1IsPlaying:
+  sep #$20
+  lda.l MSU_STATUS
+  and.b #MSU_STATUS_AUDIO_PLAY
+  rep #$20
+  beq +
+    sec
+    rts
 +
   clc
   rts

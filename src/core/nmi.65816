@@ -1,4 +1,4 @@
-;this nmi uses a maximum of 20 scanlines while streaming brr frames to the spc
+;nmi handler — processes VRAM DMA queue, scroll updates, OAM transfer
 .include "src/core/nmi.h"
 
 ;tile cache staging defines (must match room_scroll.h)

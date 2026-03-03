@@ -25,12 +25,6 @@ core.boot.init:
 	ldx.w #$0000
 	jsr ClearWRAM
 
-	;clear HdmaSpcBuffer (same uninitialized DRAM issue)
-	lda.b #0
-	ldy.w #$0100
-	ldx.w #HdmaSpcBuffer & $ffff
-	jsr ClearWRAM
-
 	lda.b #0		;clear zero page
 	ldy.w #kernelEnd-kernelStart
 	ldx.w #ZP
@@ -55,6 +49,11 @@ core.boot.init:
 	jsr core.object.init
     jsr core.persistency.init
 
+	;initialize Terrific Audio Driver (requires interrupts disabled, S-SMP at IPL)
+	sep #$20
+	jsl Tad_Init
+	rep #$20
+
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main
 
@@ -63,6 +62,11 @@ core.boot.mainLoop:
     jsr core.nmi.waitFrame
 	jsr core.oam.play
 	jsr core.object.play
+
+	;process Terrific Audio Driver (once per frame, after game logic)
+	sep #$20
+	jsl Tad_Process
+	rep #$20
 
 	bra core.boot.mainLoop
 .ends

@@ -20,7 +20,7 @@ We do the same thing, but for SCUMM v5 on SNES+MSU-1.
 - **Platform**: SNES + MSU-1
 - **Language**: 65816 assembly (WLA-DX v9.3)
 - **Input**: SNES Mouse (primary), joypad (fallback with virtual cursor)
-- **Audio**: MSU-1 PCM for music, SPC700 for sound effects
+- **Audio**: SPC700 native chip music + SFX via Terrific Audio Driver (TAD), MSU-1 for voice acting
 
 ### Why MSU-1 Makes This Possible
 Without MSU-1, this project is dead on arrival — MI1 VGA is ~8MB of data and the SNES can't hold it in a standard cartridge in any usable way. MSU-1 gives us:
@@ -235,8 +235,8 @@ This is the same streaming pattern proven by the Dragon's Lair engine, adapted f
 │               MSU-1 Data Pack                    │
 │  ┌────────┐ ┌────────┐ ┌───────┐ ┌───────────┐ │
 │  │ Rooms  │ │Costumes│ │Scripts│ │   Audio   │ │
-│  │(tiles, │ │(sprite │ │ (v5   │ │(PCM music │ │
-│  │ maps,  │ │ tiles) │ │ byte- │ │ BRR sfx)  │ │
+│  │(tiles, │ │(sprite │ │ (v5   │ │(voice PCM │ │
+│  │ maps,  │ │ tiles) │ │ byte- │ │ tracks)   │ │
 │  │ z-data)│ │        │ │ code) │ │           │ │
 │  └───┬────┘ └───┬────┘ └───┬───┘ └─────┬─────┘ │
 └──────┼──────────┼──────────┼────────────┼───────┘
@@ -244,11 +244,11 @@ This is the same streaming pattern proven by the Dragon's Lair engine, adapted f
        ▼          ▼          ▼            ▼
 ┌──────────────────────────────────┐  ┌──────────┐
 │        65816 Engine (~24KB ROM)  │  │ SPC700   │
-│                                  │  │ Driver   │
+│                                  │  │ TAD v0.2 │
 │  ┌──────────┐  ┌──────────────┐  │  │          │
-│  │  MI1 VM  │  │  Resource    │  │  │ - SFX    │
-│  │  (v5     │  │  Streamer    │  │  │ - BRR    │
-│  │  interp) │  │  (MSU-1 I/O) │  │  │   playback│
+│  │  MI1 VM  │  │  Resource    │  │  │ - 8ch MML│
+│  │  (v5     │  │  Streamer    │  │  │   music  │
+│  │  interp) │  │  (MSU-1 I/O) │  │  │ - BRR sfx│
 │  └────┬─────┘  └──────┬───────┘  │  └──────────┘
 │       │               │          │
 │  ┌────▼───────────────▼───────┐  │
@@ -346,7 +346,7 @@ The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcode
 
 9. **Text/Dialog** (~5 opcodes): print, printEgo, actorSay, talkActor. Text rendering with color and position. Dialog choices.
 
-10. **Sound** (~5 opcodes): startSound, stopSound, startMusic, isSoundRunning. Trigger MSU-1 track changes and SPC700 SFX.
+10. **Sound** (~5 opcodes): startSound, stopSound, startMusic, stopMusic, isSoundRunning, soundKludge. Wired to Terrific Audio Driver (TAD) API — startMusic loads songs, startSound queues SFX, isSoundRunning checks TAD state. soundKludge (iMUSE) is a parameter-consuming stub.
 
 11. **System** (~8 opcodes): wait (waitForActor, waitForMessage, waitForCamera, waitForSentence), delay, delayVariable, saveRestoreVerbs, cutscene/endCutscene, saveLoadGame.
 
@@ -385,8 +385,9 @@ $285C20         Global script index (187 slots × 8 bytes)
 $2861F8         Room script index (100 slots × 8 bytes)
 $286600         Global script data (187 scripts, contiguous, individually indexed)
 $2B1E00         Room script blocks (per-room: mini-header + ENCD + EXCD + LSCRs)
-$2E3800+        [Reserved for future sections: costumes, sounds, charsets]
----             MSU-1 PCM audio tracks (music — separate .pcm files per track)
+$2E3800+        [Reserved for future sections: costumes, charsets]
+---             MSU-1 PCM voice tracks (CD Talkie voice acting — separate .pcm files)
+---             SPC700 music + SFX: embedded in ROM via TAD (not in MSU-1 data pack)
 ```
 
 **Loading Flow — Room Change (Bulk Load):**
@@ -502,22 +503,35 @@ On SNES:
 - Mouse click or d-pad+A to select
 - Font is pre-loaded in BG3 VRAM — fixed-width or simple proportional
 
-### 5.6 Audio
+### 5.6 Audio — Hybrid Architecture (SPC700 + MSU-1)
 
-**Music (MSU-1):**
-- Pre-render all MI1 music tracks as 44.1kHz 16-bit PCM
-- Source: MT-32 or GM MIDI recordings, or rip from Special Edition soundtrack
-- MSU-1 plays tracks by number, supports looping
-- iMUSE in MI1 primarily does: start track on room enter, transition on event
-- Simple approach: map each music cue to an MSU-1 track number. Hard-cut transitions.
-- Advanced approach: pre-render transition segments for smoother fades at key moments
+The audio system uses a **hybrid architecture**: SPC700 for native chip music and sound effects, MSU-1 for CD-quality voice acting.
 
-**Sound Effects (SPC700):**
-- MI1 has ~50-60 unique sound effects
-- Convert to BRR (Bit Rate Reduction) format for SPC700
-- Write minimal SPC700 driver: receive command byte via APU ports → play sample
-- SFX channel count: 4-6 channels (leaving 2-4 for potential SPC700 music fallback)
-- MSU-1 PCM and SPC700 mix in hardware — SFX overlay on music automatically
+**SPC700 Music & SFX — Terrific Audio Driver (TAD) v0.2.0:**
+- **Driver**: [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver) by undisbeliever (Marcus Rowe)
+- **Integration**: WLA-DX wrapper in `src/object/audio/tad_interface.{h,65816}` — ported from the ca65/64tass API
+- **Capabilities**: 8 music channels (MML-composed), SFX with priority + panning, mono/stereo/surround modes
+- **Composition**: MML text files compiled by `tad-compiler` → bytecode + BRR samples → single binary blob embedded in ROM
+- **Build pipeline**: `tools/tad/tad-compiler.exe` reads `audio/smi.terrificaudio` project → outputs `build/audio/tad-audio-data.bin` → `.incbin`'d into ROM via superfree section
+- **Boot sequence**: `Tad_Init` called at boot (blocking — uploads loader + driver to SPC700 via IPL), `Tad_Process` called per frame in main loop (handles transfer continuation, command dispatch, SFX queue)
+- **SCUMM integration**: Sound opcodes wired directly to TAD API:
+  - `startMusic` → `Tad_LoadSongIfChanged(songId)` — loads and plays song
+  - `stopMusic` → `Tad_QueueCommand(PAUSE)` — pauses playback
+  - `startSound` → `Tad_QueueSoundEffect(sfxId)` — queues SFX with center pan
+  - `stopSound` → `Tad_QueueCommand(STOP_SOUND_EFFECTS)` — stops all SFX
+  - `isSoundRunning` → `Tad_IsSongPlaying()` — returns 1/0 to SCUMM variable
+  - `soundKludge` (iMUSE) — parameter-consuming stub, deferred until iMUSE dispatch needed
+- **Current content**: 3 test instruments (sine, square, triangle), 1 silence song, 1 test beep SFX. Real MI1 tracks pending MML arrangement.
+- **Community**: emberling (SNES musician) has arranged the SCUMM Bar theme as 8-channel SPC700 MML — translation to TAD's PMD-based MML syntax is the next audio content step.
+- **WRAM**: ~20 bytes in lowram (flags, state, transfer pointers, command queue, SFX queue)
+- **ROM**: TAD loader (116B) + audio driver (3,250B) + audio data table + compiled song/SFX data in superfree section
+
+**MSU-1 Voice Acting (future — Phase 3/4):**
+- MI1 CD Talkie has embedded voice data — extract from `.001` data file
+- Pack as MSU-1 PCM tracks (44.1kHz 16-bit stereo, headerless)
+- Hook into SCUMM `print`/`printEgo` opcodes for playback
+- Voice ducking: lower SPC700 music volume during voice playback via `Tad_SetMainVolume`
+- Gap-filling: record new voice lines for text-only dialogue (stretch goal)
 
 ### 5.7 Save System
 
@@ -762,12 +776,29 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - Cache flush on room change: acceptable for now (ENCD re-launches needed globals via startScript)
   - Verified: room 1 ENCD=366B, EXCD=74B, 2 LSCRs (200=89B, 201=300B), ENCD running in slot
 - [x] 16 opcode stubs for ENCD/actor execution
-  - Sound: stopSound, startSound, startMusic, stopMusic, isSoundRunning, soundKludge (all no-op, consume params)
+  - Sound: wired to TAD (see below)
   - Object: setClass (p16 + vararg), drawObject (p16 + sub-opcode)
   - Room: matrixOps (sub-opcode), roomOps (complex sub-opcode), loadRoomWithEgo (sets newRoom)
   - Actor: animateActor, faceActor, walkActorToActor, walkActorTo, isActorInBox (all no-op stubs)
   - Wait: wait (sub-opcode based)
   - ENCD/LSCR execute to completion with 0 stub hits on room 1
+- [x] Terrific Audio Driver (TAD) v0.2.0 integrated
+  - Old SPC700 MOD player removed (`spcinterface.{h,65816}`, `spc700/`)
+  - WLA-DX wrapper: `src/object/audio/tad_interface.{h,65816}` — full TAD API (init, process, load song, queue SFX, commands)
+  - `Tad_Init` called at boot (blocking SPC700 upload), `Tad_Process` per-frame in main loop
+  - Audio project: `audio/smi.terrificaudio`, songs in `audio/songs/`, samples in `audio/samples/`
+  - Build: `tools/tad/tad-compiler.exe` → `build/audio/tad-audio-data.bin` → embedded in ROM
+  - TAD state verified: $82 (PLAYING) after boot, SPC700 driver active
+- [x] SCUMM sound opcodes wired to TAD API
+  - `startMusic` → `Tad_LoadSongIfChanged(songId)` — loads and starts a song
+  - `stopMusic` → `Tad_QueueCommand(PAUSE)` — pauses music
+  - `startSound` → `Tad_QueueSoundEffect(sfxId)` — queues SFX with center pan
+  - `stopSound` → `Tad_QueueCommand(STOP_SOUND_EFFECTS)` — stops all SFX
+  - `isSoundRunning` → `Tad_IsSongPlaying()` — writes 1/0 to SCUMM result variable
+  - `soundKludge` (iMUSE) — parameter-consuming stub, deferred
+  - TAD constants defined in `scummvm.h`: TadCommand_PAUSE, TadCommand_UNPAUSE, TadCommand_STOP_SOUND_EFFECTS
+  - Verified: game boots and runs through multiple rooms with TAD active, no crashes
+  - **Future title screen options:** Sound Check (Phase 3) — MSU-1 PCM track browser for previewing music. EGA graphics toggle (Phase 4) — switch between VGA and EGA room tilesets. Both use the same title screen menu pattern.
 - [x] 7 opcode families for print/verb/sentence/object/string (84 dispatch entries, 79 stubs remain)
   - print ($14,$94): actor + sub-opcode loop (pos/color/clipping/text with embedded var refs)
   - printEgo ($D8): reuses print's sub-opcode loop, no actor param
@@ -826,6 +857,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - Brightness singleton at 0 — level1.script created Brightness but never set it to FULL
 - actorOps handler restructured to group sub-opcodes by parameter count (fixed branch distance errors)
 - loadGlobalScript refactored: extracted `copyMsuToCache` helper (reused by room script loader). loadGlobalScript's inline copy loop replaced with helper call, stack cleanup simplified.
+- TAD spinlock deadlock: `sta.b (PORT & $ff)` generated STA (dp) indirect ($92) instead of STA dp ($85) — WLA-DX parses parentheses as indirect addressing, not expression grouping. CPU wrote through random pointers instead of to APU IO ports → SPC700 never received data → deadlock. Fix: remove parentheses from all DP port accesses in transfer inner loop.
 - **Known open bug**: Room 4 E_Brk crash — expression handler stack corruption when transitioning from room 83 state (room 3 ENCD redirects to 83, then cycling to room 4 triggers crash). excErr=13, excPc=$8046, currentOpcode=$AC. See debugging plan above.
 
 **Success Criteria:** SUBSTANTIALLY MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test confirms rooms 1-3 load and execute ENCD/EXCD/LSCR scripts. One genuine interpreter bug found: expression handler stack corruption on room 83→4 transition (E_Brk crash). Still needed: fix expression bug, actor placement, resource cache eviction.
@@ -866,8 +898,16 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - [x] Implement all remaining MI1-used opcodes — 105/105 done (completed in Phase 1)
 - [ ] Cutscene system (beginOverride/endOverride, ESC to skip)
 - [ ] All puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion, etc.)
-- [ ] MSU-1 music — all tracks converted, triggered on correct cues
-- [ ] SPC700 sound effects — all SFX converted to BRR
+- [ ] SPC700 music — MI1 tracks arranged as MML, compiled via TAD (SCUMM opcodes already wired)
+- [ ] SPC700 sound effects — MI1 SFX as BRR samples in TAD project (SCUMM opcodes already wired)
+- [ ] MSU-1 voice acting — CD Talkie voice lines extracted and packed as PCM tracks
+- [ ] SCUMM-to-TAD ID mapping table (SCUMM sound numbers → TAD song/SFX IDs)
+- [ ] Sound Check screen — title menu option to preview MSU-1 PCM tracks
+  - Requires: MI1 music rendered to WAV (from MIDI/iMUSE recordings), converted via `tools/msu1pcmwriter.py`
+  - Title screen third menu row: "SOUND CHECK" → enters track browser (Left/Right to pick track, A to play, B to stop/back)
+  - Uses same `_scummvm.msu1PlayTrack` / `msu1StopTrack` helpers from dual music mode
+  - Track list display: track number + name (if known) on BG3 text layer
+  - Prerequisite: at least one PCM track file in `distribution/SuperMonkeyIsland-N.pcm`
 - [ ] Save/load game (SRAM)
 - [ ] Room transitions, screen fades
 - [ ] Camera scripting (panCameraTo, etc.)
@@ -889,6 +929,12 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - [ ] Credits
 - [ ] README / setup instructions for end users
 - [ ] Testing on multiple emulators + real hardware
+- [ ] EGA graphics mode toggle
+  - Source: `data/monkeypacks/mnkyega/` (full EGA MI1 game files)
+  - Pipeline: extract EGA bitmaps → 16-color palette → SNES 4bpp tile conversion
+  - Title screen option: "GRAPHICS: VGA" / "GRAPHICS: EGA" toggle (same pattern as music mode)
+  - Stored in WRAM variable like `SCUMM.musicMode`, read by room loader to pick tileset source
+  - Nostalgia/novelty feature — low priority, purely cosmetic
 
 ---
 

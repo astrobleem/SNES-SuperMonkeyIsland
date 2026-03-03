@@ -13,7 +13,7 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 - **Platform**: SNES + MSU-1 (SD2SNES / FXPAK Pro)
 - **Target**: MI1 VGA CD Talkie (`monkey.000` / `monkey.001`)
 - **Input**: SNES Mouse (primary), joypad with virtual cursor (fallback)
-- **Audio**: MSU-1 PCM for music, SPC700 for sound effects
+- **Audio**: SPC700 native chip music + SFX via [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver), MSU-1 for voice acting
 - **Assembler**: WLA-DX v9.3 (v9.4+ breaks the build)
 - **Engine base**: Forked from Super Dragon's Lair Arcade (SNES MSU-1)
 
@@ -51,6 +51,7 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
+| `tad/tad-compiler.exe` | Terrific Audio Driver compiler — MML + WAV → SPC700 binary blob |
 
 ## Legal Model
 
@@ -90,5 +91,9 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly
 - **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Local scripts (200+) routed via LSCR table lookup.
 - **Multi-room smoke test** (`distribution/test_multiroom.lua`) — rooms 1, 2, 3 PASS with room scripts executing to completion
+- **Audio engine integrated** — Terrific Audio Driver (TAD) v0.2.0 replaces legacy SPC700 MOD player
+  - TAD init at boot, per-frame processing in main loop, SPC700 driver active and playing
+  - SCUMM sound opcodes (`startMusic`, `startSound`, `stopMusic`, `stopSound`, `isSoundRunning`) wired to TAD API
+  - MML composition pipeline ready — songs in `audio/songs/`, samples in `audio/samples/`, compiled by `tad-compiler`
 - Known issue: room 4 E_Brk crash (expression handler stack corruption after room 83 scripts)
-- Next: debug expression handler, actor placement, verb bar
+- Next: debug expression handler, actor placement, verb bar, MI1 music arrangements

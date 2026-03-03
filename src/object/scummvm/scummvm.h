@@ -4,6 +4,15 @@
 ; SCUMM v5 Interpreter — Constants, Structs, WRAM layout
 ;---------------------------------------------------------------------------
 
+; TAD audio driver commands (from tad_interface.h)
+.define TadCommand_PAUSE                 0
+.define TadCommand_UNPAUSE               4
+.define TadCommand_STOP_SOUND_EFFECTS    8
+
+; Music mode constants
+.define SCUMM_MUSIC_MODE_TAD   0
+.define SCUMM_MUSIC_MODE_MSU1  1
+
 ; Slot status values
 .define SCUMM_SLOT_DEAD     0
 .define SCUMM_SLOT_RUNNING  1
@@ -126,6 +135,7 @@ SCUMM.cutsceneNest        dw      ;cutscene nesting depth
 SCUMM.currentRoom         dw      ;current room number (0=none)
 SCUMM.newRoom             dw      ;pending room to load (0=none)
 SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
+SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)

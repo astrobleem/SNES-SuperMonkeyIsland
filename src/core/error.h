@@ -15,7 +15,7 @@ E_Sa1IramClear	db
 E_Sa1Test db
 E_Sa1NoIrq db
 E_Todo db
-E_SpcTimeout db
+E_SpcTimeout db ;(legacy, unused — preserved for error LUT alignment)
 E_ObjBadHash	db
 E_ObjBadMethod db
 E_BadScript db
@@ -27,7 +27,7 @@ E_Sa1BWramClear db
 E_Sa1NoBWram db
 E_Sa1BWramToSmall db
 E_Sa1DoubleIrq	db
-E_SpcNoStimulusCallback	db
+E_SpcNoStimulusCallback	db ;(legacy, unused — preserved for error LUT alignment)
 E_Msu1NotPresent db
 E_Msu1FileNotPresent db
 E_Msu1SeekTimeout db

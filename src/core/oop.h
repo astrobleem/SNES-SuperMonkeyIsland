@@ -93,7 +93,6 @@ OBJID.abstract.Background db
 OBJID.abstract.Hdma db
 OBJID.abstract.Script db
 OBJID.abstract.Palette db
-OBJID.Spc	db
 OBJID.Script	db
 OBJID.Msu1	db
 OBJID.Msu1.audio	db
@@ -133,7 +132,6 @@ OopClassLut:
 	PTRLONG OopClassLut abstract.Hdma.CLS
 	PTRLONG OopClassLut abstract.Script.CLS
 	PTRLONG OopClassLut abstract.Palette.CLS
-	PTRLONG OopClassLut Spc.CLS
 	PTRLONG OopClassLut Script.CLS
 	PTRLONG OopClassLut Msu1.CLS
 	PTRLONG OopClassLut Msu1.audio.CLS

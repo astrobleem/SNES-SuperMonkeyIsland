@@ -40,13 +40,6 @@
   bcs +
 	rts
 +
-  jsr core.nmi.stop
-  NEW Spc.CLS.PTR hashPtr.3
-
-  lda.w #0
-  CALL Spc.SpcIssueSamplePackUpload.MTD hashPtr.3
-  jsr core.nmi.start
-
   jsr SavePC
 
   ldx #INPUT.DEVICE.ID.0

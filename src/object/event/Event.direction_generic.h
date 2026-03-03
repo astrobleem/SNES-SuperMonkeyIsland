@@ -2,7 +2,6 @@
 
 .struct vars
   sprite ds 4
-  audio ds 4
   age dw
   direction dw
   wrongMask dw

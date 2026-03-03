@@ -60,9 +60,12 @@
   lda #T_title.PTR
   CALL Background.textlayer.8x8.print.MTD objText
 
-  ;write '>' cursor at START GAME
-  lda.w #$286
-  tax
+  ;initialize menu state
+  stz.b this._tmp              ; cursor row: 0=START GAME, 1=MUSIC
+  stz.b this._tmp+2            ; music mode: 0=SPC700, 1=MSU-1
+
+  ;write '>' cursor at START GAME ($326)
+  ldx #$326
   sep #$20
   lda #$3E
   sta.w GLOBAL.CORE.STRING.buffer,x
@@ -70,16 +73,117 @@
 
   CALL Background.textlayer.8x8.flush.MTD objText
 
-  ;--- Wait for START or A button ---
-_title_screen.waitLoop:
+  ;--- Menu loop ---
+_title_screen.menuLoop:
   jsr SavePC
 
   ldx #INPUT.DEVICE.ID.0
   jsr core.input.get.trigger
-  and.w #(JOY_BUTTON_A | JOY_BUTTON_START)
-  beq _title_screen.waitLoop.noPress
-    jmp _title_screen.startTransition
-_title_screen.waitLoop.noPress:
+  sta.b this._tmp+4             ; save trigger state
+
+  ;--- Check Up/Down ---
+  and.w #JOY_DIR_UP | JOY_DIR_DOWN
+  beq _title_screen.noUpDown
+    ; Toggle cursor row (0↔1)
+    lda.b this._tmp
+    eor #1
+    sta.b this._tmp
+    ; Erase both cursor positions, draw at new row
+    ldx #$326
+    sep #$20
+    lda #$20                    ; space
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    ldx #$346
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    rep #$20
+    lda.b this._tmp
+    beq _title_screen.cursorRow0
+      ldx #$346
+      bra _title_screen.drawCursor
+_title_screen.cursorRow0:
+      ldx #$326
+_title_screen.drawCursor:
+    sep #$20
+    lda #$3E                    ; '>'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    rep #$20
+    CALL Background.textlayer.8x8.flush.MTD objText
+_title_screen.noUpDown:
+
+  ;--- Check Left/Right/A on MUSIC row ---
+  lda.b this._tmp
+  beq _title_screen.checkStart  ; row 0 = START GAME, skip toggle
+  lda.b this._tmp+4
+  and.w #JOY_DIR_LEFT | JOY_DIR_RIGHT | JOY_BUTTON_A
+  beq _title_screen.checkStart
+    ; Toggle music mode (0↔1) and update display
+    lda.b this._tmp+2
+    eor #1
+    sta.b this._tmp+2
+    ; Write mode string at buffer position $34E (6 chars)
+    bne _title_screen.writeMsu1
+    ; Write "SPC700"
+    ldx #$34E
+    sep #$20
+    lda #$53                    ; 'S'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$50                    ; 'P'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$43                    ; 'C'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$37                    ; '7'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$30                    ; '0'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$30                    ; '0'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    rep #$20
+    bra _title_screen.modeTextDone
+_title_screen.writeMsu1:
+    ; Write "MSU-1 " (padded to 6)
+    ldx #$34E
+    sep #$20
+    lda #$4D                    ; 'M'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$53                    ; 'S'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$55                    ; 'U'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$2D                    ; '-'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$31                    ; '1'
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    inx
+    lda #$20                    ; ' '
+    sta.w GLOBAL.CORE.STRING.buffer,x
+    rep #$20
+_title_screen.modeTextDone:
+    CALL Background.textlayer.8x8.flush.MTD objText
+
+_title_screen.checkStart:
+  ;--- Check START (always starts game) or A on START GAME row ---
+  lda.b this._tmp+4
+  bit.w #JOY_BUTTON_START
+  bne _title_screen.launchGame
+  bit.w #JOY_BUTTON_A
+  beq _title_screen.menuDone
+  lda.b this._tmp
+  bne _title_screen.menuDone     ; A on MUSIC row already handled above
+_title_screen.launchGame:
+  ; Write selected music mode to SCUMM VM state
+  lda.b this._tmp+2
+  sta.w SCUMM.musicMode
+  jmp _title_screen.startTransition
+_title_screen.menuDone:
   rts
 
 _title_screen.startTransition:

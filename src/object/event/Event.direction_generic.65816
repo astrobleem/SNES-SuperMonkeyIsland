@@ -30,7 +30,6 @@ _not_action_mask:
   sta this.branchImmediate
   stz this.hasTriggered
 
-  NEW Spc.CLS.PTR this.audio
   rts
 
   METHOD play

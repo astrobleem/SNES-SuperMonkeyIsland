@@ -681,7 +681,10 @@ T_title:
     .db "SNES INTERPRETER"
     .db TC_pos
     .dw $326
-    .db " START GAME",TC_end
+    .db " START GAME"
+    .db TC_pos
+    .dw $346
+    .db " MUSIC: SPC700",TC_end
 
 ;might not work yet
 T_EXCP_E_Msu1FrameBad:

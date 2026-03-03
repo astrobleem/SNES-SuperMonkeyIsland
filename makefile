@@ -14,11 +14,6 @@ linkobjectfile := $(linkdir)/linkobjs.lst
 assembler := ./tools/wla-dx-9.5-svn/wla-65816
 assemblerflags := -o
 
-spcasm = ./tools/wla-dx-9.5-svn/wla-spc700
-spcflags = -o
-spclinkflags := -sb
-spclinkobjectfile := $(linkdir)/spclinkobjs.lst
-
 gfxconverter :=./tools/gracon.py
 
 # Allow switching to superfamiconv for faster builds
@@ -40,7 +35,6 @@ msu1converter := ./tools/msu1blockwriter.py
 msu1flags := -title "SUPER MONKEY ISLAND"
 
 msu1audioconverter := ./tools/msu1pcmwriter.py
-songconverter := ./tools/mod2snes.py
 
 animation_converter := ./tools/animationWriter.py
 
@@ -48,7 +42,10 @@ ifdef USE_SUPERFAMICONV
 animation_converter := ./tools/animationWriter_sfc.py
 endif
 
-sound_converter := ./tools/snesbrr-2006-12-13/snesbrr.exe
+# TAD audio compiler
+tadcompiler := ./tools/tad/tad-compiler.exe
+tadproject := audio/smi.terrificaudio
+tadaudiobin := $(builddir)/audio/tad-audio-data.bin
 
 RD := $(RM) -r
 MD := mkdir -p
@@ -60,19 +57,9 @@ asmsource := 65816
 asmobj := o
 asmheader := h
 
-spcsource := spc700
-spcobject := spo
-spcbinary := bin
-
 image := png
 tile := tiles
 spriteanimation := animation
-
-song := mod
-spcsong := spcmod
-
-sound := wav
-spcsound := brr
 
 msu1audio := pcm
 msu1ext := msu
@@ -102,10 +89,6 @@ scripteventxmls := $(sort $(shell find $(datadir)/ -type f -name '*.$(scripteven
 chapterscripts := $(scripteventxmls:$(eventfolder)%.$(scripteventxml)=$(chapterfolder)%/chapter.$(chapterscript))
 chapteridfiles := $(shell find $(datadir)/ -type f -name 'chapter.id.*')
 
-spcsourcefiles := $(shell find $(sourcedir)/ -type f -name '*.$(spcsource)')
-spcobjects := $(addprefix $(builddir)/,$(patsubst %.$(spcsource), %.$(spcobject), $(spcsourcefiles)))
-spcbin = $(firstword $(addprefix $(builddir)/,$(patsubst %.$(spcsource), %.$(spcbinary), $(spcsourcefiles))))
-
 
 graphics := $(shell find $(datadir)/ -type f -name '*.gfx_normal.$(image)')
 graphics += $(shell find $(datadir)/ -type f -name '*.gfx_font*.$(image)')
@@ -120,18 +103,8 @@ converted_bg_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(sprite
 sprite_animations := $(shell find $(datadir)/ -type d -name '*.gfx_sprite')
 converted_sprite_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(sprite_animations))))
 
-songs := $(shell find $(datadir)/ -type f -name '*.$(song)')
-converted_songs := $(addprefix $(builddir)/,$(patsubst %.$(song), %.$(spcsong), $(songs)))
-
-sounds := $(shell find $(datadir)/ -type f -name '*.sfx_normal.$(sound)')
-sounds += $(shell find $(datadir)/ -type f -name '*.sfx_loop.$(sound)')
-converted_sounds := $(sort $(addprefix $(builddir)/,$(patsubst %.$(sound), %.$(spcsound), $(sounds))))
-
-sfx_normal_flags := -e
-sfx_loop_flags := -e -l 0
-
-video_sounds := $(shell find $(datadir)/ -type f -name '*.sfx_video.$(sound)')
-converted_video_sounds := $(sort $(addprefix $(builddir)/,$(patsubst %.$(sound), %.$(msu1audio), $(video_sounds))))
+video_sounds := $(shell find $(datadir)/ -type f -name '*.sfx_video.wav')
+converted_video_sounds := $(sort $(addprefix $(builddir)/,$(patsubst %.wav, %.$(msu1audio), $(video_sounds))))
 
 
 chapterids := $(shell find $(datadir)/ -type f -name 'chapter.id.*')
@@ -140,8 +113,7 @@ buildchapterids := $(sort $(addprefix $(builddir)/,$(chapterids)))
 
 msu1file := $(romfile:$(romext)=$(msu1ext))
 
-#datafiles := $(msu1file) $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(converted_songs) $(converted_sounds) $(spcbin)
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(converted_songs) $(converted_sounds) $(spcbin)
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects
@@ -164,28 +136,15 @@ $(linkobjectfile): $(objects)
 $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles) $(scriptfiles) $(interfacefiles) $(inheritancefiles) $(datafiles) | $(builddirs)
 	$(assembler) $(assemblerflags) $< $@
 
-#link spc700 objects
-$(spcbin): $(spclinkobjectfile)
-	$(linker) $(spclinkflags) $(spclinkobjectfile) $(spcbin)
-
-#create spc700 object linkfile
-$(spclinkobjectfile): $(spcobjects)
-	$(shell echo "[objects]" > $(spclinkobjectfile))
-	$(foreach obj, $(spcobjects), $(shell echo "$(obj)" >> $(spclinkobjectfile)))
-
-#compile spc700 assembler sourcefiles
-$(spcobjects): $(builddir)/%.$(spcobject): %.$(spcsource) | $(builddirs)
-	$(spcasm) $(spcflags) $< $@
+#compile TAD audio data (run tad-compiler to produce binary blob)
+$(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx/*.txt) $(wildcard audio/samples/*.wav) | $(builddirs)
+	$(tadcompiler) 64tass-export --hirom --output-asm $(builddir)/audio/tad-audio-data.asm --output-bin $(tadaudiobin) --output-inc $(builddir)/audio/tad-enums.inc --section "AudioData0" $(tadproject)
 
 
 #convert graphic files. conversion flags are determined by special string inside filename ".gfx_%." (e.g. fixed8x8.gfx_font.png) and fetched from corresponding variable name ($(gfx_font_flags) in this case)
 $(converted_graphics): $(builddir)/%.$(tile): %.$(image) | $(builddirs)
 	$(gfxconverter) $($(filter gfx_%, $(subst .,$(space), $@))_flags) -infile $< -outfilebase $(patsubst %.$(tile), %, $@)
 
-
-#convert pro tracker mod files to custom spcmod format
-$(converted_songs): $(builddir)/%.$(spcsong): %.$(song) | $(builddirs)
-	$(songconverter) $< $(patsubst %.$(spcsong), %, $@)
 
 #copy chapter id files over to build dir
 $(buildchapterids): $(builddir)/%: % | $(builddirs)
@@ -197,12 +156,8 @@ $(msu1file): $(buildchapterids) $(converted_video_graphics) $(converted_video_so
 	$(msu1converter) $(msu1flags) -infilebase $(chapter_builddir) -outfile $@
 
 #convert wav files to custom msu1 audio format
-$(converted_video_sounds): $(builddir)/%.$(msu1audio): %.$(sound) | $(builddirs)
+$(converted_video_sounds): $(builddir)/%.$(msu1audio): %.wav | $(builddirs)
 	$(msu1audioconverter) -infile $< -outfile $@
-
-#convert wav files to brr sample format
-$(converted_sounds): $(builddir)/%.$(spcsound): %.$(sound) | $(builddirs)
-	$(sound_converter) $($(filter sfx_%, $(subst .,$(space), $@))_flags) $< $@
 
 #convert msu1 video graphic files. conversion flags are determined by special string inside filename ".gfx_%." (e.g. fixed8x8.gfx_font.png) and fetched from corresponding variable name ($(gfx_font_flags) in this case)
 $(converted_video_graphics): $(builddir)/%.$(tile): %.$(image) | $(builddirs)

@@ -54,7 +54,7 @@ Custom object system with 48 concurrent object slots. Each object has init/play/
 - `isScript=$0001`, `isChapter=$0002`, `isEvent=$0004`, `isHdma=$0008`, `isSerializable=$1000`
 - `killOthers` uses bitmask AND matching — ALL requested bits must be present
 
-**Singleton objects**: Brightness, Spc have `OBJECT.FLAGS.Singleton`. Creating a singleton that already exists returns the existing instance WITHOUT calling init again.
+**Singleton objects**: Brightness, ScummVM have `OBJECT.FLAGS.Singleton`. Creating a singleton that already exists returns the existing instance WITHOUT calling init again.
 
 ### Script System (`src/object/script/`)
 Scripts are 65816 code that runs synchronously during init (via `bra _play`) until the first `jsr SavePC`, then resumes one iteration per frame. Key macros: `SCRIPT`, `DIE`, `SavePC`, `WAIT`.
@@ -124,6 +124,10 @@ Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read
 | `src/object/event/abstract.Event.65816` | Base event class, EventResult handlers |
 | `src/object/room/room.65816` | Room loader: MSU-1 seek, index lookup, tileset/tilemap/palette DMA |
 | `src/object/room/room.h` | Room structs, MSU-1 constants, WRAM buffers |
+| `src/object/scummvm/scummvm.65816` | SCUMM v5 interpreter: scheduler, opcodes, script cache, room transitions |
+| `src/object/scummvm/scummvm.h` | SCUMM constants, slot struct, WRAM layout, cache config |
+| `src/object/audio/tad_interface.65816` | Terrific Audio Driver (TAD) — SPC700 init, transfer, per-frame processing |
+| `src/object/audio/tad_interface.h` | TAD API exports (QueueCommand, QueueSoundEffect, LoadSong, etc.) |
 | `tools/create_event.py` | Generate boilerplate for new Event classes |
 | `tools/paths.py` | Shared path resolution for Python tools |
 | `tools/fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |

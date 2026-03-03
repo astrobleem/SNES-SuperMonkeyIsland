@@ -90,10 +90,11 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
 - **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly
 - **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Local scripts (200+) routed via LSCR table lookup.
-- **Multi-room smoke test** (`distribution/test_multiroom.lua`) — rooms 1, 2, 3 PASS with room scripts executing to completion
+- **Multi-room navigation works** — 9/9 rooms pass smoke test (rooms 1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20)
+- **Global script cache reload on room change** — surviving GLOBAL script slots get fresh cache positions after cache flush, preventing stale pointer crashes
 - **Audio engine integrated** — Terrific Audio Driver (TAD) v0.2.0 replaces legacy SPC700 MOD player
   - TAD init at boot, per-frame processing in main loop, SPC700 driver active and playing
   - SCUMM sound opcodes (`startMusic`, `startSound`, `stopMusic`, `stopSound`, `isSoundRunning`) wired to TAD API
+  - MSU-1 PCM audio fallback path for music playback
   - MML composition pipeline ready — songs in `audio/songs/`, samples in `audio/samples/`, compiled by `tad-compiler`
-- Known issue: room 4 E_Brk crash (expression handler stack corruption after room 83 scripts)
-- Next: debug expression handler, actor placement, verb bar, MI1 music arrangements
+- Next: actor placement, verb bar, MI1 music arrangements

@@ -50,6 +50,9 @@
 .define SCUMM_LSCR_BASE     200     ;LSCR numbers are 200-255
 .define SCUMM_LSCR_MAX      56      ;table entries (200..255)
 
+; Actor limits
+.define SCUMM_MAX_ACTORS     256    ;full byte range (MI1 uses actors 0-255)
+
 ; MSU-1 header offsets for script section
 .define SCUMM_MSU_SCRIPT_HDR_OFFSET $0024   ;32-bit pointer in MSU header
 
@@ -95,6 +98,23 @@
 .endst
 
 ;---------------------------------------------------------------------------
+; Actor Structure (16 bytes per actor)
+;---------------------------------------------------------------------------
+.struct scummActor
+  room          db      ; room number (0 = not placed)
+  costume       db      ; costume resource number (0 = none)
+  x             dw      ; X position in room coordinates
+  y             dw      ; Y position in room coordinates
+  facing        dw      ; direction (0=north, 90=right, 180=south, 270=left)
+  elevation     dw      ; Y offset for depth
+  moving        db      ; 0=stationary
+  visible       db      ; nonzero = render
+  initFrame     db      ; animation frame
+  scalex        db      ; scale (255=full)
+  pad           dw      ; pad to 16 bytes (power of 2 for fast indexing)
+.endst
+
+;---------------------------------------------------------------------------
 ; WRAM sections — Bank $7E (auto-placed by linker)
 ;---------------------------------------------------------------------------
 
@@ -136,6 +156,7 @@ SCUMM.currentRoom         dw      ;current room number (0=none)
 SCUMM.newRoom             dw      ;pending room to load (0=none)
 SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
 SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
+SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)
@@ -146,6 +167,17 @@ SCUMM.roomExcdPtr    dw      ; cache offset for EXCD (0 = none)
 SCUMM.roomExcdLen    dw      ; EXCD bytecode length
 SCUMM.roomLscrCount  dw      ; number of LSCR entries loaded
 SCUMM.roomLscrTable  INSTANCEOF lscrEntry SCUMM_LSCR_MAX  ; 56 x 4 = 224B
+.ends
+
+; Actor state table (256 x 16 = 4096 bytes)
+.ramsection "scumm actor state" bank 0 slot 1
+SCUMM.actors         INSTANCEOF scummActor SCUMM_MAX_ACTORS
+.ends
+
+; Object state table (1 byte per object, 1024 objects)
+.define SCUMM_MAX_OBJECTS     1024
+.ramsection "scumm object state" bank 0 slot 1
+SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 .ends
 
 ;---------------------------------------------------------------------------

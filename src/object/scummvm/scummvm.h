@@ -187,13 +187,30 @@ SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 .ends
 
+; Actor walk targets (parallel arrays — 16 actors max, avoids changing struct size)
+.define SCUMM_WALK_ACTORS 16
+.ramsection "scumm actor walk" bank 0 slot 1
+SCUMM.actorTargetX   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination X
+SCUMM.actorTargetY   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination Y
+SCUMM.actorAnimFrame ds SCUMM_WALK_ACTORS      ; 16B — walk cycle index (0-11)
+SCUMM.actorAnimTimer ds SCUMM_WALK_ACTORS      ; 16B — frame delay countdown
+SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
+.ends
+
+; OAM scratch buffer (copy of current frame's OAM data, max ~80 bytes)
+.ramsection "scumm oam scratch" bank 0 slot 1
+SCUMM.oamScratch     ds 80
+.ends
+
 ;---------------------------------------------------------------------------
 ; OOP Class Config
 ;---------------------------------------------------------------------------
 
-; ScummVM uses minimal ZP (just the iteratorStruct from OOP framework)
+; ScummVM ZP layout
 .enum 0
   iterator INSTANCEOF iteratorStruct
+  _oamSrcPtr ds 3
+  _oamSrcLen ds 1
   zpLen ds 0
 .ende
 

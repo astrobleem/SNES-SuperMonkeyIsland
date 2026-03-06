@@ -101,6 +101,30 @@ _init.zeroObjState:
   cpx #SCUMM_MAX_OBJECTS
   bcc _init.zeroObjState
 
+  ;zero walk state arrays (16 actors × 2B targets + 16B anim)
+  ldx #0
+  lda #0
+_init.zeroWalk:
+  sta.w SCUMM.actorTargetX,x
+  sta.w SCUMM.actorTargetY,x
+  inx
+  inx
+  cpx #SCUMM_WALK_ACTORS * 2
+  bcc _init.zeroWalk
+  ldx #0
+  sep #$20
+  lda #0
+_init.zeroWalk2:
+  sta.w SCUMM.actorAnimFrame,x
+  sta.w SCUMM.actorAnimTimer,x
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x
+  lda #0
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _init.zeroWalk2
+  rep #$20
+
   ;zero script cache in $7F
   ldx #0
   lda #0
@@ -331,7 +355,9 @@ _play.nextSlot:
   cmp #SCUMM_MAX_SLOTS
   bcc _play.slotLoop
 
-  ; Render visible actors to OAM buffer (after scripts have run)
+  ; Update actor movement + animation (after scripts have run)
+  jsr _scummvm.updateActors
+  ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
 _play.done:
@@ -3252,20 +3278,43 @@ op_walkActorTo:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor number
   jsr _scummvm.getActorPtr
-  stx.w SCUMM.scratch2
+  stx.w SCUMM.scratch2              ; save actor struct offset
 
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectWord    ; x
-  ldx.w SCUMM.scratch2
-  sta.w SCUMM.actors.x,x
+  pha                                ; save target x
 
   lda #SCUMM_FLAG_BIT5
   jsr _scummvm.getVarOrDirectWord    ; y
-  ldx.w SCUMM.scratch2
-  sta.w SCUMM.actors.y,x
+  sta.w SCUMM.scratch               ; target y
 
-  ; MVP: instant teleport — mark actor as moving so getActorMoving returns non-zero
+  ; Derive actor number from struct offset (offset / 16)
+  lda.w SCUMM.scratch2
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; actor number
+  asl a                              ; × 2 for word index
+  tax
+
+  ; Store walk targets in parallel arrays
+  pla                                ; target x
+  sta.w SCUMM.actorTargetX,x
+  lda.w SCUMM.scratch               ; target y
+  sta.w SCUMM.actorTargetY,x
+
+  ; Initialize animation state for this actor
+  txa
+  lsr a                              ; back to byte index
+  tax
+  lda #WALK_ANIM_SPEED
   sep #$20
+  sta.w SCUMM.actorAnimTimer,x
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+
+  ; Set actor.moving = 1
+  ldx.w SCUMM.scratch2
   lda #1
   sta.w SCUMM.actors.moving,x
   rep #$20
@@ -3935,6 +3984,11 @@ _div16.pos:
 _scummvm.loadActorCostumes:
   rep #$31
 
+  ; Save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
+  lda.w ScreenBrightness
+  and #$00FF
+  pha                               ; save on stack (16-bit push)
+
   ; Disable both NMI and IRQ — DMA queue IRQ also corrupts VMADDL/VMAIN
   jsr core.nmi.stop
   sei
@@ -3998,8 +4052,20 @@ _scummvm.loadActorCostumes:
   sta.w ObjSel
 
   ; Restore display + re-enable NMI/IRQ
-  lda.w ScreenBrightness
+  rep #$20
+  pla                               ; restore saved brightness (16-bit pull)
+  sep #$20
   sta.l INIDSP
+  sta.w ScreenBrightness            ; restore WRAM copy too
+
+  ; Initialize actor 1 animation state
+  ldx #1                              ; actor 1 byte offset
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x        ; force DMA on first render
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+  sta.w SCUMM.actorAnimTimer,x
+
   cli
   rep #$20
   jsr core.nmi.start
@@ -4016,163 +4082,151 @@ _scummvm.loadActorCostumes:
 ; Writes to GLOBAL.oamBuffer (Table 0) and GLOBAL.oamTable1 (Table 1).
 ; Sets GLOBAL.oamUploadFlag so the engine DMAs to OAM during VBlank.
 ;===================================================================
-_scummvm.renderActors:
+
+;===================================================================
+; _scummvm.updateActors
+; Per-frame walk movement + animation. MVP: actor 1 only.
+;===================================================================
+.define WALK_SPEED 2
+
+_scummvm.updateActors:
   rep #$31
 
-  ; Check actor 1 (Guybrush) is visible in current room
-  ; INSTANCEOF .2 = actor index 1 (wla-dx 1-based)
-  lda.w SCUMM.actors.2.visible
+  ; Check if actor 1 is moving
+  lda.w SCUMM.actors.2.moving
   and #$00FF
   bne +
-  jmp _ra.done
+  rts
 +
-  lda.w SCUMM.actors.2.room
-  and #$00FF
-  cmp.w SCUMM.currentRoom
-  beq +
-  jmp _ra.done
-+
-
-  ; Compute screen X = actor.x - cameraX (16-bit)
-  lda.w SCUMM.actors.2.x
+  ; dx = targetX - x
+  ldx #2                            ; actor 1 word offset
+  lda.w SCUMM.actorTargetX,x
   sec
-  sbc.w GLOBAL.room.cameraX
-  sta.w SCUMM.actorScreenX
+  sbc.w SCUMM.actors.2.x
+  sta.w SCUMM.scratch               ; dx
 
-  ; Screen Y = actor.y (no vertical scroll in MI1)
-  lda.w SCUMM.actors.2.y
-  sta.w SCUMM.actorScreenY
+  lda.w SCUMM.actorTargetY,x
+  sec
+  sbc.w SCUMM.actors.2.y
+  sta.w SCUMM.scratch2              ; dy
 
-  ; If both screen coords are 0, actor not yet positioned — use defaults
-  lda.w SCUMM.actorScreenX
-  ora.w SCUMM.actorScreenY
-  bne _ra.posReady
-  lda #128
-  sta.w SCUMM.actorScreenX
-  lda #110
-  sta.w SCUMM.actorScreenY
-_ra.posReady:
-
-  ; Read numEntries from OAM header byte 0
-  lda.l Costume1Oam
-  and #$00FF
-  sta.w SCUMM.actorOamCount
-
-  ; Clear OAM Table 1 bytes for our sprites (5 bytes covers sprites 0-19)
-  sep #$20
-  lda #0
-  ldx #4
-- sta.w GLOBAL.oamTable1,x
-  dex
-  bpl -
-
-  ; X = index into ROM OAM data (skip 6-byte header)
-  ; Y = byte offset into GLOBAL.oamBuffer
-  rep #$20
-  ldx #6
-  ldy.w GLOBAL.currentOamSlot
-
-_ra.entryLoop:
-  ; --- Compute 16-bit X = screenX + sign-extended dx ---
-  rep #$20
-  lda.l Costume1Oam,x              ; dx byte (in low byte, high byte is next field)
-  and #$00FF
-  cmp #$0080
-  bcc +
-  ora #$FF00                        ; sign-extend negative
-+
-  clc
-  adc.w SCUMM.actorScreenX
-  sta.w SCUMM.scratch               ; 16-bit X result
-  inx
-
-  ; --- Compute 16-bit Y = screenY + sign-extended dy ---
-  lda.l Costume1Oam,x              ; dy byte
-  and #$00FF
-  cmp #$0080
-  bcc +
-  ora #$FF00
-+
-  clc
-  adc.w SCUMM.actorScreenY
-  sta.w SCUMM.scratch2              ; 16-bit Y result
-  inx
-
-  ; --- Bounds check: hide tiles outside visible area ---
-  ; X must be in [0, 255], Y must be in [0, 223]
+  ; |dx|
   lda.w SCUMM.scratch
-  bmi _ra.hideEntry                 ; negative X → offscreen
-  cmp #$0100
-  bcs _ra.hideEntry                 ; X >= 256 → offscreen
-  lda.w SCUMM.scratch2
-  bmi _ra.hideEntry                 ; negative Y → offscreen
-  cmp #$00E0
-  bcs _ra.hideEntry                 ; Y >= 224 → offscreen
-
-  ; --- Write visible OAM entry ---
-  sep #$20
-  lda.w SCUMM.scratch               ; X low byte
-  sta.w GLOBAL.oamBuffer,y
-  iny
-  lda.w SCUMM.scratch2              ; Y low byte
-  sta.w GLOBAL.oamBuffer,y
-  iny
-  lda.l Costume1Oam,x              ; tile_id
-  sta.w GLOBAL.oamBuffer,y
-  inx
-  iny
-  lda.l Costume1Oam,x              ; flags (vh000000)
-  ora #$30                          ; priority 3 (above BG)
-  sta.w GLOBAL.oamBuffer,y
-  inx
-  iny
-  bra _ra.nextEntry
-
-_ra.hideEntry:
-  ; Write offscreen entry (Y=$F0 hides the sprite)
-  sep #$20
-  lda #0
-  sta.w GLOBAL.oamBuffer,y          ; X = 0
-  iny
-  lda #$F0
-  sta.w GLOBAL.oamBuffer,y          ; Y = offscreen
-  iny
-  lda #0
-  sta.w GLOBAL.oamBuffer,y          ; tile = 0
-  inx                                ; skip tile byte in ROM
-  iny
-  sta.w GLOBAL.oamBuffer,y          ; flags = 0
-  inx                                ; skip flags byte in ROM
-  iny
-
-_ra.nextEntry:
-  rep #$20
-  dec.w SCUMM.actorOamCount
-  beq +
-  jmp _ra.entryLoop
+  bpl +
+  eor #$FFFF
+  inc a
 +
+  sta.w SCUMM.actorOamCount         ; |dx| temp
 
-  ; Update currentOamSlot
-  sty.w GLOBAL.currentOamSlot
+  ; |dy|
+  lda.w SCUMM.scratch2
+  bpl +
+  eor #$FFFF
+  inc a
++
+  ; A = |dy|
+  clc
+  adc.w SCUMM.actorOamCount         ; |dx|+|dy|
+  cmp #WALK_SPEED + 1
+  bcs _ua.notArrived
 
-  ; Write sprite palette to CGRAM color 128
+  ; --- Arrived ---
+  ldx #2
+  lda.w SCUMM.actorTargetX,x
+  sta.w SCUMM.actors.2.x
+  lda.w SCUMM.actorTargetY,x
+  sta.w SCUMM.actors.2.y
   sep #$20
-  lda #128
-  sta.l CGADD
-  ldx #0
-- lda.l Costume1Pal,x
-  sta.l CGDATA
-  inx
-  cpx #32
-  bne -
-
-  ; Signal engine to upload OAM buffer during next VBlank
-  lda #1
-  sta.w GLOBAL.oamUploadFlag
-
+  stz.w SCUMM.actors.2.moving
+  ldx #1
+  stz.w SCUMM.actorAnimFrame,x
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x
   rep #$20
+  rts
 
-_ra.done:
+_ua.notArrived:
+  ; Move X
+  lda.w SCUMM.actorOamCount         ; |dx|
+  cmp #WALK_SPEED + 1
+  bcc +
+  lda #WALK_SPEED
++
+  ldx.w SCUMM.scratch               ; dx sign
+  bpl _ua.dxPos
+  eor #$FFFF
+  inc a
+_ua.dxPos:
+  clc
+  adc.w SCUMM.actors.2.x
+  sta.w SCUMM.actors.2.x
+
+  ; Move Y
+  lda.w SCUMM.scratch2
+  bpl +
+  eor #$FFFF
+  inc a
++
+  cmp #WALK_SPEED + 1
+  bcc +
+  lda #WALK_SPEED
++
+  ldx.w SCUMM.scratch2              ; dy sign
+  bpl _ua.dyPos
+  eor #$FFFF
+  inc a
+_ua.dyPos:
+  clc
+  adc.w SCUMM.actors.2.y
+  sta.w SCUMM.actors.2.y
+
+  ; Update facing: recompute |dy|
+  lda.w SCUMM.scratch2
+  bpl +
+  eor #$FFFF
+  inc a
++
+  cmp.w SCUMM.actorOamCount         ; |dy| vs |dx|
+  bcs _ua.faceVertical
+  lda.w SCUMM.scratch
+  bmi _ua.faceWest
+  lda #90
+  bra _ua.setFacing
+_ua.faceWest:
+  lda #270
+  bra _ua.setFacing
+_ua.faceVertical:
+  lda.w SCUMM.scratch2
+  bmi _ua.faceNorth
+  lda #180
+  bra _ua.setFacing
+_ua.faceNorth:
+  lda #0
+_ua.setFacing:
+  sta.w SCUMM.actors.2.facing
+
+  ; Advance walk animation
+  sep #$20
+  ldx #1
+  lda.w SCUMM.actorAnimTimer,x
+  dec a
+  sta.w SCUMM.actorAnimTimer,x
+  bne _ua.animDone
+  lda #WALK_ANIM_SPEED
+  sta.w SCUMM.actorAnimTimer,x
+  lda.w SCUMM.actorAnimFrame,x
+  inc a
+  cmp #WALK_CYCLE_LEN
+  bcc +
+  lda #0
++
+  sta.w SCUMM.actorAnimFrame,x
+_ua.animDone:
+  rep #$20
+  rts
+
+_scummvm.renderActors:
+  jsl scummvm.renderActors_impl
   rts
 
 
@@ -4186,12 +4240,355 @@ _ra.done:
 ; Guybrush standing south idle (cost_017 pic00: 19x47, 13 tiles)
 ;===================================================================
 .section "CostumeData" superfree
+
+;--- Walk cycle table (12 steps → pic index) ---
+WalkCycleTable:
+  .db 0, 1, 2, 3, 3, 2, 4, 5, 6, 7, 8, 9
+.define WALK_CYCLE_LEN 12
+.define WALK_ANIM_SPEED 5
+
+;--- Frame lookup tables (10 entries for pics 0-9) ---
+CostumeFrameChrLo:
+  .dw Costume_pic00_chr, Costume_pic01_chr, Costume_pic02_chr, Costume_pic03_chr, Costume_pic04_chr
+  .dw Costume_pic05_chr, Costume_pic06_chr, Costume_pic07_chr, Costume_pic08_chr, Costume_pic09_chr
+
+CostumeFrameChrHi:
+  .db :Costume_pic00_chr, :Costume_pic01_chr, :Costume_pic02_chr, :Costume_pic03_chr, :Costume_pic04_chr
+  .db :Costume_pic05_chr, :Costume_pic06_chr, :Costume_pic07_chr, :Costume_pic08_chr, :Costume_pic09_chr
+
+CostumeFrameChrLen:
+  .dw Costume_pic00_chrEnd - Costume_pic00_chr
+  .dw Costume_pic01_chrEnd - Costume_pic01_chr
+  .dw Costume_pic02_chrEnd - Costume_pic02_chr
+  .dw Costume_pic03_chrEnd - Costume_pic03_chr
+  .dw Costume_pic04_chrEnd - Costume_pic04_chr
+  .dw Costume_pic05_chrEnd - Costume_pic05_chr
+  .dw Costume_pic06_chrEnd - Costume_pic06_chr
+  .dw Costume_pic07_chrEnd - Costume_pic07_chr
+  .dw Costume_pic08_chrEnd - Costume_pic08_chr
+  .dw Costume_pic09_chrEnd - Costume_pic09_chr
+
+CostumeFrameOamLo:
+  .dw Costume_pic00_oam, Costume_pic01_oam, Costume_pic02_oam, Costume_pic03_oam, Costume_pic04_oam
+  .dw Costume_pic05_oam, Costume_pic06_oam, Costume_pic07_oam, Costume_pic08_oam, Costume_pic09_oam
+
+CostumeFrameOamHi:
+  .db :Costume_pic00_oam, :Costume_pic01_oam, :Costume_pic02_oam, :Costume_pic03_oam, :Costume_pic04_oam
+  .db :Costume_pic05_oam, :Costume_pic06_oam, :Costume_pic07_oam, :Costume_pic08_oam, :Costume_pic09_oam
+
+;--- Backward-compat aliases for loadActorCostumes ---
 Costume1Chr:
-  .incbin "data/snes_converted/costumes/cost_017/pic00.chr"
+Costume_pic00_chr: .incbin "data/snes_converted/costumes/cost_017/pic00.chr"
+Costume_pic00_chrEnd:
 Costume1ChrEnd:
+
 Costume1Pal:
-  .incbin "data/snes_converted/costumes/cost_017/pic00.pal"
+CostumePal: .incbin "data/snes_converted/costumes/cost_017/palette.pal"
+
 Costume1Oam:
-  .incbin "data/snes_converted/costumes/cost_017/pic00.oam"
+Costume_pic00_oam: .incbin "data/snes_converted/costumes/cost_017/pic00.oam"
 Costume1OamEnd:
+
+;--- Remaining walk frames (pics 1-9) ---
+Costume_pic01_chr: .incbin "data/snes_converted/costumes/cost_017/pic01.chr"
+Costume_pic01_chrEnd:
+Costume_pic01_oam: .incbin "data/snes_converted/costumes/cost_017/pic01.oam"
+
+Costume_pic02_chr: .incbin "data/snes_converted/costumes/cost_017/pic02.chr"
+Costume_pic02_chrEnd:
+Costume_pic02_oam: .incbin "data/snes_converted/costumes/cost_017/pic02.oam"
+
+Costume_pic03_chr: .incbin "data/snes_converted/costumes/cost_017/pic03.chr"
+Costume_pic03_chrEnd:
+Costume_pic03_oam: .incbin "data/snes_converted/costumes/cost_017/pic03.oam"
+
+Costume_pic04_chr: .incbin "data/snes_converted/costumes/cost_017/pic04.chr"
+Costume_pic04_chrEnd:
+Costume_pic04_oam: .incbin "data/snes_converted/costumes/cost_017/pic04.oam"
+
+Costume_pic05_chr: .incbin "data/snes_converted/costumes/cost_017/pic05.chr"
+Costume_pic05_chrEnd:
+Costume_pic05_oam: .incbin "data/snes_converted/costumes/cost_017/pic05.oam"
+
+Costume_pic06_chr: .incbin "data/snes_converted/costumes/cost_017/pic06.chr"
+Costume_pic06_chrEnd:
+Costume_pic06_oam: .incbin "data/snes_converted/costumes/cost_017/pic06.oam"
+
+Costume_pic07_chr: .incbin "data/snes_converted/costumes/cost_017/pic07.chr"
+Costume_pic07_chrEnd:
+Costume_pic07_oam: .incbin "data/snes_converted/costumes/cost_017/pic07.oam"
+
+Costume_pic08_chr: .incbin "data/snes_converted/costumes/cost_017/pic08.chr"
+Costume_pic08_chrEnd:
+Costume_pic08_oam: .incbin "data/snes_converted/costumes/cost_017/pic08.oam"
+
+Costume_pic09_chr: .incbin "data/snes_converted/costumes/cost_017/pic09.chr"
+Costume_pic09_chrEnd:
+Costume_pic09_oam: .incbin "data/snes_converted/costumes/cost_017/pic09.oam"
+
+.ends
+
+
+;===================================================================
+; Dynamic actor renderer — superfree bank (called via jsl from bank 0)
+; Looks up current walk cycle frame, DMAs CHR on frame change,
+; renders OAM entries using [_oamSrcPtr],y indirect long addressing.
+; D register = ScummVM object ZP (preserved across jsl).
+; DBR = $7E (WRAM bank, preserved across jsl).
+;===================================================================
+.section "scummvm render impl" superfree
+
+scummvm.renderActors_impl:
+  rep #$31
+
+  ; Check actor 1 (Guybrush) is visible in current room
+  lda.w SCUMM.actors.2.visible
+  and #$00FF
+  bne +
+  jmp _ri.done
++
+  lda.w SCUMM.actors.2.room
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  beq +
+  jmp _ri.done
++
+
+  ; --- Determine current pic index from walk cycle ---
+  sep #$20
+  ldx #1                              ; actor 1 byte index
+  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-11)
+  rep #$20
+  and #$00FF
+  tax
+  lda.l WalkCycleTable,x
+  and #$00FF
+  sta.w SCUMM.scratch                 ; pic index (0-9)
+
+  ; --- CHR DMA if frame changed ---
+  sep #$20
+  ldx #1
+  lda.w SCUMM.actorLastFrame,x
+  rep #$20
+  and #$00FF
+  cmp.w SCUMM.scratch
+  bne +
+  jmp _ri.chrReady
++
+
+  ; Store new lastFrame
+  lda.w SCUMM.scratch
+  sep #$20
+  ldx #1
+  sta.w SCUMM.actorLastFrame,x
+  rep #$20
+
+  ; --- DMA new CHR to VRAM $6000 (brief force-blank) ---
+  ; Save brightness before disabling NMI (which zeros ScreenBrightness)
+  lda.w ScreenBrightness
+  and #$00FF
+  pha                                 ; save brightness (16-bit push)
+
+  ; Inline core.nmi.stop: clear NMI enable bit
+  sep #$20
+  lda.w GLOBAL.interruptFlags
+  and #NMITIMEN_NMI_ENABLE ~$ff
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  sei
+
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+  rep #$20
+
+  ; Look up CHR source from frame tables
+  lda.w SCUMM.scratch                 ; pic index
+  asl a                               ; x2 for word tables
+  tax
+  lda.l CostumeFrameChrLo,x
+  sta.l $4372                         ; DMA source address low
+  lda.l CostumeFrameChrLen,x
+  sta.l $4375                         ; DMA transfer length
+
+  ; Bank byte (byte table, needs original pic index)
+  lda.w SCUMM.scratch
+  and #$00FF
+  tax
+  sep #$20
+  lda.l CostumeFrameChrHi,x
+  sta.l $4374                         ; DMA source bank
+
+  ; Set VRAM destination
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+  lda #$6000
+  sta.l VMADDL
+
+  ; DMA channel 7: word write to VMDATAL/H
+  sep #$20
+  lda.b #$01                          ; A->B, increment, 2-reg write
+  sta.l $4370
+  lda.b #$18                          ; destination: VMDATAL
+  sta.l $4371
+  lda.b #$80                          ; channel 7
+  sta.l MDMAEN
+
+  ; Restore brightness + inline core.nmi.start
+  rep #$20
+  pla                                 ; brightness (16-bit pull)
+  sep #$20
+  sta.l INIDSP
+  sta.w ScreenBrightness
+  cli
+  lda.w GLOBAL.interruptFlags
+  ora #NMITIMEN_NMI_ENABLE
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+
+_ri.chrReady:
+  ; --- Set up OAM source pointer (24-bit) in ZP ---
+  lda.w SCUMM.scratch                 ; pic index
+  asl a                               ; x2 for word table
+  tax
+  lda.l CostumeFrameOamLo,x
+  sta.b _oamSrcPtr                    ; low 16 bits
+
+  lda.w SCUMM.scratch
+  and #$00FF
+  tax
+  sep #$20
+  lda.l CostumeFrameOamHi,x
+  sta.b _oamSrcPtr + 2               ; bank byte
+  rep #$20
+
+  ; Read entry count from OAM header byte 0
+  ldy #0
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sta.w SCUMM.actorOamCount
+
+  ; Compute screen X = actor.x - cameraX
+  lda.w SCUMM.actors.2.x
+  sec
+  sbc.w GLOBAL.room.cameraX
+  sta.w SCUMM.actorScreenX
+
+  ; Screen Y = actor.y (no vertical scroll in MI1)
+  lda.w SCUMM.actors.2.y
+  sta.w SCUMM.actorScreenY
+
+  ; Default position if both zero (actor not yet positioned)
+  lda.w SCUMM.actorScreenX
+  ora.w SCUMM.actorScreenY
+  bne _ri.posReady
+  lda #128
+  sta.w SCUMM.actorScreenX
+  lda #110
+  sta.w SCUMM.actorScreenY
+_ri.posReady:
+
+  ; Clear OAM Table 1 bytes for our sprites (5 bytes covers sprites 0-19)
+  sep #$20
+  lda #0
+  ldx #4
+- sta.w GLOBAL.oamTable1,x
+  dex
+  bpl -
+
+  ; --- OAM render loop ---
+  ; Y = source offset into OAM data (skip 6-byte header)
+  ; X = destination offset into GLOBAL.oamBuffer
+  rep #$20
+  ldx.w GLOBAL.currentOamSlot
+  ldy #6
+
+_ri.entryLoop:
+  rep #$20
+  lda [_oamSrcPtr],y                  ; dx byte
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  clc
+  adc.w SCUMM.actorScreenX
+  sta.w SCUMM.scratch
+
+  lda [_oamSrcPtr],y                  ; dy byte
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  clc
+  adc.w SCUMM.actorScreenY
+  sta.w SCUMM.scratch2
+
+  ; Bounds check
+  lda.w SCUMM.scratch
+  bmi _ri.hideEntry
+  cmp #$0100
+  bcs _ri.hideEntry
+  lda.w SCUMM.scratch2
+  bmi _ri.hideEntry
+  cmp #$00E0
+  bcs _ri.hideEntry
+
+  ; Write visible OAM entry
+  sep #$20
+  lda.w SCUMM.scratch
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.scratch2
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda [_oamSrcPtr],y                  ; tile_id
+  sta.w GLOBAL.oamBuffer,x
+  iny
+  inx
+  lda [_oamSrcPtr],y                  ; flags
+  ora #$30                            ; priority 3, sprite palette 0
+  sta.w GLOBAL.oamBuffer,x
+  iny
+  inx
+  bra _ri.nextEntry
+
+_ri.hideEntry:
+  sep #$20
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #$F0                            ; off-screen Y
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  iny                                 ; skip tile_id in source
+  inx
+  sta.w GLOBAL.oamBuffer,x
+  iny                                 ; skip flags in source
+  inx
+
+_ri.nextEntry:
+  rep #$20
+  dec.w SCUMM.actorOamCount
+  beq +
+  jmp _ri.entryLoop
++
+
+  stx.w GLOBAL.currentOamSlot
+
+  ; Signal engine to upload OAM buffer during next VBlank
+  sep #$20
+  lda #1
+  sta.w GLOBAL.oamUploadFlag
+  rep #$20
+
+_ri.done:
+  rtl
+
 .ends

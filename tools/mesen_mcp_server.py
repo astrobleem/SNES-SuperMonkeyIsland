@@ -102,33 +102,56 @@ def lookup_symbols(symbols: list[str]) -> str:
 
 
 @mcp.tool()
-def build_rom(clean: bool = True) -> str:
-    """Build the ROM via WSL make. Returns build output.
+def build_rom(clean: bool = False) -> str:
+    """Build the ROM via WSL make. Returns build output and refreshes .sym file.
 
     Args:
-        clean: If True, runs 'make clean && make'. If False, runs 'make' only.
+        clean: If True, runs 'make clean && make'. If False (default), runs
+               incremental 'make' (~1s). Use clean=True only when needed.
     """
-    make_cmd = "make clean && make" if clean else "make"
     wsl_project = windows_to_wsl(str(PROJECT))
-    wsl_cmd = f'wsl -e bash -c "cd {wsl_project} && {make_cmd}"'
+
+    # Pre-flight: verify WSL is responsive (fail fast instead of hanging)
+    # CRITICAL: stdin=DEVNULL prevents WSL from inheriting the MCP server's
+    # piped stdin, which causes WSL to hang indefinitely on Windows.
+    try:
+        ping = subprocess.run(
+            ["wsl", "echo", "ok"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, timeout=10,
+        )
+        if ping.returncode != 0 or "ok" not in ping.stdout:
+            return f"BUILD ERROR: WSL not responsive (rc={ping.returncode}, out={ping.stdout.strip()!r})"
+    except subprocess.TimeoutExpired:
+        return "BUILD ERROR: WSL not responding (10s ping timeout). Is WSL running?"
+    except FileNotFoundError:
+        return "BUILD ERROR: 'wsl' command not found. Is WSL installed?"
+    except Exception as e:
+        return f"BUILD ERROR: WSL pre-flight failed: {e}"
+
+    # Build command — no shell=True, call wsl directly with list args
+    make_cmd = "make clean && make" if clean else "make"
+    timeout = 60 if clean else 30
 
     try:
         result = subprocess.run(
-            wsl_cmd, shell=True, capture_output=True, text=True, timeout=300
+            ["wsl", "bash", "-c", f"cd {wsl_project} && {make_cmd}"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, timeout=timeout,
         )
         output = result.stdout + result.stderr
 
-        # Check for success indicators
         if result.returncode == 0:
-            # Verify ROM exists
             rom = PROJECT / "build" / "SuperMonkeyIsland.sfc"
+            sym = PROJECT / "build" / "SuperMonkeyIsland.sym"
             if rom.exists():
                 size_kb = rom.stat().st_size // 1024
-                return f"BUILD SUCCESS ({size_kb} KB ROM)\n\n{output[-2000:]}"
+                sym_note = " + .sym updated" if sym.exists() else " (WARNING: .sym missing)"
+                return f"BUILD SUCCESS ({size_kb} KB ROM{sym_note})\n\n{output[-2000:]}"
             return f"BUILD WARNING: make returned 0 but ROM not found\n\n{output[-2000:]}"
         return f"BUILD FAILED (exit code {result.returncode})\n\n{output[-2000:]}"
     except subprocess.TimeoutExpired:
-        return "BUILD TIMEOUT (>300s)"
+        return f"BUILD TIMEOUT (>{timeout}s). WSL was responsive but make hung."
     except Exception as e:
         return f"BUILD ERROR: {e}"
 
@@ -158,7 +181,8 @@ def run_test(script_name: str, timeout: int = 120) -> str:
 
     try:
         subprocess.run(
-            f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout
+            f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired:
         return f"MESEN TIMEOUT (>{timeout}s). Partial output:\n{_read_out_file(out_file)}"
@@ -199,7 +223,8 @@ def run_lua_snippet(lua_code: str, timeout: int = 60) -> str:
 
     try:
         subprocess.run(
-            f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout
+            f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired:
         return f"MESEN TIMEOUT (>{timeout}s). Partial output:\n{_read_out_file(out_file)}"
@@ -360,7 +385,8 @@ def take_screenshot(
     )
 
     try:
-        subprocess.run(f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout)
+        subprocess.run(f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
+                       stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
         return f"MESEN TIMEOUT (>{timeout}s). Partial output:\n{_read_out_file(out_file)}"
     except Exception as e:

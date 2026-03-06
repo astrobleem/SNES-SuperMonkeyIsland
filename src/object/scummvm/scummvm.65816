@@ -331,6 +331,9 @@ _play.nextSlot:
   cmp #SCUMM_MAX_SLOTS
   bcc _play.slotLoop
 
+  ; Render visible actors to OAM buffer (after scripts have run)
+  jsr _scummvm.renderActors
+
 _play.done:
   rts
 
@@ -399,6 +402,9 @@ _prc.bgReady:
   beq _prc.noEncd
   jsr _scummvm.startEncdSlot
 _prc.noEncd:
+
+  ; Load actor costume tiles + palette to VRAM/CGRAM
+  jsr _scummvm.loadActorCostumes
 
   ; Fade up brightness
   sep #$20
@@ -3921,6 +3927,236 @@ _div16.pos:
   plx
   rts
 
+;===================================================================
+; _scummvm.loadActorCostumes
+; DMA costume tiles + palette to VRAM/CGRAM during room change.
+; MVP: always loads costume 1 (Guybrush standing frame).
+;===================================================================
+_scummvm.loadActorCostumes:
+  rep #$31
+
+  ; Disable both NMI and IRQ — DMA queue IRQ also corrupts VMADDL/VMAIN
+  jsr core.nmi.stop
+  sei
+  sep #$20
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+  rep #$20
+
+  ; --- DMA costume palette to CGRAM sprite palette 0 (color 128) ---
+  sep #$20
+  lda.b #128                          ; color index 128 = sprite palette 0
+  sta.l CGADD
+
+  lda.b #$00                          ; A→B, increment source, 1-reg write
+  sta.l $4360                         ; DMA6 control
+  lda.b #$22                          ; destination: CGDATA ($2122)
+  sta.l $4361
+  rep #$20
+  lda.w #Costume1Pal
+  sta.l $4362                         ; source address low
+  sep #$20
+  lda.b #:Costume1Pal
+  sta.l $4364                         ; source bank
+  rep #$20
+  lda.w #32                           ; 16 colors x 2 bytes
+  sta.l $4365                         ; transfer length
+  sep #$20
+  lda.b #$40                          ; channel 6 bit
+  sta.l MDMAEN                        ; start DMA
+
+  ; --- DMA costume CHR to VRAM word $6000 (byte $C000) ---
+  ; ObjSel=3 means sprite name base at word $6000
+  lda.b #VMAIN_INCREMENT_MODE         ; word-access, increment on high byte write
+  sta.l VMAIN
+  rep #$20
+  lda #$6000                          ; VRAM word address
+  sta.l VMADDL
+
+  ; DMA channel 7: A→B, increment source, write to $2118/$2119 (VMDATAL/H)
+  sep #$20
+  lda.b #$01                          ; A→B, increment, 2-reg write (word)
+  sta.l $4370                         ; DMA7 control
+  lda.b #$18                          ; destination: VMDATAL ($2118)
+  sta.l $4371
+  rep #$20
+  lda.w #Costume1Chr
+  sta.l $4372                         ; source address low
+  sep #$20
+  lda.b #:Costume1Chr
+  sta.l $4374                         ; source bank
+  rep #$20
+  lda.w #Costume1ChrEnd - Costume1Chr
+  sta.l $4375                         ; transfer length
+  sep #$20
+  lda.b #$80                          ; channel 7 bit
+  sta.l MDMAEN                        ; start DMA
+
+  ; Set ObjSel so sprites read tiles from VRAM word $6000 (byte $C000)
+  ; Bits 0-1 = 11 = name base at word $6000
+  lda.b #$03
+  sta.w ObjSel
+
+  ; Restore display + re-enable NMI/IRQ
+  lda.w ScreenBrightness
+  sta.l INIDSP
+  cli
+  rep #$20
+  jsr core.nmi.start
+
+  rts
+
+
+;===================================================================
+; _scummvm.renderActors
+; Write OAM entries for visible actors in current room.
+; MVP: only renders actor 1 (Guybrush) using hardcoded costume frame.
+; Called at end of ScummVM.play(), after slot scheduler.
+;===================================================================
+_scummvm.renderActors:
+  rep #$31
+
+  ; Check actor 1 (Guybrush) is visible in current room
+  ; INSTANCEOF .2 = actor index 1 (wla-dx 1-based)
+  lda.w SCUMM.actors.2.visible
+  and #$00FF
+  bne +
+  jmp _ra.done
++
+  lda.w SCUMM.actors.2.room
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  beq +
+  jmp _ra.done
++
+
+  ; Compute screen X = actor.x - cameraX
+  lda.w SCUMM.actors.2.x
+  sec
+  sbc.w GLOBAL.room.cameraX
+  sta.w SCUMM.actorScreenX
+
+  ; Screen Y = actor.y (no vertical scroll in MI1)
+  lda.w SCUMM.actors.2.y
+  sta.w SCUMM.actorScreenY
+
+  ; If both screen coords are 0, actor not yet positioned — use defaults
+  lda.w SCUMM.actorScreenX
+  ora.w SCUMM.actorScreenY
+  bne _ra.posReady
+  lda #128
+  sta.w SCUMM.actorScreenX
+  lda #110
+  sta.w SCUMM.actorScreenY
+_ra.posReady:
+
+  ; Read numEntries from OAM header byte 0
+  lda.l Costume1Oam
+  and #$00FF
+  sta.w SCUMM.actorOamCount
+
+  ; X = index into ROM OAM data (skip 6-byte header)
+  ; Y = byte offset into GLOBAL.oamBuffer
+  ldx #6
+  ldy.w GLOBAL.currentOamSlot
+
+_ra.entryLoop:
+  sep #$20
+
+  ; --- Byte 0: X coordinate ---
+  lda.l Costume1Oam,x              ; dx (signed byte)
+  clc
+  adc.w SCUMM.actorScreenX         ; + screenX low byte (8-bit wrap)
+  sta.w GLOBAL.oamBuffer,y
+  inx
+  iny
+
+  ; --- Byte 1: Y coordinate ---
+  lda.l Costume1Oam,x              ; dy (signed byte)
+  clc
+  adc.w SCUMM.actorScreenY         ; + screenY low byte
+  sta.w GLOBAL.oamBuffer,y
+  inx
+  iny
+
+  ; --- Byte 2: tile number ---
+  lda.l Costume1Oam,x              ; tile_id
+  sta.w GLOBAL.oamBuffer,y
+  inx
+  iny
+
+  ; --- Byte 3: flags (vhoopppN) ---
+  lda.l Costume1Oam,x              ; flags from converter (vh000000)
+  ora.b #$30                       ; priority 3 (above BG)
+  sta.w GLOBAL.oamBuffer,y
+  inx
+  iny
+
+  ; Decrement entry counter
+  dec.w SCUMM.actorOamCount
+  bne _ra.entryLoop
+
+  ; Update currentOamSlot
+  sty.w GLOBAL.currentOamSlot
+
+  ; --- Direct DMA: upload OAM + refresh sprite palette every frame ---
+  ; OAM can be written during active display, no force-blank needed
+  sep #$20
+
+  ; Write sprite palette to CGRAM color 128 (byte-by-byte, safe during display)
+  lda.b #128
+  sta.l CGADD
+  ldx #0
+- lda.l Costume1Pal,x
+  sta.l CGDATA
+  inx
+  cpx #32
+  bne -
+
+  ; Upload OAM buffer to hardware OAM
+  lda #0
+  sta.l OAMADDL
+  sta.l OAMADDH
+
+  ; DMA channel 0: GLOBAL.oamBuffer → OAMDATA ($2104), 512 bytes
+  lda.b #$00                        ; A→B, increment source, 1-reg write
+  sta.l $4300
+  lda.b #$04                        ; destination: OAMDATA ($2104)
+  sta.l $4301
+  rep #$20
+  lda.w #GLOBAL.oamBuffer
+  sta.l $4302                       ; source address low
+  sep #$20
+  lda.b #RAM                        ; source bank ($7E)
+  sta.l $4304
+  rep #$20
+  lda.w #$0200                      ; 512 bytes
+  sta.l $4305
+  sep #$20
+  lda.b #$01                        ; channel 0
+  sta.l MDMAEN
+  rep #$20
+
+_ra.done:
+  rts
+
+
   CLASS ScummVM
 
+.ends
+
+
+;===================================================================
+; Costume frame data — embedded in ROM (superfree bank)
+; Guybrush standing south idle (pic09: 37x28, 19 tiles, 19 OAM entries)
+;===================================================================
+.section "CostumeData" superfree
+Costume1Chr:
+  .incbin "data/snes_converted/costumes/cost_001/pic09.chr"
+Costume1ChrEnd:
+Costume1Pal:
+  .incbin "data/snes_converted/costumes/cost_001/pic09.pal"
+Costume1Oam:
+  .incbin "data/snes_converted/costumes/cost_001/pic09.oam"
+Costume1OamEnd:
 .ends

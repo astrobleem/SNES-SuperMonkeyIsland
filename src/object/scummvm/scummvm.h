@@ -180,6 +180,13 @@ SCUMM.actors         INSTANCEOF scummActor SCUMM_MAX_ACTORS
 SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 .ends
 
+; Actor rendering scratch (used by renderActors)
+.ramsection "scumm actor render" bank 0 slot 1
+SCUMM.actorScreenX   dw      ; computed screen X for current actor
+SCUMM.actorScreenY   dw      ; computed screen Y for current actor
+SCUMM.actorOamCount  dw      ; OAM entry counter
+.ends
+
 ;---------------------------------------------------------------------------
 ; OOP Class Config
 ;---------------------------------------------------------------------------

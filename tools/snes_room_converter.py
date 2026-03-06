@@ -436,11 +436,12 @@ def build_palettes_tileaware(snes_tiles):
         t_g = tg[idxs]
         t_b = tb[idxs]
 
-        # (n, 64, 16) distance
+        # (n, 64, 16) distance — exclude index 0 (transparent)
         dist = _weighted_dist_sq(
             t_r[:, :, None], t_g[:, :, None], t_b[:, :, None],
             pr[None, None, :], pg[None, None, :], pb[None, None, :]
         )
+        dist[:, :, 0] = np.inf  # never map pixels to transparent slot
         indexed_tiles[idxs] = dist.argmin(axis=2).astype(np.uint8)
 
     indexed_tiles = indexed_tiles.reshape(n_tiles, TILE_SIZE, TILE_SIZE)

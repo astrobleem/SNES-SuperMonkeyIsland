@@ -4,8 +4,10 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 
 | | |
 |:---:|:---:|
-| ![Melee Island beach](screenshots/room01_beach.png) | ![Melee Island town](screenshots/room35_town.png) |
-| ![Governor's mansion](screenshots/room07_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
+| ![Beach](screenshots/room01_beach.png) | ![SCUMM Bar](screenshots/room28_scumm_bar.png) |
+| ![Melee Town](screenshots/room35_town.png) | ![Moonlit Dock](screenshots/room33_dock.png) |
+| ![Governor's Mansion](screenshots/room53_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
+| ![Monkey Island](screenshots/room12_monkey_island.png) | ![LeChuck's Lair](screenshots/room65_hell.png) |
 
 ## Architecture
 
@@ -43,7 +45,7 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | Tool | Purpose |
 |------|---------|
 | `scumm_extract.py` | Extract all MI1 resources (rooms, scripts, costumes, sounds, charsets) |
-| `snes_room_converter.py` | Convert room backgrounds to SNES 4bpp tilesets + tilemaps |
+| `snes_room_converter.py` | Convert room backgrounds to SNES 4bpp tilesets + tilemaps (tile-aware palette optimization) |
 | `msu1_pack_rooms.py` | Pack all converted rooms into MSU-1 data file |
 | `msu1_pack_scripts.py` | Pack all script bytecode into MSU-1 data file (appends to room pack) |
 | `scumm_opcode_audit.py` | Walk all 748 script files, decode bytecode, report opcode coverage |
@@ -70,7 +72,7 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 **Phase 0 complete** — room rendering and scroll streaming fully operational.
 
 - All 86 MI1 rooms extracted, converted, and packed into MSU-1 data (2.52 MB)
-- Rooms display correctly on SNES via Mode 1 BG1 with per-room adaptive palettes
+- Rooms display correctly on SNES via Mode 1 BG1 with tile-aware optimized palettes (joint tile-palette assignment, perceptual color weighting)
 - 896-slot VRAM tile cache with MSU-1 random-access streaming
 - Smooth horizontal scrolling with background column refresh (handles ring buffer eviction on scroll reversal)
 - Room cycling via L/R buttons with fade transitions — all 86 rooms browsable

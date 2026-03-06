@@ -88,123 +88,363 @@ def _collect_unique_colors(snes_pixels):
     return sorted(unique)
 
 
-def _reduce_palette(colors, target_count):
-    """Reduce color list by iteratively merging nearest pairs (gracon method).
-
-    Uses NumPy pairwise distance for speed.
-    """
-    if len(colors) <= target_count:
-        return colors
-
-    arr = np.array(colors, dtype=np.int32)
-
-    while len(arr) > target_count:
-        r = (arr & 0x1F).astype(np.float64)
-        g = ((arr >> 5) & 0x1F).astype(np.float64)
-        b = ((arr >> 10) & 0x1F).astype(np.float64)
-
-        # Pairwise squared distance
-        dr = r[:, None] - r[None, :]
-        dg = g[:, None] - g[None, :]
-        db = b[:, None] - b[None, :]
-        dist = dr * dr + dg * dg + db * db
-        np.fill_diagonal(dist, np.inf)
-
-        flat_idx = int(np.argmin(dist))
-        i, j = divmod(flat_idx, len(arr))
-        # Remove the higher index (keep the lower one)
-        arr = np.delete(arr, max(i, j))
-
-    return arr.tolist()
+def _bgr555_to_components(colors):
+    """Decompose BGR555 array into float R, G, B component arrays (0-31)."""
+    arr = np.asarray(colors, dtype=np.int32)
+    return (arr & 0x1F).astype(np.float64), \
+           ((arr >> 5) & 0x1F).astype(np.float64), \
+           ((arr >> 10) & 0x1F).astype(np.float64)
 
 
-def build_palettes(snes_pixels):
-    """Build 8 sub-palettes from the image's SNES-space pixels.
-
-    1. Collect unique BGR555 colors
-    2. Reduce to NUM_SUBPALETTES * COLORS_PER_SUBPALETTE_NONTRANS by merging nearest
-    3. Partition linearly into sub-palettes, each prefixed with transparent color
-
-    Returns list of 8 lists, each 16 BGR555 values.
-    """
-    unique = _collect_unique_colors(snes_pixels)
-    target = NUM_SUBPALETTES * COLORS_PER_SUBPALETTE_NONTRANS
-    reduced = _reduce_palette(unique, target)
-
-    trans = rgb_to_bgr555(*TRANS_COLOR)
-    palettes = []
-    idx = 0
-    for _ in range(NUM_SUBPALETTES):
-        pal = [trans]
-        for _ in range(COLORS_PER_SUBPALETTE_NONTRANS):
-            if idx < len(reduced):
-                pal.append(reduced[idx])
-                idx += 1
-            else:
-                pal.append(trans)
-        palettes.append(pal)
-    return palettes
+def _components_to_bgr555(r, g, b):
+    """Convert float R, G, B (0-31) back to BGR555 uint16."""
+    ri = np.clip(np.round(r), 0, 31).astype(np.int32)
+    gi = np.clip(np.round(g), 0, 31).astype(np.int32)
+    bi = np.clip(np.round(b), 0, 31).astype(np.int32)
+    return (ri | (gi << 5) | (bi << 10)).astype(np.uint16)
 
 
-# ---------------------------------------------------------------------------
-# Tile palettization (lossy, gracon-inspired)
-# ---------------------------------------------------------------------------
+def _weighted_dist_sq(r1, g1, b1, r2, g2, b2):
+    """Perceptual weighted squared distance: 2*dR² + 4*dG² + 1*dB²."""
+    dr = r1 - r2
+    dg = g1 - g2
+    db = b1 - b2
+    return 2.0 * dr * dr + 4.0 * dg * dg + db * db
 
-def palettize_tiles(snes_tiles, palettes):
-    """Assign each tile to its best sub-palette and remap pixels.
 
-    snes_tiles: (n_tiles, 8, 8) uint16 array of BGR555 pixels
-    palettes:   list of 8 lists of 16 BGR555 values
+def _tile_color_histograms(snes_tiles):
+    """Build per-tile unique color lists and pixel counts.
 
-    Returns (indexed_tiles, tile_pal_ids):
-        indexed_tiles: (n_tiles, 8, 8) uint8 — palette-relative indices 0-15
-        tile_pal_ids:  (n_tiles,) uint8 — which sub-palette each tile uses
+    Returns list of (colors_bgr555, counts) tuples, one per tile.
+    colors_bgr555 is a 1D uint16 array, counts is a matching int array.
     """
     n_tiles = snes_tiles.shape[0]
+    flat = snes_tiles.reshape(n_tiles, PIXELS_PER_TILE)
+    histograms = []
+    for i in range(n_tiles):
+        colors, counts = np.unique(flat[i], return_counts=True)
+        histograms.append((colors.astype(np.uint16), counts.astype(np.int32)))
+    return histograms
+
+
+def _assign_tiles_to_palettes(palettes_rgb, histograms):
+    """Assign each tile to its lowest-error palette.
+
+    palettes_rgb: (num_pals, pal_size, 3) float64 — R,G,B components
+    histograms: list of (colors_bgr555, counts) per tile
+
+    Returns (assignments, total_errors):
+        assignments: (n_tiles,) int — palette index
+        total_errors: (n_tiles,) float — weighted error per tile
+    """
+    n_pals = palettes_rgb.shape[0]
+    n_tiles = len(histograms)
+    assignments = np.zeros(n_tiles, dtype=np.int32)
+    total_errors = np.zeros(n_tiles, dtype=np.float64)
+
+    for i, (colors, counts) in enumerate(histograms):
+        cr, cg, cb = _bgr555_to_components(colors)
+        best_err = np.inf
+        best_pal = 0
+        for p in range(n_pals):
+            pr, pg, pb = palettes_rgb[p, :, 0], palettes_rgb[p, :, 1], palettes_rgb[p, :, 2]
+            # Distance from each tile color to each palette color
+            dist = _weighted_dist_sq(
+                cr[:, None], cg[:, None], cb[:, None],
+                pr[None, :], pg[None, :], pb[None, :]
+            )  # (n_colors, pal_size)
+            min_dist = dist.min(axis=1)  # (n_colors,)
+            err = (min_dist * counts).sum()
+            if err < best_err:
+                best_err = err
+                best_pal = p
+        assignments[i] = best_pal
+        total_errors[i] = best_err
+
+    return assignments, total_errors
+
+
+def _recompute_palette_centroids(palettes_rgb, histograms, assignments):
+    """Recompute each palette color as the weighted centroid of assigned pixels.
+
+    Uses weighted k-means: each palette color attracts its nearest pixels from
+    all tiles assigned to that palette.
+    """
+    n_pals = palettes_rgb.shape[0]
+    pal_size = palettes_rgb.shape[1]
+    new_pals = palettes_rgb.copy()
+
+    for p in range(n_pals):
+        tile_mask = (assignments == p)
+        if not tile_mask.any():
+            continue
+
+        # Gather all unique colors and their total weights for this palette
+        all_colors_r = []
+        all_colors_g = []
+        all_colors_b = []
+        all_weights = []
+        indices = np.where(tile_mask)[0]
+        for i in indices:
+            colors, counts = histograms[i]
+            cr, cg, cb = _bgr555_to_components(colors)
+            all_colors_r.append(cr)
+            all_colors_g.append(cg)
+            all_colors_b.append(cb)
+            all_weights.append(counts.astype(np.float64))
+
+        if not all_colors_r:
+            continue
+
+        ar = np.concatenate(all_colors_r)
+        ag = np.concatenate(all_colors_g)
+        ab = np.concatenate(all_colors_b)
+        aw = np.concatenate(all_weights)
+
+        pr = new_pals[p, :, 0]
+        pg = new_pals[p, :, 1]
+        pb = new_pals[p, :, 2]
+
+        # Assign each pixel-color to nearest palette entry
+        dist = _weighted_dist_sq(
+            ar[:, None], ag[:, None], ab[:, None],
+            pr[None, :], pg[None, :], pb[None, :]
+        )  # (n_pixels, pal_size)
+        nearest = dist.argmin(axis=1)  # (n_pixels,)
+
+        # Recompute centroids
+        for c in range(pal_size):
+            mask = (nearest == c)
+            w = aw[mask]
+            if w.sum() > 0:
+                wsum = w.sum()
+                new_pals[p, c, 0] = (ar[mask] * w).sum() / wsum
+                new_pals[p, c, 1] = (ag[mask] * w).sum() / wsum
+                new_pals[p, c, 2] = (ab[mask] * w).sum() / wsum
+
+    return new_pals
+
+
+def build_palettes_tileaware(snes_tiles):
+    """Build 8 sub-palettes using tile-aware iterative optimization.
+
+    Jointly assigns tiles to palettes and recomputes palette colors to minimize
+    per-tile quantization error. Based on tiledpalettequant by Rilden.
+
+    snes_tiles: (n_tiles, 8, 8) uint16 BGR555 pixels
+
+    Returns (palettes, indexed_tiles, tile_pal_ids):
+        palettes:      list of 8 lists of 16 BGR555 values
+        indexed_tiles: (n_tiles, 8, 8) uint8 palette-relative indices
+        tile_pal_ids:  (n_tiles,) uint8 sub-palette assignments
+    """
+    n_tiles = snes_tiles.shape[0]
+    trans = rgb_to_bgr555(*TRANS_COLOR)
+    pal_size = COLORS_PER_SUBPALETTE_NONTRANS  # 15 usable colors per sub-palette
+    rng = np.random.RandomState(42)
+
+    # Build per-tile color histograms
+    histograms = _tile_color_histograms(snes_tiles)
+
+    # Gather all pixel colors with weights for global stats
+    all_r, all_g, all_b, all_w = [], [], [], []
+    for colors, counts in histograms:
+        cr, cg, cb = _bgr555_to_components(colors)
+        all_r.append(cr)
+        all_g.append(cg)
+        all_b.append(cb)
+        all_w.append(counts.astype(np.float64))
+    glob_r = np.concatenate(all_r)
+    glob_g = np.concatenate(all_g)
+    glob_b = np.concatenate(all_b)
+    glob_w = np.concatenate(all_w)
+
+    # Global weighted average color
+    ws = glob_w.sum()
+    avg_r = (glob_r * glob_w).sum() / ws
+    avg_g = (glob_g * glob_w).sum() / ws
+    avg_b = (glob_b * glob_w).sum() / ws
+
+    # --- Initialize palettes via splitting ---
+    # Start with 1 palette of 1 color (global average), split to NUM_SUBPALETTES
+    palettes_rgb = np.zeros((1, pal_size, 3), dtype=np.float64)
+    palettes_rgb[0, 0] = [avg_r, avg_g, avg_b]
+
+    while palettes_rgb.shape[0] < NUM_SUBPALETTES:
+        n_pals = palettes_rgb.shape[0]
+        assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
+
+        # Find palette with highest total error
+        _, tile_errors = _assign_tiles_to_palettes(palettes_rgb, histograms)
+        pal_errors = np.zeros(n_pals)
+        for i in range(n_tiles):
+            pal_errors[assignments[i]] += tile_errors[i]
+
+        worst = int(np.argmax(pal_errors))
+
+        # Duplicate the worst palette with small perturbation
+        new_pal = palettes_rgb[worst].copy()
+        perturbed = new_pal + rng.uniform(-1.5, 1.5, new_pal.shape)
+        perturbed = np.clip(perturbed, 0, 31)
+
+        palettes_rgb = np.concatenate([palettes_rgb, perturbed[None]], axis=0)
+
+        # Quick refinement: 3 rounds of assign + recompute
+        for _ in range(3):
+            assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
+            palettes_rgb = _recompute_palette_centroids(palettes_rgb, histograms, assignments)
+
+    # --- Expand palettes from initial colors to full 15 ---
+    # Currently palette entries beyond [0] are zero; fill them via k-means on assigned tiles
+    for expand_round in range(3):
+        assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
+
+        for p in range(NUM_SUBPALETTES):
+            tile_mask = (assignments == p)
+            if not tile_mask.any():
+                continue
+
+            # Gather unique colors for this palette's tiles
+            p_colors_r, p_colors_g, p_colors_b, p_weights = [], [], [], []
+            for i in np.where(tile_mask)[0]:
+                colors, counts = histograms[i]
+                cr, cg, cb = _bgr555_to_components(colors)
+                p_colors_r.append(cr)
+                p_colors_g.append(cg)
+                p_colors_b.append(cb)
+                p_weights.append(counts.astype(np.float64))
+
+            pr = np.concatenate(p_colors_r)
+            pg = np.concatenate(p_colors_g)
+            pb = np.concatenate(p_colors_b)
+            pw = np.concatenate(p_weights)
+
+            n_unique = len(pr)
+            n_centers = min(pal_size, n_unique)
+
+            if n_centers < 1:
+                continue
+
+            # k-means++ initialization
+            centers_r = np.zeros(n_centers)
+            centers_g = np.zeros(n_centers)
+            centers_b = np.zeros(n_centers)
+
+            # First center: weighted random
+            probs = pw / pw.sum()
+            idx = rng.choice(n_unique, p=probs)
+            centers_r[0], centers_g[0], centers_b[0] = pr[idx], pg[idx], pb[idx]
+
+            for c in range(1, n_centers):
+                dist = np.full(n_unique, np.inf)
+                for cc in range(c):
+                    d = _weighted_dist_sq(pr, pg, pb, centers_r[cc], centers_g[cc], centers_b[cc])
+                    dist = np.minimum(dist, d)
+                probs = (dist * pw)
+                s = probs.sum()
+                if s > 0:
+                    probs /= s
+                else:
+                    probs = pw / pw.sum()
+                idx = rng.choice(n_unique, p=probs)
+                centers_r[c], centers_g[c], centers_b[c] = pr[idx], pg[idx], pb[idx]
+
+            # Run k-means iterations
+            for _ in range(8):
+                dist = _weighted_dist_sq(
+                    pr[:, None], pg[:, None], pb[:, None],
+                    centers_r[None, :], centers_g[None, :], centers_b[None, :]
+                )
+                nearest = dist.argmin(axis=1)
+                for c in range(n_centers):
+                    mask = (nearest == c)
+                    w = pw[mask]
+                    if w.sum() > 0:
+                        wsum = w.sum()
+                        centers_r[c] = (pr[mask] * w).sum() / wsum
+                        centers_g[c] = (pg[mask] * w).sum() / wsum
+                        centers_b[c] = (pb[mask] * w).sum() / wsum
+
+            palettes_rgb[p, :n_centers, 0] = centers_r
+            palettes_rgb[p, :n_centers, 1] = centers_g
+            palettes_rgb[p, :n_centers, 2] = centers_b
+            # Fill remaining slots with duplicates of first center
+            for c in range(n_centers, pal_size):
+                palettes_rgb[p, c] = palettes_rgb[p, 0]
+
+    # --- Main refinement: alternating assignment + centroid recomputation ---
+    best_palettes = palettes_rgb.copy()
+    best_error = np.inf
+
+    for iteration in range(10):
+        assignments, tile_errors = _assign_tiles_to_palettes(palettes_rgb, histograms)
+        total_err = tile_errors.sum()
+
+        if total_err < best_error:
+            best_error = total_err
+            best_palettes = palettes_rgb.copy()
+
+        palettes_rgb = _recompute_palette_centroids(palettes_rgb, histograms, assignments)
+
+    # Final assignment with best palettes
+    palettes_rgb = best_palettes
+    assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
+    # One last centroid pass
+    palettes_rgb = _recompute_palette_centroids(palettes_rgb, histograms, assignments)
+    assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
+
+    # --- Quantize to BGR555 and build output ---
+    palettes_out = []
+    # Convert float palettes to BGR555
+    for p in range(NUM_SUBPALETTES):
+        pal = [trans]
+        bgr_arr = _components_to_bgr555(
+            palettes_rgb[p, :, 0], palettes_rgb[p, :, 1], palettes_rgb[p, :, 2]
+        )
+        for c in range(pal_size):
+            pal.append(int(bgr_arr[c]))
+        palettes_out.append(pal)
+
+    # --- Palettize tiles: assign pixels to nearest color in assigned palette ---
     flat_tiles = snes_tiles.reshape(n_tiles, PIXELS_PER_TILE).astype(np.int32)
-
-    # Decompose tile pixels into RGB channels
-    tr = flat_tiles & 0x1F
-    tg = (flat_tiles >> 5) & 0x1F
-    tb = (flat_tiles >> 10) & 0x1F
-
-    # Pre-decompose all palettes
-    pal_rgb = []  # list of (16, 3) arrays
-    for pal in palettes:
-        arr = np.array(pal, dtype=np.int32)
-        pal_rgb.append(np.stack([arr & 0x1F, (arr >> 5) & 0x1F, (arr >> 10) & 0x1F], axis=1))
+    tr = (flat_tiles & 0x1F).astype(np.float64)
+    tg = ((flat_tiles >> 5) & 0x1F).astype(np.float64)
+    tb = ((flat_tiles >> 10) & 0x1F).astype(np.float64)
 
     indexed_tiles = np.zeros((n_tiles, PIXELS_PER_TILE), dtype=np.uint8)
-    tile_pal_ids = np.zeros(n_tiles, dtype=np.uint8)
+    tile_pal_ids = assignments.astype(np.uint8)
 
-    # For each palette, compute total error for all tiles at once
-    # Then pick the palette with lowest error per tile
-    best_errors = np.full(n_tiles, np.inf)
-    best_nearest = np.zeros((n_tiles, PIXELS_PER_TILE), dtype=np.uint8)
+    # Pre-decompose quantized palettes (including trans at index 0)
+    pal_decomp = []
+    for pal in palettes_out:
+        arr = np.array(pal, dtype=np.int32)
+        pal_decomp.append((
+            (arr & 0x1F).astype(np.float64),
+            ((arr >> 5) & 0x1F).astype(np.float64),
+            ((arr >> 10) & 0x1F).astype(np.float64),
+        ))
 
-    for p_idx, prgb in enumerate(pal_rgb):
-        # prgb: (16, 3)  tile_channels: (n_tiles, 64)
-        pr = prgb[:, 0]  # (16,)
-        pg = prgb[:, 1]
-        pb = prgb[:, 2]
+    # Batch by palette assignment for efficiency
+    for p in range(NUM_SUBPALETTES):
+        mask = (assignments == p)
+        if not mask.any():
+            continue
+        idxs = np.where(mask)[0]
+        pr, pg, pb = pal_decomp[p]  # each (16,)
 
-        # Distance: (n_tiles, 64, 16) — broadcasting
-        dr = tr[:, :, None] - pr[None, None, :]
-        dg = tg[:, :, None] - pg[None, None, :]
-        db = tb[:, :, None] - pb[None, None, :]
-        dist_sq = dr * dr + dg * dg + db * db  # (n_tiles, 64, 16)
+        t_r = tr[idxs]  # (n, 64)
+        t_g = tg[idxs]
+        t_b = tb[idxs]
 
-        nearest_idx = np.argmin(dist_sq, axis=2)       # (n_tiles, 64)
-        min_dist_sq = np.min(dist_sq, axis=2)           # (n_tiles, 64)
-        total_error = min_dist_sq.sum(axis=1).astype(np.float64)  # (n_tiles,)
+        # (n, 64, 16) distance
+        dist = _weighted_dist_sq(
+            t_r[:, :, None], t_g[:, :, None], t_b[:, :, None],
+            pr[None, None, :], pg[None, None, :], pb[None, None, :]
+        )
+        indexed_tiles[idxs] = dist.argmin(axis=2).astype(np.uint8)
 
-        better = total_error < best_errors
-        best_errors[better] = total_error[better]
-        best_nearest[better] = nearest_idx[better]
-        tile_pal_ids[better] = p_idx
-
-    indexed_tiles = best_nearest.reshape(n_tiles, TILE_SIZE, TILE_SIZE)
-    return indexed_tiles, tile_pal_ids
+    indexed_tiles = indexed_tiles.reshape(n_tiles, TILE_SIZE, TILE_SIZE)
+    return palettes_out, indexed_tiles, tile_pal_ids
 
 
 # ---------------------------------------------------------------------------
@@ -527,18 +767,15 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         (((rgb[:, :, 2] >> 3) & 0x1F) << 10)
     ).astype(np.uint16)
 
-    # Step 1: Build palettes
+    # Step 1+2: Split into tiles, build palettes, and palettize (tile-aware)
     t0 = time.time()
-    palettes = build_palettes(snes_pixels)
-    pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
-                                                 for c in p[1:]))
-
-    # Step 2: Split into tiles and palettize
     snes_tiles = snes_pixels.reshape(
         height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
     ).transpose(0, 2, 1, 3).reshape(-1, TILE_SIZE, TILE_SIZE)
 
-    indexed_tiles, tile_pal_ids = palettize_tiles(snes_tiles, palettes)
+    palettes, indexed_tiles, tile_pal_ids = build_palettes_tileaware(snes_tiles)
+    pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
+                                                 for c in p[1:]))
 
     # Step 3: Deduplicate
     unique_tiles, tilemap_entries = dedup_tiles(indexed_tiles, tile_pal_ids)

@@ -55,6 +55,7 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
+| `mesen_mcp_server.py` | MCP server for Mesen 2 automation: symbol lookup, build, test, screenshots |
 | `tad/tad-compiler.exe` | Terrific Audio Driver compiler — MML + WAV → SPC700 binary blob |
 
 ## Legal Model
@@ -80,7 +81,7 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
 - 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit tile IDs
 
-**Phase 1 in progress** — SCUMM v5 bytecode interpreter boots MI1.
+**Phase 1 nearly complete** — SCUMM v5 bytecode interpreter boots MI1, all opcodes done, actor system working.
 
 - Opcode audit complete: 103 of 105 base opcodes used by MI1 (only `getAnimCounter` and `getInventoryCount` unused)
 - 748 scripts analyzed (30,066 opcodes decoded, 0 decode errors)
@@ -94,7 +95,7 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - ScummVM OOP singleton object: boots MI1 script 1 from MSU-1, runs scheduler in play loop
 - **MI1 boots and renders room 1** — SCUMM interpreter runs boot scripts, triggers room load via Phase 0 pipeline, beach scene displays correctly
 - **Room scripts loaded on room change** — ENCD/EXCD/LSCR bytecode parsed from MSU-1 data, cached in $7F, ENCD auto-started in a script slot. Local scripts (200+) routed via LSCR table lookup.
-- **Multi-room navigation works** — 15/15 rooms pass smoke test (rooms 1, 2, 3, 4, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50)
+- **Multi-room navigation works** — 15/15 rooms pass smoke test (rooms 1, 2, 3, 4, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50), including redirect chains (3→83, 4→83, 5→83)
 - **Expression evaluator fixed** — stack-based RPN expression handler with correct sub-opcode dispatch, signed 16-bit multiply/divide
 - **Global script cache reload on room change** — surviving GLOBAL script slots get fresh cache positions after cache flush, preventing stale pointer crashes
 - **Audio engine integrated** — Terrific Audio Driver (TAD) v0.2.0 replaces legacy SPC700 MOD player
@@ -102,8 +103,13 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
   - SCUMM sound opcodes (`startMusic`, `startSound`, `stopMusic`, `stopSound`, `isSoundRunning`) wired to TAD API
   - MSU-1 PCM audio fallback path for music playback
   - MML composition pipeline ready — songs in `audio/songs/`, samples in `audio/samples/`, compiled by `tad-compiler`
-- **Guybrush sprite on screen** — costume decoder (RLE with cross-column carry), SNES 4bpp tile converter, OAM renderer with 16-bit coordinate math, VBlank DMA via engine queue
+- **Guybrush walking on beach** — costume decoder (RLE with cross-column carry), SNES 4bpp tile converter, OAM renderer with 16-bit coordinate math, VBlank DMA via engine queue
   - OAM Table 1 (high X bit + size select) properly maintained
   - Sprite transparency working — color 0 pixels correctly transparent
   - Costume 17 (Guybrush standing/walking) renders with correct palette: white shirt, dark pants, brown hair, skin tones
-- Next: walking animation, verb bar, MI1 music arrangements
+- **Walking animation** — Guybrush moves and animates with a 12-step walk cycle
+  - `walkActorTo` sets walk targets in parallel WRAM arrays (no longer instant teleport)
+  - `updateActors`: per-frame movement (2px/frame), direction from dx/dy, animation timer
+  - `renderActors`: dynamic frame lookup via costume frame tables, CHR DMA on frame change
+  - Heavy rendering code in superfree section (jsl/rtl) to avoid bank 0 linker overflow
+- Next: verb bar, mouse input, dialog system, MI1 music arrangements

@@ -28,13 +28,7 @@ gfx_font4bpp_flags := $(verify) -optimize off -palettes 1 -bpp 4 -mode bg
 
 gfx_bg_flags := $(verify) -optimize on -tilethreshold 15 -palettes 3 -bpp 4 -mode bg
 gfx_directcolor_flags := $(verify) -optimize on -directcolor on -tilethreshold 10 -palettes 1 -bpp 8 -mode bg
-gfx_video_flags := $(verify) -optimize on -tilethreshold 13 -maxtiles 512 -palettes 8 -bpp 4 -mode bg
 gfx_sprite_flags := $(verify) -optimize on -tilethreshold 10 -palettes 2 -bpp 4 -mode sprite
-
-msu1converter := ./tools/msu1blockwriter.py
-msu1flags := -title "SUPER MONKEY ISLAND"
-
-msu1audioconverter := ./tools/msu1pcmwriter.py
 
 animation_converter := ./tools/animationWriter.py
 
@@ -61,10 +55,6 @@ image := png
 tile := tiles
 spriteanimation := animation
 
-msu1audio := pcm
-msu1ext := msu
-chapter_builddir := $(builddir)/$(datadir)/chapters
-
 
 
 sourcefiles := $(shell find $(sourcedir)/ -type f -name '*.$(asmsource)')
@@ -75,43 +65,15 @@ interfacefiles := $(shell find $(sourcedir)/ -type f -name '*.interface')
 inheritancefiles := $(shell find $(sourcedir)/ -type f -name '*.inheritance')
 
 
-#this is a hack
-videofile := $(shell find $(datadir)/ -type f -name '*.mp4')
-convertedframefolder := cimg2
-#convertedframefolder := /media/toshiba/build/data/frames
-chapterfolder := $(datadir)/chapters
-eventfolder := $(datadir)/events
-scriptmaster := $(chapterfolder)/chapter.include
-
-scripteventxml := xml
-chapterscript := script
-scripteventxmls := $(sort $(shell find $(datadir)/ -type f -name '*.$(scripteventxml)'))
-chapterscripts := $(scripteventxmls:$(eventfolder)%.$(scripteventxml)=$(chapterfolder)%/chapter.$(chapterscript))
-chapteridfiles := $(shell find $(datadir)/ -type f -name 'chapter.id.*')
-
-
 graphics := $(shell find $(datadir)/ -type f -name '*.gfx_normal.$(image)')
 graphics += $(shell find $(datadir)/ -type f -name '*.gfx_font*.$(image)')
 converted_graphics := $(sort $(addprefix $(builddir)/,$(patsubst %.$(image), %.$(tile), $(graphics))))
-
-video_graphics := $(shell find $(datadir)/ -type f -name '*.gfx_video.$(image)')
-converted_video_graphics := $(sort $(addprefix $(builddir)/,$(patsubst %.$(image), %.$(tile), $(video_graphics))))
 
 bg_animations := $(shell find $(datadir)/ -type d -name '*.gfx_bg')
 bg_animations += $(shell find $(datadir)/ -type d -name '*.gfx_directcolor')
 converted_bg_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(bg_animations))))
 sprite_animations := $(shell find $(datadir)/ -type d -name '*.gfx_sprite')
 converted_sprite_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(sprite_animations))))
-
-video_sounds := $(shell find $(datadir)/ -type f -name '*.sfx_video.wav')
-converted_video_sounds := $(sort $(addprefix $(builddir)/,$(patsubst %.wav, %.$(msu1audio), $(video_sounds))))
-
-
-chapterids := $(shell find $(datadir)/ -type f -name 'chapter.id.*')
-buildchapterids := $(sort $(addprefix $(builddir)/,$(chapterids)))
-
-
-msu1file := $(romfile:$(romext)=$(msu1ext))
 
 datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
@@ -145,23 +107,6 @@ $(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx
 $(converted_graphics): $(builddir)/%.$(tile): %.$(image) | $(builddirs)
 	$(gfxconverter) $($(filter gfx_%, $(subst .,$(space), $@))_flags) -infile $< -outfilebase $(patsubst %.$(tile), %, $@)
 
-
-#copy chapter id files over to build dir
-$(buildchapterids): $(builddir)/%: % | $(builddirs)
-	$(shell cp $< $@)
-
-
-#build msu1 video file from converted video images
-$(msu1file): $(buildchapterids) $(converted_video_graphics) $(converted_video_sounds) | $(builddirs)
-	$(msu1converter) $(msu1flags) -infilebase $(chapter_builddir) -outfile $@
-
-#convert wav files to custom msu1 audio format
-$(converted_video_sounds): $(builddir)/%.$(msu1audio): %.wav | $(builddirs)
-	$(msu1audioconverter) -infile $< -outfile $@
-
-#convert msu1 video graphic files. conversion flags are determined by special string inside filename ".gfx_%." (e.g. fixed8x8.gfx_font.png) and fetched from corresponding variable name ($(gfx_font_flags) in this case)
-$(converted_video_graphics): $(builddir)/%.$(tile): %.$(image) | $(builddirs)
-	$(gfxconverter) $($(filter gfx_%, $(subst .,$(space), $@))_flags) -infile $< -outfilebase $(patsubst %.$(tile), %, $@)
 
 #convert sprite animation folders to sprite animation file
 $(converted_sprite_animations): $(builddir)/%.$(spriteanimation): % | $(builddirs)

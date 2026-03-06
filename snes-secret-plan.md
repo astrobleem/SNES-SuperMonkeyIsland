@@ -715,11 +715,11 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 
 **Success Criteria:** MET — SCUMM Bar interior renders with correct colors, scrolls smoothly, tiles stream from MSU-1 without glitches. All 86 rooms browsable with correct display. Engine foundation solid for Phase 1.
 
-### Phase 1: The Interpreter Boots (8-10 weeks) — IN PROGRESS (all opcodes implemented)
+### Phase 1: The Interpreter Boots (8-10 weeks) — COMPLETE — all opcodes implemented, actor system wired, Guybrush walking
 
 **Goal:** SCUMM v5 bytecode interpreter running MI1's boot sequence and loading the first room.
 
-**Current status:** MI1 boots. All 105 base opcodes implemented (0 stubs in dispatch table). Room loading integrated with Phase 0 pipeline. Global script cache reloaded on room transitions (reloadGlobalScripts). Expression evaluator fixed with correct sub-opcode dispatch and signed 16-bit multiply/divide. Script cache expanded to 44KB. Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). Sound opcodes wired to TAD audio driver with MSU-1 PCM fallback. Next: actor placement.
+**Current status:** MI1 boots. All 105 base opcodes implemented (0 stubs in dispatch table). Room loading integrated with Phase 0 pipeline. Global script cache reloaded on room transitions (reloadGlobalScripts). Expression evaluator fixed with correct sub-opcode dispatch and signed 16-bit multiply/divide. Script cache expanded to 44KB. Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). Sound opcodes wired to TAD audio driver with MSU-1 PCM fallback. Actor system wired with 19 opcodes, Guybrush walking on beach with 12-step animation cycle.
 
 - [x] Opcode audit — catalog which opcodes MI1 actually uses
   - `tools/scumm_opcode_audit.py` + `tools/scumm/opcodes_v5.py`
@@ -829,7 +829,18 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - Secondary: PUSH flag bit checked main opcode byte ($AC & $80 = always set) instead of sub-opcode byte → always took var-ref path
   - Also: script cache expanded 32→44KB ($7F5000-$7FFFFF) — room 15 + globals overflowed 32KB. Cache-full path changed from silent wrap to TRIGGER_ERROR E_ScummVmCacheFull.
   - Also: implemented real signed 16-bit multiply (shift-and-add) and divide (restoring division)
-- [ ] Implement basic actor placement (putActor, walkActorTo)
+- [x] Implement basic actor placement (putActor, walkActorTo)
+  - Actor struct (16B x 256 actors), 19 actor opcodes wired
+  - putActor/putActorInRoom set room + visible fields
+  - actorOps sub-opcodes 1-based (0x01=setCostume, 0x02=walkSpeed, etc.)
+  - OAM renderer, costume decoder, VRAM DMA pipeline
+  - getActorX/Y/Room, getActorMoving, getActorCostume all read actor table
+- [x] Walking animation — updateActors, walkActorTo, dynamic renderActors
+  - Walk state in parallel WRAM arrays (actorTargetX/Y, animFrame/Timer/LastFrame)
+  - 12-step walk cycle [0,1,2,3,3,2,4,5,6,7,8,9], WALK_ANIM_SPEED=5, WALK_SPEED=2
+  - renderActors moved to superfree section (jsl/rtl) to avoid bank 0 overflow
+  - CHR DMA on frame change with brightness save/restore around force-blank
+  - 10 costume frames in ROM lookup tables (CostumeFrameChr/Oam Lo/Hi/Len)
 - [ ] Resource loader: extend script cache beyond linear allocator (LRU eviction)
 
 **Key findings from opcode audit:**
@@ -868,7 +879,13 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **Fixed**: Room 4 E_Brk crash — stale global script cache pointers, not expression handler bug. See `reloadGlobalScripts` above.
 - **Fixed**: Room 15 E_Brk crash — expression sub-opcode dispatch numbering was wrong (0x01 dispatched ADD instead of PUSH), causing stack corruption. Also expanded script cache 32→44KB. See fix details above.
 
-**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood visible on beach** — costume decoder, SNES tile converter, and OAM renderer all working. Still needed: walking animation, resource cache eviction.
+**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. Still needed: resource cache eviction.
+
+**Bank 0 overflow discovery:**
+- Bank 0 is ~88% full; adding ~300 bytes triggers WLA-DX linker section rearrangement → boot crash
+- Fix: move heavy code (renderActors) to superfree sections, call via jsl/rtl trampoline
+- `_` prefix labels don't resolve across superfree section boundaries — use global names
+- core.nmi.stop zeros ScreenBrightness — must save/restore around force-blank DMA
 
 **Room 4 crash — RESOLVED:**
 Root cause was stale global script cache pointers, not expression handler corruption. `processRoomChange` flushed the cache (`stz cacheWritePtr`) then loaded room scripts at offset 0, but surviving GLOBAL slots kept their stale `cachePtr=0` — reading room ENCD bytes as their own bytecode. Fix: `reloadGlobalScripts` subroutine re-fetches each live GLOBAL slot's bytecode from MSU-1 into a fresh cache position after room scripts are loaded.
@@ -886,7 +903,8 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - OAM renderer in 65816: 16-bit X/Y with sign extension, bounds checking, OAM Table 1 zeroing, VBlank DMA via engine queue (no direct mid-frame DMA)
   - OAM Table 1 buffer added to engine (`oam.h`), DMA extended to 544 bytes (Table 0 + Table 1)
   - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
-- [ ] Walking: pathfinding on walkboxes, walk animation, direction changes
+- [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
+- [ ] Walkbox pathfinding — constrained walking within BOXD walk areas, box-to-box routing
 - [ ] Mouse input: cursor rendering, position tracking, click detection
 - [ ] Joypad fallback: virtual cursor with acceleration
 - [ ] Verb bar: render verbs on BG2, highlight selection, sentence construction

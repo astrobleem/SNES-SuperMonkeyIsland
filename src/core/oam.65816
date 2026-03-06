@@ -73,10 +73,10 @@ core.oam.play:
 	lda #RAM	;@fixme, this is a hack. must find out why above returns $00 instead of $7e
 	pha
 	pea OAM.TABLE.0.START	;target
-	pea OAM.TABLE.0.LENGTH	;length
+	pea OAM.TABLE.0.LENGTH + OAM.TABLE.1.LENGTH	;length (Table 0 + Table 1)
 
 	jsr core.dma.registerTransfer
-	
+
 	txs
 
 + stz.w GLOBAL.oamUploadFlag

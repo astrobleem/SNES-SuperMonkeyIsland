@@ -318,35 +318,45 @@ def _decode_rle(data: bytes, start: int, width: int, height: int,
                 shr: int, mask: int) -> Tuple[np.ndarray, int]:
     """Decode RLE-compressed column data into a pixel array.
 
+    ScummVM carries leftover run lengths across column boundaries — when a run
+    extends past the bottom of a column, the remaining length becomes the start
+    of the next column. This is critical for correct decoding.
+
     Returns:
         (pixels, rle_bytes_consumed) where pixels is (height, width) uint8 array.
     """
     pixels = np.zeros((height, width), dtype=np.uint8)
     src = start
+    rep_len = 0
+    rep_color = 0
 
     for col in range(width):
         row = 0
         while row < height:
-            if src >= len(data):
-                log.debug("RLE: end of data at col=%d/%d, row=%d/%d", col, width, row, height)
-                return pixels, src - start
-
-            b = data[src]
-            src += 1
-            color = b >> shr
-            length = b & mask
-
-            if length == 0:
+            if rep_len == 0:
+                # Need to read a new RLE entry
                 if src >= len(data):
-                    log.debug("RLE: end of data reading extended length at col=%d", col)
+                    log.debug("RLE: end of data at col=%d/%d, row=%d/%d", col, width, row, height)
                     return pixels, src - start
-                length = data[src]
-                src += 1
 
-            end_row = min(row + length, height)
-            if color != 0:
-                pixels[row:end_row, col] = color
-            row = end_row
+                b = data[src]
+                src += 1
+                rep_color = b >> shr
+                rep_len = b & mask
+
+                if rep_len == 0:
+                    if src >= len(data):
+                        log.debug("RLE: end of data reading extended length at col=%d", col)
+                        return pixels, src - start
+                    rep_len = data[src]
+                    src += 1
+
+            # Draw as many pixels as fit in this column
+            draw = min(rep_len, height - row)
+            if rep_color != 0:
+                pixels[row:row + draw, col] = rep_color
+            row += draw
+            rep_len -= draw
 
     return pixels, src - start
 

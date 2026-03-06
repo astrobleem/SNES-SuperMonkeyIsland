@@ -4012,6 +4012,9 @@ _scummvm.loadActorCostumes:
 ; Write OAM entries for visible actors in current room.
 ; MVP: only renders actor 1 (Guybrush) using hardcoded costume frame.
 ; Called at end of ScummVM.play(), after slot scheduler.
+;
+; Writes to GLOBAL.oamBuffer (Table 0) and GLOBAL.oamTable1 (Table 1).
+; Sets GLOBAL.oamUploadFlag so the engine DMAs to OAM during VBlank.
 ;===================================================================
 _scummvm.renderActors:
   rep #$31
@@ -4030,7 +4033,7 @@ _scummvm.renderActors:
   jmp _ra.done
 +
 
-  ; Compute screen X = actor.x - cameraX
+  ; Compute screen X = actor.x - cameraX (16-bit)
   lda.w SCUMM.actors.2.x
   sec
   sbc.w GLOBAL.room.cameraX
@@ -4055,56 +4058,106 @@ _ra.posReady:
   and #$00FF
   sta.w SCUMM.actorOamCount
 
+  ; Clear OAM Table 1 bytes for our sprites (5 bytes covers sprites 0-19)
+  sep #$20
+  lda #0
+  ldx #4
+- sta.w GLOBAL.oamTable1,x
+  dex
+  bpl -
+
   ; X = index into ROM OAM data (skip 6-byte header)
   ; Y = byte offset into GLOBAL.oamBuffer
+  rep #$20
   ldx #6
   ldy.w GLOBAL.currentOamSlot
 
 _ra.entryLoop:
+  ; --- Compute 16-bit X = screenX + sign-extended dx ---
+  rep #$20
+  lda.l Costume1Oam,x              ; dx byte (in low byte, high byte is next field)
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00                        ; sign-extend negative
++
+  clc
+  adc.w SCUMM.actorScreenX
+  sta.w SCUMM.scratch               ; 16-bit X result
+  inx
+
+  ; --- Compute 16-bit Y = screenY + sign-extended dy ---
+  lda.l Costume1Oam,x              ; dy byte
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  clc
+  adc.w SCUMM.actorScreenY
+  sta.w SCUMM.scratch2              ; 16-bit Y result
+  inx
+
+  ; --- Bounds check: hide tiles outside visible area ---
+  ; X must be in [0, 255], Y must be in [0, 223]
+  lda.w SCUMM.scratch
+  bmi _ra.hideEntry                 ; negative X → offscreen
+  cmp #$0100
+  bcs _ra.hideEntry                 ; X >= 256 → offscreen
+  lda.w SCUMM.scratch2
+  bmi _ra.hideEntry                 ; negative Y → offscreen
+  cmp #$00E0
+  bcs _ra.hideEntry                 ; Y >= 224 → offscreen
+
+  ; --- Write visible OAM entry ---
   sep #$20
-
-  ; --- Byte 0: X coordinate ---
-  lda.l Costume1Oam,x              ; dx (signed byte)
-  clc
-  adc.w SCUMM.actorScreenX         ; + screenX low byte (8-bit wrap)
+  lda.w SCUMM.scratch               ; X low byte
   sta.w GLOBAL.oamBuffer,y
-  inx
   iny
-
-  ; --- Byte 1: Y coordinate ---
-  lda.l Costume1Oam,x              ; dy (signed byte)
-  clc
-  adc.w SCUMM.actorScreenY         ; + screenY low byte
+  lda.w SCUMM.scratch2              ; Y low byte
   sta.w GLOBAL.oamBuffer,y
-  inx
   iny
-
-  ; --- Byte 2: tile number ---
   lda.l Costume1Oam,x              ; tile_id
   sta.w GLOBAL.oamBuffer,y
   inx
   iny
-
-  ; --- Byte 3: flags (vhoopppN) ---
-  lda.l Costume1Oam,x              ; flags from converter (vh000000)
-  ora.b #$30                       ; priority 3 (above BG)
+  lda.l Costume1Oam,x              ; flags (vh000000)
+  ora #$30                          ; priority 3 (above BG)
   sta.w GLOBAL.oamBuffer,y
   inx
   iny
+  bra _ra.nextEntry
 
-  ; Decrement entry counter
+_ra.hideEntry:
+  ; Write offscreen entry (Y=$F0 hides the sprite)
+  sep #$20
+  lda #0
+  sta.w GLOBAL.oamBuffer,y          ; X = 0
+  iny
+  lda #$F0
+  sta.w GLOBAL.oamBuffer,y          ; Y = offscreen
+  iny
+  lda #0
+  sta.w GLOBAL.oamBuffer,y          ; tile = 0
+  inx                                ; skip tile byte in ROM
+  iny
+  sta.w GLOBAL.oamBuffer,y          ; flags = 0
+  inx                                ; skip flags byte in ROM
+  iny
+
+_ra.nextEntry:
+  rep #$20
   dec.w SCUMM.actorOamCount
-  bne _ra.entryLoop
+  beq +
+  jmp _ra.entryLoop
++
 
   ; Update currentOamSlot
   sty.w GLOBAL.currentOamSlot
 
-  ; --- Direct DMA: upload OAM + refresh sprite palette every frame ---
-  ; OAM can be written during active display, no force-blank needed
+  ; Write sprite palette to CGRAM color 128
   sep #$20
-
-  ; Write sprite palette to CGRAM color 128 (byte-by-byte, safe during display)
-  lda.b #128
+  lda #128
   sta.l CGADD
   ldx #0
 - lda.l Costume1Pal,x
@@ -4113,28 +4166,10 @@ _ra.entryLoop:
   cpx #32
   bne -
 
-  ; Upload OAM buffer to hardware OAM
-  lda #0
-  sta.l OAMADDL
-  sta.l OAMADDH
+  ; Signal engine to upload OAM buffer during next VBlank
+  lda #1
+  sta.w GLOBAL.oamUploadFlag
 
-  ; DMA channel 0: GLOBAL.oamBuffer → OAMDATA ($2104), 512 bytes
-  lda.b #$00                        ; A→B, increment source, 1-reg write
-  sta.l $4300
-  lda.b #$04                        ; destination: OAMDATA ($2104)
-  sta.l $4301
-  rep #$20
-  lda.w #GLOBAL.oamBuffer
-  sta.l $4302                       ; source address low
-  sep #$20
-  lda.b #RAM                        ; source bank ($7E)
-  sta.l $4304
-  rep #$20
-  lda.w #$0200                      ; 512 bytes
-  sta.l $4305
-  sep #$20
-  lda.b #$01                        ; channel 0
-  sta.l MDMAEN
   rep #$20
 
 _ra.done:
@@ -4148,15 +4183,15 @@ _ra.done:
 
 ;===================================================================
 ; Costume frame data — embedded in ROM (superfree bank)
-; Guybrush standing south idle (pic09: 37x28, 19 tiles, 19 OAM entries)
+; Guybrush standing south idle (cost_017 pic00: 19x47, 13 tiles)
 ;===================================================================
 .section "CostumeData" superfree
 Costume1Chr:
-  .incbin "data/snes_converted/costumes/cost_001/pic09.chr"
+  .incbin "data/snes_converted/costumes/cost_017/pic00.chr"
 Costume1ChrEnd:
 Costume1Pal:
-  .incbin "data/snes_converted/costumes/cost_001/pic09.pal"
+  .incbin "data/snes_converted/costumes/cost_017/pic00.pal"
 Costume1Oam:
-  .incbin "data/snes_converted/costumes/cost_001/pic09.oam"
+  .incbin "data/snes_converted/costumes/cost_017/pic00.oam"
 Costume1OamEnd:
 .ends

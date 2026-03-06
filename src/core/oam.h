@@ -26,6 +26,8 @@ GLOBAL.oamUploadFlag db
 GLOBAL.oamClearFlag db
 GLOBAL.oamBuffer INSTANCEOF oamSlot OAM_SLOTS
 GLOBAL.oamBuffer.end ds 0
+GLOBAL.oamTable1 ds 32
+GLOBAL.oamTable1.end ds 0
 GLOBAL.oam.vram.id db
 GLOBAL.oam.vram.start dw
 

@@ -868,7 +868,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **Fixed**: Room 4 E_Brk crash — stale global script cache pointers, not expression handler bug. See `reloadGlobalScripts` above.
 - **Fixed**: Room 15 E_Brk crash — expression sub-opcode dispatch numbering was wrong (0x01 dispatched ADD instead of PUSH), causing stack corruption. Also expanded script cache 32→44KB. See fix details above.
 
-**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. Still needed: actor placement, resource cache eviction.
+**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood visible on beach** — costume decoder, SNES tile converter, and OAM renderer all working. Still needed: walking animation, resource cache eviction.
 
 **Room 4 crash — RESOLVED:**
 Root cause was stale global script cache pointers, not expression handler corruption. `processRoomChange` flushed the cache (`stz cacheWritePtr`) then loaded room scripts at offset 0, but surviving GLOBAL slots kept their stale `cachePtr=0` — reading room ENCD bytes as their own bytecode. Fix: `reloadGlobalScripts` subroutine re-fetches each live GLOBAL slot's bytecode from MSU-1 into a fresh cache position after room scripts are loaded.
@@ -880,7 +880,12 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 
 **Goal:** Guybrush walks, interacts, and talks.
 
-- [ ] Costume decoder + sprite tile renderer
+- [x] Costume decoder + sprite tile renderer
+  - SCUMM v5 RLE costume decoder (`scumm_costume_decoder.py`): column-by-column RLE with cross-column run carry (critical — runs span column boundaries)
+  - SNES costume converter (`snes_costume_converter.py`): 4bpp planar tile encoding, H/V flip dedup, OAM layout table, BGR555 palette via costume→VGA palette indirection
+  - OAM renderer in 65816: 16-bit X/Y with sign extension, bounds checking, OAM Table 1 zeroing, VBlank DMA via engine queue (no direct mid-frame DMA)
+  - OAM Table 1 buffer added to engine (`oam.h`), DMA extended to 544 bytes (Table 0 + Table 1)
+  - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
 - [ ] Walking: pathfinding on walkboxes, walk animation, direction changes
 - [ ] Mouse input: cursor rendering, position tracking, click detection
 - [ ] Joypad fallback: virtual cursor with acceleration

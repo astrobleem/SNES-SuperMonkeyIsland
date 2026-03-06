@@ -45,6 +45,8 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | Tool | Purpose |
 |------|---------|
 | `scumm_extract.py` | Extract all MI1 resources (rooms, scripts, costumes, sounds, charsets) |
+| `scumm_costume_decoder.py` | Decode SCUMM v5 costume RLE data into indexed pixel arrays |
+| `snes_costume_converter.py` | Convert decoded costumes to SNES 4bpp sprite tiles + OAM layout |
 | `snes_room_converter.py` | Convert room backgrounds to SNES 4bpp tilesets + tilemaps (tile-aware palette optimization) |
 | `msu1_pack_rooms.py` | Pack all converted rooms into MSU-1 data file |
 | `msu1_pack_scripts.py` | Pack all script bytecode into MSU-1 data file (appends to room pack) |
@@ -100,4 +102,8 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
   - SCUMM sound opcodes (`startMusic`, `startSound`, `stopMusic`, `stopSound`, `isSoundRunning`) wired to TAD API
   - MSU-1 PCM audio fallback path for music playback
   - MML composition pipeline ready — songs in `audio/songs/`, samples in `audio/samples/`, compiled by `tad-compiler`
-- Next: actor placement, verb bar, MI1 music arrangements
+- **Guybrush sprite on screen** — costume decoder (RLE with cross-column carry), SNES 4bpp tile converter, OAM renderer with 16-bit coordinate math, VBlank DMA via engine queue
+  - OAM Table 1 (high X bit + size select) properly maintained
+  - Sprite transparency working — color 0 pixels correctly transparent
+  - Costume 17 (Guybrush standing/walking) renders with correct palette: white shirt, dark pants, brown hair, skin tones
+- Next: walking animation, verb bar, MI1 music arrangements

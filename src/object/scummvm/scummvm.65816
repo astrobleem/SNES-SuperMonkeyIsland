@@ -5328,7 +5328,7 @@ _rvb.nextVerb:
 ; scummvm.buildCgramHdmaTable -- fill WRAM CGRAM HDMA table
 ; Briefly enters force blank to read room's palette 7 colors 1-3
 ; from CGRAM, then writes the full table to SCUMM.cgramHdmaTable.
-; Table restores room colors at scanline 0, sets verb colors at 144.
+; Table restores room colors at scanline 0, sets verb colors at 140.
 ; JSL/RTL. DBR=$7E assumed for absolute addressing.
 ;-------------------------------------------------------------------
 .base BSL
@@ -5390,8 +5390,8 @@ scummvm.buildCgramHdmaTable:
   stz.w 16,x
   stz.w 17,x
 
-  ; -- Scanlines 128-143: 16 lines, harmless CGRAM[$70] = $0000 --
-  lda #16
+  ; -- Scanlines 128-139: 12 lines, harmless CGRAM[$70] = $0000 --
+  lda #12
   sta.w 18,x
   lda #$70
   sta.w 19,x
@@ -5399,7 +5399,7 @@ scummvm.buildCgramHdmaTable:
   stz.w 21,x
   stz.w 22,x
 
-  ; -- Scanlines 144-147: repeat 4, set verb colors --
+  ; -- Scanlines 140-143: repeat 4, set verb colors --
   lda #$84
   sta.w 23,x
   ; CGRAM[$00] = $0000 (backdrop = black)
@@ -5432,8 +5432,8 @@ scummvm.buildCgramHdmaTable:
   lda #$7F
   sta.w 39,x
 
-  ; -- Scanlines 148-223: 76 lines, harmless CGRAM[$70] = $0000 --
-  lda #76
+  ; -- Scanlines 144-223: 80 lines, harmless CGRAM[$70] = $0000 --
+  lda #80
   sta.w 40,x
   lda #$70
   sta.w 41,x

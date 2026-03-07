@@ -300,14 +300,14 @@ VerbHdmaTable:
 VerbCgramHdmaTable:
   .db 128                               ; scanlines 0-127: room area
   .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (pal7 color0, transparent)
-  .db 16                                ; scanlines 128-143: room area continued
+  .db 12                                ; scanlines 128-139: room area continued
   .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (pal7 color0, transparent)
-  .db $84                               ; repeat 4 lines (scanlines 144-147)
+  .db $84                               ; repeat 4 lines (scanlines 140-143)
   .db $00, $00, $00, $00               ;   CGRAM[$00] = $0000 (backdrop = black)
   .db $71, $71, $18, $63               ;   CGRAM[$71] = $6318 (pal7 color1 = light grey)
   .db $72, $72, $4A, $29               ;   CGRAM[$72] = $294A (pal7 color2 = dark grey)
   .db $73, $73, $FF, $7F               ;   CGRAM[$73] = $7FFF (pal7 color3 = white body)
-  .db 76                                ; scanlines 148-223: verb area remainder
+  .db 80                                ; scanlines 144-223: verb area
   .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (colors already set)
   .db 0                                 ; end of table
 .ends

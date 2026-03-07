@@ -420,6 +420,9 @@ _play.done:
   rts
 
 
+; buildCgramHdmaTable moved to superfree section at end of file
+
+
 ;-------------------------------------------------------------------
 ; _scummvm.processRoomChange -- load new room background
 ; Called when SCUMM.newRoom != SCUMM.currentRoom
@@ -429,7 +432,9 @@ _scummvm.processRoomChange:
 
   ; Set up PPU for BG1 room display (once)
   lda.w SCUMM.bgInitDone
-  bne _prc.bgReady
+  beq +
+  jmp _prc.bgReady
++
 
   sep #$20
   ; Mode 1, BG1 tilemap at $7000 (word $3800), 64 tiles wide
@@ -469,6 +474,80 @@ _scummvm.processRoomChange:
   jsr core.dma.registerTransfer
   txs
 
+  ; Set up HDMA to disable BG1 below scanline 144 (verb area)
+  sep #$20
+  jsr core.dma_channel.allocate
+  bcc +
+    ; A = channel id (0-7), convert to register offset (channel * 16)
+    sta.w SCUMM.hdmaChannel
+    rep #$31
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tax
+    ; DMAP: $00 = direct, 1-register, A-bus to B-bus
+    sep #$20
+    lda #$00
+    sta.l DMAP0,x
+    ; Target register: $2C (low byte of $212C = TM/MainScreen)
+    lda #$2C
+    sta.l DMADEST0,x
+    ; Table address (24-bit pointer to VerbHdmaTable in ROM)
+    lda.b #:VerbHdmaTable
+    sta.l DMASRC0B,x
+    rep #$20
+    lda.w #VerbHdmaTable
+    sta.l DMASRC0L,x
+    ; Enable this channel in HDMA
+    rep #$20
+    lda.w SCUMM.hdmaChannel
+    and #$00FF
+    tax
+    sep #$20
+    lda.l dmaBitflagLut,x
+    ora.w GLOBAL.HDMA.CHANNEL.ENABLE
+    sta.w GLOBAL.HDMA.CHANNEL.ENABLE
++
+
+  ; Set up HDMA to write verb palette colors to CGRAM at scanline 144
+  sep #$20
+  jsr core.dma_channel.allocate
+  bcc +
+    sta.w SCUMM.hdmaCgramChannel
+    rep #$31
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tax
+    ; DMAP: mode 3 = write pp,pp,pp+1,pp+1 (4 bytes per transfer)
+    sep #$20
+    lda #DMAP_2_REG_WRITE_TWICE_EACH
+    sta.l DMAP0,x
+    ; Target register: $21 (low byte of $2121=CGADD, $2122=CGDATA)
+    lda #$21
+    sta.l DMADEST0,x
+    ; Table address (24-bit pointer to WRAM CGRAM HDMA table)
+    lda.b #$7E
+    sta.l DMASRC0B,x
+    rep #$20
+    lda.w #SCUMM.cgramHdmaTable
+    sta.l DMASRC0L,x
+    ; Enable this channel in HDMA
+    rep #$20
+    lda.w SCUMM.hdmaCgramChannel
+    and #$00FF
+    tax
+    sep #$20
+    lda.l dmaBitflagLut,x
+    ora.w GLOBAL.HDMA.CHANNEL.ENABLE
+    sta.w GLOBAL.HDMA.CHANNEL.ENABLE
++
+
+  rep #$31
   lda #1
   sta.w SCUMM.bgInitDone
 
@@ -478,19 +557,8 @@ _prc.bgReady:
   jsr room.load
   bcc _prc.failed
 
-  ; DMA verb font palette to CGRAM (AFTER room.load which overwrites all BG CGRAM)
-  sep #$20
-  tsx
-  lda #DMA_TRANSFER.CGRAM
-  pha
-  pea VerbFontPal
-  lda.b #:VerbFontPal
-  pha
-  rep #$31
-  pea VERB_PALETTE_CGRAM
-  pea VerbFontPal.end - VerbFontPal
-  jsr core.dma.registerTransfer
-  txs
+  ; Build CGRAM HDMA table with room's palette 7 colors
+  jsl scummvm.buildCgramHdmaTable
 
   ; Kill old room/local script slots
   jsr _scummvm.killRoomScripts
@@ -5221,7 +5289,7 @@ _rvb.charLoop:
   and #$00FF
   sec
   sbc #$20                              ; tile index = ASCII - 0x20
-  ora #$2400                            ; priority 1 + palette 2
+  ora #$3C00                            ; priority 1 + palette 7
   phx
   ldx.w SCUMM.scratch                   ; X = tilemap byte offset
   sta.w SCUMM.verbTilemap,x
@@ -5252,6 +5320,131 @@ _rvb.nextVerb:
   sta.w SCUMM.verbDmaPending
 
   plb
+  rtl
+
+.ends
+
+;-------------------------------------------------------------------
+; scummvm.buildCgramHdmaTable -- fill WRAM CGRAM HDMA table
+; Briefly enters force blank to read room's palette 7 colors 1-3
+; from CGRAM, then writes the full table to SCUMM.cgramHdmaTable.
+; Table restores room colors at scanline 0, sets verb colors at 144.
+; JSL/RTL. DBR=$7E assumed for absolute addressing.
+;-------------------------------------------------------------------
+.base BSL
+.section "ScummVMBuildCgramHdma" superfree
+
+scummvm.buildCgramHdmaTable:
+  php
+  rep #$31
+  lda.w #SCUMM.cgramHdmaTable & $FFFF
+  tax
+
+  ; Enter force blank to read CGRAM
+  sep #$20
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+
+  ; Set CGRAM read address to $71 (palette 7 color 1)
+  lda #$71
+  sta.l $2121
+
+  ; -- Repeat 3 lines at scanline 0: restore room palette 7 colors 1-3 --
+  lda #$83
+  sta.w 0,x
+  ; Color 1: CGRAM[$71] = room value
+  lda #$71
+  sta.w 1,x
+  sta.w 2,x
+  lda.l $213B
+  sta.w 3,x
+  lda.l $213B
+  sta.w 4,x
+  ; Color 2: CGRAM[$72] = room value (CGADD auto-incremented)
+  lda #$72
+  sta.w 5,x
+  sta.w 6,x
+  lda.l $213B
+  sta.w 7,x
+  lda.l $213B
+  sta.w 8,x
+  ; Color 3: CGRAM[$73] = room value (CGADD auto-incremented)
+  lda #$73
+  sta.w 9,x
+  sta.w 10,x
+  lda.l $213B
+  sta.w 11,x
+  lda.l $213B
+  sta.w 12,x
+
+  ; Restore display brightness (exit force blank)
+  lda.w ScreenBrightness
+  sta.l INIDSP
+
+  ; -- Scanlines 3-127: 125 lines, harmless CGRAM[$70] = $0000 --
+  lda #125
+  sta.w 13,x
+  lda #$70
+  sta.w 14,x
+  sta.w 15,x
+  stz.w 16,x
+  stz.w 17,x
+
+  ; -- Scanlines 128-143: 16 lines, harmless CGRAM[$70] = $0000 --
+  lda #16
+  sta.w 18,x
+  lda #$70
+  sta.w 19,x
+  sta.w 20,x
+  stz.w 21,x
+  stz.w 22,x
+
+  ; -- Scanlines 144-147: repeat 4, set verb colors --
+  lda #$84
+  sta.w 23,x
+  ; CGRAM[$00] = $0000 (backdrop = black)
+  stz.w 24,x
+  stz.w 25,x
+  stz.w 26,x
+  stz.w 27,x
+  ; CGRAM[$71] = $6318 (light grey inner fill)
+  lda #$71
+  sta.w 28,x
+  sta.w 29,x
+  lda #$18
+  sta.w 30,x
+  lda #$63
+  sta.w 31,x
+  ; CGRAM[$72] = $294A (dark grey shadow)
+  lda #$72
+  sta.w 32,x
+  sta.w 33,x
+  lda #$4A
+  sta.w 34,x
+  lda #$29
+  sta.w 35,x
+  ; CGRAM[$73] = $7FFF (white letter body)
+  lda #$73
+  sta.w 36,x
+  sta.w 37,x
+  lda #$FF
+  sta.w 38,x
+  lda #$7F
+  sta.w 39,x
+
+  ; -- Scanlines 148-223: 76 lines, harmless CGRAM[$70] = $0000 --
+  lda #76
+  sta.w 40,x
+  lda #$70
+  sta.w 41,x
+  sta.w 42,x
+  stz.w 43,x
+  stz.w 44,x
+
+  ; Terminator
+  stz.w 45,x
+
+  plp
   rtl
 
 .ends

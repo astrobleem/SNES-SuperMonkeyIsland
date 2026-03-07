@@ -4,7 +4,8 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 
 | | |
 |:---:|:---:|
-| ![Beach](screenshots/room01_beach.png) | ![SCUMM Bar](screenshots/room28_scumm_bar.png) |
+| ![Verb Bar](screenshots/room1_verb_bar.png) | ![SCUMM Bar](screenshots/room28_scumm_bar.png) |
+| Guybrush on the beach with full verb bar | SCUMM Bar background |
 | ![Melee Town](screenshots/room35_town.png) | ![Moonlit Dock](screenshots/room33_dock.png) |
 | ![Governor's Mansion](screenshots/room53_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
 | ![Monkey Island](screenshots/room12_monkey_island.png) | ![LeChuck's Lair](screenshots/room65_hell.png) |
@@ -81,7 +82,7 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
 - Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
 - 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit tile IDs
 
-**Phase 1 nearly complete** — SCUMM v5 bytecode interpreter boots MI1, all opcodes done, actor system working.
+**Phase 1 complete, Phase 2 in progress** — SCUMM v5 interpreter running, actor + verb systems operational.
 
 - Opcode audit complete: 103 of 105 base opcodes used by MI1 (only `getAnimCounter` and `getInventoryCount` unused)
 - 748 scripts analyzed (30,066 opcodes decoded, 0 decode errors)
@@ -112,4 +113,11 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
   - `updateActors`: per-frame movement (2px/frame), direction from dx/dy, animation timer
   - `renderActors`: dynamic frame lookup via costume frame tables, CHR DMA on frame change
   - Heavy rendering code in superfree section (jsl/rtl) to avoid bank 0 linker overflow
-- Next: verb bar, mouse input, dialog system, MI1 music arrangements
+- **Verb bar rendering** — all 10 MI1 verbs displayed on BG2 with font tile DMA
+  - BG2 (32x32 tilemap) dedicated to verb/UI layer, BG1 for room backgrounds
+  - 4bpp font tiles DMA'd to VRAM on room init, verb palette to CGRAM after room palette
+  - Verb tilemap renderer: iterates verb slots, builds tilemap in WRAM, DMA to VRAM
+  - Priority bit on BG2 tiles ensures verbs render above BG1's room tiles
+  - `verbOps` opcode handler: set verb name, position, flags, on/off state
+  - `initDefaultVerbs`: hardcoded MI1 verb layout (Walk to, Give, Open, Close, Pick up, Look at, Talk to, Use, Push, Pull)
+- Next: mouse input, dialog system, verb interaction, MI1 music arrangements

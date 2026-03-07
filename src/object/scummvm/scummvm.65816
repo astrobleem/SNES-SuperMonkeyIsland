@@ -101,6 +101,37 @@ _init.zeroObjState:
   cpx #SCUMM_MAX_OBJECTS
   bcc _init.zeroObjState
 
+  ;zero verb table (20 * 16 = 320 bytes)
+  ldx #0
+  lda #0
+_init.zeroVerbs:
+  sta.w SCUMM.verbs,x
+  inx
+  inx
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcc _init.zeroVerbs
+
+  ;zero verb names buffer (256 bytes)
+  ldx #0
+_init.zeroVerbNames:
+  sta.w SCUMM.verbNames,x
+  inx
+  inx
+  cpx #SCUMM_VERB_NAMES_SIZE
+  bcc _init.zeroVerbNames
+
+  stz.w SCUMM.verbNamesPtr
+  stz.w SCUMM.verbDirty
+
+  ;zero verb tilemap (2048 bytes)
+  ldx #0
+_init.zeroVerbTilemap:
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  cpx #VERB_TILEMAP_SIZE
+  bcc _init.zeroVerbTilemap
+
   ;zero walk state arrays (16 actors × 2B targets + 16B anim)
   ldx #0
   lda #0
@@ -292,6 +323,9 @@ _init.zeroCache:
   lda #1
   sta.w SCUMM.running
 
+  ;--- Init default verb bar (room 10 scripts don't run yet) ---
+  jsl scummvm.initDefaultVerbs
+
   rts
 
 
@@ -360,6 +394,28 @@ _play.nextSlot:
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
+  ; Render verb bar if dirty
+  lda.w SCUMM.verbDirty
+  beq _play.verbClean
+  jsl scummvm.renderVerbBar
+_play.verbClean:
+  ; DMA verb tilemap to VRAM if pending
+  lda.w SCUMM.verbDmaPending
+  beq _play.done
+  stz.w SCUMM.verbDmaPending
+  sep #$20
+  tsx
+  lda #DMA_TRANSFER.VRAM
+  pha
+  pea SCUMM.verbTilemap
+  lda #$7E
+  pha
+  rep #$31
+  pea VERB_TILEMAP_VRAM_ADDR
+  pea VERB_TILEMAP_SIZE
+  jsr core.dma.registerTransfer
+  txs
+
 _play.done:
   rts
 
@@ -379,17 +435,39 @@ _scummvm.processRoomChange:
   ; Mode 1, BG1 tilemap at $7000 (word $3800), 64 tiles wide
   lda.b #$39                        ; $38 = tilemap base $3800, +1 = 64-wide
   sta.w BG1TilemapVram
-  ; Tile data at VRAM $0000 (BG1 uses low nibble of BG12NBA)
-  lda.b #$00
+  ; BG2 tilemap at $9000 (word $4800), 32x32
+  lda.b #$48
+  sta.w BG2TilemapVram
+  ; Tile data: BG1=$0000, BG2=$4000 (high nibble)
+  lda.b #$40
   sta.w BGTilesVram12
-  ; Enable BG1 on main screen
+  ; Enable BG1 + BG2 on main screen
   lda.w MainScreen
-  ora.b #T_BG1_ENABLE
+  ora.b #(T_BG1_ENABLE | T_BG2_ENABLE)
   sta.w MainScreen
   ; Set mode 1
   lda.b #BGMODE_MODE_1
   sta.w ScreenMode
   rep #$20
+
+  ; Set BG2 Y scroll
+  lda #112
+  sta.w yScrollBG2
+  stz.w xScrollBG2
+
+  ; DMA verb font tiles to VRAM $8000 (word $4000)
+  sep #$20
+  tsx
+  lda #DMA_TRANSFER.VRAM
+  pha
+  pea VerbFontTiles
+  lda.b #:VerbFontTiles
+  pha
+  rep #$31
+  pea VERB_FONT_VRAM_ADDR
+  pea VerbFontTiles.LEN
+  jsr core.dma.registerTransfer
+  txs
 
   lda #1
   sta.w SCUMM.bgInitDone
@@ -399,6 +477,20 @@ _prc.bgReady:
   lda.w SCUMM.newRoom
   jsr room.load
   bcc _prc.failed
+
+  ; DMA verb font palette to CGRAM (AFTER room.load which overwrites all BG CGRAM)
+  sep #$20
+  tsx
+  lda #DMA_TRANSFER.CGRAM
+  pha
+  pea VerbFontPal
+  lda.b #:VerbFontPal
+  pha
+  rep #$31
+  pea VERB_PALETTE_CGRAM
+  pea VerbFontPal.end - VerbFontPal
+  jsr core.dma.registerTransfer
+  txs
 
   ; Kill old room/local script slots
   jsr _scummvm.killRoomScripts
@@ -615,7 +707,7 @@ _scummvm.skipWordVararg:
 ;-------------------------------------------------------------------
 ; _scummvm.skipP8fromScratch -- skip one p8 param using SCUMM.scratch
 ; Input: A = flag bitmask to test against SCUMM.scratch
-; If flag SET: fetchWord (2-byte var ref), else fetchByte (literal)
+; If flag SET: fetchWord (2-byte var ref), else fetchByte (1-byte literal)
 ;-------------------------------------------------------------------
 _scummvm.skipP8fromScratch:
   and.w SCUMM.scratch
@@ -1729,7 +1821,7 @@ op_equalZero:
   rts
 
 ; isGreater ($78, $F8) -- getVar + p16[7] + jump
-; ScummVM: if(b>a) skip, else jump → skip when value>var (A<scratch)
+; ScummVM: if(b>a) skip, else jump → skip when A < scratch
 op_isGreater:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -1742,14 +1834,14 @@ op_isGreater:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → value > var → skip
-    jsr _scummvm.takeRelJump     ; A >= scratch → value <= var → jump
+  bcc +                          ; A < scratch → b > a → condition TRUE → skip
+    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → condition FALSE → jump
 +
   clc
   rts
 
 ; isLess ($44, $C4) -- getVar + p16[7] + jump
-; ScummVM: if(b<a) skip, else jump → skip when value<var (A>scratch)
+; ScummVM: if(b<a) skip, else jump → skip when A > scratch
 op_isLess:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -1762,16 +1854,16 @@ op_isLess:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq _isLess.doJump             ; A == scratch → value >= var → jump
-  bcs +                          ; A > scratch → value < var → skip
+  beq _isLess.doJump             ; A == scratch → b >= a → condition FALSE → jump
+  bcs +                          ; A > scratch → b < a → condition TRUE → skip
 _isLess.doJump:
-    jsr _scummvm.takeRelJump     ; A <= scratch → value >= var → jump
+    jsr _scummvm.takeRelJump     ; A <= scratch → b >= a → condition FALSE → jump
 +
   clc
   rts
 
 ; isLessEqual ($38, $B8) -- getVar + p16[7] + jump
-; ScummVM: if(b<=a) skip, else jump → skip when value<=var (A>=scratch)
+; ScummVM: if(b<=a) skip, else jump → skip when A >= scratch
 op_isLessEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -1784,14 +1876,14 @@ op_isLessEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcs +                          ; A >= scratch → value <= var → skip
-    jsr _scummvm.takeRelJump     ; A < scratch → value > var → jump
+  bcs +                          ; A >= scratch → b <= a → condition TRUE → skip
+    jsr _scummvm.takeRelJump     ; A < scratch → b > a → condition FALSE → jump
 +
   clc
   rts
 
 ; isGreaterEqual ($04, $84) -- getVar + p16[7] + jump
-; ScummVM: if(b>=a) skip, else jump → skip when value>=var (A<=scratch)
+; ScummVM: if(b>=a) skip, else jump → skip when A <= scratch
 op_isGreaterEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -1804,9 +1896,9 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; A == scratch → value >= var → skip
-  bcc +                          ; A < scratch → value > var → skip
-    jsr _scummvm.takeRelJump     ; A > scratch → value < var → jump
+  beq +                          ; A == scratch → b >= a → condition TRUE → skip
+  bcc +                          ; A < scratch → b > a → condition TRUE → skip
+    jsr _scummvm.takeRelJump     ; A > scratch → b < a → condition FALSE → jump
 +
   clc
   rts
@@ -2255,27 +2347,16 @@ op_resourceRoutines:
   cmp #$14
   beq _resRoutines.flObject  ; loadFlObject: p8 + p16
 
-  ; Default: one p8 parameter (flag = bit 7 of sub-opcode)
-  lda.w SCUMM.scratch
-  and #$0080
-  beq _resRoutines.lit
-  jsr _scummvm.fetchWord     ; var ref: 2 bytes
-  bra _resRoutines.done
-_resRoutines.lit:
-  jsr _scummvm.fetchByte     ; literal: 1 byte
+  ; Default: one p8 parameter (flag = bit 7 of MAIN opcode, per ScummVM)
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
   bra _resRoutines.done
 
 _resRoutines.flObject:
-  ; loadFlObject: p8[7] room + p16 object
-  lda.w SCUMM.scratch
-  and #$0080
-  beq _resRoutines.flLit
-  jsr _scummvm.fetchWord     ; room as var ref
-  bra +
-_resRoutines.flLit:
-  jsr _scummvm.fetchByte     ; room as literal
-+
-  jsr _scummvm.fetchWord     ; object ID (always p16)
+  ; loadFlObject: p8[7] room + p16 object (per ScummVM)
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte   ; room
+  jsr _scummvm.fetchWord            ; object ID (always p16)
 
 _resRoutines.done:
   clc
@@ -3453,89 +3534,15 @@ op_printEgo:
 
 
 ;-------------------------------------------------------------------
-; verbOps ($7A, $FA) -- verb + sub-opcode loop, no-op
+; verbOps ($7A, $FA) -- verb setup: store verb data for display
+; Delegates to superfree section to avoid bank 0 overflow
 ;-------------------------------------------------------------------
 op_verbOps:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; verb
-_verbOps.subLoop:
-  jsr _scummvm.fetchByte
-  cmp #$00FF
-  beq _verbOps.done
-  sta.w SCUMM.scratch                ; save sub-opcode for flag testing
-  and #$001F                         ; sub-key is low 5 bits
-
-  ; $01: image (p16)
-  cmp #$01
-  beq _verbOps.p16
-
-  ; $02: name (null-terminated string)
-  cmp #$02
-  beq _verbOps.string
-
-  ; $03,$04: p8 range — color, hiColor
-  cmp #$03
-  bcc _verbOps.noParams              ; < $03 shouldn't happen (already checked $01,$02)
-  cmp #$05
-  bcc _verbOps.p8_7                  ; $03, $04: p8[7]
-
-  ; $05: setXY (2x p16)
-  cmp #$05
-  beq _verbOps.setXY
-
-  ; $06-$09: no params (on, off, delete, new)
-  cmp #$0A
-  bcc _verbOps.noParams
-
-  ; $10: dimColor (p8) — range $10-$1F except explicit checks
-  cmp #$11
-  beq _verbOps.noParams              ; $11: dimmed — no params
-  cmp #$13
-  beq _verbOps.noParams              ; $13: key — no params
-
-  ; $14: center (p16)
-  cmp #$14
-  beq _verbOps.p16
-
-  ; $16: setToString (p16 + p8[7])
-  cmp #$16
-  beq _verbOps.p16_p8
-
-  ; $17: setToObject (p16)
-  cmp #$17
-  beq _verbOps.p16
-
-  ; default: p8[7] ($10, $12, and others)
-  bra _verbOps.p8_7
-
-_verbOps.noParams:
-  jmp _verbOps.subLoop
-
-_verbOps.p16:
-  jsr _scummvm.fetchWord
-  jmp _verbOps.subLoop
-
-_verbOps.string:
-  jsr _scummvm.skipNullString
-  jmp _verbOps.subLoop
-
-_verbOps.p8_7:
-  lda #$0080
-  jsr _scummvm.skipP8fromScratch
-  jmp _verbOps.subLoop
-
-_verbOps.setXY:
-  jsr _scummvm.fetchWord             ; x
-  jsr _scummvm.fetchWord             ; y
-  jmp _verbOps.subLoop
-
-_verbOps.p16_p8:
-  jsr _scummvm.fetchWord             ; stringId
-  lda #$0080
-  jsr _scummvm.skipP8fromScratch     ; charset
-  jmp _verbOps.subLoop
-
-_verbOps.done:
+  jsr _scummvm.getVarOrDirectByte    ; A = verb ID, Y = advanced PC
+  and #$00FF
+  sta.w SCUMM.resultVar              ; save verb ID
+  jsl scummvm.verbOps_impl
   clc
   rts
 
@@ -3782,11 +3789,15 @@ op_divide:
 op_ifClassOfIs:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object
-_ifClassOfIs.loop:
-  jsr _scummvm.fetchWord             ; class word
-  cmp #$00FF                         ; terminator = word $00FF ($FF $00 in LE)
-  bne _ifClassOfIs.loop
-  jsr _scummvm.fetchWord             ; jump offset (skip — always false)
+  ; Vararg: {aux_byte, word_value}* terminated by $FF (same as setClass)
+-
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq +
+  jsr _scummvm.fetchWord             ; class word arg
+  bra -
++
+  jsr _scummvm.fetchWord             ; jump offset (skip — always false stub)
   clc
   rts
 
@@ -4092,6 +4103,12 @@ _scummvm.loadActorCostumes:
 _scummvm.updateActors:
   rep #$31
 
+  ; Skip if actor not placed in a room yet (room=0 means not initialized)
+  lda.w SCUMM.actors.2.room
+  and #$00FF
+  bne +
+  rts
++
   ; Check if actor 1 is moving
   lda.w SCUMM.actors.2.moving
   and #$00FF
@@ -4589,6 +4606,652 @@ _ri.nextEntry:
   rep #$20
 
 _ri.done:
+  rtl
+
+.ends
+
+;===========================================================================
+; verbOps implementation — superfree section (bank 0 too full)
+; Called via jsl from op_verbOps. Y = SCUMM PC, [tmp] = script base.
+; SCUMM.resultVar = verb ID. All sub-opcodes handled here.
+;===========================================================================
+.section "scummvm verbOps impl" superfree
+
+scummvm.verbOps_impl:
+  ; Set data bank to $7E for WRAM access
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$20
+
+  ; Find existing slot with this verb ID, or first empty slot
+  phy                                ; save Y (SCUMM PC)
+  ldx #0
+  ldy #$FFFF                         ; Y = first empty slot
+_voi.findSlot:
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  beq _voi.findEmpty
+  cmp.w SCUMM.resultVar
+  beq _voi.foundExact
+  bra _voi.findAdvance
+_voi.findEmpty:
+  rep #$20
+  cpy #$FFFF
+  bne _voi.findAdvance
+  txy
+_voi.findAdvance:
+  rep #$20
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcc _voi.findSlot
+  tyx                                ; X = empty slot (or $FFFF)
+  bra _voi.foundDone
+_voi.foundExact:
+  rep #$20
+_voi.foundDone:
+  txa
+  sta.w SCUMM.scratch2
+  ply                                ; restore Y (SCUMM PC)
+
+; --- Sub-opcode loop ---
+_voi.subLoop:
+  jsr _voi.fetchByte
+  cmp #$00FF
+  bne +
+  plb                                ; restore DB
+  rtl
++
+  sta.w SCUMM.scratch
+  and #$001F
+
+  cmp #$01
+  beq _voi.p16
+  cmp #$02
+  bne +
+  jmp _voi.doName
++
+  cmp #$03
+  bne +
+  jmp _voi.doColor
++
+  cmp #$04
+  bne +
+  jmp _voi.doHiColor
++
+  cmp #$05
+  bne +
+  jmp _voi.doSetXY
++
+  cmp #$06
+  bne +
+  jmp _voi.doOn
++
+  cmp #$07
+  bne +
+  jmp _voi.doOff
++
+  cmp #$08
+  bne +
+  jmp _voi.doDelete
++
+  cmp #$09
+  bne +
+  jmp _voi.doNew
++
+  cmp #$0A
+  bcc _voi.subLoop
+  cmp #$10
+  bne +
+  jmp _voi.doDimColor
++
+  cmp #$11
+  beq _voi.doP8
+  cmp #$13
+  bne +
+  jmp _voi.doKey
++
+  cmp #$14
+  beq _voi.p16
+  cmp #$16
+  beq _voi.p16_p8
+  cmp #$17
+  beq _voi.p16
+  bra _voi.doP8
+
+; --- Skip helpers ---
+_voi.p16:
+  jsr _voi.fetchWord
+  jmp _voi.subLoop
+
+_voi.doP8:
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+  jsr _voi.fetchWord
+  jmp _voi.subLoop
++
+  jsr _voi.fetchByte
+  jmp _voi.subLoop
+
+_voi.p16_p8:
+  jsr _voi.fetchWord
+  jmp _voi.doP8
+
+; --- Fetch helpers (duplicate of bank 0 routines for cross-bank use) ---
+_voi.fetchByte:
+  lda [tmp],y
+  and #$00FF
+  iny
+  rts
+
+_voi.fetchWord:
+  lda [tmp],y
+  iny
+  iny
+  rts
+
+; Read p8 param resolving variable refs via SCUMM.scratch flags
+_voi.readP8:
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+  jsr _voi.fetchWord
+  jmp _voi.readVar
++
+  jmp _voi.fetchByte
+
+; Minimal readVariable (inline for superfree)
+; Input: A = variable index (encoded). Output: A = value.
+_voi.readVar:
+  pha
+  and #SCUMM_VAR_TYPE_MASK
+  beq _voi.readGlobal
+  cmp #SCUMM_VAR_LOCAL_MASK
+  beq _voi.readLocal
+  ; bit variable — return 0/1
+  pla
+  and #SCUMM_VAR_INDEX_MASK
+  ; index in A, divide by 8 for byte offset, bit within byte
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tax
+  pla
+  and #$0007
+  phx
+  tax
+  lda.l _voi.bitTable,x
+  plx
+  and.w SCUMM.bitVars,x
+  beq +
+  lda #1
++
+  rts
+
+_voi.readGlobal:
+  pla
+  and #SCUMM_VAR_INDEX_MASK
+  asl a                              ; *2 for word index
+  tax
+  lda.w SCUMM.globalVars,x
+  rts
+
+_voi.readLocal:
+  pla
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  clc
+  adc.w SCUMM.currentSlotPtr
+  tax
+  lda.w SCUMM.slots.1.localVars,x
+  rts
+
+_voi.bitTable:
+  .db $01, $02, $04, $08, $10, $20, $40, $80
+
+; --- Storage handlers ---
+
+_voi.doNew:
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  bne +
+  jmp _voi.subLoop
++
+  lda.w SCUMM.resultVar
+  sep #$20
+  sta.w SCUMM.verbs.1.id,x
+  rep #$20
+  jmp _voi.subLoop
+
+_voi.doOn:
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  bne +
+  jmp _voi.subLoop
++
+  sep #$20
+  lda.w SCUMM.verbs.1.flags,x
+  ora #SCUMM_VERB_FLAG_ON
+  sta.w SCUMM.verbs.1.flags,x
+  rep #$20
+  lda #1
+  sta.w SCUMM.verbDirty
+  jmp _voi.subLoop
+
+_voi.doOff:
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  bne +
+  jmp _voi.subLoop
++
+  sep #$20
+  lda.w SCUMM.verbs.1.flags,x
+  and #$FE
+  sta.w SCUMM.verbs.1.flags,x
+  rep #$20
+  lda #1
+  sta.w SCUMM.verbDirty
+  jmp _voi.subLoop
+
+_voi.doDelete:
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  bne +
+  jmp _voi.subLoop
++
+  stz.w SCUMM.verbs.1.id,x
+  stz.w SCUMM.verbs.1.flags,x
+  lda #1
+  sta.w SCUMM.verbDirty
+  jmp _voi.subLoop
+
+_voi.doName:
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  bne _voi.doName.store
+  ; skip null string
+-
+  jsr _voi.fetchByte
+  cmp #0
+  bne -
+  jmp _voi.subLoop
+_voi.doName.store:
+  lda.w SCUMM.verbNamesPtr
+  sta.w SCUMM.verbs.1.namePtr,x
+  ldx.w SCUMM.verbNamesPtr
+  lda #0
+  sta.w SCUMM.scratch                ; char count
+_voi.nameChar:
+  jsr _voi.fetchByte
+  cmp #0
+  beq _voi.nameDone
+  sep #$20
+  sta.w SCUMM.verbNames,x
+  rep #$20
+  inx
+  inc.w SCUMM.scratch
+  bra _voi.nameChar
+_voi.nameDone:
+  txa
+  sta.w SCUMM.verbNamesPtr
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.scratch
+  sep #$20
+  sta.w SCUMM.verbs.1.nameLen,x
+  rep #$20
+  lda #1
+  sta.w SCUMM.verbDirty
+  jmp _voi.subLoop
+
+_voi.doColor:
+  jsr _voi.readP8
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  beq _voi.doColor.skip
+  sep #$20
+  sta.w SCUMM.verbs.1.color,x
+  rep #$20
+_voi.doColor.skip:
+  jmp _voi.subLoop
+
+_voi.doHiColor:
+  jsr _voi.readP8
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  beq _voi.doHiColor.skip
+  sep #$20
+  sta.w SCUMM.verbs.1.hiColor,x
+  rep #$20
+_voi.doHiColor.skip:
+  jmp _voi.subLoop
+
+_voi.doDimColor:
+  jsr _voi.readP8
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  beq _voi.doDimColor.skip
+  sep #$20
+  sta.w SCUMM.verbs.1.dimColor,x
+  rep #$20
+_voi.doDimColor.skip:
+  jmp _voi.subLoop
+
+_voi.doKey:
+  jsr _voi.readP8
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  beq _voi.doKey.skip
+  sep #$20
+  sta.w SCUMM.verbs.1.key,x
+  rep #$20
+_voi.doKey.skip:
+  jmp _voi.subLoop
+
+_voi.doSetXY:
+  ; Read X param: test SCUMM.scratch bit 7
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+  jsr _voi.fetchWord
+  jsr _voi.readVar
+  bra _voi.xyGotX
++
+  jsr _voi.fetchWord
+_voi.xyGotX:
+  pha
+  ; Read Y param: test SCUMM.scratch bit 6
+  lda.w SCUMM.scratch
+  and #$0040
+  beq +
+  jsr _voi.fetchWord
+  jsr _voi.readVar
+  bra _voi.xyGotY
++
+  jsr _voi.fetchWord
+_voi.xyGotY:
+  sta.w SCUMM.scratch
+  pla
+  ldx.w SCUMM.scratch2
+  cpx #$FFFF
+  beq _voi.xySkip
+  ; Store raw SCUMM pixel coordinates (renderer handles conversion)
+  sep #$20
+  sta.w SCUMM.verbs.1.x,x
+  lda.w SCUMM.scratch
+  sta.w SCUMM.verbs.1.y,x
+  rep #$20
+  lda #1
+  sta.w SCUMM.verbDirty
+_voi.xySkip:
+  jmp _voi.subLoop
+
+.ends
+
+
+;===================================================================
+; Default verb initializer (superfree — called via jsl from init)
+; Hardcodes MI1's standard 10 verbs until proper boot flow runs.
+; Table format: 8 bytes per entry (fixed size, no variable-length names)
+;   id(1), x_pixel(1), y_pixel(1), nameLen(1), nameOffset(2), pad(2)
+; Names stored separately for easy addressing.
+;===================================================================
+.section "ScummVMDefaultVerbs" superfree
+
+scummvm.initDefaultVerbs:
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  lda #0
+  sta.w SCUMM.verbNamesPtr             ; reset name write pointer
+
+  ; Process 10 verb entries
+  ldx #0                               ; X = table index (0..9) * 4
+  ldy #0                               ; Y = verb slot offset
+
+_idv.loop:
+  cpx #_idv.tableEnd - _idv.table
+  bcs _idv.done
+
+  ; Read id
+  sep #$20
+  lda.l _idv.table,x
+  beq _idv.done
+  sta.w SCUMM.verbs.1.id,y
+
+  ; Read x, y pixel coords
+  lda.l _idv.table+1,x
+  sta.w SCUMM.verbs.1.x,y
+
+  lda.l _idv.table+2,x
+  sta.w SCUMM.verbs.1.y,y
+
+  ; Set flags = ON
+  lda #SCUMM_VERB_FLAG_ON
+  sta.w SCUMM.verbs.1.flags,y
+
+  ; Read name length
+  lda.l _idv.table+3,x
+  sta.w SCUMM.verbs.1.nameLen,y
+  rep #$20
+  and #$00FF
+  sta.w SCUMM.scratch                  ; name length
+
+  ; Set name pointer = current verbNamesPtr
+  lda.w SCUMM.verbNamesPtr
+  sta.w SCUMM.verbs.1.namePtr,y
+
+  ; Copy name: read offset from table entry bytes 4-5
+  phx
+  phy
+  lda.l _idv.table+4,x                ; name ROM offset (relative to _idv.names)
+  and #$00FF
+  tax                                  ; X = name source offset
+  ldy.w SCUMM.verbNamesPtr            ; Y = dest offset in verbNames
+  lda.w SCUMM.scratch                  ; char count
+  sta.w SCUMM.scratch2
+
+_idv.copy:
+  sep #$20
+  lda.l _idv.names,x
+  sta.w SCUMM.verbNames,y
+  rep #$20
+  inx
+  iny
+  dec.w SCUMM.scratch2
+  bne _idv.copy
+
+  tya
+  sta.w SCUMM.verbNamesPtr
+  ply                                  ; restore verb slot offset
+  plx                                  ; restore table index
+
+  ; Advance to next entry (6 bytes per table row)
+  rep #$20
+  txa
+  clc
+  adc #6
+  tax
+
+  ; Advance verb slot
+  tya
+  clc
+  adc #_sizeof_scummVerb
+  tay
+
+  bra _idv.loop
+
+_idv.done:
+  lda #1
+  sta.w SCUMM.verbDirty
+  plb
+  rtl
+
+; Table: id, x_pixel, y_pixel, nameLen, nameOffset (1 byte into _idv.names)
+_idv.table:
+  ;     id   x    y   len  nameOff
+  .db  $01,   0, 144,   7, _idv.n0 - _idv.names, 0
+  .db  $04,   0, 152,   4, _idv.n1 - _idv.names, 0
+  .db  $02,   0, 160,   4, _idv.n2 - _idv.names, 0
+  .db  $03,   0, 168,   5, _idv.n3 - _idv.names, 0
+  .db  $09,  80, 152,   7, _idv.n4 - _idv.names, 0
+  .db  $08,  80, 160,   7, _idv.n5 - _idv.names, 0
+  .db  $0A,  80, 168,   7, _idv.n6 - _idv.names, 0
+  .db  $07, 168, 152,   3, _idv.n7 - _idv.names, 0
+  .db  $05, 168, 160,   4, _idv.n8 - _idv.names, 0
+  .db  $06, 168, 168,   4, _idv.n9 - _idv.names, 0
+_idv.tableEnd:
+
+_idv.names:
+_idv.n0: .db "Walk to"
+_idv.n1: .db "Give"
+_idv.n2: .db "Open"
+_idv.n3: .db "Close"
+_idv.n4: .db "Pick up"
+_idv.n5: .db "Look at"
+_idv.n6: .db "Talk to"
+_idv.n7: .db "Use"
+_idv.n8: .db "Push"
+_idv.n9: .db "Pull"
+
+.ends
+
+
+;===================================================================
+; Verb bar renderer (superfree — called via jsl from play method)
+; Builds BG2 tilemap from verb table, then DMA uploads it.
+;===================================================================
+.section "ScummVMVerbRenderer" superfree
+
+scummvm.renderVerbBar:
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ; Clear verb tilemap buffer (2048 bytes = 1024 words)
+  ldx #0
+  lda #0
+-
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  cpx #VERB_TILEMAP_SIZE
+  bcc -
+
+  ; Iterate verb slots
+  ldx #0                                ; X = verb slot offset
+
+_rvb.verbLoop:
+  ; Check if slot is active (id != 0 and flags & ON)
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  beq _rvb.nextVerb
+  lda.w SCUMM.verbs.1.flags,x
+  and #SCUMM_VERB_FLAG_ON
+  beq _rvb.nextVerb
+  rep #$20
+
+  ; Get verb name length
+  lda.w SCUMM.verbs.1.nameLen,x
+  and #$00FF
+  beq _rvb.nextVerb
+
+  ; Compute tilemap offset: (y * 32 + x) * 2
+  ; X pos: scale 320->256 by *4/5, then /8 for tiles
+  ; For simplicity: tile_x = scumm_x * 4 / 5 / 8 = scumm_x * 4 / 40
+  ; Y pos: scumm_y is relative to 144, divide by 8
+  ; tile_y = (scumm_y - 144) / 8
+  lda.w SCUMM.verbs.1.x,x
+  and #$00FF
+  ; X is SCUMM pixel coordinate; convert to tile column: x / 8
+  lsr a
+  lsr a
+  lsr a
+  sta.w SCUMM.scratch
+
+  lda.w SCUMM.verbs.1.y,x
+  and #$00FF
+  ; Y is stored as SCUMM pixel coord; convert to tile row in verb area
+  ; verb area starts at SCUMM y=144, BG2 tilemap row 0 = screen y=144
+  ; tile_y = (y - 144) / 8
+  sec
+  sbc #144
+  lsr a
+  lsr a
+  lsr a
+  ; tilemap offset = (tile_y * 32 + tile_x) * 2
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                                 ; tile_y * 32
+  clc
+  adc.w SCUMM.scratch                   ; + tile_x
+  asl a                                 ; * 2 (word entries)
+  sta.w SCUMM.scratch                   ; tilemap byte offset
+
+  ; Get name pointer and length
+  phx                                   ; save verb slot offset
+  lda.w SCUMM.verbs.1.nameLen,x
+  and #$00FF
+  sta.w SCUMM.scratch2                  ; char count
+  lda.w SCUMM.verbs.1.namePtr,x
+  tay                                   ; Y = offset into verbNames
+
+  ; Write tile indices for each character
+  ; tile index = char - $20 (ASCII space = tile 0)
+  ; palette 2 in tilemap bits 10-12 = $0400
+_rvb.charLoop:
+  sep #$20
+  lda.w SCUMM.verbNames,y
+  rep #$20
+  and #$00FF
+  sec
+  sbc #$20                              ; tile index = ASCII - 0x20
+  ora #$2400                            ; priority 1 + palette 2
+  phx
+  ldx.w SCUMM.scratch                   ; X = tilemap byte offset
+  sta.w SCUMM.verbTilemap,x
+  plx
+  ; advance tilemap offset by 2 (next tile word)
+  inc.w SCUMM.scratch
+  inc.w SCUMM.scratch
+  ; advance name pointer
+  iny
+  ; decrement char count
+  dec.w SCUMM.scratch2
+  bne _rvb.charLoop
+
+  plx                                   ; restore verb slot offset
+
+_rvb.nextVerb:
+  rep #$20
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcc _rvb.verbLoop
+
+  ; Clear dirty flag, set DMA pending flag
+  stz.w SCUMM.verbDirty
+  lda #1
+  sta.w SCUMM.verbDmaPending
+
+  plb
   rtl
 
 .ends

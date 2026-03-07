@@ -203,6 +203,37 @@ SCUMM.oamScratch     ds 80
 .ends
 
 ;---------------------------------------------------------------------------
+; Verb Table
+;---------------------------------------------------------------------------
+.define SCUMM_MAX_VERBS       20
+.define SCUMM_VERB_NAMES_SIZE 256
+.define SCUMM_VERB_FLAG_ON    $01
+.define SCUMM_VERB_FLAG_DIRTY $80
+
+.struct scummVerb
+  id          db      ; SCUMM verb ID (0 = unused slot)
+  x           db      ; X position (tile units, 0-31)
+  y           db      ; Y position (tile units, 0-3)
+  color       db      ; normal color palette index
+  hiColor     db      ; highlighted color palette index
+  dimColor    db      ; dimmed color palette index
+  flags       db      ; bit 0=on, bit 7=dirty
+  key         db      ; shortcut key mapping
+  namePtr     dw      ; offset into verbNames buffer
+  nameLen     db      ; string length
+  pad         ds 5    ; align to 16 bytes
+.endst
+
+.ramsection "scumm verb table" bank 0 slot 1
+SCUMM.verbs          INSTANCEOF scummVerb SCUMM_MAX_VERBS  ; 320 bytes
+SCUMM.verbNames      ds SCUMM_VERB_NAMES_SIZE              ; packed name strings
+SCUMM.verbNamesPtr   dw      ; next free offset in name buffer
+SCUMM.verbDirty      dw      ; nonzero = redraw BG2
+SCUMM.verbDmaPending dw      ; nonzero = DMA tilemap to VRAM next frame
+SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
+.ends
+
+;---------------------------------------------------------------------------
 ; OOP Class Config
 ;---------------------------------------------------------------------------
 
@@ -218,5 +249,39 @@ SCUMM.oamScratch     ds 80
 .define CLASS.PROPERTIES 0
 .define CLASS.ZP_LENGTH zpLen
 
+; BG2 VRAM layout constants
+.define VERB_FONT_VRAM_ADDR   $8000   ; byte addr for font tiles (word $4000)
+.define VERB_TILEMAP_VRAM_ADDR $9000  ; byte addr for BG2 tilemap (word $4800)
+.define VERB_PALETTE_CGRAM    $40     ; CGRAM byte offset: BG2 palette 2 (4bpp: pal*32)
+.define VERB_TILEMAP_SIZE     2048    ; 32x32 x 2 bytes
+
 .base BSL
 .bank 0 slot 0
+
+;---------------------------------------------------------------------------
+; Verb font data (4bpp 8x8 font, 96 glyphs)
+;---------------------------------------------------------------------------
+.section "VerbFontData" superfree
+  FILEINC VerbFontTiles "build/data/font/fixed8x8.gfx_font4bpp.tiles"
+.ends
+
+.section "VerbFontPalette" superfree
+VerbFontPal:
+  .dw $0000   ; color 0: transparent
+  .dw $7FFF   ; color 1: white (normal verb text)
+  .dw $0000   ; color 2: unused
+  .dw $0000   ; color 3: unused
+  .dw $0000   ; color 4: unused
+  .dw $0000   ; color 5: unused
+  .dw $0000   ; color 6: unused
+  .dw $0000   ; color 7: unused
+  .dw $0000   ; color 8: transparent (subpalette 1)
+  .dw $4631   ; color 9: grey (dimmed verb text)
+  .dw $0000   ; color 10: unused
+  .dw $0000   ; color 11: unused
+  .dw $0000   ; color 12: unused
+  .dw $0000   ; color 13: unused
+  .dw $0000   ; color 14: unused
+  .dw $0000   ; color 15: unused
+VerbFontPal.end:
+.ends

@@ -188,6 +188,7 @@ SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 SCUMM.actorScreenX   dw      ; computed screen X for current actor
 SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
+SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
 .ends
 
 ; Actor walk targets (parallel arrays — 16 actors max, avoids changing struct size)

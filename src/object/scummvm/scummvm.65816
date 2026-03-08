@@ -4578,6 +4578,17 @@ scummvm.renderActors_impl:
   lda.b #$80                          ; channel 7
   sta.l MDMAEN
 
+  ; Refresh cursor OBJ palette 1 while still in force-blank
+  lda #$91                            ; CGRAM address $91 (OBJ pal1 color 1)
+  sta.l $2121
+  lda #$00                            ; color 1 = $0000 (black outline)
+  sta.l $2122
+  sta.l $2122
+  lda #$FF                            ; color 2 = $7FFF (white fill)
+  sta.l $2122
+  lda #$7F
+  sta.l $2122
+
   ; Restore brightness + inline core.nmi.start
   rep #$20
   pla                                 ; brightness (16-bit pull)
@@ -4641,6 +4652,16 @@ _ri.posReady:
   dex
   bpl -
 
+  ; Compute flip mask based on facing direction
+  ; Facing 270 (west) = H-flip all sprites
+  lda #$30                            ; default: priority 3, no flip
+  ldx.w SCUMM.actors.2.facing
+  cpx #270
+  bne +
+  lda #$70                            ; priority 3 + H-flip ($40)
++
+  sta.w SCUMM.actorFlipMask
+
   ; --- OAM render loop ---
   ; Y = source offset into OAM data (skip 6-byte header)
   ; X = destination offset into GLOBAL.oamBuffer
@@ -4657,6 +4678,22 @@ _ri.entryLoop:
   bcc +
   ora #$FF00
 +
+  ; If facing west, mirror dx: new_dx = -(dx + 8)
+  pha
+  sep #$20
+  lda.w SCUMM.actorFlipMask
+  rep #$20
+  and #$0040                          ; test H-flip bit
+  beq _ri.noFlipDx
+  pla
+  clc
+  adc #8
+  eor #$FFFF
+  inc a                               ; negate
+  bra _ri.applyDx
+_ri.noFlipDx:
+  pla
+_ri.applyDx:
   clc
   adc.w SCUMM.actorScreenX
   sta.w SCUMM.scratch
@@ -4695,7 +4732,7 @@ _ri.entryLoop:
   iny
   inx
   lda [_oamSrcPtr],y                  ; flags
-  ora #$30                            ; priority 3, sprite palette 0
+  ora.w SCUMM.actorFlipMask           ; priority 3 + H-flip if facing west
   sta.w GLOBAL.oamBuffer,x
   iny
   inx
@@ -5761,7 +5798,21 @@ _uc.noRight:
   jmp _uc.verbAreaClick
 +
 
-  ;--- Click-to-walk: convert screen X to room X ---
+  ;--- Click-to-walk: initialize position if actor at (0,0) ---
+  ; Scripts may call putActorInRoom (sets room+visible) without putActor (sets x/y).
+  ; If x=0 and y=0, snap to the renderActors fallback position before walking.
+  lda.w SCUMM.actors.2.x
+  ora.w SCUMM.actors.2.y
+  bne _uc.posOk
+  lda.w GLOBAL.room.cameraX
+  clc
+  adc #128
+  sta.w SCUMM.actors.2.x
+  lda #110
+  sta.w SCUMM.actors.2.y
+_uc.posOk:
+
+  ;--- Convert screen X to room X ---
   lda.w SCUMM.cursorX
   clc
   adc.w GLOBAL.room.cameraX           ; roomX = screenX + scrollX
@@ -5780,7 +5831,7 @@ _uc.noRight:
   ; Init walk animation
   ldx #1                              ; actor 1 byte index
   sep #$20
-  lda #5
+  lda #WALK_ANIM_SPEED
   sta.w SCUMM.actorAnimTimer,x
   lda #0
   sta.w SCUMM.actorAnimFrame,x

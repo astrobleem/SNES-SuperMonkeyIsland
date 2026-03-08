@@ -12,10 +12,10 @@ Build runs under WSL. The project uses WLA-DX v9.3 assembler (v9.4+ breaks the b
 
 ```bash
 # Standard build (clean + build)
-wsl -e bash -c "cd <wsl-project-root> && make clean && make"
+wsl -e bash -lc "cd <wsl-project-root> && make clean && make"
 
 # Fast rebuild (skip clean if only .65816/.script files changed)
-wsl -e bash -c "cd <wsl-project-root> && make"
+wsl -e bash -lc "cd <wsl-project-root> && make"
 
 # Build output
 # ROM: build/SuperMonkeyIsland.sfc

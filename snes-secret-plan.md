@@ -490,18 +490,26 @@ MI1 uses the classic SCUMM sentence bar:
 - Test cursor position against object bounds in room coordinates
 - Return object ID to VM for script dispatch
 
-### 5.5 Dialog System
+### 5.5 Dialog System — IMPLEMENTED
 
 MI1's dialog choices (e.g., talking to pirates at the SCUMM Bar) work through the VM:
 - Script calls `print` opcodes with multiple numbered choices
 - VM waits for player to select a choice
 - Selection stored in a variable, script branches accordingly
 
-On SNES:
-- Dialog text rendered on BG3 (2bpp overlay, semi-transparent or solid)
-- Cursor highlights current choice
-- Mouse click or d-pad+A to select
-- Font is pre-loaded in BG3 VRAM — fixed-width or simple proportional
+**SNES Implementation (complete):**
+- BG3 in Mode 1 with BG3 priority bit ($08) — renders above BG1 (room) and BG2 (verbs)
+- 2bpp font: existing `ExcFontTiles` (96 glyphs, 1536 bytes) DMA'd to VRAM $A000
+- VRAM layout: tilemap at $9800 (word $4C00), tiles at $A000 (word $5000)
+- 2bpp palette 7 (CGRAM $38-$3B): transparent + talk color, DMA'd every frame while active
+- Per-actor talk colors: SCUMM color LUT maps 16 EGA-standard color indices to BGR555 values
+- WRAM: 2066 bytes (18B state + 2048B tilemap buffer at `SCUMM.dialogTilemap`)
+- `extractAndRenderString` (superfree): reads [tmp],y bytecode, pre-scans for char count, centers text, writes tilemap entries with $3C00 priority+palette OR'd with tile index
+- Timer: `charCount * 6 + 60` frames (~0.1s/char + 1s minimum), auto-clears in play()
+- VerbHdmaTable updated: T_BG3_ENABLE on all scanline entries (room + verb area)
+- Sentence line on BG3 row 17: shows currently selected verb ("Walk to", "Open", etc.)
+- `op_print`/`op_printEgo` wired: saves actor ID, dialogX/Y from _print.pos sub-op
+- **Still needed:** dialog choice selection (cursor highlights choices, d-pad+A to select)
 
 ### 5.6 Audio — Hybrid Architecture (SPC700 + MSU-1)
 
@@ -691,7 +699,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - 14 rooms exceeding 1024 unique tiles handled correctly via tile cache + 11-bit IDs
 - [x] Smooth horizontal scrolling for wide rooms (joypad-controlled camera for testing)
   - D-pad left/right at 2px/frame, clamped to [0, maxScrollX]
-- [ ] Render verb bar placeholder on BG2 *(deferred to Phase 2 — verb system needed first)*
+- [x] Render verb bar on BG2 *(implemented in Phase 2 — 10 MI1 verbs, HDMA split, highlight)*
 - [x] Process all ~80 rooms through the pipeline, verify visual quality of palette quantization
   - 86/86 rooms converted and packed, visual quality verified in Mesen
 - [x] Room cycling via L/R buttons with fade transitions — all 86 rooms browsable
@@ -858,7 +866,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **Slot WHERE tracking**: Each slot has a `where` byte: 0=GLOBAL, 1=LOCAL, 2=ROOM. Used by `killRoomScripts` to selectively kill room/local scripts while preserving globals. `startScriptSlot` routes scripts >= 200 to the LSCR table lookup path.
 - **WRAM layout**: ~3.6KB in bank $7E for VM state. Struct-based slot layout (64 bytes/slot × 25 = 1600B). Global vars at $7E:6000, bit vars at $7E:7D1A, slots at $7E:6640. All addresses resolved by wla-dx linker — no hardcoded offsets.
 - **XBA word-read pattern for MSU-1**: Reading 16-bit LE values from MSU_DATA one byte at a time: `sep #$20; lda MSU_DATA; xba; lda MSU_DATA; xba; rep #$20` builds a 16-bit word. Avoids wla-dx ramsection `symbol+1` arithmetic (which evaluates full 24-bit address → linker error).
-- **level1.script replaced**: The Phase 0 room browser test harness is gone. Boot now creates ScummVM object, which reads MSU-1 script headers and starts MI1 boot script 1.
+- **Simplified boot chain**: `boot.65816 → main.script → msu1 splash → level1 → ScummVM`. The losers/credits and title screen were removed. MSU-1 splash auto-advances on timeout or button press. Boot now creates ScummVM object, which reads MSU-1 script headers and starts MI1 boot script 1. SCUMM interpreter boots by ~frame 300 without input.
 - **Room loading via processRoomChange**: ScummVM.play() detects SCUMM.newRoom != SCUMM.currentRoom at the start of each frame, calls processRoomChange which sets up PPU registers (BG1SC, BG12NBA, MainScreen, ScreenMode) and delegates to Phase 0's room.load(). Room load happens before script execution, matching ScummVM's main loop order.
 - **Brightness singleton management**: The Brightness object must be explicitly set to FULL — its play() method continuously writes its internal value to ScreenBrightness, overriding any direct register writes. processRoomChange does not touch Brightness directly.
 - **MI1 boot script behavior**: Script 1 runs an infinite loop — 3x breakHere, check getActorMoving(VAR_EGO), startScript(35), jump back. Script 35 checks getObjectState and bails when no objects exist. This loop is correct MI1 behavior — the game needs room scripts and actors to progress beyond this point.
@@ -905,11 +913,13 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
 - [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
 - [ ] Walkbox pathfinding — constrained walking within BOXD walk areas, box-to-box routing
-- [ ] Mouse input: cursor rendering, position tracking, click detection
-- [ ] Joypad fallback: virtual cursor with acceleration
-- [ ] Verb bar: render verbs on BG2, highlight selection, sentence construction
+- [ ] Mouse input: SNES Mouse position tracking, click detection
+- [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
+- [x] Verb bar: render 10 verbs on BG2, HDMA per-scanline palette split, verb highlight (yellow on hover via palette 6/7 swap)
 - [ ] Object interaction: click detection, doSentence execution
-- [ ] Dialog system: text rendering on BG3, choice selection
+- [x] Dialog system: text rendering on BG3, auto-timed display, auto-clear
+- [x] Sentence line on BG3 row 17: shows currently selected verb
+- [x] Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
 - [ ] Inventory: display, scrolling, object combination
 - [ ] Upgrade actor opcode stubs to real implementations (animate, face, talkActor, walkActorTo, etc.)
 - [ ] Upgrade object/verb opcode stubs to real implementations
@@ -1002,7 +1012,7 @@ The engine itself contains zero LucasArts intellectual property. It's a clean-ro
 
 3. ~~**Which MI1 version exactly?**~~ **RESOLVED: CD Talkie** (`monkey.000` / `monkey.001`, XOR'd with `0x69`). All 86 rooms, 187 scripts, 138 sounds, 123 costumes, 5 charsets extracted and verified. Voice streaming can be deferred — start with text-only, add MSU-1 PCM speech later.
 
-4. **BG2 split: foreground masking vs verb UI.** Both need BG2. Can we share it? Foreground mask occupies the room viewport area, verb UI occupies the bottom. They don't overlap vertically. Use HDMA to switch BG2 tilemap/scroll mid-screen between room area and verb area. *(Deferred verb bar placeholder to Phase 2 — needs verb system design first.)*
+4. ~~**BG2 split: foreground masking vs verb UI.**~~ **RESOLVED.** HDMA splits the screen at scanline 144: ch1 disables BG1 below the room area (TM register), ch2 swaps CGRAM palettes for verb font colors. BG2 holds verb tilemap in lower portion. 70-byte WRAM HDMA table rebuilt on verb dirty flag. Foreground z-masking still TBD (upper BG2 area available).
 
 5. **MI2 compatibility path?** MI2 is also SCUMM v5. If we architect the interpreter cleanly, MI2 support might be relatively achievable as a follow-up. Worth keeping in mind during design, without over-engineering for it.
 

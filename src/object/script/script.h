@@ -167,8 +167,6 @@ _CHAPTER.init.done:
 
 .include "src/main.script"
 .include "src/msu1.script"
-.include "src/losers.script"
-.include "src/title_screen.script"
 .include "src/level1.script"
 .include "data/chapters/chapter.include"
 

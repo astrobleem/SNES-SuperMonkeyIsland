@@ -86,7 +86,7 @@ _lastcheckpoint.goContinue:
   lda.b event.resultTarget
   cmp.w #none
   bne +
-    lda.w #title_screen
+    lda.w #level1
 +
   pha
   NEW Script.CLS.PTR oopCreateNoPtr

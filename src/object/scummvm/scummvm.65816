@@ -74,6 +74,8 @@ _init.zeroBits:
   stz.w SCUMM.newRoom
   stz.w SCUMM.bgInitDone
   stz.w SCUMM.gcInProgress
+  stz.w SCUMM.hdmaChannel          ; zeros both hdmaChannel + hdmaCgramChannel (adjacent db's)
+  stz.w SCUMM.cgramHdmaTable       ; zero first entry so HDMA terminates immediately if read
   stz.w SCUMM.roomEncdPtr
   stz.w SCUMM.roomEncdLen
   stz.w SCUMM.roomExcdPtr
@@ -318,12 +320,37 @@ _init.zeroCache:
   lda #1
   sta.w SCUMM.cursorEnabled
   stz.w SCUMM.sentenceVerb
+  stz.w SCUMM.sentenceObjectA
+  stz.w SCUMM.sentenceObjectB
+  stz.w SCUMM.sentenceDirty
   lda #$FFFF
   sta.w SCUMM.highlightVerb
   stz.w SCUMM.cursorTileDone
   lda #1
   ldx #48*2
   sta.w SCUMM.globalVars,x            ; VAR(48) = VAR_USERPUT = 1
+
+  ;--- Init dialog state ---
+  stz.w SCUMM.dialogActive
+  stz.w SCUMM.dialogTimer
+  stz.w SCUMM.dialogX
+  stz.w SCUMM.dialogY
+  stz.w SCUMM.dialogColor
+  stz.w SCUMM.dialogActor
+  stz.w SCUMM.dialogFontDone
+  stz.w SCUMM.dialogCharCount
+
+  ;zero dialog tilemap (2048 bytes) + set DMA pending to clear VRAM
+  ldx #0
+  lda #0
+_init.zeroDialogTilemap:
+  sta.w SCUMM.dialogTilemap,x
+  inx
+  inx
+  cpx #DIALOG_TILEMAP_SIZE
+  bcc _init.zeroDialogTilemap
+  lda #1
+  sta.w SCUMM.dialogDmaPending
 
   ;--- Set starting room (triggers room load on first play frame) ---
   ; MI1 starting room = 1; currentRoom already 0 from zero pass
@@ -362,7 +389,9 @@ _init.zeroCache:
   rep #$31
 
   lda.w SCUMM.running
-  beq _play.done
+  bne +
+  jmp _play.done
++
 
   ; Check for pending room change
   lda.w SCUMM.newRoom
@@ -402,7 +431,7 @@ _play.slotLoop:
   bra _play.nextSlot
 
 _play.runSlot:
-  jsr _scummvm.executeSlot
+  jsl scummvm.executeSlot
 
 _play.nextSlot:
   ; Advance to next slot
@@ -418,31 +447,37 @@ _play.nextSlot:
   bcc _play.slotLoop
 
   ; Update actor movement + animation (after scripts have run)
-  jsr _scummvm.updateActors
+  jsl scummvm.updateActors
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
-  ; Render verb bar if dirty
+  ; Render verb bar if dirty (must run before DMA registration)
+  rep #$31
   lda.w SCUMM.verbDirty
   beq _play.verbClean
   jsl scummvm.renderVerbBar
 _play.verbClean:
-  ; DMA verb tilemap to VRAM if pending
-  lda.w SCUMM.verbDmaPending
-  beq _play.done
-  stz.w SCUMM.verbDmaPending
-  sep #$20
-  tsx
-  lda #DMA_TRANSFER.VRAM
-  pha
-  pea SCUMM.verbTilemap
-  lda #$7E
-  pha
-  rep #$31
-  pea VERB_TILEMAP_VRAM_ADDR
-  pea VERB_TILEMAP_SIZE
-  jsr core.dma.registerTransfer
-  txs
+  ; Tick dialog timer
+  rep #$20
+  lda.w SCUMM.dialogActive
+  beq _play.noDialog
+  lda.w SCUMM.dialogTimer
+  beq _play.clearDialog
+  dec a
+  sta.w SCUMM.dialogTimer
+  bra _play.noDialog
+_play.clearDialog:
+  stz.w SCUMM.dialogActive
+  jsl scummvm.clearDialogTilemap
+_play.noDialog:
+  ; Re-render sentence line if dirty
+  lda.w SCUMM.sentenceDirty
+  beq _play.noSentence
+  jsl scummvm.renderSentenceLine
+_play.noSentence:
+
+  ; Register pending DMA transfers (CHR, cursor, verb, dialog) via superfree helper
+  jsl scummvm.registerPendingDma
 
 _play.done:
   rts
@@ -474,19 +509,28 @@ _scummvm.processRoomChange:
   ; Tile data: BG1=$0000, BG2=$4000 (high nibble)
   lda.b #$40
   sta.w BGTilesVram12
-  ; Enable BG1 + BG2 on main screen
+  ; BG3 tilemap at $9800 (word $4C00), 32x32
+  lda.b #$4C
+  sta.w BG3TilemapVram
+  ; BG3+BG4 tile data: BG3 at word $5000 (byte $A000)
+  lda.b #$05
+  sta.w BGTilesVram34
+  ; Enable BG1 + BG2 + BG3 on main screen
   lda.w MainScreen
-  ora.b #(T_BG1_ENABLE | T_BG2_ENABLE)
+  ora.b #(T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE)
   sta.w MainScreen
-  ; Set mode 1
-  lda.b #BGMODE_MODE_1
+  ; Set mode 1 with BG3 priority (bit 3)
+  lda.b #(BGMODE_MODE_1 | BGMODE_PRIORITY_LAYER_3)
   sta.w ScreenMode
   rep #$20
 
   ; Set BG2 Y scroll
-  lda #112
+  lda #110
   sta.w yScrollBG2
   stz.w xScrollBG2
+  ; BG3 scroll = 0,0 (text layer, no scrolling)
+  stz.w xScrollBG3
+  stz.w yScrollBG3
 
   ; DMA verb font tiles to VRAM $8000 (word $4000)
   sep #$20
@@ -636,346 +680,6 @@ _prc.failed:
   METHOD kill
   rep #$31
   stz.w SCUMM.running
-  rts
-
-
-;===================================================================
-; _scummvm.executeSlot -- run opcodes for current slot until yield
-;
-; Sets up [tmp] pointing into $7F cache and Y = slot.pc,
-; then loops: fetch opcode, dispatch via jsr (table,x).
-; Handler returns carry set to yield, carry clear to continue.
-;===================================================================
-_scummvm.executeSlot:
-  rep #$31
-
-  ; Set up tmp (ZP) as 24-bit pointer to script bytecode
-  ; tmp+0,1 = SCUMM_CACHE_BASE + slot.cachePtr (low 16)
-  ; tmp+2   = $7F
-  ldx.w SCUMM.currentSlotPtr
-  lda.w SCUMM.slots.cachePtr,x
-  clc
-  adc #SCUMM_CACHE_BASE
-  sta.b tmp
-  sep #$20
-  lda #$7F
-  sta.b tmp+2
-  rep #$20
-
-  ; Y = slot.pc
-  ldx.w SCUMM.currentSlotPtr
-  ldy.w SCUMM.slots.pc,x
-
-_scummvm.fetchLoop:
-  ; Read opcode byte (16-bit load, mask to 8-bit)
-  lda [tmp],y
-  and #$00FF
-  sta.w SCUMM.currentOpcode
-  iny                       ; advance PC past opcode byte
-
-  ; Dispatch: opcode * 2 for word-indexed table
-  asl a
-  tax
-  jsr (_scummvm.dispatchTable,x)
-  bcc _scummvm.fetchLoop    ; carry clear = keep going
-
-  ; Carry set = yield. Save Y back to slot.pc
-  ldx.w SCUMM.currentSlotPtr
-  tya
-  sta.w SCUMM.slots.pc,x
-  rts
-
-
-;===================================================================
-; Parameter Decoder Helpers
-;
-; These read parameters from the bytecode stream.
-; Y = SCUMM PC (advanced as bytes are consumed).
-; [tmp] = bytecode pointer.
-;===================================================================
-
-;-------------------------------------------------------------------
-; _scummvm.fetchByte -- read next byte, zero-extend to 16-bit
-; Returns: A = byte value, Y advanced by 1
-;-------------------------------------------------------------------
-_scummvm.fetchByte:
-  lda [tmp],y
-  and #$00FF
-  iny
-  rts
-
-;-------------------------------------------------------------------
-; _scummvm.fetchWord -- read next 16-bit LE word
-; Returns: A = word value, Y advanced by 2
-;-------------------------------------------------------------------
-_scummvm.fetchWord:
-  lda [tmp],y
-  iny
-  iny
-  rts
-
-;-------------------------------------------------------------------
-; _scummvm.getActorPtr -- convert actor number to table offset
-; Input: A = actor number (0-12)
-; Output: X = byte offset into SCUMM.actors, carry set if valid
-; Clobbers: A
-; If actor >= SCUMM_MAX_ACTORS, returns X=0 and carry clear
-;-------------------------------------------------------------------
-_scummvm.getActorPtr:
-  and #$00FF              ; mask to byte
-  cmp #SCUMM_MAX_ACTORS
-  bcc _getActorPtr.ok
-    ldx #0                ; out of bounds → point to actor 0 (unused)
-    clc                   ; carry clear = invalid
-    rts
-_getActorPtr.ok:
-  asl a                   ; *2
-  asl a                   ; *4
-  asl a                   ; *8
-  asl a                   ; *16 = _sizeof_scummActor
-  tax
-  sec                     ; carry set = valid
-  rts
-
-;-------------------------------------------------------------------
-; _scummvm.getVarOrDirectWord -- decode p16 parameter
-; Input: A = flag bitmask to test against currentOpcode
-; If flag SET in opcode: FETCH_WORD -> readVariable (var reference)
-; If flag CLEAR: FETCH_WORD (literal value)
-; Returns: A = resolved value
-;-------------------------------------------------------------------
-_scummvm.getVarOrDirectWord:
-  and.w SCUMM.currentOpcode   ; test flag bit against opcode
-  beq +
-    ; Flag set: word is a variable reference
-    jsr _scummvm.fetchWord
-    jmp _scummvm.readVariable
-+
-  ; Flag clear: word is literal
-  jsr _scummvm.fetchWord
-  rts
-
-;-------------------------------------------------------------------
-; _scummvm.getVarOrDirectByte -- decode p8 parameter
-; Input: A = flag bitmask to test against currentOpcode
-; If flag SET: FETCH_WORD -> readVariable (2-byte var ref)
-; If flag CLEAR: FETCH_BYTE (1-byte literal)
-; Returns: A = resolved value
-;-------------------------------------------------------------------
-_scummvm.getVarOrDirectByte:
-  and.w SCUMM.currentOpcode   ; test flag bit against opcode
-  beq +
-    ; Flag set: read variable reference (2 bytes)
-    jsr _scummvm.fetchWord
-    jmp _scummvm.readVariable
-+
-  ; Flag clear: literal byte
-  jsr _scummvm.fetchByte
-  rts
-
-;-------------------------------------------------------------------
-; _scummvm.getResultPos -- read result variable position
-; Reads 2-byte variable reference, stores in SCUMM.resultVar
-;-------------------------------------------------------------------
-_scummvm.getResultPos:
-  jsr _scummvm.fetchWord
-  sta.w SCUMM.resultVar
-  rts
-
-
-;-------------------------------------------------------------------
-; _scummvm.skipWordVararg -- skip getWordVararg argument list
-; SCUMM v5 format: { sub_opcode_byte, word_arg } ... 0xFF
-; Each non-0xFF byte is followed by a 2-byte word (var ref or literal).
-; Preserves A on stack (caller typically has script number pushed).
-;-------------------------------------------------------------------
-_scummvm.skipWordVararg:
--
-  jsr _scummvm.fetchByte
-  cmp #$00FF
-  beq +
-  jsr _scummvm.fetchWord          ; skip the 2-byte argument
-  bra -
-+
-  rts
-
-
-;-------------------------------------------------------------------
-; _scummvm.skipP8fromScratch -- skip one p8 param using SCUMM.scratch
-; Input: A = flag bitmask to test against SCUMM.scratch
-; If flag SET: fetchWord (2-byte var ref), else fetchByte (1-byte literal)
-;-------------------------------------------------------------------
-_scummvm.skipP8fromScratch:
-  and.w SCUMM.scratch
-  beq +
-  jmp _scummvm.fetchWord
-+
-  jmp _scummvm.fetchByte
-
-
-;-------------------------------------------------------------------
-; _scummvm.skipNullString -- skip bytes until $00 terminator
-;-------------------------------------------------------------------
-_scummvm.skipNullString:
--
-  jsr _scummvm.fetchByte
-  cmp #0
-  bne -
-  rts
-
-
-;-------------------------------------------------------------------
-; _scummvm.skipPrintString -- skip SCUMM print string
-; Bytes $01-$08 are embedded var references (2 extra bytes each).
-; $00 terminates the string.
-;-------------------------------------------------------------------
-_scummvm.skipPrintString:
--
-  jsr _scummvm.fetchByte
-  cmp #0
-  beq +                            ; $00 = end of string
-  cmp #$0009
-  bcs -                            ; >= $09 = normal char, loop
-  ; $01-$08: embedded var ref, consume 2 extra bytes
-  jsr _scummvm.fetchWord
-  bra -
-+
-  rts
-
-
-;===================================================================
-; Variable System
-;===================================================================
-
-;-------------------------------------------------------------------
-; _scummvm.readVariable -- read a SCUMM variable
-; Input: A = raw variable encoding (16-bit)
-; Returns: A = variable value (16-bit)
-;-------------------------------------------------------------------
-_scummvm.readVariable:
-  sta.w SCUMM.scratch
-  and #SCUMM_VAR_TYPE_MASK
-  beq _readVar.global
-
-  cmp #SCUMM_VAR_LOCAL_MASK
-  beq _readVar.local
-
-  ; Bit variable ($8000-$BFFF)
-  lda.w SCUMM.scratch
-  and #SCUMM_VAR_INDEX_MASK
-  pha
-  lsr a
-  lsr a
-  lsr a
-  tax
-  pla
-  and #$0007
-  pha
-  lda #1
-  sta.w SCUMM.scratch2
-  pla
-  beq _readBit.test
-_readBit.shift:
-  asl.w SCUMM.scratch2
-  dec a
-  bne _readBit.shift
-_readBit.test:
-  lda.w SCUMM.bitVars,x
-  and #$00FF
-  and.w SCUMM.scratch2
-  beq +
-    lda #1
-+
-  rts
-
-_readVar.global:
-  lda.w SCUMM.scratch
-  and #SCUMM_VAR_INDEX_MASK
-  asl a
-  tax
-  lda.w SCUMM.globalVars,x
-  rts
-
-_readVar.local:
-  lda.w SCUMM.scratch
-  and #SCUMM_VAR_INDEX_MASK
-  asl a
-  clc
-  adc.w SCUMM.currentSlotPtr
-  tax
-  lda.w SCUMM.slots.localVars,x
-  rts
-
-
-;-------------------------------------------------------------------
-; _scummvm.writeVariable -- write a SCUMM variable
-; Input: A = value to write
-;        SCUMM.resultVar = target variable encoding
-;-------------------------------------------------------------------
-_scummvm.writeVariable:
-  sta.w SCUMM.scratch2
-  lda.w SCUMM.resultVar
-  and #SCUMM_VAR_TYPE_MASK
-  beq _writeVar.global
-
-  cmp #SCUMM_VAR_LOCAL_MASK
-  beq _writeVar.local
-
-  ; Bit variable
-  lda.w SCUMM.resultVar
-  and #SCUMM_VAR_INDEX_MASK
-  pha
-  lsr a
-  lsr a
-  lsr a
-  tax
-  pla
-  and #$0007
-  pha
-  lda #1
-  sta.w SCUMM.scratch
-  pla
-  beq _writeBit.apply
-_writeBit.shift:
-  asl.w SCUMM.scratch
-  dec a
-  bne _writeBit.shift
-_writeBit.apply:
-  lda.w SCUMM.scratch2
-  beq _writeBit.clear
-    sep #$20
-    lda.w SCUMM.bitVars,x
-    ora.w SCUMM.scratch
-    sta.w SCUMM.bitVars,x
-    rep #$20
-    rts
-_writeBit.clear:
-    sep #$20
-    lda.w SCUMM.scratch
-    eor #$FF
-    and.w SCUMM.bitVars,x
-    sta.w SCUMM.bitVars,x
-    rep #$20
-    rts
-
-_writeVar.global:
-  lda.w SCUMM.resultVar
-  and #SCUMM_VAR_INDEX_MASK
-  asl a
-  tax
-  lda.w SCUMM.scratch2
-  sta.w SCUMM.globalVars,x
-  rts
-
-_writeVar.local:
-  lda.w SCUMM.resultVar
-  and #SCUMM_VAR_INDEX_MASK
-  asl a
-  clc
-  adc.w SCUMM.currentSlotPtr
-  tax
-  lda.w SCUMM.scratch2
-  sta.w SCUMM.slots.localVars,x
   rts
 
 
@@ -1687,6 +1391,492 @@ _startEncd.found:
   jmp _startScript.initSlot
 
 
+
+;===================================================================
+; _scummvm.loadActorCostumes
+; DMA costume tiles + palette to VRAM/CGRAM during room change.
+; MVP: always loads costume 1 (Guybrush standing frame).
+;===================================================================
+_scummvm.loadActorCostumes:
+  rep #$31
+
+  ; Save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
+  lda.w ScreenBrightness
+  and #$00FF
+  pha                               ; save on stack (16-bit push)
+
+  ; Disable both NMI and IRQ — DMA queue IRQ also corrupts VMADDL/VMAIN
+  jsr core.nmi.stop
+  sei
+  sep #$20
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+  rep #$20
+
+  ; --- DMA costume palette to CGRAM sprite palette 0 (color 128) ---
+  sep #$20
+  lda.b #128                          ; color index 128 = sprite palette 0
+  sta.l CGADD
+
+  lda.b #$00                          ; A→B, increment source, 1-reg write
+  sta.l $4360                         ; DMA6 control
+  lda.b #$22                          ; destination: CGDATA ($2122)
+  sta.l $4361
+  rep #$20
+  lda.w #Costume1Pal
+  sta.l $4362                         ; source address low
+  sep #$20
+  lda.b #:Costume1Pal
+  sta.l $4364                         ; source bank
+  rep #$20
+  lda.w #32                           ; 16 colors x 2 bytes
+  sta.l $4365                         ; transfer length
+  sep #$20
+  lda.b #$40                          ; channel 6 bit
+  sta.l MDMAEN                        ; start DMA
+
+  ; --- DMA costume CHR to VRAM word $6000 (byte $C000) ---
+  ; ObjSel=3 means sprite name base at word $6000
+  lda.b #VMAIN_INCREMENT_MODE         ; word-access, increment on high byte write
+  sta.l VMAIN
+  rep #$20
+  lda #$6000                          ; VRAM word address
+  sta.l VMADDL
+
+  ; DMA channel 7: A→B, increment source, write to $2118/$2119 (VMDATAL/H)
+  sep #$20
+  lda.b #$01                          ; A→B, increment, 2-reg write (word)
+  sta.l $4370                         ; DMA7 control
+  lda.b #$18                          ; destination: VMDATAL ($2118)
+  sta.l $4371
+  rep #$20
+  lda.w #Costume1Chr
+  sta.l $4372                         ; source address low
+  sep #$20
+  lda.b #:Costume1Chr
+  sta.l $4374                         ; source bank
+  rep #$20
+  lda.w #Costume1ChrEnd - Costume1Chr
+  sta.l $4375                         ; transfer length
+  sep #$20
+  lda.b #$80                          ; channel 7 bit
+  sta.l MDMAEN                        ; start DMA
+
+  ; Set ObjSel so sprites read tiles from VRAM word $6000 (byte $C000)
+  ; Bits 0-1 = 11 = name base at word $6000
+  lda.b #$03
+  sta.w ObjSel
+
+  ; Restore display + re-enable NMI/IRQ
+  rep #$20
+  pla                               ; restore saved brightness (16-bit pull)
+  sep #$20
+  sta.l INIDSP
+  sta.w ScreenBrightness            ; restore WRAM copy too
+
+  ; Initialize actor 1 animation state
+  ldx #1                              ; actor 1 byte offset
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x        ; force DMA on first render
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+  sta.w SCUMM.actorAnimTimer,x
+
+  cli
+  rep #$20
+  jsr core.nmi.start
+
+  rts
+
+
+;===================================================================
+; _scummvm.renderActors
+; Write OAM entries for visible actors in current room.
+; MVP: only renders actor 1 (Guybrush) using hardcoded costume frame.
+; Called at end of ScummVM.play(), after slot scheduler.
+;
+; Writes to GLOBAL.oamBuffer (Table 0) and GLOBAL.oamTable1 (Table 1).
+; Sets GLOBAL.oamUploadFlag so the engine DMAs to OAM during VBlank.
+;===================================================================
+
+_scummvm.renderActors:
+  jsl scummvm.renderActors_impl
+  rts
+
+
+;-------------------------------------------------------------------
+; Long-callable wrappers for cross-bank calls from superfree opcodes
+;-------------------------------------------------------------------
+scummvm.startScriptSlot_long:
+  jsr _scummvm.startScriptSlot
+  rtl
+
+scummvm.triggerBadOpcode:
+  TRIGGER_ERROR E_ScummVmBadOpcode
+
+
+  CLASS ScummVM
+
+.ends
+
+
+;===================================================================
+; SCUMM Opcode Dispatch — superfree section
+;
+; Contains: executeSlot, fetchLoop, dispatch table, all 106 opcode
+; handlers, parameter helpers, math/audio helpers, updateActors.
+; Moved from bank 0 to free ~3.5KB.
+;===================================================================
+.section "ScummVM dispatch" superfree
+
+;-------------------------------------------------------------------
+; _scummvm.updateActors entry (jsl wrapper)
+; Internal code uses rts to return to this wrapper, which does rtl.
+;-------------------------------------------------------------------
+scummvm.updateActors:
+  jsr _scummvm.updateActors_body
+  rtl
+
+;===================================================================
+; _scummvm.executeSlot -- run opcodes for current slot until yield
+;
+; Sets up [tmp] pointing into $7F cache and Y = slot.pc,
+; then loops: fetch opcode, dispatch via jsr (table,x).
+; Handler returns carry set to yield, carry clear to continue.
+;===================================================================
+scummvm.executeSlot:
+  rep #$31
+
+  ; Set up tmp (ZP) as 24-bit pointer to script bytecode
+  ; tmp+0,1 = SCUMM_CACHE_BASE + slot.cachePtr (low 16)
+  ; tmp+2   = $7F
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.cachePtr,x
+  clc
+  adc #SCUMM_CACHE_BASE
+  sta.b tmp
+  sep #$20
+  lda #$7F
+  sta.b tmp+2
+  rep #$20
+
+  ; Y = slot.pc
+  ldx.w SCUMM.currentSlotPtr
+  ldy.w SCUMM.slots.pc,x
+
+_scummvm.fetchLoop:
+  ; Read opcode byte (16-bit load, mask to 8-bit)
+  lda [tmp],y
+  and #$00FF
+  sta.w SCUMM.currentOpcode
+  iny                       ; advance PC past opcode byte
+
+  ; Dispatch: opcode * 2 for word-indexed table
+  asl a
+  tax
+  jsr (_scummvm.dispatchTable,x)
+  bcc _scummvm.fetchLoop    ; carry clear = keep going
+
+  ; Carry set = yield. Save Y back to slot.pc
+  ldx.w SCUMM.currentSlotPtr
+  tya
+  sta.w SCUMM.slots.pc,x
+  rtl
+
+
+;===================================================================
+; Parameter Decoder Helpers
+;
+; These read parameters from the bytecode stream.
+; Y = SCUMM PC (advanced as bytes are consumed).
+; [tmp] = bytecode pointer.
+;===================================================================
+
+;-------------------------------------------------------------------
+; _scummvm.fetchByte -- read next byte, zero-extend to 16-bit
+; Returns: A = byte value, Y advanced by 1
+;-------------------------------------------------------------------
+_scummvm.fetchByte:
+  lda [tmp],y
+  and #$00FF
+  iny
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.fetchWord -- read next 16-bit LE word
+; Returns: A = word value, Y advanced by 2
+;-------------------------------------------------------------------
+_scummvm.fetchWord:
+  lda [tmp],y
+  iny
+  iny
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getActorPtr -- convert actor number to table offset
+; Input: A = actor number (0-12)
+; Output: X = byte offset into SCUMM.actors, carry set if valid
+; Clobbers: A
+; If actor >= SCUMM_MAX_ACTORS, returns X=0 and carry clear
+;-------------------------------------------------------------------
+_scummvm.getActorPtr:
+  and #$00FF              ; mask to byte
+  cmp #SCUMM_MAX_ACTORS
+  bcc _getActorPtr.ok
+    ldx #0                ; out of bounds → point to actor 0 (unused)
+    clc                   ; carry clear = invalid
+    rts
+_getActorPtr.ok:
+  asl a                   ; *2
+  asl a                   ; *4
+  asl a                   ; *8
+  asl a                   ; *16 = _sizeof_scummActor
+  tax
+  sec                     ; carry set = valid
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getVarOrDirectWord -- decode p16 parameter
+; Input: A = flag bitmask to test against currentOpcode
+; If flag SET in opcode: FETCH_WORD -> readVariable (var reference)
+; If flag CLEAR: FETCH_WORD (literal value)
+; Returns: A = resolved value
+;-------------------------------------------------------------------
+_scummvm.getVarOrDirectWord:
+  and.w SCUMM.currentOpcode   ; test flag bit against opcode
+  beq +
+    ; Flag set: word is a variable reference
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  ; Flag clear: word is literal
+  jsr _scummvm.fetchWord
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getVarOrDirectByte -- decode p8 parameter
+; Input: A = flag bitmask to test against currentOpcode
+; If flag SET: FETCH_WORD -> readVariable (2-byte var ref)
+; If flag CLEAR: FETCH_BYTE (1-byte literal)
+; Returns: A = resolved value
+;-------------------------------------------------------------------
+_scummvm.getVarOrDirectByte:
+  and.w SCUMM.currentOpcode   ; test flag bit against opcode
+  beq +
+    ; Flag set: read variable reference (2 bytes)
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  ; Flag clear: literal byte
+  jsr _scummvm.fetchByte
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.getResultPos -- read result variable position
+; Reads 2-byte variable reference, stores in SCUMM.resultVar
+;-------------------------------------------------------------------
+_scummvm.getResultPos:
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.resultVar
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipWordVararg -- skip getWordVararg argument list
+; SCUMM v5 format: { sub_opcode_byte, word_arg } ... 0xFF
+; Each non-0xFF byte is followed by a 2-byte word (var ref or literal).
+; Preserves A on stack (caller typically has script number pushed).
+;-------------------------------------------------------------------
+_scummvm.skipWordVararg:
+-
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq +
+  jsr _scummvm.fetchWord          ; skip the 2-byte argument
+  bra -
++
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipP8fromScratch -- skip one p8 param using SCUMM.scratch
+; Input: A = flag bitmask to test against SCUMM.scratch
+; If flag SET: fetchWord (2-byte var ref), else fetchByte (1-byte literal)
+;-------------------------------------------------------------------
+_scummvm.skipP8fromScratch:
+  and.w SCUMM.scratch
+  beq +
+  jmp _scummvm.fetchWord
++
+  jmp _scummvm.fetchByte
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipNullString -- skip bytes until $00 terminator
+;-------------------------------------------------------------------
+_scummvm.skipNullString:
+-
+  jsr _scummvm.fetchByte
+  cmp #0
+  bne -
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.skipPrintString -- skip SCUMM print string
+; Bytes $01-$08 are embedded var references (2 extra bytes each).
+; $00 terminates the string.
+;-------------------------------------------------------------------
+_scummvm.skipPrintString:
+-
+  jsr _scummvm.fetchByte
+  cmp #0
+  beq +                            ; $00 = end of string
+  cmp #$0009
+  bcs -                            ; >= $09 = normal char, loop
+  ; $01-$08: embedded var ref, consume 2 extra bytes
+  jsr _scummvm.fetchWord
+  bra -
++
+  rts
+
+
+;===================================================================
+; Variable System
+;===================================================================
+
+;-------------------------------------------------------------------
+; _scummvm.readVariable -- read a SCUMM variable
+; Input: A = raw variable encoding (16-bit)
+; Returns: A = variable value (16-bit)
+;-------------------------------------------------------------------
+_scummvm.readVariable:
+  sta.w SCUMM.scratch
+  and #SCUMM_VAR_TYPE_MASK
+  beq _readVar.global
+
+  cmp #SCUMM_VAR_LOCAL_MASK
+  beq _readVar.local
+
+  ; Bit variable ($8000-$BFFF)
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tax
+  pla
+  and #$0007
+  pha
+  lda #1
+  sta.w SCUMM.scratch2
+  pla
+  beq _readBit.test
+_readBit.shift:
+  asl.w SCUMM.scratch2
+  dec a
+  bne _readBit.shift
+_readBit.test:
+  lda.w SCUMM.bitVars,x
+  and #$00FF
+  and.w SCUMM.scratch2
+  beq +
+    lda #1
++
+  rts
+
+_readVar.global:
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  tax
+  lda.w SCUMM.globalVars,x
+  rts
+
+_readVar.local:
+  lda.w SCUMM.scratch
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  clc
+  adc.w SCUMM.currentSlotPtr
+  tax
+  lda.w SCUMM.slots.localVars,x
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.writeVariable -- write a SCUMM variable
+; Input: A = value to write
+;        SCUMM.resultVar = target variable encoding
+;-------------------------------------------------------------------
+_scummvm.writeVariable:
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_TYPE_MASK
+  beq _writeVar.global
+
+  cmp #SCUMM_VAR_LOCAL_MASK
+  beq _writeVar.local
+
+  ; Bit variable
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tax
+  pla
+  and #$0007
+  pha
+  lda #1
+  sta.w SCUMM.scratch
+  pla
+  beq _writeBit.apply
+_writeBit.shift:
+  asl.w SCUMM.scratch
+  dec a
+  bne _writeBit.shift
+_writeBit.apply:
+  lda.w SCUMM.scratch2
+  beq _writeBit.clear
+    sep #$20
+    lda.w SCUMM.bitVars,x
+    ora.w SCUMM.scratch
+    sta.w SCUMM.bitVars,x
+    rep #$20
+    rts
+_writeBit.clear:
+    sep #$20
+    lda.w SCUMM.scratch
+    eor #$FF
+    and.w SCUMM.bitVars,x
+    sta.w SCUMM.bitVars,x
+    rep #$20
+    rts
+
+_writeVar.global:
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  tax
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.globalVars,x
+  rts
+
+_writeVar.local:
+  lda.w SCUMM.resultVar
+  and #SCUMM_VAR_INDEX_MASK
+  asl a
+  clc
+  adc.w SCUMM.currentSlotPtr
+  tax
+  lda.w SCUMM.scratch2
+  sta.w SCUMM.slots.localVars,x
+  rts
+
+
 ;-------------------------------------------------------------------
 ; _scummvm.findSlotByNumber -- find slot running script N
 ; Input: A = script number
@@ -1745,7 +1935,7 @@ op_stub:
   ldx.w SCUMM.currentSlotPtr
   tya
   sta.w SCUMM.slots.pc,x
-  TRIGGER_ERROR E_ScummVmBadOpcode
+  jml scummvm.triggerBadOpcode
 
 
 ;-------------------------------------------------------------------
@@ -1795,7 +1985,7 @@ op_startScript:
   jsr _scummvm.skipWordVararg
   pla
   phy                           ; save SCUMM PC (startScriptSlot clobbers Y)
-  jsr _scummvm.startScriptSlot
+  jsl scummvm.startScriptSlot_long
   ply                           ; restore SCUMM PC
   clc
   rts
@@ -2379,7 +2569,7 @@ op_chainScript:
   rep #$20
   pla
   phy                           ; save Y (startScriptSlot clobbers Y)
-  jsr _scummvm.startScriptSlot
+  jsl scummvm.startScriptSlot_long
   ply                           ; restore Y
   sec
   rts
@@ -2742,28 +2932,36 @@ _actorOps.dispatch:
 +
   ;--- Sub 0x08: init (0 params)
   cmp #$08
-  beq _actorOps.sub_none
+  beq _actorOps.jmp_none
   ;--- Sub 0x0A: animDefault (0 params)
   cmp #$0A
-  beq _actorOps.sub_none
+  beq _actorOps.jmp_none
   ;--- Sub 0x12: neverZClip (0 params)
   cmp #$12
-  beq _actorOps.sub_none
+  beq _actorOps.jmp_none
   ;--- Sub 0x14: ignoreBoxes (0 params)
   cmp #$14
-  beq _actorOps.sub_none
+  beq _actorOps.jmp_none
   ;--- Sub 0x15: followBoxes (0 params)
   cmp #$15
-  beq _actorOps.sub_none
+  beq _actorOps.jmp_none
   ;--- Sub 0x0E: initFrame — wire to actor table
   cmp #$0E
   bne +
     jmp _actorOps.sub_initFrame
 +
+  ;--- Sub 0x0C: talkColor — wire to actor table
+  cmp #$0C
+  bne +
+    jmp _actorOps.sub_talkColor
++
   ;--- Everything else: 1 param p8[7]
-  ; (0x03=sound, 0x04=walkAnimNr, 0x06=standFrame, 0x0C=talkColor,
+  ; (0x03=sound, 0x04=walkAnimNr, 0x06=standFrame,
   ;  0x10=width, 0x13=setZClip, 0x16=animSpeed, 0x17=shadow + unknown)
   bra _actorOps.sub_1param
+
+_actorOps.jmp_none:
+  jmp _actorOps.sub_none
 
 _actorOps.jmp_2param:
   jmp _actorOps.sub_2param
@@ -2915,6 +3113,26 @@ _actorOps.sub_default:
   jmp _actorOps.subLoop
 +
   jsr _scummvm.fetchByte
+  jmp _actorOps.subLoop
+
+_actorOps.sub_talkColor:
+  ; Sub 0x0C: p8[7] — store talkColor to actor table
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  pha
+  lda 3,s                            ; actor offset from stack
+  tax
+  pla
+  sep #$20
+  sta.w SCUMM.actors.talkColor,x
+  rep #$20
   jmp _actorOps.subLoop
 
 _actorOps.sub_string:
@@ -3613,6 +3831,9 @@ _drawObj.setState:
 op_print:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor
+  sta.w SCUMM.dialogActor            ; save for positioning
+  stz.w SCUMM.dialogX                ; reset explicit position
+  stz.w SCUMM.dialogY
 _print.subLoop:
   jsr _scummvm.fetchByte
   cmp #$00FF
@@ -3632,12 +3853,22 @@ _print.subLoop:
 
 _print.pos:
   jsr _scummvm.fetchWord             ; x
+  sta.w SCUMM.dialogX
   jsr _scummvm.fetchWord             ; y
+  sta.w SCUMM.dialogY
   jmp _print.subLoop
 
 _print.color:
-  lda #$0080
-  jsr _scummvm.skipP8fromScratch
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  sta.w SCUMM.dialogColor
   jmp _print.subLoop
 
 _print.clipping:
@@ -3645,7 +3876,7 @@ _print.clipping:
   jmp _print.subLoop
 
 _print.text:
-  jsr _scummvm.skipPrintString
+  jsl scummvm.extractAndRenderString
   jmp _print.subLoop
 
 _print.done:
@@ -3657,6 +3888,11 @@ _print.done:
 ; printEgo ($D8) -- same sub-opcode loop as print, no actor param
 ;-------------------------------------------------------------------
 op_printEgo:
+  lda #1                              ; VAR_EGO = global var 1
+  jsr _scummvm.readVariable
+  sta.w SCUMM.dialogActor
+  stz.w SCUMM.dialogX
+  stz.w SCUMM.dialogY
   jmp _print.subLoop
 
 
@@ -3696,9 +3932,9 @@ _doSentence.verbVar:
 
 _doSentence.readObjects:
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectWord    ; objectA
+  jsr _scummvm.getVarOrDirectWord    ; objectA (consumed but not stored yet)
   lda #SCUMM_FLAG_BIT5
-  jsr _scummvm.getVarOrDirectWord    ; objectB
+  jsr _scummvm.getVarOrDirectWord    ; objectB (consumed but not stored yet)
 
 _doSentence.done:
   clc
@@ -4114,112 +4350,6 @@ _div16.pos:
   plx
   rts
 
-;===================================================================
-; _scummvm.loadActorCostumes
-; DMA costume tiles + palette to VRAM/CGRAM during room change.
-; MVP: always loads costume 1 (Guybrush standing frame).
-;===================================================================
-_scummvm.loadActorCostumes:
-  rep #$31
-
-  ; Save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
-  lda.w ScreenBrightness
-  and #$00FF
-  pha                               ; save on stack (16-bit push)
-
-  ; Disable both NMI and IRQ — DMA queue IRQ also corrupts VMADDL/VMAIN
-  jsr core.nmi.stop
-  sei
-  sep #$20
-  lda.b #INIDSP_FORCE_BLANK
-  sta.l INIDSP
-  rep #$20
-
-  ; --- DMA costume palette to CGRAM sprite palette 0 (color 128) ---
-  sep #$20
-  lda.b #128                          ; color index 128 = sprite palette 0
-  sta.l CGADD
-
-  lda.b #$00                          ; A→B, increment source, 1-reg write
-  sta.l $4360                         ; DMA6 control
-  lda.b #$22                          ; destination: CGDATA ($2122)
-  sta.l $4361
-  rep #$20
-  lda.w #Costume1Pal
-  sta.l $4362                         ; source address low
-  sep #$20
-  lda.b #:Costume1Pal
-  sta.l $4364                         ; source bank
-  rep #$20
-  lda.w #32                           ; 16 colors x 2 bytes
-  sta.l $4365                         ; transfer length
-  sep #$20
-  lda.b #$40                          ; channel 6 bit
-  sta.l MDMAEN                        ; start DMA
-
-  ; --- DMA costume CHR to VRAM word $6000 (byte $C000) ---
-  ; ObjSel=3 means sprite name base at word $6000
-  lda.b #VMAIN_INCREMENT_MODE         ; word-access, increment on high byte write
-  sta.l VMAIN
-  rep #$20
-  lda #$6000                          ; VRAM word address
-  sta.l VMADDL
-
-  ; DMA channel 7: A→B, increment source, write to $2118/$2119 (VMDATAL/H)
-  sep #$20
-  lda.b #$01                          ; A→B, increment, 2-reg write (word)
-  sta.l $4370                         ; DMA7 control
-  lda.b #$18                          ; destination: VMDATAL ($2118)
-  sta.l $4371
-  rep #$20
-  lda.w #Costume1Chr
-  sta.l $4372                         ; source address low
-  sep #$20
-  lda.b #:Costume1Chr
-  sta.l $4374                         ; source bank
-  rep #$20
-  lda.w #Costume1ChrEnd - Costume1Chr
-  sta.l $4375                         ; transfer length
-  sep #$20
-  lda.b #$80                          ; channel 7 bit
-  sta.l MDMAEN                        ; start DMA
-
-  ; Set ObjSel so sprites read tiles from VRAM word $6000 (byte $C000)
-  ; Bits 0-1 = 11 = name base at word $6000
-  lda.b #$03
-  sta.w ObjSel
-
-  ; Restore display + re-enable NMI/IRQ
-  rep #$20
-  pla                               ; restore saved brightness (16-bit pull)
-  sep #$20
-  sta.l INIDSP
-  sta.w ScreenBrightness            ; restore WRAM copy too
-
-  ; Initialize actor 1 animation state
-  ldx #1                              ; actor 1 byte offset
-  lda #$FF
-  sta.w SCUMM.actorLastFrame,x        ; force DMA on first render
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-  sta.w SCUMM.actorAnimTimer,x
-
-  cli
-  rep #$20
-  jsr core.nmi.start
-
-  rts
-
-
-;===================================================================
-; _scummvm.renderActors
-; Write OAM entries for visible actors in current room.
-; MVP: only renders actor 1 (Guybrush) using hardcoded costume frame.
-; Called at end of ScummVM.play(), after slot scheduler.
-;
-; Writes to GLOBAL.oamBuffer (Table 0) and GLOBAL.oamTable1 (Table 1).
-; Sets GLOBAL.oamUploadFlag so the engine DMAs to OAM during VBlank.
-;===================================================================
 
 ;===================================================================
 ; _scummvm.updateActors
@@ -4227,7 +4357,7 @@ _scummvm.loadActorCostumes:
 ;===================================================================
 .define WALK_SPEED 2
 
-_scummvm.updateActors:
+_scummvm.updateActors_body:
   rep #$31
 
   ; Skip if actor not placed in a room yet (room=0 means not initialized)
@@ -4368,13 +4498,6 @@ _ua.setFacing:
 _ua.animDone:
   rep #$20
   rts
-
-_scummvm.renderActors:
-  jsl scummvm.renderActors_impl
-  rts
-
-
-  CLASS ScummVM
 
 .ends
 
@@ -4527,32 +4650,14 @@ scummvm.renderActors_impl:
   sta.w SCUMM.actorLastFrame,x
   rep #$20
 
-  ; --- DMA new CHR to VRAM $6000 (brief force-blank) ---
-  ; Save brightness before disabling NMI (which zeros ScreenBrightness)
-  lda.w ScreenBrightness
-  and #$00FF
-  pha                                 ; save brightness (16-bit push)
-
-  ; Inline core.nmi.stop: clear NMI enable bit
-  sep #$20
-  lda.w GLOBAL.interruptFlags
-  and #NMITIMEN_NMI_ENABLE ~$ff
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
-  sei
-
-  lda.b #INIDSP_FORCE_BLANK
-  sta.l INIDSP
-  rep #$20
-
-  ; Look up CHR source from frame tables
+  ; --- Store CHR DMA parameters for VBlank queue (no mid-frame force-blank) ---
   lda.w SCUMM.scratch                 ; pic index
   asl a                               ; x2 for word tables
   tax
   lda.l CostumeFrameChrLo,x
-  sta.l $4372                         ; DMA source address low
+  sta.w SCUMM.chrDmaSrcLo
   lda.l CostumeFrameChrLen,x
-  sta.l $4375                         ; DMA transfer length
+  sta.w SCUMM.chrDmaLen
 
   ; Bank byte (byte table, needs original pic index)
   lda.w SCUMM.scratch
@@ -4560,46 +4665,9 @@ scummvm.renderActors_impl:
   tax
   sep #$20
   lda.l CostumeFrameChrHi,x
-  sta.l $4374                         ; DMA source bank
-
-  ; Set VRAM destination
-  lda.b #VMAIN_INCREMENT_MODE
-  sta.l VMAIN
-  rep #$20
-  lda #$6000
-  sta.l VMADDL
-
-  ; DMA channel 7: word write to VMDATAL/H
-  sep #$20
-  lda.b #$01                          ; A->B, increment, 2-reg write
-  sta.l $4370
-  lda.b #$18                          ; destination: VMDATAL
-  sta.l $4371
-  lda.b #$80                          ; channel 7
-  sta.l MDMAEN
-
-  ; Refresh cursor OBJ palette 1 while still in force-blank
-  lda #$91                            ; CGRAM address $91 (OBJ pal1 color 1)
-  sta.l $2121
-  lda #$00                            ; color 1 = $0000 (black outline)
-  sta.l $2122
-  sta.l $2122
-  lda #$FF                            ; color 2 = $7FFF (white fill)
-  sta.l $2122
-  lda #$7F
-  sta.l $2122
-
-  ; Restore brightness + inline core.nmi.start
-  rep #$20
-  pla                                 ; brightness (16-bit pull)
-  sep #$20
-  sta.l INIDSP
-  sta.w ScreenBrightness
-  cli
-  lda.w GLOBAL.interruptFlags
-  ora #NMITIMEN_NMI_ENABLE
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
+  sta.w SCUMM.chrDmaSrcHi
+  lda #1
+  sta.w SCUMM.chrDmaPending
   rep #$20
 
 _ri.chrReady:
@@ -5407,10 +5475,14 @@ _rvb.verbLoop:
 
   ; Write tile indices for each character
   ; tile index = char - $20 (ASCII space = tile 0)
-  ; All verbs use palette 7 (verb font palette via HDMA)
-  ; Highlight palette swap disabled until proper HDMA integration
+  ; Choose palette based on highlight state (X = verb slot offset)
   rep #$20
-  lda #$3C00                            ; priority 1 + palette 7
+  cpx.w SCUMM.highlightVerb
+  bne +
+  lda #$3800                            ; palette 6 = highlight (yellow)
+  bra _rvb.paletteSet
++
+  lda #$3C00                            ; palette 7 = normal (white)
 _rvb.paletteSet:
   sta.w SCUMM.actorOamCount            ; reuse as palette word
 
@@ -5479,14 +5551,14 @@ scummvm.buildCgramHdmaTable:
   lda.b #INIDSP_FORCE_BLANK
   sta.l INIDSP
 
-  ; Set CGRAM read address to $71 (palette 7 color 1)
+  ; --- Read palette 7 colors 1-3 from CGRAM $71 ---
   lda #$71
   sta.l $2121
 
-  ; -- Repeat 3 lines at scanline 0: restore room palette 7 colors 1-3 --
-  lda #$83
+  ; -- Per-line 6 entries at scanlines 0-5: restore pal7 c1-c3 + pal6 c1-c3 --
+  lda #$86
   sta.w 0,x
-  ; Color 1: CGRAM[$71] = room value
+  ; Entry 0: CGRAM[$71] = room pal7 c1
   lda #$71
   sta.w 1,x
   sta.w 2,x
@@ -5494,7 +5566,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 3,x
   lda.l $213B
   sta.w 4,x
-  ; Color 2: CGRAM[$72] = room value (CGADD auto-incremented)
+  ; Entry 1: CGRAM[$72] = room pal7 c2
   lda #$72
   sta.w 5,x
   sta.w 6,x
@@ -5502,7 +5574,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 7,x
   lda.l $213B
   sta.w 8,x
-  ; Color 3: CGRAM[$73] = room value (CGADD auto-incremented)
+  ; Entry 2: CGRAM[$73] = room pal7 c3
   lda #$73
   sta.w 9,x
   sta.w 10,x
@@ -5511,72 +5583,124 @@ scummvm.buildCgramHdmaTable:
   lda.l $213B
   sta.w 12,x
 
+  ; --- Read palette 6 colors 1-3 from CGRAM $61 ---
+  lda #$61
+  sta.l $2121
+  ; Entry 3: CGRAM[$61] = room pal6 c1
+  lda #$61
+  sta.w 13,x
+  sta.w 14,x
+  lda.l $213B
+  sta.w 15,x
+  lda.l $213B
+  sta.w 16,x
+  ; Entry 4: CGRAM[$62] = room pal6 c2
+  lda #$62
+  sta.w 17,x
+  sta.w 18,x
+  lda.l $213B
+  sta.w 19,x
+  lda.l $213B
+  sta.w 20,x
+  ; Entry 5: CGRAM[$63] = room pal6 c3
+  lda #$63
+  sta.w 21,x
+  sta.w 22,x
+  lda.l $213B
+  sta.w 23,x
+  lda.l $213B
+  sta.w 24,x
+
   ; Restore display brightness (exit force blank)
   lda.w ScreenBrightness
   sta.l INIDSP
 
-  ; -- Scanlines 3-127: 125 lines, harmless CGRAM[$70] = $0000 --
-  lda #125
-  sta.w 13,x
+  ; -- Scanlines 6-127: 122 lines, harmless CGRAM[$70] = $0000 --
+  lda #122
+  sta.w 25,x
   lda #$70
-  sta.w 14,x
-  sta.w 15,x
-  stz.w 16,x
-  stz.w 17,x
+  sta.w 26,x
+  sta.w 27,x
+  stz.w 28,x
+  stz.w 29,x
 
-  ; -- Scanlines 128-139: 12 lines, harmless CGRAM[$70] = $0000 --
-  lda #12
-  sta.w 18,x
-  lda #$70
-  sta.w 19,x
-  sta.w 20,x
-  stz.w 21,x
-  stz.w 22,x
-
-  ; -- Scanlines 140-143: repeat 4, set verb colors --
-  lda #$84
-  sta.w 23,x
-  ; CGRAM[$00] = $0000 (backdrop = black)
-  stz.w 24,x
-  stz.w 25,x
-  stz.w 26,x
-  stz.w 27,x
-  ; CGRAM[$71] = $6318 (light grey inner fill)
-  lda #$71
-  sta.w 28,x
-  sta.w 29,x
-  lda #$18
+  ; -- Scanlines 128-136: 9 lines, harmless CGRAM[$70] = $0000 --
+  lda #9
   sta.w 30,x
-  lda #$63
+  lda #$70
   sta.w 31,x
-  ; CGRAM[$72] = $294A (dark grey shadow)
-  lda #$72
   sta.w 32,x
-  sta.w 33,x
-  lda #$4A
-  sta.w 34,x
-  lda #$29
+  stz.w 33,x
+  stz.w 34,x
+
+  ; -- Scanlines 137-143: per-line 7, set verb + highlight colors --
+  lda #$87
   sta.w 35,x
-  ; CGRAM[$73] = $7FFF (white letter body)
+  ; Entry 0: CGRAM[$00] = $0000 (backdrop = black)
+  stz.w 36,x
+  stz.w 37,x
+  stz.w 38,x
+  stz.w 39,x
+  ; Entry 1: CGRAM[$71] = $6318 (light grey fill — normal)
+  lda #$71
+  sta.w 40,x
+  sta.w 41,x
+  lda #$18
+  sta.w 42,x
+  lda #$63
+  sta.w 43,x
+  ; Entry 2: CGRAM[$72] = $294A (dark shadow — normal)
+  lda #$72
+  sta.w 44,x
+  sta.w 45,x
+  lda #$4A
+  sta.w 46,x
+  lda #$29
+  sta.w 47,x
+  ; Entry 3: CGRAM[$73] = $7FFF (white body — normal verb text)
   lda #$73
-  sta.w 36,x
-  sta.w 37,x
+  sta.w 48,x
+  sta.w 49,x
   lda #$FF
-  sta.w 38,x
+  sta.w 50,x
   lda #$7F
-  sta.w 39,x
+  sta.w 51,x
+  ; Entry 4: CGRAM[$61] = $6318 (light grey fill — highlight)
+  lda #$61
+  sta.w 52,x
+  sta.w 53,x
+  lda #$18
+  sta.w 54,x
+  lda #$63
+  sta.w 55,x
+  ; Entry 5: CGRAM[$62] = $294A (dark shadow — highlight)
+  lda #$62
+  sta.w 56,x
+  sta.w 57,x
+  lda #$4A
+  sta.w 58,x
+  lda #$29
+  sta.w 59,x
+  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body — highlight)
+  lda #$63
+  sta.w 60,x
+  sta.w 61,x
+  lda #$FF
+  sta.w 62,x
+  lda #$03
+  sta.w 63,x
 
   ; -- Scanlines 144-223: 80 lines, harmless CGRAM[$70] = $0000 --
   lda #80
-  sta.w 40,x
+  sta.w 64,x
   lda #$70
-  sta.w 41,x
-  sta.w 42,x
-  stz.w 43,x
-  stz.w 44,x
+  sta.w 65,x
+  sta.w 66,x
+  stz.w 67,x
+  stz.w 68,x
 
   ; Terminator
-  stz.w 45,x
+  stz.w 69,x
 
   plp
   rtl
@@ -5635,80 +5759,18 @@ scummvm.updateCursor:
   plb
   rep #$31
 
-  ;--- DMA cursor tile to VRAM once ---
+  ;--- Init cursor palette buffer (DMA deferred to play method) ---
   lda.w SCUMM.cursorTileDone
-  beq +
-  jmp _uc.tileDone
-+
-
-  lda #1
-  sta.w SCUMM.cursorTileDone
-
-  ; Brief force-blank for DMA
-  lda.w ScreenBrightness
-  and #$00FF
-  pha
+  bne _uc.tileDone
+  ; Write palette colors to WRAM buffer (play() will DMA them)
   sep #$20
-  lda.w GLOBAL.interruptFlags
-  and #NMITIMEN_NMI_ENABLE ~$ff
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
-  sei
-  lda.b #INIDSP_FORCE_BLANK
-  sta.l INIDSP
+  stz.w SCUMM.cursorPalBuf
+  stz.w SCUMM.cursorPalC1Hi
+  lda #$FF
+  sta.w SCUMM.cursorPalC2Lo
+  lda #$7F
+  sta.w SCUMM.cursorPalC2Hi
   rep #$20
-
-  ; DMA cursor tile (32 bytes) to VRAM
-  sep #$20
-  lda.b #VMAIN_INCREMENT_MODE
-  sta.l VMAIN
-  rep #$20
-  lda #CURSOR_TILE_VRAM_WORD
-  sta.l VMADDL
-
-  sep #$20
-  lda.b #$01                          ; A->B, increment, 2-reg write
-  sta.l $4370
-  lda.b #$18                          ; VMDATAL
-  sta.l $4371
-  rep #$20
-  lda.w #CursorTileData
-  sta.l $4372
-  sep #$20
-  lda.b #:CursorTileData
-  sta.l $4374
-  rep #$20
-  lda.w #CursorTileDataEnd - CursorTileData
-  sta.l $4375
-  sep #$20
-  lda.b #$80                          ; channel 7
-  sta.l MDMAEN
-
-  ; Write cursor palette (OBJ palette 1) to CGRAM while in force-blank
-  lda #$91                             ; CGRAM address $91 (obj pal1 color1)
-  sta.l $2121
-  lda #$00                             ; $0000 = black (low)
-  sta.l $2122
-  lda #$00                             ; (high)
-  sta.l $2122
-  lda #$FF                             ; $7FFF = white (low)
-  sta.l $2122
-  lda #$7F                             ; (high)
-  sta.l $2122
-
-  ; Restore brightness + NMI
-  rep #$20
-  pla
-  sep #$20
-  sta.l INIDSP
-  sta.w ScreenBrightness
-  cli
-  lda.w GLOBAL.interruptFlags
-  ora #NMITIMEN_NMI_ENABLE
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
-  rep #$20
-
 _uc.tileDone:
 
   ;--- Read joypad state (direct WRAM access — can't jsr bank 0 from superfree) ---
@@ -5902,6 +5964,10 @@ _uc.verbHitLoop:
   rep #$20
   and #$00FF
   sta.w SCUMM.sentenceVerb
+  stz.w SCUMM.sentenceObjectA
+  stz.w SCUMM.sentenceObjectB
+  lda #1
+  sta.w SCUMM.sentenceDirty
   jmp _uc.noClick
 
 _uc.verbHitNext:
@@ -5998,6 +6064,560 @@ _uc.clearHighlight:
 
 _uc.highlightDone:
   plb
+  rtl
+
+.ends
+
+
+;===================================================================
+; DMA registration helper — superfree (called via jsl from play)
+; Directly writes DMA queue entries for pending CHR/cursor/verb
+; transfers. Avoids bank 0 bloat from inline registerTransfer calls.
+;===================================================================
+.section "ScummVMDmaRegistration" superfree
+
+scummvm.registerPendingDma:
+  php
+  rep #$31
+  phx
+  phy
+  sei
+
+  ;--- CHR DMA (costume animation frame → VRAM $6000) ---
+  sep #$20
+  lda.w SCUMM.chrDmaPending
+  beq _rpd.noChr
+  stz.w SCUMM.chrDmaPending
+  rep #$20
+  jsr _rpd.findSlot
+  bcc _rpd.noChr
+  lda.w SCUMM.chrDmaLen
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #$C000
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w SCUMM.chrDmaSrcLo
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda.w SCUMM.chrDmaSrcHi
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                           ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.noChr:
+
+  ;--- Cursor tile DMA (one-time init) ---
+  rep #$20
+  lda.w SCUMM.cursorTileDone
+  bne _rpd.cursorTileReady
+
+  ; Mark done so we only DMA tile once
+  lda #1
+  sta.w SCUMM.cursorTileDone
+
+  ; Cursor tile CHR → VRAM
+  jsr _rpd.findSlot
+  bcc _rpd.noCursor
+  lda #CursorTileDataEnd - CursorTileData
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #CURSOR_TILE_VRAM_WORD * 2
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #CursorTileData
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda.b #:CursorTileData
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                           ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+  rep #$20
+
+_rpd.cursorTileReady:
+  ;--- Cursor palette DMA (every frame — guards against CGRAM corruption) ---
+  lda.w SCUMM.cursorEnabled
+  beq _rpd.noCursor
+  jsr _rpd.findSlot
+  bcc _rpd.noCursor
+  lda #4
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #$0122
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #SCUMM.cursorPalBuf & $FFFF
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda #$7E
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$42                           ; CGRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.noCursor:
+
+  ;--- Verb tilemap DMA → VRAM ---
+  rep #$20
+  lda.w SCUMM.verbDmaPending
+  beq _rpd.noVerb
+  stz.w SCUMM.verbDmaPending
+  jsr _rpd.findSlot
+  bcc _rpd.noVerb
+  lda #VERB_TILEMAP_SIZE
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #VERB_TILEMAP_VRAM_ADDR
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #SCUMM.verbTilemap & $FFFF
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda #$7E
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                           ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.noVerb:
+
+  ;--- Dialog font DMA (one-time: ExcFontTiles -> VRAM $A000) ---
+  rep #$20
+  lda.w SCUMM.dialogFontDone
+  bne _rpd.fontReady
+  lda #1
+  sta.w SCUMM.dialogFontDone
+  jsr _rpd.findSlot
+  bcc _rpd.fontReady
+  lda #ExcFontTiles.LEN
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #DIALOG_TILES_VRAM
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #ExcFontTiles
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda.b #:ExcFontTiles
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                           ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.fontReady:
+
+  ;--- Dialog tilemap DMA -> VRAM $9800 ---
+  rep #$20
+  lda.w SCUMM.dialogDmaPending
+  beq _rpd.noDialog
+  stz.w SCUMM.dialogDmaPending
+  jsr _rpd.findSlot
+  bcc _rpd.noDialog
+  lda #DIALOG_TILEMAP_SIZE
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #DIALOG_TILEMAP_VRAM
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #SCUMM.dialogTilemap & $FFFF
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda #$7E
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                           ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.noDialog:
+
+  ;--- Dialog palette DMA (every frame while dialog or sentence active) ---
+  rep #$20
+  lda.w SCUMM.dialogActive
+  bne _rpd.doDialogPal
+  lda.w SCUMM.sentenceVerb
+  beq _rpd.noDialogPal
+_rpd.doDialogPal:
+  ; Build dynamic palette from dialogColor (or default white)
+  lda.w SCUMM.dialogActive
+  beq _rpd.palWhite
+  lda.w SCUMM.dialogColor
+  and #$000F
+  bne _rpd.palLookup
+_rpd.palWhite:
+  lda #15                            ; default = white
+_rpd.palLookup:
+  asl a
+  tax
+  lda.l _scummTalkColorLUT,x
+  sta.w SCUMM.dialogPalColor         ; color 1 = talk color
+  stz.w SCUMM.dialogPalTrans         ; color 0 = transparent
+  ; DMA from WRAM palette buffer
+  jsr _rpd.findSlot
+  bcc _rpd.noDialogPal
+  lda #4                             ; 2 colors x 2 bytes
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda #$0038                         ; CGRAM byte addr $38 (2bpp pal7 color0)
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  lda.w #SCUMM.dialogPalTrans & $FFFF
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+  sep #$20
+  lda #$7E
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$42                           ; CGRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+_rpd.noDialogPal:
+
+  rep #$31
+  ply
+  plx
+  plp
+  rtl
+
+
+; Find free DMA queue slot.
+; Assumes 16-bit A+X. Returns X = slot byte offset, carry set.
+; If queue full, returns carry clear.
+_rpd.findSlot:
+  lda.w GLOBAL.currentDmaQueueSlot
+  and.w #$78                          ; (16-1) * 8 = 120
+  tax
+  ldy #16                             ; DMA_QUEUE_SLOTS
+-
+  lda.w GLOBAL.dmaQueue.1.transferType,x
+  bit.w #$0040                        ; ACTIVE bit
+  beq +
+  txa
+  clc
+  adc #8                              ; sizeof dmaQueue
+  and.w #$78
+  tax
+  dey
+  bne -
+  clc
+  rts
++
+  sec
+  rts
+
+; SCUMM color index → BGR555 lookup table (EGA-standard approximation)
+; BGR555: B[14:10] G[9:5] R[4:0]
+_scummTalkColorLUT:
+  .dw $0000             ; 0: black
+  .dw $5400             ; 1: blue        (R=0,  G=0,  B=21)
+  .dw $02A0             ; 2: green       (R=0,  G=21, B=0)
+  .dw $56A0             ; 3: cyan        (R=0,  G=21, B=21)
+  .dw $0015             ; 4: red         (R=21, G=0,  B=0)
+  .dw $5415             ; 5: magenta     (R=21, G=0,  B=21)
+  .dw $0155             ; 6: brown       (R=21, G=10, B=0)
+  .dw $56B5             ; 7: light gray  (R=21, G=21, B=21)
+  .dw $294A             ; 8: dark gray   (R=10, G=10, B=10)
+  .dw $7D4A             ; 9: light blue  (R=10, G=10, B=31)
+  .dw $2BEA             ; 10: light green (R=10, G=31, B=10)
+  .dw $7FEA             ; 11: light cyan  (R=10, G=31, B=31)
+  .dw $295F             ; 12: light red   (R=31, G=10, B=10)
+  .dw $7D5F             ; 13: light magenta (R=31, G=10, B=31)
+  .dw $03FF             ; 14: yellow     (R=31, G=31, B=0)
+  .dw $7FFF             ; 15: white      (R=31, G=31, B=31)
+
+.ends
+
+
+;===================================================================
+; Dialog text renderer — superfree
+; extractAndRenderString: reads SCUMM string from bytecode,
+; renders to BG3 tilemap buffer, sets dialog state.
+; clearDialogTilemap: fills tilemap with $0000, flags DMA.
+;===================================================================
+.section "ScummVMDialogRenderer" superfree
+
+scummvm.extractAndRenderString:
+  php
+  phx
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ; --- Clear dialog tilemap buffer (fill with $0000) ---
+  phx
+  ldx #0
+  lda #0
+_ears.clearLoop:
+  sta.w SCUMM.dialogTilemap,x
+  inx
+  inx
+  cpx #DIALOG_TILEMAP_SIZE
+  bcc _ears.clearLoop
+  plx
+
+  ; --- Pre-scan: count printable chars for centering + timer ---
+  phy                                  ; save Y (bytecode PC)
+  lda #0
+  sta.w SCUMM.dialogCharCount         ; reset count
+_ears.scanLoop:
+  lda [tmp],y
+  and #$00FF
+  beq _ears.scanDone                   ; $00 = end
+  iny
+  cmp #$0009
+  bcs _ears.scanPrintable              ; >= $09 = printable char
+  ; $01-$08: escape code, skip 2-byte arg
+  iny
+  iny
+  bra _ears.scanLoop
+_ears.scanPrintable:
+  inc.w SCUMM.dialogCharCount
+  bra _ears.scanLoop
+_ears.scanDone:
+  ply                                  ; restore Y to start of string
+
+  ; --- Determine text position ---
+  ; If dialogY != 0: use explicit position from _print.pos
+  ; Else: derive from actor screen position
+  lda.w SCUMM.dialogY
+  bne _ears.useExplicit
+
+  ; Derive from actor: screenX = actor.x - cameraX, screenY = actor.y - 24
+  lda.w SCUMM.dialogActor
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a                                ; *16 = _sizeof_scummActor
+  tax
+  lda.w SCUMM.actors.1.x,x
+  sec
+  sbc.w GLOBAL.room.cameraX           ; screen X
+  lsr a
+  lsr a
+  lsr a                                ; /8 = tile column
+  sta.w SCUMM.dialogX
+  lda.w SCUMM.actors.1.y,x
+  sec
+  sbc #24                              ; above actor head
+  bpl +
+  lda #8                               ; clamp to top
++
+  lsr a
+  lsr a
+  lsr a                                ; /8 = tile row
+  sta.w SCUMM.dialogY
+  bra _ears.center
+
+_ears.useExplicit:
+  ; dialogX/dialogY set by _print.pos (SCUMM 320x200 coords)
+  ; Convert to tile: col = X / 10 (320->32), row = Y / 8
+  lda.w SCUMM.dialogX
+  ldx #0
+_ears.div10:
+  cmp #10
+  bcc _ears.div10done
+  sec
+  sbc #10
+  inx
+  bra _ears.div10
+_ears.div10done:
+  txa
+  sta.w SCUMM.dialogX                 ; tile column (0-31)
+  lda.w SCUMM.dialogY
+  lsr a
+  lsr a
+  lsr a
+  sta.w SCUMM.dialogY                 ; tile row
+
+_ears.center:
+  ; --- Center text: start_col = centerCol - (charCount / 2) ---
+  lda.w SCUMM.dialogCharCount
+  lsr a                                ; count / 2
+  sta.w SCUMM.scratch                  ; half width
+  lda.w SCUMM.dialogX                 ; center column
+  sec
+  sbc.w SCUMM.scratch                  ; start_col = center - half
+  bpl +
+  lda #0                               ; clamp to left edge
++
+  cmp #32
+  bcc +
+  lda #0                               ; if > 31, reset to 0
++
+  sta.w SCUMM.scratch                  ; scratch = current column
+
+  ; --- Compute tilemap base offset for current row ---
+  ; offset = (row * 32 + col) * 2
+  lda.w SCUMM.dialogY                 ; tile row
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                                ; row * 32
+  clc
+  adc.w SCUMM.scratch                  ; + start column
+  asl a                                ; * 2 (word entries)
+  tax                                  ; X = tilemap byte offset
+
+  ; --- Render: read chars from bytecode, write tilemap entries ---
+  ; Reads until $00 terminator (like skipPrintString). Renders printable chars.
+_ears.renderLoop:
+  lda [tmp],y
+  and #$00FF
+  beq _ears.renderEnd                  ; $00 = end of string
+  iny
+  cmp #$0009
+  bcs _ears.renderChar                 ; >= $09 = printable
+  ; $01-$08: escape, skip 2-byte arg
+  iny
+  iny
+  bra _ears.renderLoop
+
+_ears.renderChar:
+  ; tile index = char - $20 (ASCII space = tile 0 in font)
+  sec
+  sbc #$20
+  ; tilemap word: priority 1 + palette 7 + tile index
+  ora #$3C00
+  cpx #DIALOG_TILEMAP_SIZE
+  bcs _ears.renderLoop                 ; bounds check: skip if past tilemap end
+  sta.w SCUMM.dialogTilemap,x
+  inx
+  inx
+  bra _ears.renderLoop
+
+_ears.renderEnd:
+  iny                                  ; skip past $00 terminator
+
+  ; --- Default dialogColor to white if not set ---
+  lda.w SCUMM.dialogColor
+  bne +
+    lda #15
+    sta.w SCUMM.dialogColor
++
+  ; --- Set dialog state ---
+  lda #1
+  sta.w SCUMM.dialogActive
+  ; Timer = char_count * 6 + 60 (min 1 second)
+  lda.w SCUMM.dialogCharCount
+  asl a                                ; *2
+  sta.w SCUMM.scratch
+  asl a                                ; *4
+  clc
+  adc.w SCUMM.scratch                  ; *6
+  clc
+  adc #60                              ; minimum 1 second
+  sta.w SCUMM.dialogTimer
+  lda #1
+  sta.w SCUMM.dialogDmaPending
+
+  plb
+  plx
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; scummvm.clearDialogTilemap -- fill tilemap with $0000, flag DMA
+;-------------------------------------------------------------------
+scummvm.clearDialogTilemap:
+  php
+  phx
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ldx #0
+  lda #0
+_cdt.clearLoop:
+  sta.w SCUMM.dialogTilemap,x
+  inx
+  inx
+  cpx #DIALOG_TILEMAP_SIZE
+  bcc _cdt.clearLoop
+
+  lda #1
+  sta.w SCUMM.dialogDmaPending
+  ; Re-dirty sentence so it re-renders after dialog clears row 17
+  lda.w SCUMM.sentenceVerb
+  beq +
+    lda #1
+    sta.w SCUMM.sentenceDirty
++
+
+  plb
+  plx
+  plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; Sentence line renderer — superfree
+; Renders the current verb name on BG3 tilemap row 17 (Y=136).
+;===================================================================
+.section "ScummVMSentenceRenderer" superfree
+
+scummvm.renderSentenceLine:
+  php
+  phx
+  phy
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ; Clear row 17 of tilemap (offset $0440, 32 entries x 2 bytes = 64 bytes)
+  ldx #$0440
+  lda #0
+  ldy #32
+_rsl.clearLoop:
+  sta.w SCUMM.dialogTilemap,x
+  inx
+  inx
+  dey
+  bne _rsl.clearLoop
+
+  ; If sentenceVerb == 0, just clear and exit
+  lda.w SCUMM.sentenceVerb
+  beq _rsl.done
+
+  ; Find verb slot matching sentenceVerb
+  ldy #0
+  ldx #0
+_rsl.findVerb:
+  cpy #SCUMM_MAX_VERBS
+  bcs _rsl.done                      ; not found
+  lda.w SCUMM.verbs.1.id,x
+  and #$00FF
+  cmp.w SCUMM.sentenceVerb
+  beq _rsl.foundVerb
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  iny
+  bra _rsl.findVerb
+
+_rsl.foundVerb:
+  ; X = verb struct offset; read name pointer and length
+  lda.w SCUMM.verbs.1.namePtr,x
+  pha                                 ; save namePtr
+  lda.w SCUMM.verbs.1.nameLen,x
+  and #$00FF
+  sta.w SCUMM.scratch2               ; char count
+
+  ; Write verb name to row 17, starting at column 1
+  ply                                 ; Y = namePtr (offset into verbNames)
+  ldx #$0442                         ; row 17, column 1
+
+_rsl.writeLoop:
+  lda.w SCUMM.scratch2
+  beq _rsl.done
+  dec.w SCUMM.scratch2
+  lda.w SCUMM.verbNames,y
+  and #$00FF
+  sec
+  sbc #$20                           ; ASCII to tile index
+  ora #$3C00                         ; priority 1 + palette 7
+  sta.w SCUMM.dialogTilemap,x
+  iny
+  inx
+  inx
+  bra _rsl.writeLoop
+
+_rsl.done:
+  stz.w SCUMM.sentenceDirty
+  lda #1
+  sta.w SCUMM.dialogDmaPending
+
+  plb
+  ply
+  plx
+  plp
   rtl
 
 .ends

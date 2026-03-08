@@ -68,11 +68,7 @@ TILES.SHIFT.LUT:
 .Section "BackgroundAnimationLUT" superfree
 BackgroundAnimationLUT:
   PTRLONG BackgroundAnimationLUT BG.msu1
-  PTRLONG BackgroundAnimationLUT BG.titlescreen
-  PTRLONG BackgroundAnimationLUT BG.losers
 
 .ends
   BG_ANIMATION msu1 gfx_bg
-  BG_ANIMATION titlescreen gfx_bg
-  BG_ANIMATION losers gfx_bg
 

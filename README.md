@@ -120,4 +120,22 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
   - Priority bit on BG2 tiles ensures verbs render above BG1's room tiles
   - `verbOps` opcode handler: set verb name, position, flags, on/off state
   - `initDefaultVerbs`: hardcoded MI1 verb layout (Walk to, Give, Open, Close, Pick up, Look at, Talk to, Use, Push, Pull)
-- Next: mouse input, dialog system, verb interaction, MI1 music arrangements
+- **HDMA verb area split** — per-scanline BG1 disable + CGRAM palette swap at scanline boundary
+  - Channel 1: disables BG1 below scanline 144 (TM register) so verb area shows only BG2
+  - Channel 2: writes verb font palettes to CGRAM at scanline 137 (mode 3, targeting $2121/$2122)
+  - 70-byte HDMA table in WRAM: restores room palette colors at top of frame, sets verb colors before verb area
+- **Verb highlight** — hovered verb rendered in bright yellow, others in white
+  - `updateCursor` hit-tests verb bounding boxes, stores highlighted slot in `SCUMM.highlightVerb`
+  - `renderVerbBar` selects palette 6 (yellow, $03FF) for highlighted verb, palette 7 (white, $7FFF) for normal
+  - Both palettes written per-scanline via HDMA — no CPU cost during active display
+- **Virtual cursor + click-to-walk** — joypad D-pad moves an 8x8 OAM cursor sprite, A-button walks Guybrush
+  - Cursor position tracked as SCUMM variables (VAR 42-45), 2px/frame movement
+  - Click in room area (Y < 144) triggers `walkActorTo` for ego actor
+  - Click in verb area triggers verb hover/selection
+  - `cursorCommand` subops wired: cursor on/off/increment/userput
+- **Dialog text on BG3** — SCUMM print/printEgo opcodes render text to BG3 tilemap in Mode 1 with BG3 priority
+  - 2bpp font (ExcFontTiles) DMA'd to VRAM $A000, tilemap at $9800
+  - Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
+  - Auto-timed display (charCount * 6 + 60 frames), auto-clear
+  - Sentence line on BG3 row 17: shows currently selected verb ("Walk to", "Open", etc.)
+- Next: mouse input, sentence line object names, verb+object execution, walkbox pathfinding, MI1 music arrangements

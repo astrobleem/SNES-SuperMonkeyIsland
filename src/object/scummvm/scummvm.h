@@ -111,7 +111,8 @@
   visible       db      ; nonzero = render
   initFrame     db      ; animation frame
   scalex        db      ; scale (255=full)
-  pad           dw      ; pad to 16 bytes (power of 2 for fast indexing)
+  talkColor     db      ; SCUMM color index for dialog (0-15)
+  pad           db      ; pad to 16 bytes (power of 2 for fast indexing)
 .endst
 
 ;---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaCgramChannel    db      ;allocated HDMA channel id for CGRAM palette swap
-SCUMM.cgramHdmaTable      ds 48   ;WRAM copy of CGRAM HDMA table (room colors dynamic)
+SCUMM.cgramHdmaTable      ds 72   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal)
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)
@@ -189,6 +190,14 @@ SCUMM.actorScreenX   dw      ; computed screen X for current actor
 SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
+SCUMM.chrDmaPending  db      ; 1 = costume CHR DMA needed this frame
+SCUMM.chrDmaSrcLo   dw      ; CHR source ROM address (low 16)
+SCUMM.chrDmaSrcHi   db      ; CHR source ROM bank
+SCUMM.chrDmaLen      dw      ; CHR transfer length
+SCUMM.cursorPalBuf   db      ; cursor OBJ pal1 color1 low byte
+SCUMM.cursorPalC1Hi  db      ; cursor OBJ pal1 color1 high byte
+SCUMM.cursorPalC2Lo  db      ; cursor OBJ pal1 color2 low byte
+SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal1 color2 high byte
 .ends
 
 ; Actor walk targets (parallel arrays — 16 actors max, avoids changing struct size)
@@ -212,6 +221,9 @@ SCUMM.cursorX         dw      ; screen X (0-255)
 SCUMM.cursorY         dw      ; screen Y (0-223)
 SCUMM.cursorEnabled   dw      ; nonzero = cursor active + visible
 SCUMM.sentenceVerb    dw      ; currently selected verb ID (0=none)
+SCUMM.sentenceObjectA dw      ; first object in sentence (0=none)
+SCUMM.sentenceObjectB dw      ; second object in sentence (0=none)
+SCUMM.sentenceDirty   dw      ; nonzero = re-render sentence line
 SCUMM.highlightVerb   dw      ; verb slot offset currently highlighted ($FFFF=none)
 SCUMM.cursorTileDone  dw      ; nonzero = cursor CHR already DMA'd to VRAM
 .ends
@@ -246,6 +258,29 @@ SCUMM.verbDirty      dw      ; nonzero = redraw BG2
 SCUMM.verbDmaPending dw      ; nonzero = DMA tilemap to VRAM next frame
 SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .ends
+
+;---------------------------------------------------------------------------
+; Dialog text state
+;---------------------------------------------------------------------------
+.ramsection "scumm dialog state" bank 0 slot 1
+SCUMM.dialogActive       dw      ; nonzero = dialog text on screen
+SCUMM.dialogTimer        dw      ; frames remaining before auto-clear
+SCUMM.dialogX            dw      ; text center X (SCUMM pixel coords)
+SCUMM.dialogY            dw      ; text top Y (SCUMM pixel coords)
+SCUMM.dialogColor        dw      ; text color — SCUMM color index (0-15), 0=default white
+SCUMM.dialogActor        dw      ; actor ID (for positioning)
+SCUMM.dialogDmaPending   dw      ; nonzero = DMA tilemap to VRAM next VBlank
+SCUMM.dialogFontDone     dw      ; nonzero = font tiles already DMA'd
+SCUMM.dialogCharCount    dw      ; number of printable chars (for timer calc)
+SCUMM.dialogTilemap      ds 2048 ; BG3 WRAM tilemap buffer (32x32 x 2B)
+SCUMM.dialogPalTrans     dw      ; dynamic palette color 0 (always $0000 = transparent)
+SCUMM.dialogPalColor     dw      ; dynamic palette color 1 (talk color BGR555)
+.ends
+
+; BG3 VRAM layout constants
+.define DIALOG_TILEMAP_VRAM  $9800   ; byte addr (word $4C00)
+.define DIALOG_TILES_VRAM    $A000   ; byte addr (word $5000)
+.define DIALOG_TILEMAP_SIZE  2048    ; 32x32 x 2 bytes
 
 ;---------------------------------------------------------------------------
 ; OOP Class Config
@@ -292,11 +327,11 @@ SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .section "VerbHdmaTable" superfree
 VerbHdmaTable:
   .db 128                               ; scanlines 0-127: room area
-  .db T_BG1_ENABLE | T_BG2_ENABLE | T_OBJ_ENABLE  ; $13 = BG1+BG2+OBJ
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 16                                ; scanlines 128-143: room area continued
-  .db T_BG1_ENABLE | T_BG2_ENABLE | T_OBJ_ENABLE  ; $13 = BG1+BG2+OBJ
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 80                                ; scanlines 144-223: verb area
-  .db T_BG2_ENABLE | T_OBJ_ENABLE      ; $12 = BG2+OBJ (no BG1)
+  .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
 .ends
 

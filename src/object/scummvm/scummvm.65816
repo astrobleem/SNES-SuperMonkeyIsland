@@ -22,6 +22,15 @@
   METHOD init
   rep #$31
 
+  ;--- Set DBR=$7E so sta.w targets WRAM, not ROM ---
+  ;core.object.create does NOT set DBR; during boot it may be $00/$C0.
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$20
+
   ;--- Zero all WRAM state ---
   ;zero script slots (25 * 64 = 1600 bytes)
   ldx #0
@@ -301,6 +310,21 @@ _init.zeroCache:
   ldx #7*2
   sta.w SCUMM.globalVars,x          ; VAR(7) = room 1 key object (MI1 boot)
 
+  ;--- Init cursor state ---
+  lda #128
+  sta.w SCUMM.cursorX
+  lda #80
+  sta.w SCUMM.cursorY
+  lda #1
+  sta.w SCUMM.cursorEnabled
+  stz.w SCUMM.sentenceVerb
+  lda #$FFFF
+  sta.w SCUMM.highlightVerb
+  stz.w SCUMM.cursorTileDone
+  lda #1
+  ldx #48*2
+  sta.w SCUMM.globalVars,x            ; VAR(48) = VAR_USERPUT = 1
+
   ;--- Set starting room (triggers room load on first play frame) ---
   ; MI1 starting room = 1; currentRoom already 0 from zero pass
   lda #1
@@ -326,6 +350,7 @@ _init.zeroCache:
   ;--- Init default verb bar (room 10 scripts don't run yet) ---
   jsl scummvm.initDefaultVerbs
 
+  plb                               ; restore DBR
   rts
 
 
@@ -345,6 +370,9 @@ _init.zeroCache:
   beq _play.noRoomChange
   jsr _scummvm.processRoomChange
 _play.noRoomChange:
+
+  ; Update cursor (joypad input, position, SCUMM vars, OAM)
+  jsl scummvm.updateCursor
 
   ; Iterate slots 0..24
   stz.w SCUMM.currentSlot
@@ -2356,7 +2384,7 @@ op_chainScript:
   sec
   rts
 
-; cursorCommand ($2C) -- subop-based, consume parameters
+; cursorCommand ($2C) -- subop-based, consume parameters + apply cursor state
 op_cursorCommand:
   jsr _scummvm.fetchWord
   and #$001F
@@ -2370,7 +2398,38 @@ op_cursorCommand:
   beq _cursor.oneArg
   cmp #$0E
   beq _cursor.argList
-  ; Default: no args
+  ; Subops 1-7: cursor/userput state (no extra bytecode params)
+  cmp #$01
+  beq _cursor.cursorOn
+  cmp #$02
+  beq _cursor.cursorOff
+  cmp #$05
+  bne +
+_cursor.cursorOn:
+  lda #1
+  sta.w SCUMM.cursorEnabled
+  clc
+  rts
++
+  cmp #$06
+  bne +
+  lda #1
+  ldx #48*2
+  sta.w SCUMM.globalVars,x
+  clc
+  rts
++
+  cmp #$07
+  bne +
+  stz.w SCUMM.cursorEnabled
+  lda #0
+  ldx #48*2
+  sta.w SCUMM.globalVars,x
+  clc
+  rts
++
+_cursor.cursorOff:
+  stz.w SCUMM.cursorEnabled
   clc
   rts
 _cursor.twoArgs:
@@ -4430,13 +4489,13 @@ scummvm.renderActors_impl:
   lda.w SCUMM.actors.2.visible
   and #$00FF
   bne +
-  jmp _ri.done
+  jmp _ri.skipActors
 +
   lda.w SCUMM.actors.2.room
   and #$00FF
   cmp.w SCUMM.currentRoom
   beq +
-  jmp _ri.done
+  jmp _ri.skipActors
 +
 
   ; --- Determine current pic index from walk cycle ---
@@ -4666,6 +4725,30 @@ _ri.nextEntry:
 +
 
   stx.w GLOBAL.currentOamSlot
+
+_ri.skipActors:
+  ; --- Cursor OAM entry (appended after actor sprites) ---
+  rep #$20
+  lda.w SCUMM.cursorEnabled
+  beq _ri.noCursor
+
+  ldx.w GLOBAL.currentOamSlot
+  sep #$20
+  lda.w SCUMM.cursorX
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.cursorY
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.b #CURSOR_TILE_ID
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.b #$32                          ; priority 3, OBJ palette 1
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  stx.w GLOBAL.currentOamSlot
+_ri.noCursor:
 
   ; Signal engine to upload OAM buffer during next VBlank
   sep #$20
@@ -5226,16 +5309,22 @@ _rvb.verbLoop:
   ; Check if slot is active (id != 0 and flags & ON)
   sep #$20
   lda.w SCUMM.verbs.1.id,x
-  beq _rvb.nextVerb
+  bne +
+  jmp _rvb.nextVerb
++
   lda.w SCUMM.verbs.1.flags,x
   and #SCUMM_VERB_FLAG_ON
-  beq _rvb.nextVerb
+  bne +
+  jmp _rvb.nextVerb
++
   rep #$20
 
   ; Get verb name length
   lda.w SCUMM.verbs.1.nameLen,x
   and #$00FF
-  beq _rvb.nextVerb
+  bne +
+  jmp _rvb.nextVerb
++
 
   ; Compute tilemap offset: (y * 32 + x) * 2
   ; X pos: scale 320->256 by *4/5, then /8 for tiles
@@ -5281,7 +5370,13 @@ _rvb.verbLoop:
 
   ; Write tile indices for each character
   ; tile index = char - $20 (ASCII space = tile 0)
-  ; palette 2 in tilemap bits 10-12 = $0400
+  ; All verbs use palette 7 (verb font palette via HDMA)
+  ; Highlight palette swap disabled until proper HDMA integration
+  rep #$20
+  lda #$3C00                            ; priority 1 + palette 7
+_rvb.paletteSet:
+  sta.w SCUMM.actorOamCount            ; reuse as palette word
+
 _rvb.charLoop:
   sep #$20
   lda.w SCUMM.verbNames,y
@@ -5289,7 +5384,7 @@ _rvb.charLoop:
   and #$00FF
   sec
   sbc #$20                              ; tile index = ASCII - 0x20
-  ora #$3C00                            ; priority 1 + palette 7
+  ora.w SCUMM.actorOamCount            ; priority + palette bits
   phx
   ldx.w SCUMM.scratch                   ; X = tilemap byte offset
   sta.w SCUMM.verbTilemap,x
@@ -5312,7 +5407,9 @@ _rvb.nextVerb:
   adc #_sizeof_scummVerb
   tax
   cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
-  bcc _rvb.verbLoop
+  bcs +
+  jmp _rvb.verbLoop
++
 
   ; Clear dirty flag, set DMA pending flag
   stz.w SCUMM.verbDirty
@@ -5445,6 +5542,411 @@ scummvm.buildCgramHdmaTable:
   stz.w 45,x
 
   plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; Cursor tile data — 8x8 4bpp arrow sprite (32 bytes)
+; Hardcoded arrow pointing upper-left
+;===================================================================
+.section "CursorTileData" superfree
+
+CursorTileData:
+; 8x8 4bpp tile: 2 bitplanes interleaved per row (planes 0-1), then planes 2-3
+; Arrow shape (1=outline black, 2=fill white):
+; Row 0: 1 0 0 0 0 0 0 0
+; Row 1: 1 1 0 0 0 0 0 0
+; Row 2: 1 2 1 0 0 0 0 0
+; Row 3: 1 2 2 1 0 0 0 0
+; Row 4: 1 2 2 2 1 0 0 0
+; Row 5: 1 2 2 2 2 1 0 0
+; Row 6: 1 2 1 1 0 0 0 0
+; Row 7: 1 1 0 1 1 0 0 0
+; Palette: index 0=transparent, index 1=black (outline), index 2=white (fill)
+; Bitplanes 0-1 (interleaved rows):
+; Color = BP0 + BP1*2.  Color 1 (outline): BP0=1,BP1=0.  Color 2 (fill): BP0=0,BP1=1.
+  .db %10000000, %00000000   ; row 0: 1 0 0 0 0 0 0 0
+  .db %11000000, %00000000   ; row 1: 1 1 0 0 0 0 0 0
+  .db %10100000, %01000000   ; row 2: 1 2 1 0 0 0 0 0
+  .db %10010000, %01100000   ; row 3: 1 2 2 1 0 0 0 0
+  .db %10001000, %01110000   ; row 4: 1 2 2 2 1 0 0 0
+  .db %10000100, %01111000   ; row 5: 1 2 2 2 2 1 0 0
+  .db %10110000, %01000000   ; row 6: 1 2 1 1 0 0 0 0
+  .db %11011000, %00000000   ; row 7: 1 1 0 1 1 0 0 0
+; Bitplanes 2-3 (all zero — indices 0-3 only need planes 0-1):
+  .db $00, $00, $00, $00, $00, $00, $00, $00
+  .db $00, $00, $00, $00, $00, $00, $00, $00
+CursorTileDataEnd:
+
+.ends
+
+
+;===================================================================
+; Cursor update — superfree (called via jsl from play method)
+; Reads joypad, moves cursor, writes SCUMM vars, handles A-button
+; click for walk and verb selection.
+;===================================================================
+.section "ScummVMCursorUpdate" superfree
+
+scummvm.updateCursor:
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ;--- DMA cursor tile to VRAM once ---
+  lda.w SCUMM.cursorTileDone
+  beq +
+  jmp _uc.tileDone
++
+
+  lda #1
+  sta.w SCUMM.cursorTileDone
+
+  ; Brief force-blank for DMA
+  lda.w ScreenBrightness
+  and #$00FF
+  pha
+  sep #$20
+  lda.w GLOBAL.interruptFlags
+  and #NMITIMEN_NMI_ENABLE ~$ff
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  sei
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+  rep #$20
+
+  ; DMA cursor tile (32 bytes) to VRAM
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+  lda #CURSOR_TILE_VRAM_WORD
+  sta.l VMADDL
+
+  sep #$20
+  lda.b #$01                          ; A->B, increment, 2-reg write
+  sta.l $4370
+  lda.b #$18                          ; VMDATAL
+  sta.l $4371
+  rep #$20
+  lda.w #CursorTileData
+  sta.l $4372
+  sep #$20
+  lda.b #:CursorTileData
+  sta.l $4374
+  rep #$20
+  lda.w #CursorTileDataEnd - CursorTileData
+  sta.l $4375
+  sep #$20
+  lda.b #$80                          ; channel 7
+  sta.l MDMAEN
+
+  ; Write cursor palette (OBJ palette 1) to CGRAM while in force-blank
+  lda #$91                             ; CGRAM address $91 (obj pal1 color1)
+  sta.l $2121
+  lda #$00                             ; $0000 = black (low)
+  sta.l $2122
+  lda #$00                             ; (high)
+  sta.l $2122
+  lda #$FF                             ; $7FFF = white (low)
+  sta.l $2122
+  lda #$7F                             ; (high)
+  sta.l $2122
+
+  ; Restore brightness + NMI
+  rep #$20
+  pla
+  sep #$20
+  sta.l INIDSP
+  sta.w ScreenBrightness
+  cli
+  lda.w GLOBAL.interruptFlags
+  ora #NMITIMEN_NMI_ENABLE
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+
+_uc.tileDone:
+
+  ;--- Read joypad state (direct WRAM access — can't jsr bank 0 from superfree) ---
+  lda.w inputDevice.press
+  sta.w SCUMM.scratch                 ; current press state
+  lda.w inputDevice.trigger
+  sta.w SCUMM.scratch2                ; newly triggered buttons
+
+  ;--- D-pad movement ---
+  lda.w SCUMM.scratch
+  bit.w #JOY_DIR_UP
+  beq _uc.noUp
+  lda.w SCUMM.cursorY
+  sec
+  sbc #CURSOR_SPEED
+  bpl +
+  lda #0
++
+  sta.w SCUMM.cursorY
+_uc.noUp:
+
+  lda.w SCUMM.scratch
+  bit.w #JOY_DIR_DOWN
+  beq _uc.noDown
+  lda.w SCUMM.cursorY
+  clc
+  adc #CURSOR_SPEED
+  cmp #224
+  bcc +
+  lda #223
++
+  sta.w SCUMM.cursorY
+_uc.noDown:
+
+  lda.w SCUMM.scratch
+  bit.w #JOY_DIR_LEFT
+  beq _uc.noLeft
+  lda.w SCUMM.cursorX
+  sec
+  sbc #CURSOR_SPEED
+  bpl +
+  lda #0
++
+  sta.w SCUMM.cursorX
+_uc.noLeft:
+
+  lda.w SCUMM.scratch
+  bit.w #JOY_DIR_RIGHT
+  beq _uc.noRight
+  lda.w SCUMM.cursorX
+  clc
+  adc #CURSOR_SPEED
+  cmp #256
+  bcc +
+  lda #255
++
+  sta.w SCUMM.cursorX
+_uc.noRight:
+
+  ;--- Write SCUMM mouse variables ---
+  lda.w SCUMM.cursorX
+  ldx #42*2
+  sta.w SCUMM.globalVars,x            ; VAR(42) = VAR_MOUSE_X
+  ldx #44*2
+  sta.w SCUMM.globalVars,x            ; VAR(44) = VAR_VIRT_MOUSE_X
+
+  lda.w SCUMM.cursorY
+  ldx #43*2
+  sta.w SCUMM.globalVars,x            ; VAR(43) = VAR_MOUSE_Y
+  ldx #45*2
+  sta.w SCUMM.globalVars,x            ; VAR(45) = VAR_VIRT_MOUSE_Y
+
+  ;--- Handle A button click ---
+  lda.w SCUMM.scratch2
+  bit.w #JOY_BUTTON_A
+  bne +
+  jmp _uc.noClick
++
+  lda.w SCUMM.cursorEnabled
+  bne +
+  jmp _uc.noClick
++
+  ; Check if cursor is in room area (Y < 144)
+  lda.w SCUMM.cursorY
+  cmp #144
+  bcc +
+  jmp _uc.verbAreaClick
++
+
+  ;--- Click-to-walk: convert screen X to room X ---
+  lda.w SCUMM.cursorX
+  clc
+  adc.w GLOBAL.room.cameraX           ; roomX = screenX + scrollX
+  pha                                  ; save target room X
+  lda.w SCUMM.cursorY                 ; roomY = cursorY (no Y scroll)
+  sta.w SCUMM.scratch
+
+  ; Set walk target for actor 1 (Guybrush)
+  ; actor 1 word index = 2 (actor*2)
+  ldx #2
+  pla
+  sta.w SCUMM.actorTargetX,x          ; target X
+  lda.w SCUMM.scratch
+  sta.w SCUMM.actorTargetY,x          ; target Y
+
+  ; Init walk animation
+  ldx #1                              ; actor 1 byte index
+  sep #$20
+  lda #5
+  sta.w SCUMM.actorAnimTimer,x
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+  rep #$20
+
+  ; Set actor.moving = 1
+  sep #$20
+  lda #1
+  sta.w SCUMM.actors.2.moving
+  rep #$20
+
+  jmp _uc.noClick
+
+_uc.verbAreaClick:
+  ;--- Verb area click: hit-test against verb entries ---
+  ldx #0                              ; X = verb slot offset
+  lda.w SCUMM.cursorX                 ; cursor X in screen pixels
+  sta.w SCUMM.actorScreenX            ; reuse scratch (screen X)
+  lda.w SCUMM.cursorY
+  sta.w SCUMM.actorScreenY            ; screen Y
+
+_uc.verbHitLoop:
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  beq _uc.verbHitNext
+  lda.w SCUMM.verbs.1.flags,x
+  and #SCUMM_VERB_FLAG_ON
+  beq _uc.verbHitNext
+  rep #$20
+
+  ; Check Y: verb.y <= cursorY < verb.y + 8
+  lda.w SCUMM.verbs.1.y,x
+  and #$00FF
+  cmp.w SCUMM.actorScreenY
+  beq +
+  bcs _uc.verbHitNext                 ; verb.y > cursorY
++
+  clc
+  adc #8
+  cmp.w SCUMM.actorScreenY
+  bcc _uc.verbHitNext                 ; verb.y + 8 <= cursorY
+  beq _uc.verbHitNext
+
+  ; Check X: verb.x <= cursorX < verb.x + nameLen*8
+  lda.w SCUMM.verbs.1.x,x
+  and #$00FF
+  cmp.w SCUMM.actorScreenX
+  beq +
+  bcs _uc.verbHitNext                 ; verb.x > cursorX
++
+  pha
+  lda.w SCUMM.verbs.1.nameLen,x
+  and #$00FF
+  asl a
+  asl a
+  asl a                               ; nameLen * 8
+  clc
+  adc 1,s                             ; verb.x + nameLen*8
+  sta 1,s
+  pla
+  cmp.w SCUMM.actorScreenX
+  bcc _uc.verbHitNext                 ; right edge <= cursorX
+  beq _uc.verbHitNext
+
+  ; Hit! Store verb ID as sentenceVerb
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  rep #$20
+  and #$00FF
+  sta.w SCUMM.sentenceVerb
+  jmp _uc.noClick
+
+_uc.verbHitNext:
+  rep #$20
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcs +
+  jmp _uc.verbHitLoop
++
+
+_uc.noClick:
+  ;--- Verb hover highlight ---
+  ; Check if cursor is in verb area for highlight tracking
+  rep #$20
+  lda.w SCUMM.cursorY
+  cmp #144
+  bcc _uc.clearHighlight
+
+  ; Hit-test for hover (same logic as click)
+  ldx #0
+_uc.hoverLoop:
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  beq _uc.hoverNext
+  lda.w SCUMM.verbs.1.flags,x
+  and #SCUMM_VERB_FLAG_ON
+  beq _uc.hoverNext
+  rep #$20
+
+  ; Check Y bounds
+  lda.w SCUMM.verbs.1.y,x
+  and #$00FF
+  cmp.w SCUMM.cursorY
+  beq +
+  bcs _uc.hoverNext
++
+  clc
+  adc #8
+  cmp.w SCUMM.cursorY
+  bcc _uc.hoverNext
+  beq _uc.hoverNext
+
+  ; Check X bounds
+  lda.w SCUMM.verbs.1.x,x
+  and #$00FF
+  cmp.w SCUMM.cursorX
+  beq +
+  bcs _uc.hoverNext
++
+  pha
+  lda.w SCUMM.verbs.1.nameLen,x
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  clc
+  adc 1,s
+  sta 1,s
+  pla
+  cmp.w SCUMM.cursorX
+  bcc _uc.hoverNext
+  beq _uc.hoverNext
+
+  ; Hover match — check if changed
+  cpx.w SCUMM.highlightVerb
+  beq _uc.highlightDone               ; same as before, skip redraw
+  stx.w SCUMM.highlightVerb
+  lda #1
+  sta.w SCUMM.verbDirty               ; force verb redraw with highlight
+  jmp _uc.highlightDone
+
+_uc.hoverNext:
+  rep #$20
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcs +
+  jmp _uc.hoverLoop
++
+
+_uc.clearHighlight:
+  lda.w SCUMM.highlightVerb
+  cmp #$FFFF
+  beq _uc.highlightDone
+  lda #$FFFF
+  sta.w SCUMM.highlightVerb
+  lda #1
+  sta.w SCUMM.verbDirty               ; force redraw without highlight
+
+_uc.highlightDone:
+  plb
   rtl
 
 .ends

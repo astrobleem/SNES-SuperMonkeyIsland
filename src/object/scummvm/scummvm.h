@@ -205,6 +205,16 @@ SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 SCUMM.oamScratch     ds 80
 .ends
 
+; Cursor state
+.ramsection "scumm cursor state" bank 0 slot 1
+SCUMM.cursorX         dw      ; screen X (0-255)
+SCUMM.cursorY         dw      ; screen Y (0-223)
+SCUMM.cursorEnabled   dw      ; nonzero = cursor active + visible
+SCUMM.sentenceVerb    dw      ; currently selected verb ID (0=none)
+SCUMM.highlightVerb   dw      ; verb slot offset currently highlighted ($FFFF=none)
+SCUMM.cursorTileDone  dw      ; nonzero = cursor CHR already DMA'd to VRAM
+.ends
+
 ;---------------------------------------------------------------------------
 ; Verb Table
 ;---------------------------------------------------------------------------
@@ -256,6 +266,12 @@ SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .define VERB_FONT_VRAM_ADDR   $8000   ; byte addr for font tiles (word $4000)
 .define VERB_TILEMAP_VRAM_ADDR $9000  ; byte addr for BG2 tilemap (word $4800)
 .define VERB_TILEMAP_SIZE     2048    ; 32x32 x 2 bytes
+
+; Cursor sprite (shares OBJ base with actors at VRAM word $6000)
+; Actor costume tiles use tile IDs 0-12; cursor at tile 16 ($10)
+.define CURSOR_TILE_VRAM_WORD $6100   ; VRAM word addr = $6000 + 16*16
+.define CURSOR_TILE_ID        $10     ; OAM tile index
+.define CURSOR_SPEED          2       ; pixels per frame for d-pad movement
 
 .base BSL
 .bank 0 slot 0

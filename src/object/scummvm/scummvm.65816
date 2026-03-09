@@ -1825,10 +1825,38 @@ _findBox.loop:
   cmp.w SCUMM.boxCount
   bcs _findBox.none
   pha
+
+  ;--- skip invisible boxes (kBoxInvisible = $80) ---
+  and #$00FF
+  asl a               ;*2
+  asl a               ;*4
+  sta.b tmp+4
+  asl a               ;*8
+  asl a               ;*16
+  clc
+  adc.b tmp+4         ;*20
+  clc
+  adc #$5002 + $11    ;base + flags offset
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #SCUMM_BOX_INVISIBLE
+  bne _findBox.skip    ;box is invisible — skip it
+
+  lda 1,s              ;peek box index from stack
   sta.b tmp+4          ;boxIdx for pointInBox
   jsr scummvm.pointInBox
   pla
   bcs _findBox.found
+  inc a
+  bra _findBox.loop
+
+_findBox.skip:
+  .ACCU 16
+  pla
   inc a
   bra _findBox.loop
 
@@ -2175,9 +2203,311 @@ scummvm.findBox_long:
   jsr scummvm.findBox
   rtl
 
-;pad to ~2000 bytes total to stabilize WLA-DX linker bin-packing
+
+;-------------------------------------------------------------------
+; createBoxMatrix — rebuild routing matrix after box flags change
+;
+; Derives adjacency from the saved original routing matrix, then
+; runs Floyd-Warshall to compute new transitive routes, skipping
+; boxes with kBoxLocked ($40) or kBoxInvisible ($80) flags.
+;
+; Uses bwp scratch area — safe since this is never called during
+; an active buildWalkPath.
+;
+; @clobbers A, X, Y, tmp+0..tmp+10, bwp scratch
+;-------------------------------------------------------------------
+scummvm.createBoxMatrix:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.boxCount
+  cmp #2
+  bcs +
+    jmp _cbm.done                  ;0 or 1 boxes — nothing to rebuild
++
+  sta.w SCUMM.bwpDestBox           ;N (cached)
+
+  ;=== Phase 1: Initialize routing matrix from original adjacency ===
+  ; For each (i,j):
+  ;   if i == j: routing[i*N+j] = i
+  ;   elif origMatrix[i*N+j] == j: routing[i*N+j] = j (adjacent)
+  ;   else: routing[i*N+j] = $FF (no direct path)
+  stz.w SCUMM.bwpTargetY          ;i = 0
+  stz.w SCUMM.bwpArrayOfs         ;i*N = 0
+
+_cbm.initI:
+  lda.w SCUMM.bwpTargetY
+  cmp.w SCUMM.bwpDestBox
+  bcc +
+  jmp _cbm.phase2
++
+  stz.w SCUMM.bwpCurBox           ;j = 0
+
+_cbm.initJ:
+  lda.w SCUMM.bwpCurBox
+  cmp.w SCUMM.bwpDestBox
+  bcc +
+  jmp _cbm.initNextI
++
+
+  ;--- linear index = i*N + j ---
+  lda.w SCUMM.bwpArrayOfs
+  clc
+  adc.w SCUMM.bwpCurBox
+  sta.b tmp                        ;index
+
+  ;--- check i == j (self-route) ---
+  lda.w SCUMM.bwpTargetY
+  cmp.w SCUMM.bwpCurBox
+  bne _cbm.checkAdj
+
+  ;self: routing[idx] = i
+  lda.b tmp
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  lda.w SCUMM.bwpTargetY
+  sep #$20
+  .ACCU 8
+  sta.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  bra _cbm.initNextJ
+
+_cbm.checkAdj:
+  ;--- read origMatrix[idx] ---
+  lda.b tmp
+  clc
+  adc.w SCUMM.boxOrigMatrixPtr
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+
+  ;--- adjacent if origVal == j ---
+  cmp.w SCUMM.bwpCurBox
+  bne _cbm.setFF
+
+  ;adjacent: routing[idx] = j
+  lda.b tmp
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  lda.w SCUMM.bwpCurBox
+  sep #$20
+  .ACCU 8
+  sta.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  bra _cbm.initNextJ
+
+_cbm.setFF:
+  ;not adjacent: routing[idx] = $FF
+  lda.b tmp
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  sep #$20
+  .ACCU 8
+  lda #$FF
+  sta.l $7F0000,x
+  rep #$20
+  .ACCU 16
+
+_cbm.initNextJ:
+  inc.w SCUMM.bwpCurBox
+  bra _cbm.initJ
+
+_cbm.initNextI:
+  inc.w SCUMM.bwpTargetY
+  ;bwpArrayOfs += N
+  lda.w SCUMM.bwpArrayOfs
+  clc
+  adc.w SCUMM.bwpDestBox
+  sta.w SCUMM.bwpArrayOfs
+  jmp _cbm.initI
+
+  ;=== Phase 2: Floyd-Warshall ===
+_cbm.phase2:
+  stz.w SCUMM.bwpTargetX          ;k = 0
+
+_cbm.fwK:
+  lda.w SCUMM.bwpTargetX
+  cmp.w SCUMM.bwpDestBox
+  bcc +
+  jmp _cbm.done
++
+
+  ;check box k flags — skip if locked or invisible
+  jsr _cbm.getBoxFlags
+  and #(SCUMM_BOX_LOCKED | SCUMM_BOX_INVISIBLE)
+  beq +
+  jmp _cbm.fwNextK
++
+
+  ;compute k*N → bwpPathLen
+  lda.w SCUMM.bwpTargetX
+  jsr _gnb.mul                     ;A * boxCount → tmp+6
+  lda.b tmp+6
+  sta.w SCUMM.bwpPathLen           ;k*N
+
+  stz.w SCUMM.bwpTargetY          ;i = 0
+  stz.w SCUMM.bwpArrayOfs         ;i*N = 0
+
+_cbm.fwI:
+  lda.w SCUMM.bwpTargetY
+  cmp.w SCUMM.bwpDestBox
+  bcc +
+  jmp _cbm.fwNextK
++
+
+  ;check box i flags
+  jsr _cbm.getBoxFlags
+  and #(SCUMM_BOX_LOCKED | SCUMM_BOX_INVISIBLE)
+  beq +
+  jmp _cbm.fwNextI
++
+
+  ;--- preload routing[i*N+k] — if $FF, skip entire row ---
+  lda.w SCUMM.bwpArrayOfs
+  clc
+  adc.w SCUMM.bwpTargetX          ;i*N + k
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$00FF
+  bne +
+  jmp _cbm.fwNextI
++
+  sta.b tmp+2                      ;cache routing[i*N+k]
+
+  stz.w SCUMM.bwpCurBox           ;j = 0
+
+_cbm.fwJ:
+  lda.w SCUMM.bwpCurBox
+  cmp.w SCUMM.bwpDestBox
+  bcc +
+  jmp _cbm.fwNextI
++
+
+  ;check box j flags
+  jsr _cbm.getBoxFlags
+  and #(SCUMM_BOX_LOCKED | SCUMM_BOX_INVISIBLE)
+  bne _cbm.fwNextJ
+
+  ;--- check routing[i*N+j] — skip if not $FF ---
+  lda.w SCUMM.bwpArrayOfs
+  clc
+  adc.w SCUMM.bwpCurBox           ;i*N + j
+  sta.b tmp                        ;save index for potential write
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$00FF
+  bne _cbm.fwNextJ                 ;already has route
+
+  ;--- check routing[k*N+j] — skip if $FF ---
+  lda.w SCUMM.bwpPathLen
+  clc
+  adc.w SCUMM.bwpCurBox           ;k*N + j
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$00FF
+  beq _cbm.fwNextJ                 ;no route from k to j
+
+  ;--- set routing[i*N+j] = routing[i*N+k] ---
+  lda.b tmp                        ;index = i*N + j
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  lda.b tmp+2                      ;routing[i*N+k]
+  sep #$20
+  .ACCU 8
+  sta.l $7F0000,x
+  rep #$20
+  .ACCU 16
+
+_cbm.fwNextJ:
+  inc.w SCUMM.bwpCurBox
+  bra _cbm.fwJ
+
+_cbm.fwNextI:
+  inc.w SCUMM.bwpTargetY
+  lda.w SCUMM.bwpArrayOfs
+  clc
+  adc.w SCUMM.bwpDestBox
+  sta.w SCUMM.bwpArrayOfs
+  jmp _cbm.fwI
+
+_cbm.fwNextK:
+  inc.w SCUMM.bwpTargetX
+  jmp _cbm.fwK
+
+_cbm.done:
+  rts
+
+
+;-------------------------------------------------------------------
+; _cbm.getBoxFlags — read flags byte for a walkbox
+;
+; @param A = box index
+; @return A = flags byte (16-bit, high byte clear)
+; @clobbers X, tmp+4
+;-------------------------------------------------------------------
+_cbm.getBoxFlags:
+  .ACCU 16
+  .INDEX 16
+  and #$00FF
+  asl a               ;*2
+  asl a               ;*4
+  sta.b tmp+4
+  asl a               ;*8
+  asl a               ;*16
+  clc
+  adc.b tmp+4         ;*20
+  clc
+  adc #$5002 + $11    ;BOXD base + flags offset
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F0000,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  rts
+
+
+;-------------------------------------------------------------------
+; jsl/rtl wrapper for createBoxMatrix
+;-------------------------------------------------------------------
+scummvm.createBoxMatrix_long:
+  jsr scummvm.createBoxMatrix
+  rtl
+
+;pad to stabilize WLA-DX linker bin-packing
 ;(prevents TAD audio sections from being reshuffled to bank 1)
-.dsb 1200 $EA
+.dsb 700 $EA
 
 .ends
 
@@ -4018,40 +4348,93 @@ op_setClass:
 
 
 ;-------------------------------------------------------------------
-; matrixOps ($30, $B0) -- sub-opcode with box params, no-op
+; matrixOps ($30, $B0) -- walkbox runtime modification
+; Sub-ops: 0x01=setBoxFlags, 0x02=setBoxScale, 0x03=setBoxSlot,
+;          0x04=createBoxMatrix
 ;-------------------------------------------------------------------
 op_matrixOps:
   jsr _scummvm.fetchByte             ; sub-opcode byte
-  sta.w SCUMM.scratch
-  and #$001F                         ; key
+  pha                                ; save for flag bit checks
+  and #$001F                         ; extract key
   cmp #$04
-  beq _matrixOps.done                ; createBoxMatrix: no params
+  beq _matrixOps.create              ; createBoxMatrix: no params
   cmp #$01
-  beq _matrixOps.twoP8
+  beq _matrixOps.setFlags
   cmp #$02
-  beq _matrixOps.twoP8
+  beq _matrixOps.setScale
   cmp #$03
-  beq _matrixOps.twoP8
-  ; Unknown sub-op: no params
+  beq _matrixOps.setSlot
+  pla                                ; pop sub-opcode (unknown)
   bra _matrixOps.done
 
-_matrixOps.twoP8:
-  ; box: p8[bit7 of sub], val: p8[bit6 of sub]
-  lda.w SCUMM.scratch
+_matrixOps.setFlags:
+  lda #$11                           ; flags offset in scummBoxEntry
+  bra _matrixOps.writeField
+
+_matrixOps.setScale:
+  lda #$12                           ; scale offset in scummBoxEntry
+  bra _matrixOps.writeField
+
+_matrixOps.setSlot:
+  lda #$10                           ; mask offset in scummBoxEntry
+
+_matrixOps.writeField:
+  sta.w SCUMM.scratch2               ; field offset within box entry
+
+  ;--- decode param 1: box number (p8, flag bit $80 of sub-opcode) ---
+  pla                                ; pull sub-opcode byte
+  pha                                ; save again for param 2
   and #$0080
   beq +
-  jsr _scummvm.fetchWord             ; var ref
-  bra ++
+    jsr _scummvm.fetchWord           ; 2-byte variable reference
+    jsr _scummvm.readVariable        ; resolve to value
+    bra ++
 +
-  jsr _scummvm.fetchByte             ; literal
+    jsr _scummvm.fetchByte           ; 1-byte literal
 ++
-  lda.w SCUMM.scratch
+  and #$00FF
+  sta.w SCUMM.scratch3               ; box number
+
+  ;--- decode param 2: value (p8, flag bit $40 of sub-opcode) ---
+  pla                                ; pull sub-opcode byte (final pop)
   and #$0040
   beq +
-  jsr _scummvm.fetchWord
-  bra _matrixOps.done
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
 +
-  jsr _scummvm.fetchByte
+    jsr _scummvm.fetchByte
+++
+  and #$00FF                         ; value to write (byte)
+  pha                                ; save value
+
+  ;--- compute BOXD entry address: $7F5002 + box*20 + fieldOffset ---
+  lda.w SCUMM.scratch3              ; box number
+  asl a                              ;*2
+  asl a                              ;*4
+  sta.w SCUMM.scratch3
+  asl a                              ;*8
+  asl a                              ;*16
+  clc
+  adc.w SCUMM.scratch3              ;*20
+  clc
+  adc #$5002                         ;skip count word
+  clc
+  adc.w SCUMM.scratch2              ;+ field offset
+  tax                                ;X = byte offset in $7F
+
+  pla                                ;A = value
+  sep #$20
+  .ACCU 8
+  sta.l $7F0000,x                    ;write field byte
+  rep #$20
+  .ACCU 16
+  bra _matrixOps.done
+
+_matrixOps.create:
+  pla                                ; pop sub-opcode
+  jsl scummvm.createBoxMatrix_long
+  bra _matrixOps.done
 
 _matrixOps.done:
   clc

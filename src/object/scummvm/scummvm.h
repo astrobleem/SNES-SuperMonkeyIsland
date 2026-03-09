@@ -235,9 +235,14 @@ SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 .define SCUMM_MAX_BOXES      62
 .define WALK_MAX_WAYPOINTS   8
 
+; SCUMM v5 box flag constants (ScummVM: kBoxLocked, kBoxInvisible)
+.define SCUMM_BOX_LOCKED     $40   ; excluded from pathfinding as intermediate
+.define SCUMM_BOX_INVISIBLE  $80   ; excluded from findBox AND pathfinding
+
 .ramsection "scumm walkbox state" bank 0 slot 1
 SCUMM.boxCount        dw      ; number of walkboxes in current room
 SCUMM.boxMatrixPtr    dw      ; offset within $7F bank to routing matrix start
+SCUMM.boxOrigMatrixPtr dw     ; offset within $7F to saved original routing matrix
 SCUMM.boxDataSize     dw      ; total size of walkbox data loaded (for validation)
 .ends
 

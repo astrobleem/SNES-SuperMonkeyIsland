@@ -743,6 +743,44 @@ _box.hasData:
   adc.w #$5002
   sta.w SCUMM.boxMatrixPtr
 
+  ;--- Save original routing matrix copy for createBoxMatrix ---
+  ;matrixSize = boxCount * boxCount (use shift-add multiply)
+  lda.w SCUMM.boxCount
+  sta.b tmp             ;multiplicand
+  sta.b tmp+2           ;multiplier
+  stz.b tmp+4           ;result
+  ldy #16
+_box.mulLoop:
+  lsr.b tmp+2
+  bcc +
+    lda.b tmp+4
+    clc
+    adc.b tmp
+    sta.b tmp+4
++
+  asl.b tmp
+  dey
+  bne _box.mulLoop
+
+  ;tmp+4 = matrixSize (boxCount * boxCount)
+  ;origMatrixPtr = boxMatrixPtr + matrixSize
+  lda.w SCUMM.boxMatrixPtr
+  clc
+  adc.b tmp+4
+  sta.w SCUMM.boxOrigMatrixPtr
+
+  ;copy matrixSize bytes from $7F:boxMatrixPtr to $7F:boxOrigMatrixPtr
+  ;uses 65816 block move: mvn dest_bank, src_bank (X=src, Y=dest, A=count-1)
+  lda.b tmp+4
+  beq _box.copyDone     ;zero-size matrix = nothing to copy
+  dec a                 ;mvn takes count-1
+  ldx.w SCUMM.boxMatrixPtr     ;X = source offset in $7F
+  ldy.w SCUMM.boxOrigMatrixPtr ;Y = dest offset in $7F
+  phb                   ;save data bank
+  mvn $7F, $7F
+  plb                   ;restore data bank
+_box.copyDone:
+
   plp
   rtl
 
@@ -750,6 +788,7 @@ _box.none:
   stz.w SCUMM.boxCount
   stz.w SCUMM.boxDataSize
   stz.w SCUMM.boxMatrixPtr
+  stz.w SCUMM.boxOrigMatrixPtr
   plp
   rtl
 

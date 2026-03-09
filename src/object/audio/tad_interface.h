@@ -177,8 +177,9 @@ Tad_sfxQueue_pan         db      ; SFX pan value
 ; The LoadAudioData callback is included here and uses label arithmetic
 ; to compute absolute addresses (no bank-alignment requirement).
 
+.bank 2 slot 0
 .base BSL
-.section "TAD Audio Data" superfree
+.section "TAD Audio Data" free
 Tad_AudioData:
 Tad_Loader_Bin:
   .incbin "build/audio/tad-audio-data.bin" SKIP TAD_LOADER_OFFSET READ TAD_LOADER_SIZE

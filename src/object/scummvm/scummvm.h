@@ -189,6 +189,12 @@ SCUMM.actors         INSTANCEOF scummActor SCUMM_MAX_ACTORS
 SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 .ends
 
+; Object owner table (1 byte per object, 1024 objects)
+; Owner 0 = unowned, owner 0x0F = room, 1-14 = actor/inventory
+.ramsection "scumm object owner" bank 0 slot 1
+SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
+.ends
+
 ; Actor rendering scratch (used by renderActors)
 .ramsection "scumm actor render" bank 0 slot 1
 SCUMM.actorScreenX   dw      ; computed screen X for current actor
@@ -264,6 +270,15 @@ SCUMM.walkPathLen  ds SCUMM_WALK_ACTORS                           ; 16B — wayp
 SCUMM.walkPathIdx  ds SCUMM_WALK_ACTORS                           ; 16B — current waypoint
 SCUMM.actorWalkBox ds SCUMM_WALK_ACTORS                           ; 16B — current box per actor
 SCUMM.actorIgnoreBoxes ds SCUMM_WALK_ACTORS                       ; 16B — 1=straight-line walk
+SCUMM.actorWidth       ds SCUMM_WALK_ACTORS                       ; 16B — pixel width (default 24)
+SCUMM.actorWalkSpeedX  ds SCUMM_WALK_ACTORS                       ; 16B — walk speed X component
+SCUMM.actorWalkSpeedY  ds SCUMM_WALK_ACTORS                       ; 16B — walk speed Y component
+SCUMM.actorAnimSpeed   ds SCUMM_WALK_ACTORS                       ; 16B — animation speed
+SCUMM.actorWalkAnimNr  ds SCUMM_WALK_ACTORS                       ; 16B — walk animation number
+SCUMM.actorStandFrame  ds SCUMM_WALK_ACTORS                       ; 16B — stand animation frame
+SCUMM.actorTalkAnimStart ds SCUMM_WALK_ACTORS                     ; 16B — talk anim start frame
+SCUMM.actorTalkAnimEnd ds SCUMM_WALK_ACTORS                       ; 16B — talk anim end frame
+SCUMM.actorZClip       ds SCUMM_WALK_ACTORS                       ; 16B — Z clipping plane
 .ends
 
 ; OAM scratch buffer (copy of current frame's OAM data, max ~80 bytes)

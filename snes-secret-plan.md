@@ -787,7 +787,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - Sound: wired to TAD (see below)
   - Object: setClass (p16 + vararg), drawObject (p16 + sub-opcode)
   - Room: matrixOps (sub-opcode), roomOps (complex sub-opcode), loadRoomWithEgo (sets newRoom)
-  - Actor: animateActor, faceActor, walkActorToActor, walkActorTo, isActorInBox (all no-op stubs)
+  - Actor: animateActor, faceActor, walkActorToActor, walkActorTo, isActorInBox (all now real implementations)
   - Wait: wait (sub-opcode based)
   - ENCD/LSCR execute to completion with 0 stub hits on room 1
 - [x] Terrific Audio Driver (TAD) v0.2.0 integrated
@@ -817,14 +817,16 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - saveRestoreVerbs ($AB): 3× p8 for all sub-ops
   - 3 shared helpers: skipP8fromScratch, skipNullString, skipPrintString
   - 19 dispatch table entries updated
-- [x] All remaining opcode stubs — 105/105 base opcodes in dispatch table (~35 parameter-consuming stubs remain)
+- [x] All remaining opcode stubs — 105/105 base opcodes in dispatch table (~20 parameter-consuming stubs remain)
   - Conditional: ifState/ifNotState — real implementations (objectState table lookup)
-  - 10 getter stubs (result+p8→return 0): getActorElevation/Scale/Facing/Width/Costume/WalkBox, getAnimCounter, getInventoryCount, getRandomNr, getStringWidth
-  - Getter stubs (other patterns): getClosestObjActor (result+p16→0), getDist/getVerbEntrypoint/actorFromPos (result+p16+p16→0), findObject/findInventory (result+p8+p8→0)
+  - Actor getters now read real data: getActorCostume/Facing/Elevation/Scale/Width/WalkBox all wired to struct/arrays
+  - Remaining getter stubs (return 0): getAnimCounter, getInventoryCount, getStringWidth, getClosestObjActor, getDist, getVerbEntrypoint, actorFromPos, findObject, findInventory
   - Actor action stubs: putActorAtObject, walkActorToObject, pickupObject, pickupObjectOld
-  - Arithmetic: multiply, divide — expression sub-ops are real (signed 16-bit shift-and-add mul, restoring division); standalone opcodes consume params but return 0
+  - Arithmetic: multiply, divide — real implementations (signed 16-bit shift-and-add mul, restoring division)
   - Complex stubs: ifClassOfIs (vararg loop, always false), setObjectName (skip null string), drawBox, oldRoomEffect, pseudoRoom (byte-pair loop)
-  - Camera: actorFollowCamera, panCameraTo, setCameraAt — now real implementations (Phase 2)
+  - Camera: actorFollowCamera, panCameraTo, setCameraAt — real implementations (Phase 2)
+  - Object ownership: setOwnerOf/getObjectOwner — real implementations with objectOwner[1024] table
+  - Lights: stores to VAR_CURRENT_LIGHTS (globalVars[72])
 - [x] Multi-room smoke test (`distribution/test_multiroom.lua`)
   - Mesen Lua state machine: BOOT → STABLE → TESTING → DONE
   - FrameCounter-based crash detection (NMI liveness check, not PC comparison)
@@ -888,7 +890,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **Fixed**: Room 4 E_Brk crash — stale global script cache pointers, not expression handler bug. See `reloadGlobalScripts` above.
 - **Fixed**: Room 15 E_Brk crash — expression sub-opcode dispatch numbering was wrong (0x01 dispatched ADD instead of PUSH), causing stack corruption. Also expanded script cache 32→44KB. See fix details above.
 
-**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. 105 dispatch entries (with ~35 parameter-consuming stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. Still needed: resource cache eviction.
+**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. 105 dispatch entries (with ~20 parameter-consuming stubs, down from ~35 after actorOps audit). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. actorOps audit complete (14/19 sub-ops store to real data). Object ownership table wired. Actor getters read real struct data. Still needed: resource cache eviction.
 
 **Bank 0 overflow discovery:**
 - Bank 0 is ~88% full; adding ~300 bytes triggers WLA-DX linker section rearrangement → boot crash
@@ -915,7 +917,7 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
 - [x] Walkbox pathfinding (core: data pipeline, room loader, pathfinding, waypoint walking)
 - [x] matrixOps (setBoxFlags/setBoxScale/setBoxSlot + createBoxMatrix)
-- [ ] Walkbox opcodes remaining (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
+- [x] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
 - [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync
 - [ ] Multi-actor walking (updateActors hardcoded to actor 1)
 - [ ] Mouse input: SNES Mouse position tracking, click detection
@@ -928,12 +930,23 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [ ] Inventory: display, scrolling, object combination
 - [ ] drawObject opcode (object rendering on room background)
 - [ ] findObject opcode (click detection for room objects)
-- [ ] getRandomNr opcode (random number generation)
-- [ ] wait opcodes (waitForActor, waitForMessage, etc.)
-- [ ] Standalone multiply/divide opcodes (currently stubs returning 0)
-- [ ] Object ownership opcodes (getObjectOwner, setObjectOwner — real implementations)
-- [ ] Upgrade actor opcode stubs to real implementations (animate, face, talkActor, walkActorTo, etc.)
+- [x] getRandomNr opcode — real RNG with internal state, modulo range
+- [x] wait opcodes — waitForActor (polls moving), waitForMessage (polls dialogActive), waitForCamera (polls cameraDest)
+- [x] Standalone multiply/divide opcodes — signed 16-bit shift-and-add mul, restoring division
+- [x] Object ownership — objectOwner[1024] table, setOwnerOf/getObjectOwner wired with bounds checks
+- [x] lights opcode — stores luminance to VAR_CURRENT_LIGHTS (globalVars[72])
+- [x] actorOps audit — 14/19 sub-ops store to real data:
+  - setCostume, walkSpeed(X/Y), talkAnimNr(start/end), initFrame, elevation, talkColor, width, scale, animSpeed, walkAnimNr, standFrame, setZClip, ignoreBoxes, followBoxes
+  - Remaining stubs (5): sound, palette, palette2, actorName, shadow
+  - WRAM parallel arrays: actorWidth, actorWalkSpeedX/Y, actorAnimSpeed, actorWalkAnimNr, actorStandFrame, actorTalkAnimStart/End, actorZClip (9 x 16B = 144B)
+- [x] Actor getter opcodes — read real struct/array data:
+  - getActorX/Y/Room/Moving/Costume/Facing/Elevation/Scale/WalkBox — read actor struct or parallel arrays
+  - getActorWidth — reads actorWidth array (default 24 if unset)
+- [x] walkActorToActor — reads target actor position, delegates to walkActorTo pathfinding
+- [x] animateActor — stores frame to actor.initFrame
+- [x] faceActor — stores direction to actor.facing
 - [ ] Upgrade object/verb opcode stubs to real implementations
+- [ ] ifClassOfIs — currently always returns false (class system not implemented)
 
 **Success Criteria:** Player can walk Guybrush around the SCUMM Bar, talk to the three pirates, pick up objects, use objects. First ~15 minutes of gameplay functional.
 

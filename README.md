@@ -138,4 +138,20 @@ The `tools/scumm/` package contains reusable SCUMM v5 modules:
   - Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
   - Auto-timed display (charCount * 6 + 60 frames), auto-clear
   - Sentence line on BG3 row 17: shows currently selected verb ("Walk to", "Open", etc.)
-- Next: mouse input, sentence line object names, verb+object execution, walkbox pathfinding, MI1 music arrangements
+- **Walkbox pathfinding** — full SCUMM v5 walkbox system operational
+  - BOXD/BOXM data loaded from MSU-1 room data, routing matrix built via createBoxMatrix
+  - A* pathfinding through walkbox graph with waypoint arrays (8 waypoints per actor)
+  - `walkActorTo`: builds walk path through connected boxes, falls back to straight-line if ignoreBoxes
+  - `walkActorToActor`: reads target actor position, delegates to walkActorTo pathfinding
+  - `isActorInBox`, `getActorWalkBox`, `actorOps` ignoreBoxes/followBoxes all wired
+  - `matrixOps`: setBoxFlags/setBoxScale/setBoxSlot/createBoxMatrix opcodes functional
+- **actorOps audit** — 14 of 19 sub-opcodes now store to real actor data
+  - Struct fields: costume, initFrame, talkColor, elevation, scalex
+  - WRAM parallel arrays (9 x 16B = 144B): width, walkSpeedX/Y, animSpeed, walkAnimNr, standFrame, talkAnimStart/End, zClip
+  - Remaining stubs (5): sound, palette, palette2, actorName, shadow
+- **Actor getters read real data** — getActorCostume/Facing/Elevation/Scale/Width/WalkBox all read struct fields or parallel arrays (no more hardcoded returns)
+- **Object ownership** — objectOwner[1024] WRAM table with setOwnerOf/getObjectOwner opcodes
+- **lights opcode** — stores luminance to VAR_CURRENT_LIGHTS (globalVars[72])
+- **walkActorToActor** — reads target actor's position, builds walk path with full pathfinding
+- **animateActor / faceActor** — store to actor struct fields (initFrame, facing)
+- Next: mouse input, object interaction (drawObject, findObject), roomOps (palette fades, screen shake), full costume animation engine, MI1 music arrangements

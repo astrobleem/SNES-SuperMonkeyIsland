@@ -352,56 +352,37 @@ _initVP.done:
 
 
 /**
-* Per-frame scroll update. Reads D-pad, moves camera,
-* stages new tilemap column for NMI if crossing a tile boundary.
+* Per-frame scroll sync. Uses GLOBAL.room.cameraX (set by
+* scummvm.moveCamera) to drive BG1 scrolling and tile streaming.
+* Detects tile boundary crossings, stages new columns for NMI.
 */
-room.scrollUpdate:
+room.syncScroll:
   php
   rep #$31
 
   lda.w GLOBAL.room.maxScrollX
-  bne _scrollUpdate.canScroll
-  jmp _scrollUpdate.done
-_scrollUpdate.canScroll:
+  bne _syncScroll.canScroll
+  jmp _syncScroll.done
+_syncScroll.canScroll:
 
+  ;clamp cameraX to [0, maxScrollX]
   lda.w GLOBAL.room.cameraX
-  sta.w GLOBAL.room.cameraXOld
-
-  ldx #INPUT.DEVICE.ID.0
-  jsr core.input.get.press
-
-  bit.w #JOY_DIR_RIGHT
-  beq _scrollUpdate.checkLeft
-
+  bpl +
+    stz.w GLOBAL.room.cameraX
++
   lda.w GLOBAL.room.cameraX
-  clc
-  adc.w #ROOM_SCROLL_SPEED
   cmp.w GLOBAL.room.maxScrollX
   bcc +
   beq +
     lda.w GLOBAL.room.maxScrollX
+    sta.w GLOBAL.room.cameraX
 +
-  sta.w GLOBAL.room.cameraX
-  bra _scrollUpdate.applyScroll
 
-_scrollUpdate.checkLeft:
-  lda.w inputDevice.press
-  bit.w #JOY_DIR_LEFT
-  beq _scrollUpdate.applyScroll
-
-  lda.w GLOBAL.room.cameraX
-  sec
-  sbc.w #ROOM_SCROLL_SPEED
-  bcs +
-    lda #0
-+
-  sta.w GLOBAL.room.cameraX
-
-_scrollUpdate.applyScroll:
+  ;apply to PPU scroll register
   lda.w GLOBAL.room.cameraX
   sta.w xScrollBG1
 
-  ;boundary detection
+  ;boundary detection (old tile col vs new)
   lda.w GLOBAL.room.cameraXOld
   lsr a
   lsr a
@@ -416,13 +397,13 @@ _scrollUpdate.applyScroll:
 
   lda.b tmp+2
   cmp.b tmp
-  beq _scrollUpdate.bgRefresh
+  beq _syncScroll.bgRefresh
 
   lda.b tmp+2
   cmp.b tmp
-  bcc _scrollUpdate.scrolledLeft
+  bcc _syncScroll.scrolledLeft
 
-  ;scrolled right
+  ;scrolled right — stage rightmost visible column
   lda.w GLOBAL.room.cameraX
   clc
   adc.w #ROOM_VIEWPORT_WIDTH_PX - 1
@@ -436,35 +417,39 @@ _scrollUpdate.applyScroll:
 +
   jsr room.stageColumnForNmi
   stz.w GLOBAL.room.refreshIdx
-  bra _scrollUpdate.done
+  bra _syncScroll.updateOld
 
-_scrollUpdate.scrolledLeft:
+_syncScroll.scrolledLeft:
   lda.b tmp+2
   jsr room.stageColumnForNmi
   stz.w GLOBAL.room.refreshIdx
-  bra _scrollUpdate.done
+  bra _syncScroll.updateOld
 
-_scrollUpdate.bgRefresh:
+_syncScroll.bgRefresh:
   ;no boundary crossing — refresh one viewport column in background
   lda.w GLOBAL.room.cameraX
   lsr a
   lsr a
-  lsr a                             ;leftCol = cameraX >> 3
+  lsr a                              ;leftCol = cameraX >> 3
   clc
-  adc.w GLOBAL.room.refreshIdx      ;refreshCol = leftCol + refreshIdx
+  adc.w GLOBAL.room.refreshIdx       ;refreshCol = leftCol + refreshIdx
   cmp.w GLOBAL.room.roomWidthTiles
-  bcs _scrollUpdate.bgRefreshSkip   ;out of bounds, skip
+  bcs _syncScroll.bgRefreshSkip      ;out of bounds, skip
   jsr room.stageColumnForNmi
-_scrollUpdate.bgRefreshSkip:
+_syncScroll.bgRefreshSkip:
   lda.w GLOBAL.room.refreshIdx
   inc a
-  cmp.w #ROOM_VIEWPORT_TILES        ;wrap at 32
+  cmp.w #ROOM_VIEWPORT_TILES         ;wrap at 32
   bcc +
     lda #0
 +
   sta.w GLOBAL.room.refreshIdx
 
-_scrollUpdate.done:
+_syncScroll.updateOld:
+  lda.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+
+_syncScroll.done:
   plp
   rts
 

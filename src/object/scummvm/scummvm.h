@@ -354,10 +354,25 @@ SCUMM.dialogPalColor     dw      ; dynamic palette color 1 (talk color BGR555)
 .define CLASS.PROPERTIES 0
 .define CLASS.ZP_LENGTH zpLen
 
+;---------------------------------------------------------------------------
+; Camera state
+;---------------------------------------------------------------------------
+.ramsection "scumm camera state" bank 0 slot 1
+SCUMM.cameraFollows   dw      ; actor number to follow (0 = none)
+SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
+.ends
+
 ; BG2 VRAM layout constants
 .define VERB_FONT_VRAM_ADDR   $8000   ; byte addr for font tiles (word $4000)
 .define VERB_TILEMAP_VRAM_ADDR $9000  ; byte addr for BG2 tilemap (word $4800)
 .define VERB_TILEMAP_SIZE     2048    ; 32x32 x 2 bytes
+
+; Camera variable indices (SCUMM v5 MI1)
+.define SCUMM_VAR_CAMERA_POS_X     2
+.define SCUMM_VAR_CAMERA_MIN_X     17
+.define SCUMM_VAR_CAMERA_MAX_X     18
+.define SCUMM_VAR_CAMERA_THRESHOLD 29
+.define SCUMM_VAR_CAMERA_FAST_X    36
 
 ; Cursor sprite (shares OBJ base with actors at VRAM word $6000)
 ; Actor costume tiles use tile IDs 0-12; cursor at tile 16 ($10)

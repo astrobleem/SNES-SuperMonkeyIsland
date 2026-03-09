@@ -314,7 +314,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented — 0 stubs remaining** (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50).
+The heart of the engine. Interprets MI1's script bytecode. **105 dispatch entries, ~35 parameter-consuming stubs remaining** (camera, inventory, object interaction, drawing, wait) (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50).
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -527,7 +527,7 @@ The audio system uses a **hybrid architecture**: SPC700 for native chip music an
   - `stopMusic` → `Tad_QueueCommand(PAUSE)` — pauses playback
   - `startSound` → `Tad_QueueSoundEffect(sfxId)` — queues SFX with center pan
   - `stopSound` → `Tad_QueueCommand(STOP_SOUND_EFFECTS)` — stops all SFX
-  - `isSoundRunning` → `Tad_IsSongPlaying()` — returns 1/0 to SCUMM variable
+  - `isSoundRunning` — stub returning 1 (prevents ENCD soundKludge EOF bug); not yet wired to `Tad_IsSongPlaying()`
   - `soundKludge` (iMUSE) — parameter-consuming stub, deferred until iMUSE dispatch needed
 - **Current content**: 3 test instruments (sine, square, triangle), 1 silence song, 1 test beep SFX. Real MI1 tracks pending MML arrangement.
 - **Community**: emberling (SNES musician) has arranged the SCUMM Bar theme as 8-channel SPC700 MML — translation to TAD's PMD-based MML syntax is the next audio content step.
@@ -802,7 +802,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - `stopMusic` → `Tad_QueueCommand(PAUSE)` — pauses music
   - `startSound` → `Tad_QueueSoundEffect(sfxId)` — queues SFX with center pan
   - `stopSound` → `Tad_QueueCommand(STOP_SOUND_EFFECTS)` — stops all SFX
-  - `isSoundRunning` → `Tad_IsSongPlaying()` — writes 1/0 to SCUMM result variable
+  - `isSoundRunning` — stub returning 1 (prevents ENCD soundKludge EOF bug); not yet wired to `Tad_IsSongPlaying()`
   - `soundKludge` (iMUSE) — parameter-consuming stub, deferred
   - TAD constants defined in `scummvm.h`: TadCommand_PAUSE, TadCommand_UNPAUSE, TadCommand_STOP_SOUND_EFFECTS
   - Verified: game boots and runs through multiple rooms with TAD active, no crashes
@@ -817,13 +817,14 @@ We're not starting from zero on understanding the data format. ScummVM has been 
   - saveRestoreVerbs ($AB): 3× p8 for all sub-ops
   - 3 shared helpers: skipP8fromScratch, skipNullString, skipPrintString
   - 19 dispatch table entries updated
-- [x] All remaining opcode stubs — 105/105 base opcodes, 0 stubs in dispatch table
-  - Conditional stubs: ifState/ifNotState (always skip branch)
+- [x] All remaining opcode stubs — 105/105 base opcodes in dispatch table (~35 parameter-consuming stubs remain)
+  - Conditional: ifState/ifNotState — real implementations (objectState table lookup)
   - 10 getter stubs (result+p8→return 0): getActorElevation/Scale/Facing/Width/Costume/WalkBox, getAnimCounter, getInventoryCount, getRandomNr, getStringWidth
   - Getter stubs (other patterns): getClosestObjActor (result+p16→0), getDist/getVerbEntrypoint/actorFromPos (result+p16+p16→0), findObject/findInventory (result+p8+p8→0)
-  - Actor action stubs: actorFollowCamera, putActorAtObject, walkActorToObject, pickupObject, pickupObjectOld
-  - Arithmetic: multiply, divide (signed 16-bit software implementations: shift-and-add mul, restoring division)
+  - Actor action stubs: putActorAtObject, walkActorToObject, pickupObject, pickupObjectOld
+  - Arithmetic: multiply, divide — expression sub-ops are real (signed 16-bit shift-and-add mul, restoring division); standalone opcodes consume params but return 0
   - Complex stubs: ifClassOfIs (vararg loop, always false), setObjectName (skip null string), drawBox, oldRoomEffect, pseudoRoom (byte-pair loop)
+  - Camera: actorFollowCamera, panCameraTo, setCameraAt — now real implementations (Phase 2)
 - [x] Multi-room smoke test (`distribution/test_multiroom.lua`)
   - Mesen Lua state machine: BOOT → STABLE → TESTING → DONE
   - FrameCounter-based crash detection (NMI liveness check, not PC comparison)
@@ -887,7 +888,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 - **Fixed**: Room 4 E_Brk crash — stale global script cache pointers, not expression handler bug. See `reloadGlobalScripts` above.
 - **Fixed**: Room 15 E_Brk crash — expression sub-opcode dispatch numbering was wrong (0x01 dispatched ADD instead of PUSH), causing stack corruption. Also expanded script cache 32→44KB. See fix details above.
 
-**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. All 105 base opcodes implemented (0 stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. Still needed: resource cache eviction.
+**Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. 105 dispatch entries (with ~35 parameter-consuming stubs). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. Still needed: resource cache eviction.
 
 **Bank 0 overflow discovery:**
 - Bank 0 is ~88% full; adding ~300 bytes triggers WLA-DX linker section rearrangement → boot crash
@@ -913,7 +914,9 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
 - [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
 - [x] Walkbox pathfinding (core: data pipeline, room loader, pathfinding, waypoint walking)
-- [ ] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes, matrixOps setBoxFlags)
+- [x] matrixOps (setBoxFlags/setBoxScale/setBoxSlot + createBoxMatrix)
+- [ ] Walkbox opcodes remaining (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
+- [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync
 - [ ] Multi-actor walking (updateActors hardcoded to actor 1)
 - [ ] Mouse input: SNES Mouse position tracking, click detection
 - [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
@@ -923,6 +926,12 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] Sentence line on BG3 row 17: shows currently selected verb
 - [x] Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
 - [ ] Inventory: display, scrolling, object combination
+- [ ] drawObject opcode (object rendering on room background)
+- [ ] findObject opcode (click detection for room objects)
+- [ ] getRandomNr opcode (random number generation)
+- [ ] wait opcodes (waitForActor, waitForMessage, etc.)
+- [ ] Standalone multiply/divide opcodes (currently stubs returning 0)
+- [ ] Object ownership opcodes (getObjectOwner, setObjectOwner — real implementations)
 - [ ] Upgrade actor opcode stubs to real implementations (animate, face, talkActor, walkActorTo, etc.)
 - [ ] Upgrade object/verb opcode stubs to real implementations
 
@@ -949,7 +958,6 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - Prerequisite: at least one PCM track file in `distribution/SuperMonkeyIsland-N.pcm`
 - [ ] Save/load game (SRAM)
 - [ ] Room transitions, screen fades
-- [ ] Camera scripting (panCameraTo, etc.)
 
 **Success Criteria:** Complete playthrough from the dock to LeChuck's ghost ship. All puzzles solvable. No blocking bugs.
 

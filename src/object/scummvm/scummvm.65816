@@ -352,6 +352,23 @@ _init.zeroDialogTilemap:
   lda #1
   sta.w SCUMM.dialogDmaPending
 
+  ;--- Init camera state ---
+  stz.w SCUMM.cameraFollows
+  stz.w SCUMM.cameraDest
+  lda #128
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x            ; VAR(2) = VAR_CAMERA_POS_X = 128
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  sta.w SCUMM.globalVars,x            ; VAR(17) = VAR_CAMERA_MIN_X = 128
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  sta.w SCUMM.globalVars,x            ; VAR(18) = VAR_CAMERA_MAX_X = 128 (updated on room load)
+  lda #10
+  ldx #SCUMM_VAR_CAMERA_THRESHOLD*2
+  sta.w SCUMM.globalVars,x            ; VAR(29) = VAR_CAMERA_THRESHOLD = 10
+  lda #4
+  ldx #SCUMM_VAR_CAMERA_FAST_X*2
+  sta.w SCUMM.globalVars,x            ; VAR(36) = VAR_CAMERA_FAST_X = 4
+
   ;--- Set starting room (triggers room load on first play frame) ---
   ; MI1 starting room = 1; currentRoom already 0 from zero pass
   lda #1
@@ -460,6 +477,12 @@ _play.nextSlot:
 
   ; Update actor movement + animation (after scripts have run)
   jsl scummvm.updateActors
+
+  ; Update camera position (follow actor / pan)
+  jsl scummvm.moveCamera
+  ; Sync tile scroll streamer with new camera position
+  jsr room.syncScroll
+
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
@@ -639,7 +662,9 @@ _prc.bgReady:
   ; Load room via Phase 0 room loader
   lda.w SCUMM.newRoom
   jsr room.load
-  bcc _prc.failed
+  bcs +
+  jmp _prc.failed
++
 
   ; Build CGRAM HDMA table with room's palette 7 colors
   jsl scummvm.buildCgramHdmaTable
@@ -666,6 +691,43 @@ _prc.bgReady:
   sta.w SCUMM.globalVars,x
   ldx #143*2                        ; VAR(143) = room state (MI1 ENCD guard check)
   sta.w SCUMM.globalVars,x
+
+  ; Update camera limits for new room
+  lda.w GLOBAL.room.hdr.width_px
+  sec
+  sbc #128
+  bcs +
+    lda #128                        ; min 128 for rooms narrower than viewport
++
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  sta.w SCUMM.globalVars,x          ; VAR(18) = roomWidth - 128
+  lda #128
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  sta.w SCUMM.globalVars,x          ; VAR(17) = 128
+
+  ; If following an actor, snap camera to actor X
+  lda.w SCUMM.cameraFollows
+  and #$00FF
+  beq _prc.noSnap
+  asl a
+  asl a
+  asl a
+  asl a                             ; * 16
+  clc
+  adc #2                            ; .x offset
+  tax
+  lda.w SCUMM.actors,x             ; actor X
+  sta.w SCUMM.cameraDest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x          ; VAR(2) = cameraPosX = actorX
+  sec
+  sbc #128
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+_prc.noSnap:
 
   ; Auto-start ENCD if present
   lda.w SCUMM.roomEncdLen
@@ -3800,17 +3862,27 @@ op_getActorRoom:
   clc
   rts
 
-; panCameraTo ($12, $92) -- p16[7] (always 2 bytes), no-op
+; panCameraTo ($12, $92) -- p16[7] — set camera pan target
 op_panCameraTo:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord
+  jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
+  sta.w SCUMM.cameraDest
   clc
   rts
 
-; setCameraAt ($32, $B2) -- p16[7] (always 2 bytes), no-op
+; setCameraAt ($32, $B2) -- p16[7] — snap camera instantly
 op_setCameraAt:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord
+  jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
+  sta.w SCUMM.cameraDest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x           ; VAR(2) = cameraPosX
+  sec
+  sbc #128
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.cameraX
   clc
   rts
 
@@ -5259,11 +5331,25 @@ op_findInventory:
   rts
 
 ;-------------------------------------------------------------------
-; actorFollowCamera ($52, $D2) — p8[7], no-op
+; actorFollowCamera ($52, $D2) — p8[7] — follow actor with camera
 ;-------------------------------------------------------------------
 op_actorFollowCamera:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
+  and #$00FF
+  sta.w SCUMM.cameraFollows
+  beq _afc.done
+  ; Immediately set cameraDest to actor's X
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16
+  clc
+  adc #2                             ; .x offset
+  tax
+  lda.w SCUMM.actors,x              ; actor X position
+  sta.w SCUMM.cameraDest
+_afc.done:
   clc
   rts
 
@@ -7847,6 +7933,130 @@ _rsl.done:
   ply
   plx
   plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; Camera system — per-frame camera position update
+;===================================================================
+.section "ScummVM camera" superfree
+
+;-------------------------------------------------------------------
+; scummvm.moveCamera — update camera position per frame
+; Called via jsl from play() after updateActors.
+; If following an actor, updates cameraDest from actor X.
+; Moves camera center toward cameraDest at FAST_X speed.
+; Writes GLOBAL.room.cameraX (left edge) for scroll system.
+;-------------------------------------------------------------------
+scummvm.moveCamera:
+  rep #$31
+
+  ; If cameraFollows != 0, update cameraDest from actor X
+  lda.w SCUMM.cameraFollows
+  and #$00FF
+  beq _mc.checkPan
+
+  ; Compute actor X: actors + actorNum*16 + 2
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16
+  clc
+  adc #2                             ; .x offset
+  tax
+  lda.w SCUMM.actors,x              ; actor X
+  sta.w SCUMM.scratch3
+
+  ; Check threshold: if |actorX - cameraPosX| > threshold, update dest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sec
+  sbc.w SCUMM.globalVars,x          ; actorX - cameraPosX
+  bpl +
+    eor #$FFFF
+    inc a                            ; abs(diff)
++
+  ldx #SCUMM_VAR_CAMERA_THRESHOLD*2
+  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_THRESHOLD
+  bcc _mc.checkPan                   ; within threshold, don't update dest
+
+  ; Set cameraDest = actorX
+  lda.w SCUMM.scratch3
+  sta.w SCUMM.cameraDest
+
+_mc.checkPan:
+  ; Clamp cameraDest to [MIN_X, MAX_X]
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  lda.w SCUMM.cameraDest
+  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_MIN_X
+  bcs +
+    lda.w SCUMM.globalVars,x
+    sta.w SCUMM.cameraDest
++
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  lda.w SCUMM.cameraDest
+  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_MAX_X
+  bcc +
+  beq +
+    lda.w SCUMM.globalVars,x
+    sta.w SCUMM.cameraDest
++
+
+  ; Move cameraPosX toward cameraDest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x          ; current camera pos
+  cmp.w SCUMM.cameraDest
+  beq _mc.updateRoom                ; already at destination
+  bcc _mc.moveRight
+
+  ; Move left: step = min(cur - dest, fast_x)
+  sec
+  sbc.w SCUMM.cameraDest
+  sta.w SCUMM.scratch3              ; delta
+  ldx #SCUMM_VAR_CAMERA_FAST_X*2
+  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
+  bcc +
+    lda.w SCUMM.globalVars,x
+    sta.w SCUMM.scratch3
++
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  sec
+  sbc.w SCUMM.scratch3
+  sta.w SCUMM.globalVars,x
+  bra _mc.updateRoom
+
+_mc.moveRight:
+  ; step = min(dest - cur, fast_x)
+  lda.w SCUMM.cameraDest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sec
+  sbc.w SCUMM.globalVars,x          ; delta = dest - cur
+  sta.w SCUMM.scratch3
+  ldx #SCUMM_VAR_CAMERA_FAST_X*2
+  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
+  bcc +
+    lda.w SCUMM.globalVars,x
+    sta.w SCUMM.scratch3
++
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  clc
+  adc.w SCUMM.scratch3
+  sta.w SCUMM.globalVars,x
+
+_mc.updateRoom:
+  ; Convert center to left edge: cameraX = cameraPosX - 128
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x          ; VAR_CAMERA_POS_X
+  sec
+  sbc #128
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.cameraX
+
   rtl
 
 .ends

@@ -27,7 +27,7 @@ from scumm.resource import parse_data_file
 from scumm.palette import parse_clut, save_palette_bin, save_palette_png
 from scumm.room_gfx import extract_background
 from scumm.object_gfx import extract_object_images
-from scumm.metadata import extract_metadata, extract_scripts
+from scumm.metadata import extract_metadata, extract_scripts, export_walkbox_binary
 from scumm.costume import extract_costumes
 from scumm.charset import extract_charsets
 from scumm.manifest import generate_manifest
@@ -96,6 +96,7 @@ def extract_room(room_resource, room_name: str, output_dir: Path,
         'costumes': 0,
         'sounds': 0,
         'charsets': 0,
+        'walkboxes': 0,
     }
 
     # Get dimensions
@@ -123,6 +124,7 @@ def extract_room(room_resource, room_name: str, output_dir: Path,
     # Metadata
     if 'metadata' in extract_types or 'all' in extract_types:
         extract_metadata(room_resource, room_dir, room_name)
+        info['walkboxes'] = export_walkbox_binary(room_resource, room_dir)
 
     # Scripts
     if 'scripts' in extract_types or 'all' in extract_types:

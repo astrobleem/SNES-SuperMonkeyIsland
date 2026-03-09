@@ -357,6 +357,18 @@ _init.zeroDialogTilemap:
   lda #1
   sta.w SCUMM.newRoom
 
+  ;--- Zero walk path state (prevent garbage movement before walkActorTo) ---
+  ldx #0
+  lda #0
+_init.zeroWalkPaths:
+  sta.w SCUMM.walkPathLen,x
+  sta.w SCUMM.walkPathIdx,x
+  sta.w SCUMM.actorWalkBox,x
+  sta.w SCUMM.actorIgnoreBoxes,x
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _init.zeroWalkPaths
+
   ;--- Seed ego actor as "moving" so boot script wait loop exits ---
   ; MI1 boot script (script 1) loops on getActorMoving(VAR_EGO) waiting
   ; for the intro cutscene to walk the ego. We skip the intro, so seed
@@ -1519,6 +1531,655 @@ scummvm.triggerBadOpcode:
 
 .ends
 
+;===================================================================
+; Walkbox Pathfinding — superfree section
+;
+; Contains: pointInBox, findBox, getNextBox, getBoxEdgeCrossing,
+; buildWalkPath.  All routines use jsr/rts internally.
+; Entry points are jsl/rtl wrappers.
+;===================================================================
+.section "ScummVM walkbox pathfinding" superfree
+
+;-------------------------------------------------------------------
+; pointInBox — test if point (px, py) is inside walkbox boxIdx
+;
+; Walkbox = quadrilateral with vertices UL, UR, LR, LL.
+; Uses scanline: check Y in range, then interpolate left/right edges.
+;
+; @param tmp+0 (word) px
+; @param tmp+2 (word) py
+; @param tmp+4 (word) boxIdx
+; @return carry set if inside, clear if outside
+;-------------------------------------------------------------------
+scummvm.pointInBox:
+  .ACCU 16
+  .INDEX 16
+  ;compute BOXD entry offset: $7F5002 + boxIdx * 20
+  lda.b tmp+4
+  ;multiply by 20: n*16 + n*4
+  asl a               ;*2
+  asl a               ;*4
+  sta.b tmp+6
+  asl a               ;*8
+  asl a               ;*16
+  clc
+  adc.b tmp+6         ;*20
+  clc
+  adc #$5002          ;base = $7F5000 + 2 (skip count word)
+  tax                 ;X = offset within $7F bank
+
+  ;read Y coords: uly(+2), ury(+6), lry(+10), lly(+14)
+  lda.l $7F0002,x     ;uly
+  sta.b tmp+6
+  lda.l $7F0006,x     ;ury
+  sta.b tmp+8
+
+  ;y_top = min(uly, ury)
+  lda.b tmp+6
+  cmp.b tmp+8
+  bcc +               ;uly < ury, uly is min
+    lda.b tmp+8
++
+  ;check py >= y_top
+  cmp.b tmp+2         ;y_top vs py
+  beq +
+  bcc +               ;y_top <= py OK
+    clc               ;py < y_top, outside
+    rts
++
+
+  lda.l $7F000A,x     ;lry
+  sta.b tmp+10
+  lda.l $7F000E,x     ;lly
+  sta.b tmp+12
+
+  ;y_bot = max(lry, lly)
+  lda.b tmp+10
+  cmp.b tmp+12
+  bcs +               ;lry >= lly, lry is max
+    lda.b tmp+12
++
+  ;check py <= y_bot
+  sta.b tmp+14        ;y_bot
+  lda.b tmp+2         ;py
+  cmp.b tmp+14
+  beq +
+  bcc +               ;py < y_bot OK
+    clc               ;py > y_bot, outside
+    rts
++
+
+  ;read X coords: ulx(+0), urx(+4), lrx(+8), llx(+12)
+  ;interpolate left edge X at py: between UL and LL
+  ;left_x = ulx + (py - uly) * (llx - ulx) / (lly - uly)
+  ;if lly == uly, left_x = ulx (zero-height edge)
+
+  ;left edge: UL -> LL
+  lda.l $7F000E,x     ;lly
+  sec
+  sbc.b tmp+6         ;lly - uly = dy_left
+  beq _pib.leftFlat
+  sta.b tmp+16        ;dy_left (denominator)
+  lda.b tmp+2         ;py
+  sec
+  sbc.b tmp+6         ;py - uly
+  sta.b tmp+18        ;numerator_y
+
+  lda.l $7F000C,x     ;llx
+  sec
+  sbc.l $7F0000,x     ;llx - ulx = dx_left
+  jsr _pib.signedMul  ;(py-uly) * (llx-ulx) in tmp+20:22
+  jsr _pib.signedDiv  ;result / dy_left in tmp+20
+  lda.b tmp+20
+  clc
+  adc.l $7F0000,x     ;+ ulx
+  bra _pib.leftDone
+
+_pib.leftFlat:
+  lda.l $7F0000,x     ;ulx (flat edge)
+
+_pib.leftDone:
+  sta.b tmp+20        ;left_x
+
+  ;check px >= left_x
+  lda.b tmp
+  cmp.b tmp+20
+  bcs +               ;px >= left_x OK (unsigned compare OK for positive coords)
+    clc               ;px < left_x, outside
+    rts
++
+
+  ;right edge: UR -> LR
+  lda.l $7F000A,x     ;lry
+  sec
+  sbc.b tmp+8         ;lry - ury = dy_right
+  beq _pib.rightFlat
+  sta.b tmp+16        ;dy_right (denominator)
+  lda.b tmp+2         ;py
+  sec
+  sbc.b tmp+8         ;py - ury
+  sta.b tmp+18        ;numerator_y
+
+  lda.l $7F0008,x     ;lrx
+  sec
+  sbc.l $7F0004,x     ;lrx - urx = dx_right
+  jsr _pib.signedMul  ;(py-ury) * (lrx-urx) in tmp+20:22
+  jsr _pib.signedDiv  ;result / dy_right in tmp+20
+  lda.b tmp+20
+  clc
+  adc.l $7F0004,x     ;+ urx
+  bra _pib.rightDone
+
+_pib.rightFlat:
+  lda.l $7F0004,x     ;urx (flat edge)
+
+_pib.rightDone:
+  sta.b tmp+22        ;right_x
+
+  ;check px <= right_x
+  lda.b tmp           ;px
+  cmp.b tmp+22
+  beq +
+  bcc +               ;px < right_x OK
+    clc               ;px > right_x, outside
+    rts
++
+  sec                 ;inside!
+  rts
+
+;--- helper: signed multiply tmp+18 * A -> tmp+20:22 (32-bit result) ---
+;uses shift-and-add, handles sign
+_pib.signedMul:
+  sta.b tmp+24        ;dx
+  ;compute sign: XOR of signs of tmp+18 and tmp+24
+  stz.b tmp+26        ;result sign (0=positive)
+  lda.b tmp+18
+  bpl +
+    eor #$FFFF
+    inc a
+    sta.b tmp+18
+    lda #1
+    sta.b tmp+26
++
+  lda.b tmp+24
+  bpl +
+    eor #$FFFF
+    inc a
+    sta.b tmp+24
+    lda.b tmp+26
+    eor #1
+    sta.b tmp+26
++
+  ;unsigned multiply: tmp+18 * tmp+24 -> tmp+20:22 (shift-right accumulate)
+  stz.b tmp+20
+  lda.b tmp+18
+  beq _pib.mulZero
+  lda #0               ;A = partial product high
+  ldy #16
+_pib.mulLoop:
+  lsr.b tmp+24         ;shift multiplier right, bit to carry
+  bcc +
+    clc
+    adc.b tmp+18       ;partial += multiplicand
++
+  ror a                ;shift 32-bit result right through carry
+  ror.b tmp+20
+  dey
+  bne _pib.mulLoop
+  sta.b tmp+22         ;store high word
+  bra _pib.mulDone
+_pib.mulZero:
+  stz.b tmp+22
+
+_pib.mulDone:
+  ;negate if sign flag set
+  lda.b tmp+26
+  beq +
+    lda.b tmp+20
+    eor #$FFFF
+    clc
+    adc #1
+    sta.b tmp+20
+    lda.b tmp+22
+    eor #$FFFF
+    adc #0
+    sta.b tmp+22
++
+  rts
+
+;--- helper: signed divide tmp+20:22 / tmp+16 -> tmp+20 (16-bit quotient) ---
+_pib.signedDiv:
+  ;handle sign
+  stz.b tmp+26
+  lda.b tmp+22        ;high word of dividend (sign indicator)
+  bpl +
+    ;negate 32-bit dividend
+    lda.b tmp+20
+    eor #$FFFF
+    clc
+    adc #1
+    sta.b tmp+20
+    lda.b tmp+22
+    eor #$FFFF
+    adc #0
+    sta.b tmp+22
+    lda #1
+    sta.b tmp+26
++
+  lda.b tmp+16        ;divisor
+  bpl +
+    eor #$FFFF
+    inc a
+    sta.b tmp+16
+    lda.b tmp+26
+    eor #1
+    sta.b tmp+26
++
+  ;unsigned 32/16 divide: tmp+20:22 / tmp+16 -> tmp+20
+  lda.b tmp+16
+  beq _pib.divZero
+  ldy #16
+  lda #0              ;remainder
+_pib.divLoop:
+  asl.b tmp+20
+  rol.b tmp+22
+  rol a
+  cmp.b tmp+16
+  bcc +
+    sbc.b tmp+16
+    inc.b tmp+20       ;set low bit of quotient
++
+  dey
+  bne _pib.divLoop
+
+  ;negate quotient if needed
+  lda.b tmp+26
+  beq +
+    lda.b tmp+20
+    eor #$FFFF
+    inc a
+    sta.b tmp+20
++
+  rts
+
+_pib.divZero:
+  stz.b tmp+20
+  rts
+
+
+;-------------------------------------------------------------------
+; findBox — find which walkbox contains point (px, py)
+;
+; @param tmp+0 (word) px
+; @param tmp+2 (word) py
+; @return A = boxIdx (0-based), or $FF if not in any box
+;-------------------------------------------------------------------
+scummvm.findBox:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.boxCount
+  beq _findBox.none
+  ;skip box 0 (sentinel), scan boxes 1..boxCount-1
+  lda #1
+_findBox.loop:
+  cmp.w SCUMM.boxCount
+  bcs _findBox.none
+  pha
+  sta.b tmp+4          ;boxIdx for pointInBox
+  jsr scummvm.pointInBox
+  pla
+  bcs _findBox.found
+  inc a
+  bra _findBox.loop
+
+_findBox.none:
+  lda #$00FF
+  rts
+
+_findBox.found:
+  ;A still has the box index
+  rts
+
+
+;-------------------------------------------------------------------
+; getNextBox — routing matrix lookup
+;
+; @param A = from box
+; @param Y = to box
+; @return A = next hop box, or $FF if no path
+;-------------------------------------------------------------------
+scummvm.getNextBox:
+  .ACCU 16
+  .INDEX 16
+  phx
+  ;idx = from * boxCount + to
+  pha                  ;save from
+  ;multiply from * boxCount using repeated addition (boxCount usually < 64)
+  ldx.w SCUMM.boxCount
+  beq _gnb.noPath
+  sta.b tmp+6          ;from
+  ;from * boxCount: use shift-add for speed
+  ;A = from, need A * boxCount
+  phy                  ;save Y (to) — _gnb.mul trashes Y
+  jsr _gnb.mul
+  ;tmp+6 = from * boxCount
+  pla                  ;recover to (was Y, now in A)
+  clc
+  adc.b tmp+6          ;from * boxCount + to = matrix index
+  tax
+  pla                  ;discard saved from
+
+  ;read matrix[idx] from $7F bank at boxMatrixPtr + idx
+  ;boxMatrixPtr is within $7F
+  txa
+  clc
+  adc.w SCUMM.boxMatrixPtr
+  tax
+  sep #$20
+  lda.l $7F0000,x
+  rep #$20
+  and #$00FF
+  plx
+  rts
+
+_gnb.noPath:
+  pla
+  lda #$00FF
+  plx
+  rts
+
+;multiply A * SCUMM.boxCount -> tmp+6 (clobbers A)
+_gnb.mul:
+  ;simple 16x16 multiply via shift-add (boxCount is small)
+  sta.b tmp+8          ;multiplicand (from)
+  stz.b tmp+6          ;result
+  lda.w SCUMM.boxCount ;multiplier
+  sta.b tmp+10
+  ldy #16
+- lsr.b tmp+10
+  bcc +
+    lda.b tmp+6
+    clc
+    adc.b tmp+8
+    sta.b tmp+6
++
+  asl.b tmp+8
+  dey
+  bne -
+  rts
+
+
+;-------------------------------------------------------------------
+; getBoxEdgeCrossing — find crossing waypoint between two adjacent boxes
+;
+; Finds overlapping Y range of both boxes, picks midpoint Y,
+; then averages the X coords of both boxes at that Y.
+;
+; @param A = boxA index
+; @param Y = boxB index
+; @return tmp+0 = crossX, tmp+2 = crossY
+;-------------------------------------------------------------------
+scummvm.getBoxEdgeCrossing:
+  .ACCU 16
+  .INDEX 16
+  ;compute BOXD offset for boxA
+  pha
+  phy
+  jsr _gbe.boxOffset   ;X = BOXD offset for box in A
+  stx.b tmp+28
+
+  ;read boxA Y range
+  lda.l $7F0002,x      ;uly
+  sta.b tmp+6
+  lda.l $7F0006,x      ;ury
+  cmp.b tmp+6
+  bcs +
+    sta.b tmp+6         ;y_topA = min(uly, ury)
++
+  lda.l $7F000A,x      ;lry
+  sta.b tmp+8
+  lda.l $7F000E,x      ;lly
+  cmp.b tmp+8
+  bcc +
+    sta.b tmp+8         ;y_botA = max(lry, lly)
++
+
+  ;compute BOXD offset for boxB
+  pla                   ;boxB (was pushed as Y)
+  jsr _gbe.boxOffset
+  stx.b tmp+30
+
+  ;read boxB Y range
+  lda.l $7F0002,x      ;uly
+  sta.b tmp+10
+  lda.l $7F0006,x      ;ury
+  cmp.b tmp+10
+  bcs +
+    sta.b tmp+10        ;y_topB = min(uly, ury)
++
+  lda.l $7F000A,x      ;lry
+  sta.b tmp+12
+  lda.l $7F000E,x      ;lly
+  cmp.b tmp+12
+  bcc +
+    sta.b tmp+12        ;y_botB = max(lry, lly)
++
+
+  pla                   ;discard saved boxA
+
+  ;overlap Y range: y_top = max(y_topA, y_topB), y_bot = min(y_botA, y_botB)
+  lda.b tmp+6           ;y_topA
+  cmp.b tmp+10          ;y_topB
+  bcs +
+    lda.b tmp+10         ;max
++
+  sta.b tmp+14           ;overlap y_top
+
+  lda.b tmp+8           ;y_botA
+  cmp.b tmp+12          ;y_botB
+  bcc +
+    lda.b tmp+12         ;min
++
+  sta.b tmp+16           ;overlap y_bot
+
+  ;crossY = (y_top + y_bot) / 2
+  lda.b tmp+14
+  clc
+  adc.b tmp+16
+  lsr a                  ;unsigned divide by 2 (coords are positive screen coords)
+  sta.b tmp+2            ;crossY
+
+  ;crossX = midpoint of left and right edges at crossY
+  ;for simplicity, average the horizontal midpoints of both boxes at crossY
+  ;use the overlapping X range at crossY
+  ;simplified: average ulx+urx of both boxes (center X of each) then average
+  ldx.b tmp+28           ;boxA BOXD offset
+  lda.l $7F0000,x        ;boxA ulx
+  clc
+  adc.l $7F0004,x        ;boxA urx
+  lsr a                  ;boxA center X
+  sta.b tmp+18
+
+  ldx.b tmp+30           ;boxB BOXD offset
+  lda.l $7F0000,x        ;boxB ulx
+  clc
+  adc.l $7F0004,x        ;boxB urx
+  lsr a                  ;boxB center X
+  clc
+  adc.b tmp+18
+  lsr a                  ;average of both center X
+  sta.b tmp             ;crossX
+
+  rts
+
+;helper: compute BOXD offset in $7F bank for box index in A
+_gbe.boxOffset:
+  ;offset = $5002 + A * 20
+  asl a
+  asl a
+  sta.b tmp+18
+  asl a
+  asl a
+  clc
+  adc.b tmp+18          ;*20
+  clc
+  adc #$5002
+  tax
+  rts
+
+
+;-------------------------------------------------------------------
+; buildWalkPath — compute waypoints from current pos to target pos
+;
+; @param A = actor index (0-15)
+; @param tmp+0 = startX
+; @param tmp+2 = startY
+; @param tmp+4 = targetX
+; @param tmp+6 = targetY
+; @return walk path stored in SCUMM.walkPath* arrays
+;-------------------------------------------------------------------
+scummvm.buildWalkPath:
+  .ACCU 16
+  .INDEX 16
+  pha                   ;save actor index
+
+  ;save target coords to WRAM before findBox trashes DP tmp
+  lda.b tmp+4
+  sta.w SCUMM.bwpTargetX
+  lda.b tmp+6
+  sta.w SCUMM.bwpTargetY
+
+  ;find source box (tmp+0=startX, tmp+2=startY already set)
+  jsr scummvm.findBox   ;trashes tmp+4-26; result in A
+  sta.w SCUMM.bwpCurBox
+
+  ;find dest box — copy target to tmp+0,+2 for findBox
+  lda.w SCUMM.bwpTargetX
+  sta.b tmp
+  lda.w SCUMM.bwpTargetY
+  sta.b tmp+2
+  jsr scummvm.findBox   ;trashes tmp+4-26; result in A
+  sta.w SCUMM.bwpDestBox
+
+  ;compute walk path array base for this actor
+  ;walkPathX base = SCUMM.walkPathX + actor * WALK_MAX_WAYPOINTS * 2
+  pla                   ;actor index
+  pha
+  and #$000F
+  asl a                 ;*2
+  asl a                 ;*4
+  asl a                 ;*8
+  asl a                 ;*16 (= WALK_MAX_WAYPOINTS * 2)
+  sta.w SCUMM.bwpArrayOfs
+
+  ;pathLen = 0
+  stz.w SCUMM.bwpPathLen
+
+  ;if curBox == destBox or curBox == $FF or destBox == $FF, skip routing
+  lda.w SCUMM.bwpCurBox
+  cmp #$00FF
+  beq _bwp.directPath
+  lda.w SCUMM.bwpDestBox
+  cmp #$00FF
+  beq _bwp.directPath
+  lda.w SCUMM.bwpCurBox
+  cmp.w SCUMM.bwpDestBox
+  beq _bwp.directPath
+
+  ;routing loop: follow BOXM until we reach destBox
+_bwp.routeLoop:
+  lda.w SCUMM.bwpPathLen
+  cmp #(WALK_MAX_WAYPOINTS - 1) * 2
+  bcs _bwp.directPath   ;path full, just go direct
+
+  ;nextBox = getNextBox(curBox, destBox)
+  lda.w SCUMM.bwpCurBox
+  ldy.w SCUMM.bwpDestBox
+  jsr scummvm.getNextBox ;trashes tmp+6-10; result in A
+  cmp #$00FF
+  beq _bwp.directPath   ;no path
+  cmp.w SCUMM.bwpCurBox
+  beq _bwp.directPath   ;stuck (self-loop)
+  pha                   ;save nextBox on stack
+
+  ;get crossing waypoint between curBox and nextBox
+  tay                   ;Y = nextBox
+  lda.w SCUMM.bwpCurBox ;A = curBox
+  jsr scummvm.getBoxEdgeCrossing ;trashes tmp+0-30; output: tmp+0=crossX, tmp+2=crossY
+
+  ;store waypoint at walkPath[actor][pathLen]
+  lda.w SCUMM.bwpPathLen
+  clc
+  adc.w SCUMM.bwpArrayOfs
+  tax
+  lda.b tmp             ;crossX
+  sta.w SCUMM.walkPathX,x
+  lda.b tmp+2           ;crossY
+  sta.w SCUMM.walkPathY,x
+
+  ;advance pathLen
+  lda.w SCUMM.bwpPathLen
+  clc
+  adc #2                ;next waypoint slot (2 bytes per entry)
+  sta.w SCUMM.bwpPathLen
+
+  ;curBox = nextBox
+  pla                   ;pop nextBox
+  sta.w SCUMM.bwpCurBox
+  cmp.w SCUMM.bwpDestBox
+  bne _bwp.routeLoop
+
+_bwp.directPath:
+  ;final waypoint = target position
+  lda.w SCUMM.bwpPathLen
+  clc
+  adc.w SCUMM.bwpArrayOfs
+  tax
+  lda.w SCUMM.bwpTargetX
+  sta.w SCUMM.walkPathX,x
+  lda.w SCUMM.bwpTargetY
+  sta.w SCUMM.walkPathY,x
+
+  ;pathLen = (bwpPathLen / 2) + 1  (convert byte offset to index, add final wp)
+  lda.w SCUMM.bwpPathLen
+  lsr a
+  inc a
+  sta.w SCUMM.bwpPathLen
+
+  ;store pathLen and reset pathIdx for this actor
+  pla                   ;actor index (pushed at entry)
+  and #$000F
+  tax
+  lda.w SCUMM.bwpPathLen
+  sep #$20
+  sta.w SCUMM.walkPathLen,x
+  lda #0
+  sta.w SCUMM.walkPathIdx,x
+
+  ;update actorWalkBox to curBox
+  lda.w SCUMM.bwpCurBox
+  sta.w SCUMM.actorWalkBox,x
+  rep #$20
+
+  rts
+
+
+;-------------------------------------------------------------------
+; jsl/rtl wrappers for external callers
+;-------------------------------------------------------------------
+scummvm.buildWalkPath_long:
+  jsr scummvm.buildWalkPath
+  rtl
+
+scummvm.findBox_long:
+  jsr scummvm.findBox
+  rtl
+
+;pad to ~2000 bytes total to stabilize WLA-DX linker bin-packing
+;(prevents TAD audio sections from being reshuffled to bank 1)
+.dsb 1200 $EA
+
+.ends
 
 ;===================================================================
 ; SCUMM Opcode Dispatch — superfree section
@@ -2939,12 +3600,37 @@ _actorOps.dispatch:
   ;--- Sub 0x12: neverZClip (0 params)
   cmp #$12
   beq _actorOps.jmp_none
-  ;--- Sub 0x14: ignoreBoxes (0 params)
+  ;--- Sub 0x14: ignoreBoxes (0 params) — set actorIgnoreBoxes[actor]=1
   cmp #$14
-  beq _actorOps.jmp_none
-  ;--- Sub 0x15: followBoxes (0 params)
+  bne +
+    lda 1,s                          ; actor struct offset from stack
+    lsr a
+    lsr a
+    lsr a
+    lsr a                            ; /16 = actor number
+    and #$000F
+    tax
+    sep #$20
+    lda #1
+    sta.w SCUMM.actorIgnoreBoxes,x
+    rep #$20
+    jmp _actorOps.subLoop
++
+  ;--- Sub 0x15: followBoxes (0 params) — set actorIgnoreBoxes[actor]=0
   cmp #$15
-  beq _actorOps.jmp_none
+  bne +
+    lda 1,s                          ; actor struct offset from stack
+    lsr a
+    lsr a
+    lsr a
+    lsr a                            ; /16 = actor number
+    and #$000F
+    tax
+    sep #$20
+    stz.w SCUMM.actorIgnoreBoxes,x
+    rep #$20
+    jmp _actorOps.subLoop
++
   ;--- Sub 0x0E: initFrame — wire to actor table
   cmp #$0E
   bne +
@@ -3719,19 +4405,80 @@ op_walkActorTo:
   lsr a
   lsr a
   lsr a
-  lsr a                              ; actor number
+  lsr a                              ; actor number (0-255)
+  sta.w SCUMM.scratch3               ; save actor index
+
+  ; Store walk targets in parallel arrays (word index = actor * 2)
   asl a                              ; × 2 for word index
   tax
-
-  ; Store walk targets in parallel arrays
   pla                                ; target x
   sta.w SCUMM.actorTargetX,x
   lda.w SCUMM.scratch               ; target y
   sta.w SCUMM.actorTargetY,x
 
-  ; Initialize animation state for this actor
+  ; Build walk path using walkbox routing
+  ; Check if actor should ignore boxes
+  lda.w SCUMM.scratch3              ; actor index
+  and #$000F
+  tax
+  sep #$20
+  lda.w SCUMM.actorIgnoreBoxes,x
+  rep #$20
+  and #$00FF
+  bne _walkActorTo.direct           ; skip pathfinding
+
+  ; Check if walkboxes are loaded
+  lda.w SCUMM.boxCount
+  beq _walkActorTo.direct           ; no boxes, straight-line
+
+  ; Set up buildWalkPath params
+  ldx.w SCUMM.scratch2              ; actor struct offset
+  lda.w SCUMM.actors.x,x           ; startX
+  sta.b tmp
+  lda.w SCUMM.actors.y,x           ; startY
+  sta.b tmp+2
+  lda.w SCUMM.scratch3
+  asl a                             ; word index
+  tax
+  lda.w SCUMM.actorTargetX,x       ; targetX
+  sta.b tmp+4
+  lda.w SCUMM.actorTargetY,x       ; targetY
+  sta.b tmp+6
+  lda.w SCUMM.scratch3             ; actor index
+  jsl scummvm.buildWalkPath_long
+  bra _walkActorTo.anim
+
+_walkActorTo.direct:
+  ; Direct path: single waypoint = target
+  lda.w SCUMM.scratch3             ; actor index
+  and #$000F
+  tax
+  sep #$20
+  lda #1
+  sta.w SCUMM.walkPathLen,x
+  lda #0
+  sta.w SCUMM.walkPathIdx,x
+  rep #$20
+
+  ; Copy target to walkPathX/Y[actor][0]
   txa
-  lsr a                              ; back to byte index
+  asl a                             ; *2
+  asl a                             ; *4
+  asl a                             ; *8
+  asl a                             ; *16 (WALK_MAX_WAYPOINTS * 2)
+  tax
+  lda.w SCUMM.scratch3
+  asl a                             ; word index for target arrays
+  tay
+  lda.w SCUMM.actorTargetX,y
+  sta.w SCUMM.walkPathX,x
+  lda.w SCUMM.actorTargetY,y
+  sta.w SCUMM.walkPathY,x
+
+_walkActorTo.anim:
+  ; Initialize animation state for this actor
+  lda.w SCUMM.scratch3
+  and #$000F
   tax
   lda #WALK_ANIM_SPEED
   sep #$20
@@ -3751,10 +4498,38 @@ op_walkActorTo:
 ; isActorInBox ($1F, $5F, $9F, $DF) -- p8[7] + p8[6] + jump, return false
 op_isActorInBox:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; actor
+  jsr _scummvm.getVarOrDirectByte    ; actor number
+  jsr _scummvm.getActorPtr           ; X = actor struct offset
+  stx.w SCUMM.scratch3              ; save actor struct ptr
+
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte    ; box
-  jsr _scummvm.fetchWord             ; jump offset (skip — always false)
+  jsr _scummvm.getVarOrDirectByte    ; box index
+  sta.w SCUMM.scratch               ; save box
+
+  jsr _scummvm.fetchWord             ; jump offset
+  sta.w SCUMM.scratch2
+
+  ; Get actor position
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  lda.w SCUMM.scratch               ; box index
+  sta.b tmp+4
+
+  ; Check if walkboxes loaded
+  lda.w SCUMM.boxCount
+  beq _isActorInBox.no              ; no boxes → not in any box
+
+  jsl scummvm.findBox_long           ; tmp+0/+2 = point, returns A=boxIdx
+  cmp.w SCUMM.scratch               ; found box == requested box?
+  beq _isActorInBox.yes
+
+_isActorInBox.no:
+  ; NOT in box → take jump
+  jsr _scummvm.takeRelJump
+_isActorInBox.yes:
   clc
   rts
 
@@ -4035,6 +4810,17 @@ op_getActorFacing:
 op_getActorWidth:
 op_getActorCostume:
 op_getActorWalkBox:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; actor number
+  and #$000F                         ; clamp to 0-15
+  tax
+  lda.w SCUMM.actorWalkBox,x
+  and #$00FF
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
 op_getInventoryCount:
 op_getRandomNr:
 op_getStringWidth:
@@ -4353,7 +5139,8 @@ _div16.pos:
 
 ;===================================================================
 ; _scummvm.updateActors
-; Per-frame walk movement + animation. MVP: actor 1 only.
+; Per-frame walk movement + animation with waypoint following.
+; MVP: actor 1 only. Uses walkPath arrays for box-constrained routing.
 ;===================================================================
 .define WALK_SPEED 2
 
@@ -4372,14 +5159,31 @@ _scummvm.updateActors_body:
   bne +
   rts
 +
-  ; dx = targetX - x
-  ldx #2                            ; actor 1 word offset
-  lda.w SCUMM.actorTargetX,x
+  ; Check if walk path is valid (pathLen > 0)
+  ; moving=1 may be seeded by init before walkActorTo has run
+  ldx #1
+  lda.w SCUMM.walkPathLen,x
+  and #$00FF
+  bne +
+  rts
++
+  ; Get current waypoint from walk path
+  ; Actor 1: byte index=1, waypoint array base = SCUMM.walkPathX + 1*16 = +16
+  ldx #1
+  lda.w SCUMM.walkPathIdx,x
+  and #$00FF
+  asl a                             ; * 2 for word index into waypoint array
+  clc
+  adc #1 * WALK_MAX_WAYPOINTS * 2   ; actor 1 base offset (=16)
+  tax
+
+  ; dx = waypointX - x
+  lda.w SCUMM.walkPathX,x
   sec
   sbc.w SCUMM.actors.2.x
   sta.w SCUMM.scratch               ; dx
 
-  lda.w SCUMM.actorTargetY,x
+  lda.w SCUMM.walkPathY,x
   sec
   sbc.w SCUMM.actors.2.y
   sta.w SCUMM.scratch2              ; dy
@@ -4404,23 +5208,44 @@ _scummvm.updateActors_body:
   cmp #WALK_SPEED + 1
   bcs _ua.notArrived
 
-  ; --- Arrived ---
-  ldx #2
-  lda.w SCUMM.actorTargetX,x
+  ; --- Arrived at waypoint ---
+  ; Snap to waypoint position
+  ldx #1
+  lda.w SCUMM.walkPathIdx,x
+  and #$00FF
+  asl a
+  clc
+  adc #1 * WALK_MAX_WAYPOINTS * 2
+  tax
+  lda.w SCUMM.walkPathX,x
   sta.w SCUMM.actors.2.x
-  lda.w SCUMM.actorTargetY,x
+  lda.w SCUMM.walkPathY,x
   sta.w SCUMM.actors.2.y
+
+  ; Advance to next waypoint
   sep #$20
+  ldx #1
+  lda.w SCUMM.walkPathIdx,x
+  inc a
+  cmp.w SCUMM.walkPathLen,x
+  bcs _ua.fullyArrived
+  sta.w SCUMM.walkPathIdx,x
+  rep #$20
+  rts                               ; keep moving=1, next frame targets new waypoint
+
+_ua.fullyArrived:
+  .ACCU 8
   stz.w SCUMM.actors.2.moving
   ldx #1
   stz.w SCUMM.actorAnimFrame,x
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
   rep #$20
+  .ACCU 16
   rts
 
 _ua.notArrived:
-  ; Move X
+  ; Move X toward current waypoint
   lda.w SCUMM.actorOamCount         ; |dx|
   cmp #WALK_SPEED + 1
   bcc +
@@ -4435,7 +5260,7 @@ _ua.dxPos:
   adc.w SCUMM.actors.2.x
   sta.w SCUMM.actors.2.x
 
-  ; Move Y
+  ; Move Y toward current waypoint
   lda.w SCUMM.scratch2
   bpl +
   eor #$FFFF
@@ -5887,8 +6712,29 @@ _uc.posOk:
   ldx #2
   pla
   sta.w SCUMM.actorTargetX,x          ; target X
+  pha                                  ; re-save target X for buildWalkPath
   lda.w SCUMM.scratch
   sta.w SCUMM.actorTargetY,x          ; target Y
+
+  ; Build walk path with walkbox routing (guarded by boxCount)
+  lda.w SCUMM.boxCount
+  beq _uc.directWalk
+
+  lda.w SCUMM.actors.2.x             ; startX
+  sta.b tmp
+  lda.w SCUMM.actors.2.y             ; startY
+  sta.b tmp+2
+  pla                                 ; targetX
+  sta.b tmp+4
+  lda.w SCUMM.scratch                ; targetY
+  sta.b tmp+6
+  lda #1                              ; actor index = 1 (Guybrush)
+  jsl scummvm.buildWalkPath_long
+  bra _uc.walkDone
+
+_uc.directWalk:
+  pla                                 ; consume saved targetX
+_uc.walkDone:
 
   ; Init walk animation
   ldx #1                              ; actor 1 byte index

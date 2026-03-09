@@ -36,10 +36,14 @@
 .define SCUMM_FLAG_BIT6     $0040
 .define SCUMM_FLAG_BIT5     $0020
 
-; Script cache in bank $7F (after scroll system buffers)
-.define SCUMM_CACHE_BASE    $5000   ;offset within bank $7F
-.define SCUMM_CACHE_SIZE    $B000   ;44KB cache ($7F5000-$7FFFFF)
-.define SCUMM_CACHE_WRAM    $7F5000 ;long address
+; Walkbox data in bank $7F (after scroll NMI slots at $7F4C00)
+.define SCUMM_BOX_WRAM       $7F5000 ;long address — walkbox buffer start
+.define SCUMM_BOX_MAX_SIZE   $1400   ;5120 bytes max (worst case: 62 boxes)
+
+; Script cache in bank $7F (shifted to make room for walkbox data)
+.define SCUMM_CACHE_BASE    $6400   ;offset within bank $7F
+.define SCUMM_CACHE_SIZE    $9C00   ;39KB cache ($7F6400-$7FFFFF)
+.define SCUMM_CACHE_WRAM    $7F6400 ;long address
 
 ; Script WHERE constants (for slot.where field)
 .define SCUMM_WHERE_GLOBAL  0
@@ -143,6 +147,7 @@ SCUMM.currentOpcode       dw      ;last fetched opcode byte (zero-extended)
 SCUMM.resultVar           dw      ;target variable for getResultPos
 SCUMM.scratch             dw      ;general scratch register
 SCUMM.scratch2            dw      ;second scratch
+SCUMM.scratch3            dw      ;third scratch
 SCUMM.cacheWritePtr       dw      ;next free offset in script cache
 SCUMM.scriptSectionLo     dw      ;MSU-1 script section offset (low 16)
 SCUMM.scriptSectionHi     dw      ;MSU-1 script section offset (high 16)
@@ -208,6 +213,52 @@ SCUMM.actorTargetY   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination Y
 SCUMM.actorAnimFrame ds SCUMM_WALK_ACTORS      ; 16B — walk cycle index (0-11)
 SCUMM.actorAnimTimer ds SCUMM_WALK_ACTORS      ; 16B — frame delay countdown
 SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
+.ends
+
+; Walkbox BOXD entry struct (20 bytes per walkbox, matches SCUMM v5 format)
+.struct scummBoxEntry
+  ulx  dw    ;+$00  upper-left X (signed)
+  uly  dw    ;+$02  upper-left Y (signed)
+  urx  dw    ;+$04  upper-right X
+  ury  dw    ;+$06  upper-right Y
+  lrx  dw    ;+$08  lower-right X
+  lry  dw    ;+$0A  lower-right Y
+  llx  dw    ;+$0C  lower-left X
+  lly  dw    ;+$0E  lower-left Y
+  mask db    ;+$10
+  flags db   ;+$11
+  scale dw   ;+$12
+.endst
+
+; Walkbox data — bulk data in $7F:4C00 (contiguous: count + BOXD + matrix)
+; Small state vars in bank $7E lowram for fast opcode access
+.define SCUMM_MAX_BOXES      62
+.define WALK_MAX_WAYPOINTS   8
+
+.ramsection "scumm walkbox state" bank 0 slot 1
+SCUMM.boxCount        dw      ; number of walkboxes in current room
+SCUMM.boxMatrixPtr    dw      ; offset within $7F bank to routing matrix start
+SCUMM.boxDataSize     dw      ; total size of walkbox data loaded (for validation)
+.ends
+
+; buildWalkPath scratch (WRAM, survives subroutine calls that trash DP tmp)
+.ramsection "scumm bwp scratch" bank 0 slot 1
+SCUMM.bwpTargetX    dw
+SCUMM.bwpTargetY    dw
+SCUMM.bwpCurBox     dw
+SCUMM.bwpDestBox    dw
+SCUMM.bwpArrayOfs   dw
+SCUMM.bwpPathLen    dw
+.ends
+
+; Walk path arrays (per-actor waypoint data, bank $7E lowram)
+.ramsection "scumm walk path" bank 0 slot 1
+SCUMM.walkPathX    ds SCUMM_WALK_ACTORS * WALK_MAX_WAYPOINTS * 2  ; 256B
+SCUMM.walkPathY    ds SCUMM_WALK_ACTORS * WALK_MAX_WAYPOINTS * 2  ; 256B
+SCUMM.walkPathLen  ds SCUMM_WALK_ACTORS                           ; 16B — waypoints in path
+SCUMM.walkPathIdx  ds SCUMM_WALK_ACTORS                           ; 16B — current waypoint
+SCUMM.actorWalkBox ds SCUMM_WALK_ACTORS                           ; 16B — current box per actor
+SCUMM.actorIgnoreBoxes ds SCUMM_WALK_ACTORS                       ; 16B — 1=straight-line walk
 .ends
 
 ; OAM scratch buffer (copy of current frame's OAM data, max ~80 bytes)

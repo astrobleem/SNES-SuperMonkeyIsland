@@ -428,5 +428,62 @@ def _read_out_file(path: Path) -> str:
         return "(could not read output file)"
 
 
+@mcp.tool()
+def validate_rom(clean_build: bool = False) -> str:
+    """Validate the ROM after build: check bank 0 usage and scan for unexpected BRK opcodes.
+
+    Args:
+        clean_build: If True, trigger a clean build first. Default False (validate existing ROM).
+
+    Returns:
+        Combined validation report with bank 0 usage and BRK scan results.
+    """
+    if clean_build:
+        build_result = build_rom(clean=True)
+        if "BUILD FAILED" in build_result or "BUILD ERROR" in build_result:
+            return build_result
+
+    rom_path = PROJECT / "build" / "SuperMonkeyIsland.sfc"
+    sym_path = PROJECT / "build" / "SuperMonkeyIsland.sym"
+
+    if not rom_path.exists():
+        return "ERROR: ROM not found. Run build_rom() first."
+    if not sym_path.exists():
+        return "ERROR: sym file not found. Run build_rom() first."
+
+    lines = ["=== ROM Validation ==="]
+
+    # Bank 0 usage check
+    rom_data = rom_path.read_bytes()
+    bank0 = rom_data[:0x8000]  # HiROM bank 0 = first 32KB
+    used = sum(1 for b in bank0 if b != 0)
+    total = len(bank0)
+    pct = used * 100.0 / total
+    status = "CRITICAL" if pct > 95 else "WARNING" if pct > 90 else "OK"
+    lines.append(f"Bank 0: {used:,}/{total:,} ({pct:.1f}%) -- {status}")
+
+    # BRK scan
+    from brk_scanner import scan_rom
+    result = scan_rom(str(sym_path), str(rom_path))
+    hit_count = len(result.hits)
+    baseline = 15
+
+    if hit_count > baseline:
+        new_hits = hit_count - baseline
+        lines.append(f"BRK scan: WARNING -- {hit_count} detected "
+                     f"({new_hits} above baseline of {baseline}, "
+                     f"{result.regions_scanned} regions scanned)")
+        for hit in result.hits:
+            ctx_hex = ' '.join(f'{b:02X}' for b in hit.context_bytes)
+            lines.append(f"  BRK at ${hit.snes_bank:02X}:{hit.snes_offset:04X} "
+                        f"near {hit.nearest_symbol}+{hit.symbol_distance} "
+                        f"ctx: [{ctx_hex}]")
+    else:
+        lines.append(f"BRK scan: CLEAN ({hit_count} detected, baseline {baseline}, "
+                     f"{result.regions_scanned} regions scanned)")
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run()

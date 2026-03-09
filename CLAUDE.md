@@ -107,6 +107,9 @@ Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read
 ### PHA/PLA Width Must Match Processor Mode
 `pha` pushes 2 bytes when M=0 (16-bit A) but only 1 byte when M=1 (8-bit A). If a function does `rep #$31; pha` at entry then `sep #$20` in the body, the exit MUST do `rep #$20; pla` to pop the correct number of bytes. A mismatched `pla` with M=1 causes a 1-byte stack misalignment that corrupts the return address. Same applies to `phx`/`plx` and `phy`/`ply` with the X flag.
 
+### WLA-DX `.ACCU`/`.INDEX` at Branch Targets
+WLA-DX tracks M/X flags linearly through source text, NOT through branch control flow. Every label that is a conditional branch target in mixed-width code MUST have `.ACCU N` / `.INDEX N` directives matching the runtime register width. Without this, immediate operands get assembled with wrong width, inserting phantom `$00` (BRK) bytes that crash the game. Use `tools/brk_scanner.py` or the `validate_rom` MCP tool after each build to check for regressions.
+
 ## Key Files
 
 | File | Purpose |
@@ -133,4 +136,5 @@ Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read
 | `tools/fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `tools/fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `tools/fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
+| `tools/brk_scanner.py` | Post-build BRK opcode scanner — detects phantom $00 from WLA-DX width bugs |
 | `build/SuperMonkeyIsland.sym` | Symbol table — look up addresses here after each build |

@@ -591,8 +591,11 @@ room.load:
   ;read all tilemap to WRAM $7F only (no VRAM writes)
   jsr room.loadTilemapToWram
 
-  ;compute base MSU offset for individual tile reads
+  ;compute base MSU offset for individual tile reads (do BEFORE walkbox load)
   jsr room.computeTileDataBase
+
+  ;load walkbox data by seeking directly to box_data offset in MSU
+  jsl room.loadWalkboxData
 
   ;initialize scroll state + tile cache
   jsr room.initScroll
@@ -617,5 +620,137 @@ room.load:
   sec
   rts
 
+
+.ends
+
+;===================================================================
+; Walkbox loader — superfree to avoid growing bank 0
+;===================================================================
+.section "room walkbox loader" superfree
+
+/**
+* Load walkbox data via MSU seek (avoids draining col_size bytes).
+* Computes absolute MSU offset: tileDataMsuBase + chr_size + map_size + col_size.
+* Then seeks there and reads box_size bytes into $7F:4C00.
+* Sets SCUMM.boxCount + SCUMM.boxMatrixPtr.
+*
+* Requires computeTileDataBase to have been called first.
+*/
+room.loadWalkboxData:
+  php
+  rep #$31
+
+  ;check if this room has walkbox data
+  lda.w GLOBAL.room.hdr.box_size
+  bne _box.hasData
+  jmp _box.none
+_box.hasData:
+
+  sta.w SCUMM.boxDataSize
+
+  ;--- Compute absolute MSU offset to box data ---
+  ;box_offset = tileDataMsuBase + chr_size + map_size + col_size
+  lda.w GLOBAL.room.tileDataMsuBase_lo
+  clc
+  adc.w GLOBAL.room.hdr.chr_size
+  sta.b tmp
+  lda.w GLOBAL.room.tileDataMsuBase_hi
+  adc.w GLOBAL.room.hdr.chr_size_hi
+  sta.b tmp+2
+
+  ;add map_size
+  lda.b tmp
+  clc
+  adc.w GLOBAL.room.hdr.map_size
+  sta.b tmp
+  lda.b tmp+2
+  adc.w GLOBAL.room.hdr.map_size_hi
+  sta.b tmp+2
+
+  ;add col_size
+  lda.b tmp
+  clc
+  adc.w GLOBAL.room.hdr.col_size
+  sta.b tmp
+  lda.b tmp+2
+  adc.w GLOBAL.room.hdr.col_size_hi
+  sta.b tmp+2
+
+  ;--- Inline MSU seek to box data offset ---
+  ;wait for any pending seek to complete
+  sep #$20
+  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
+- dex
+  beq +
+  lda.l MSU_STATUS
+  bmi -
++
+  ;write 32-bit seek address
+  rep #$31
+  lda.b tmp
+  sta.l MSU_ADRESS
+  lda.b tmp+2
+  sta.l MSU_ADRESS+2
+
+  ;SD2SNES settle delay
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+
+  ;wait for seek complete
+  sep #$20
+  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
+- dex
+  beq +
+  lda.l MSU_STATUS
+  bmi -
++
+  rep #$20
+
+  ;read box_size bytes from MSU_DATA to $7F:5000
+  phy
+  lda.w GLOBAL.room.hdr.box_size
+  tay
+  ldx #0
+  sep #$20
+- lda.l MSU_DATA
+  sta.l $7F5000,x
+  inx
+  dey
+  bne -
+  rep #$20
+  ply
+
+  ;parse boxCount from first 2 bytes
+  lda.l $7F5000
+  sta.w SCUMM.boxCount
+
+  ;compute matrix pointer: $5002 + boxCount * 20
+  lda.w SCUMM.boxCount
+  asl a
+  asl a
+  sta.b tmp
+  asl a
+  asl a
+  clc
+  adc.b tmp
+  clc
+  adc.w #$5002
+  sta.w SCUMM.boxMatrixPtr
+
+  plp
+  rtl
+
+_box.none:
+  stz.w SCUMM.boxCount
+  stz.w SCUMM.boxDataSize
+  stz.w SCUMM.boxMatrixPtr
+  plp
+  rtl
 
 .ends

@@ -43,6 +43,75 @@ def _parse_boxd(data: bytes) -> list:
     return boxes
 
 
+def _parse_boxm(data: bytes, num_boxes: int) -> bytes:
+    """Parse BOXM compressed format into flat N*N routing matrix.
+
+    SCUMM v5 format: rows of (first_dest, last_dest, next_hop) triples,
+    each row terminated by 0xFF.  For destination boxes in [first..last],
+    the next hop from this source box is next_hop.
+    Output: flat N*N byte array where matrix[from * N + to] = next_hop.
+    """
+    matrix = bytearray([0xFF] * (num_boxes * num_boxes))
+    pos = 0
+    for from_box in range(num_boxes):
+        while pos < len(data) and data[pos] != 0xFF:
+            if pos + 2 >= len(data):
+                break
+            first = data[pos]
+            last = data[pos + 1]
+            hop = data[pos + 2]
+            pos += 3
+            for to_box in range(first, last + 1):
+                if to_box < num_boxes:
+                    matrix[from_box * num_boxes + to_box] = hop
+        if pos < len(data) and data[pos] == 0xFF:
+            pos += 1
+    return bytes(matrix)
+
+
+def export_walkbox_binary(room_resource, output_dir: Path) -> int:
+    """Export walkbox data as binary .box file for SNES engine.
+
+    Format:
+        $00         num_boxes (LE16)
+        $02         BOXD entries (N * 20 bytes, raw signed coords + mask/flags/scale)
+        $02+N*20    flat routing matrix (N * N bytes)
+
+    Returns number of walkboxes exported.
+    """
+    boxd = room_resource.get_room_sub('BOXD')
+    if not boxd or len(boxd.data) < 2:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / 'walkbox.box').write_bytes(struct.pack('<H', 0))
+        return 0
+
+    num_boxes = struct.unpack_from('<H', boxd.data, 0)[0]
+    if num_boxes == 0:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / 'walkbox.box').write_bytes(struct.pack('<H', 0))
+        return 0
+
+    # Raw BOXD entries (skip 2-byte count prefix)
+    boxd_binary = boxd.data[2:2 + num_boxes * 20]
+
+    # Parse BOXM routing matrix
+    boxm = room_resource.get_room_sub('BOXM')
+    if boxm and boxm.data:
+        matrix = _parse_boxm(boxm.data, num_boxes)
+    else:
+        matrix = bytes([0xFF] * (num_boxes * num_boxes))
+
+    # Build .box file
+    box_data = struct.pack('<H', num_boxes) + boxd_binary + matrix
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / 'walkbox.box').write_bytes(box_data)
+    log.info("Room %d: exported %d walkboxes (%d bytes)",
+             room_resource.room_id, num_boxes, len(box_data))
+
+    return num_boxes
+
+
 def _parse_scal(data: bytes) -> list:
     """Parse SCAL: 4 scale slots, each 8 bytes (s1 LE16, y1 LE16, s2 LE16, y2 LE16)."""
     slots = []

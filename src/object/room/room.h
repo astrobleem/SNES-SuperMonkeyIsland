@@ -57,8 +57,8 @@
   map_size_hi   dw      ;+$16
   col_size      dw      ;+$18  low 16 bits of column index size
   col_size_hi   dw      ;+$1A
-  reserved      dw      ;+$1C
-  reserved_hi   dw      ;+$1E
+  box_size      dw      ;+$1C  walkbox data size (bytes)
+  box_size_hi   dw      ;+$1E
 .endst
 
 ;room index entry struct (8 bytes from MSU-1 index table)

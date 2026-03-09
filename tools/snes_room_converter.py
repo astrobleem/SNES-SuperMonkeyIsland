@@ -226,7 +226,8 @@ def build_column_index(map_data, width_tiles, height_tiles):
 
 
 def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
-                      num_tiles, pal_size, chr_size, map_size, col_size):
+                      num_tiles, pal_size, chr_size, map_size, col_size,
+                      box_size=0):
     """Build 32-byte room header."""
     return struct.pack('<HHHHHHHHIIII',
         room_id,
@@ -240,7 +241,7 @@ def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
         chr_size,
         map_size,
         col_size,
-        0,
+        box_size,
     )
 
 
@@ -402,6 +403,13 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     map_data = encode_tilemap_column_major(tilemap_entries, width_tiles, height_tiles)
     col_data = build_column_index(map_data, width_tiles, height_tiles)
 
+    # Copy walkbox binary from extracted data (if present)
+    box_path = room_dir / "walkbox.box"
+    if box_path.exists():
+        box_data = box_path.read_bytes()
+    else:
+        box_data = struct.pack('<H', 0)  # no walkboxes
+
     hdr_data = build_room_header(
         room_id=room_id,
         width_px=width_px,
@@ -413,6 +421,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         chr_size=len(chr_data),
         map_size=len(map_data),
         col_size=len(col_data),
+        box_size=len(box_data),
     )
 
     # Write files
@@ -420,6 +429,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     (output_dir / f"{prefix}.chr").write_bytes(chr_data)
     (output_dir / f"{prefix}.map").write_bytes(map_data)
     (output_dir / f"{prefix}.col").write_bytes(col_data)
+    (output_dir / f"{prefix}.box").write_bytes(box_data)
     (output_dir / f"{prefix}.hdr").write_bytes(hdr_data)
 
     elapsed = time.time() - t0
@@ -453,6 +463,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         'chr_bytes': len(chr_data),
         'map_bytes': len(map_data),
         'col_bytes': len(col_data),
+        'box_bytes': len(box_data),
         'hdr_bytes': len(hdr_data),
         'exceeds_tile_limit': exceeds,
         'time_s': round(elapsed, 2),

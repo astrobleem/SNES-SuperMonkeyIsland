@@ -912,7 +912,9 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - OAM Table 1 buffer added to engine (`oam.h`), DMA extended to 544 bytes (Table 0 + Table 1)
   - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
 - [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
-- [ ] Walkbox pathfinding — constrained walking within BOXD walk areas, box-to-box routing
+- [x] Walkbox pathfinding (core: data pipeline, room loader, pathfinding, waypoint walking)
+- [ ] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes, matrixOps setBoxFlags)
+- [ ] Multi-actor walking (updateActors hardcoded to actor 1)
 - [ ] Mouse input: SNES Mouse position tracking, click detection
 - [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
 - [x] Verb bar: render 10 verbs on BG2, HDMA per-scanline palette split, verb highlight (yellow on hover via palette 6/7 swap)

@@ -126,6 +126,7 @@ CheckJoypadSinglePlayer:
 
 	ldx #INPUT.DEVICE.ID.0
 	jsr _checkInputDevice
+	jsr _checkMouse
 	rts
 
 _checkInputDevice:
@@ -140,5 +141,172 @@ _checkInputDevice:
 	and.w inputDevice.trigger,x	;and and only get buttons that werent pressed last frame
 	sta.w inputDevice.trigger,x	;store in joypad buffer
 	rts
+
+;----------------------------------------------------------------------
+; Mouse read routine — detect SNES Mouse on port 1, read displacement,
+; remap buttons into joypad format, manage sensitivity.
+; Entry: A=16bit, X/Y=16bit (from _checkInputDevice)
+;----------------------------------------------------------------------
+_checkMouse:
+  .ACCU 16
+  .INDEX 16
+  ; Check mouse ID nibble from auto-read (bits 3-0 of JOY1L)
+  lda.l JOY1L
+  and #$000F
+  cmp #$0001
+  beq _cm.isMouse
+
+  ; No mouse — clear state
+  stz.w mouseDetected
+  stz.w mouseDeltaX
+  stz.w mouseDeltaY
+  stz.w mouseButtons
+  stz.w mouseOldButtons
+  rts
+
+_cm.isMouse:
+  ;--- Read displacement (bits 17-32 via $4016) ---
+  ; MUST happen before any $4016 writes (sensitivity strobe)
+  rep #$20
+  .ACCU 16
+  stz.w mouseDeltaY             ; zero high bytes for later 16-bit read
+  stz.w mouseDeltaX
+  sep #$20
+  .ACCU 8
+
+  ; Read Y displacement (8 serial bits: direction + 7-bit magnitude)
+  ldy #8
+  lda #0
+_cm.readY:
+  pha
+  lda.l JOYSER0
+  lsr a                         ; serial bit 0 -> carry
+  pla
+  rol a                         ; carry -> result
+  dey
+  bne _cm.readY
+  sta.w mouseDeltaY             ; 8-bit store (high byte already zeroed)
+
+  ; Read X displacement (8 serial bits)
+  ldy #8
+  lda #0
+_cm.readX:
+  pha
+  lda.l JOYSER0
+  lsr a
+  pla
+  rol a
+  dey
+  bne _cm.readX
+  sta.w mouseDeltaX             ; 8-bit store
+
+  ;--- Convert sign+magnitude to signed 16-bit ---
+  rep #$20
+  .ACCU 16
+
+  ; Y delta: direction 1=up(negative), 0=down(positive)
+  lda.w mouseDeltaY
+  bit #$0080
+  beq _cm.yPos
+  and #$007F
+  beq _cm.yDone                 ; zero magnitude, skip negation
+  eor #$FFFF
+  inc a                         ; two's complement negate
+  bra _cm.yDone
+_cm.yPos:
+  .ACCU 16
+  and #$007F
+_cm.yDone:
+  .ACCU 16
+  sta.w mouseDeltaY
+
+  ; X delta: direction 1=left(negative), 0=right(positive)
+  lda.w mouseDeltaX
+  bit #$0080
+  beq _cm.xPos
+  and #$007F
+  beq _cm.xDone
+  eor #$FFFF
+  inc a
+  bra _cm.xDone
+_cm.xPos:
+  .ACCU 16
+  and #$007F
+_cm.xDone:
+  .ACCU 16
+  sta.w mouseDeltaX
+
+  ;--- Extract and remap buttons ---
+  ; JOY1L bit 7 = right button, bit 6 = left button
+  lda.l JOY1L
+  and #$00C0
+  sta.w mouseButtons
+
+  ; Remap: left($0040) -> JOY_BUTTON_A($0080), right($0080) -> JOY_BUTTON_B($8000)
+  ldx #0
+  bit #$0040                    ; left button? (bit doesn't modify A)
+  beq _cm.noLeft
+  ldx #JOY_BUTTON_A
+_cm.noLeft:
+  lda.w mouseButtons
+  bit #$0080                    ; right button?
+  beq _cm.noRight
+  txa
+  ora #JOY_BUTTON_B
+  tax
+_cm.noRight:
+  ; Store remapped buttons and compute trigger
+  stx.w inputDevice.press
+  txa
+  pha                           ; save current remapped buttons
+  lda.w mouseOldButtons
+  eor #$FFFF
+  and 1,s                       ; ~old & current = newly pressed
+  sta.w inputDevice.trigger
+  pla
+  sta.w mouseOldButtons         ; save for next frame
+  sta.w inputDevice.old         ; sync
+
+  ;--- Sensitivity handling ---
+  lda.w mouseDetected
+  bne _cm.wasDetected
+
+  ; First detection — mark active, cycle sensitivity once (required by Nintendo)
+  lda #$0001
+  sta.w mouseDetected
+  bra _cm.cycleSens
+
+_cm.wasDetected:
+  .ACCU 16
+  ; Check if sensitivity is already 1 (normal)
+  lda.l JOY1L
+  and #$0030                    ; bits 5-4 = sensitivity
+  cmp #$0010                    ; sensitivity == 1?
+  beq _cm.done
+
+_cm.cycleSens:
+  .ACCU 16
+  ; Cycle sensitivity: STB=1, CLK, STB=0
+  sep #$20
+  .ACCU 8
+  lda #$01
+  sta.l JOYSER0                 ; STB=1
+  lda.l JOYSER0                 ; CLK while STB=1 -> increments sensitivity
+  lda #$00
+  sta.l JOYSER0                 ; STB=0
+  rep #$20
+  .ACCU 16
+
+_cm.done:
+  .ACCU 16
+  rts
+
+.ends
+
+;----------------------------------------------------------------------
+; Mouse BIOS ID string (required by emulators and BIOS detection)
+;----------------------------------------------------------------------
+.section "MouseBiosString" superfree
+  .db "START OF MOUSE BIOS"
 .ends
 

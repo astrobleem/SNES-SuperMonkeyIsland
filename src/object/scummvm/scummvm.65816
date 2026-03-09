@@ -7513,6 +7513,45 @@ scummvm.updateCursor:
   rep #$20
 _uc.tileDone:
 
+  ;--- Mouse delta application ---
+  lda.w mouseDetected
+  sta.w SCUMM.mouseActive             ; copy detection flag
+  beq _uc.mouseDone
+
+  ; Apply Y delta (clamp 0-223)
+  lda.w SCUMM.cursorY
+  clc
+  adc.w mouseDeltaY
+  bmi _uc.clampYzero
+  cmp #224
+  bcc _uc.storeY
+  lda #223
+  bra _uc.storeY
+_uc.clampYzero:
+  lda #0
+_uc.storeY:
+  sta.w SCUMM.cursorY
+
+  ; Apply X delta (clamp 0-255)
+  lda.w SCUMM.cursorX
+  clc
+  adc.w mouseDeltaX
+  bmi _uc.clampXzero
+  cmp #256
+  bcc _uc.storeX
+  lda #255
+  bra _uc.storeX
+_uc.clampXzero:
+  lda #0
+_uc.storeX:
+  sta.w SCUMM.cursorX
+
+  ; Clear deltas (consumed)
+  stz.w mouseDeltaX
+  stz.w mouseDeltaY
+
+_uc.mouseDone:
+
   ;--- Read joypad state (direct WRAM access — can't jsr bank 0 from superfree) ---
   lda.w inputDevice.press
   sta.w SCUMM.scratch                 ; current press state

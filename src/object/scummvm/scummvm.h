@@ -297,6 +297,7 @@ SCUMM.sentenceObjectB dw      ; second object in sentence (0=none)
 SCUMM.sentenceDirty   dw      ; nonzero = re-render sentence line
 SCUMM.highlightVerb   dw      ; verb slot offset currently highlighted ($FFFF=none)
 SCUMM.cursorTileDone  dw      ; nonzero = cursor CHR already DMA'd to VRAM
+SCUMM.mouseActive     dw      ; nonzero = mouse detected (set by updateCursor)
 .ends
 
 ;---------------------------------------------------------------------------

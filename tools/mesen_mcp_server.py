@@ -385,9 +385,21 @@ def take_screenshot(
         argb_text = output[start:end].strip().split("\n")
 
         try:
+            # Parse ARGB pixels for crash detection before PNG conversion
+            pixels = []
+            for line in argb_text:
+                for hex_val in line.strip().split():
+                    pixels.append(int(hex_val, 16))
+
             png_bytes = _argb_to_png(width, height, argb_text)
             png_path.write_bytes(png_bytes)
-            return f"Screenshot saved: {png_path} ({len(png_bytes)} bytes, from ARGB buffer)"
+            msg = f"Screenshot saved: {png_path} ({len(png_bytes)} bytes, from ARGB buffer)"
+
+            # Check for magenta error screen
+            if _check_magenta_crash(pixels, width):
+                msg += "\n[CRASH DETECTED -- magenta error screen]"
+
+            return msg
         except Exception as e:
             return f"ERROR converting ARGB to PNG: {e}"
 
@@ -405,15 +417,116 @@ def _read_out_file(path: Path) -> str:
         return "(could not read output file)"
 
 
+def _lookup_sym_address(sym_path: Path, symbol_name: str) -> int | None:
+    """Look up a symbol's Mesen exec-callback address from the sym file.
+
+    Returns the address with $C0 bank prefix for ROM symbols, or None.
+    """
+    for line in sym_path.read_text().split("\n"):
+        parsed = _parse_sym_line(line)
+        if not parsed:
+            continue
+        bank, addr, name, full = parsed
+        if name == symbol_name:
+            if bank <= 0x3F:
+                return 0xC00000 + full
+            return full
+    return None
+
+
+def _check_magenta_crash(argb_pixels: list[int], width: int) -> bool:
+    """Check if the screen shows the magenta error screen.
+
+    Samples pixels from the top-left area. The error screen has a bright
+    magenta/pink backdrop (R>200, G<100, B<100 in the SNES palette).
+    """
+    height = len(argb_pixels) // width if width > 0 else 0
+    if height == 0:
+        return False
+    sample_count = 0
+    magenta_count = 0
+    # Sample from multiple screen regions (top rows may be blank overscan)
+    for y_off in (height // 4, height // 3, height // 2, height * 2 // 3):
+        for x_off in (2, width // 4, width // 2, width * 3 // 4, width - 3):
+            idx = y_off * width + x_off
+            if idx >= len(argb_pixels):
+                continue
+            argb = argb_pixels[idx]
+            r = (argb >> 16) & 0xFF
+            g = (argb >> 8) & 0xFF
+            b = argb & 0xFF
+            sample_count += 1
+            if r > 200 and g < 100 and b > 200:
+                magenta_count += 1
+    return sample_count > 0 and magenta_count > sample_count // 2
+
+
+_BOOT_TEST_LUA = r"""
+local errorHit = false
+emu.addMemoryCallback(function()
+    if errorHit then return end
+    errorHit = true
+    local frame = emu.getState()["ppu.frameCount"]
+    print("BOOT_CRASH frame=" .. frame)
+    emu.stop()
+end, emu.callbackType.exec, {error_trigger_addr})
+
+emu.addEventCallback(function()
+    local frame = emu.getState()["ppu.frameCount"]
+    if frame >= 500 then
+        print("BOOT_OK")
+        emu.stop()
+    end
+end, emu.eventType.endFrame)
+"""
+
+
+def _run_boot_test(sym_path: Path) -> str:
+    """Run the ROM in Mesen for 500 frames and check for error handler hit."""
+    error_addr = _lookup_sym_address(sym_path, "core.error.trigger")
+    if error_addr is None:
+        return "Boot test: SKIP (core.error.trigger not found in sym file)"
+
+    lua_code = _BOOT_TEST_LUA.replace(
+        "{error_trigger_addr}", f"0x{error_addr:06X}"
+    )
+
+    script_path = SFC_DIR / "_mcp_boot_test.lua"
+    script_path.write_text(lua_code)
+
+    out_file = SFC_DIR / "out.txt"
+    cmd = (
+        f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
+        f'SuperMonkeyIsland.sfc _mcp_boot_test.lua > out.txt 2>&1'
+    )
+
+    try:
+        subprocess.run(
+            f'cmd.exe /c "{cmd}"', shell=True, timeout=60,
+            stdin=subprocess.DEVNULL,
+        )
+    except subprocess.TimeoutExpired:
+        return "Boot test: TIMEOUT (>60s)"
+    except Exception as e:
+        return f"Boot test: ERROR ({e})"
+
+    output = _read_out_file(out_file)
+    if "BOOT_CRASH" in output:
+        return f"Boot test: CRASH -- {output.strip()}"
+    if "BOOT_OK" in output:
+        return "Boot test: PASS (500 frames, no error handler hit)"
+    return f"Boot test: INCONCLUSIVE -- {output[-200:]}"
+
+
 @mcp.tool()
 def validate_rom(clean_build: bool = False) -> str:
-    """Validate the ROM after build: check bank 0 usage and scan for unexpected BRK opcodes.
+    """Validate the ROM after build: bank 0 usage, BRK scan, and runtime boot test.
 
     Args:
         clean_build: If True, trigger a clean build first. Default False (validate existing ROM).
 
     Returns:
-        Combined validation report with bank 0 usage and BRK scan results.
+        Combined validation report with bank 0 usage, BRK scan, and boot test results.
     """
     if clean_build:
         build_result = build_rom(clean=True)
@@ -458,6 +571,9 @@ def validate_rom(clean_build: bool = False) -> str:
     else:
         lines.append(f"BRK scan: CLEAN ({hit_count} detected, baseline {baseline}, "
                      f"{result.regions_scanned} regions scanned)")
+
+    # Runtime boot test
+    lines.append(_run_boot_test(sym_path))
 
     return "\n".join(lines)
 

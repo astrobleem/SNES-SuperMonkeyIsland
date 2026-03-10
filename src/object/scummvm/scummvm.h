@@ -195,6 +195,37 @@ SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
 .ends
 
+;---------------------------------------------------------------------------
+; Per-room object metadata (loaded from MSU-1 .obj data)
+;---------------------------------------------------------------------------
+.define SCUMM_MAX_ROOM_OBJECTS  96   ; max objects per room (actual max: 90 in room 99)
+
+; Per-room object entry (16 bytes, matches .obj binary format)
+.struct roomObjectEntry
+  obj_id       dw      ; +$00
+  x_px         dw      ; +$02
+  y_px         dw      ; +$04
+  width_px     dw      ; +$06
+  height_px    dw      ; +$08
+  walk_x       dw      ; +$0A  signed walk-to X
+  walk_y       dw      ; +$0C  signed walk-to Y
+  actor_dir    db      ; +$0E  facing direction (3 bits)
+  name_len     db      ; +$0F  name string length
+.endst
+
+.ramsection "scumm room objects" bank 0 slot 1
+SCUMM.roomObjCount     dw                                              ; object count for current room
+SCUMM.roomObjNameSize  dw                                              ; name table size in bytes
+SCUMM.roomObjTable     INSTANCEOF roomObjectEntry SCUMM_MAX_ROOM_OBJECTS ; 96 x 16 = 1536 bytes
+SCUMM.roomObjNames     ds 512                                          ; packed name string table
+.ends
+
+; Cursor object tracking
+.ramsection "scumm cursor object" bank 0 slot 1
+SCUMM.cursorObject     dw      ; object ID under cursor (0 = none)
+SCUMM.sentenceObject   dw      ; object ID shown in sentence line (0 = none)
+.ends
+
 ; Actor rendering scratch (used by renderActors)
 .ramsection "scumm actor render" bank 0 slot 1
 SCUMM.actorScreenX   dw      ; computed screen X for current actor

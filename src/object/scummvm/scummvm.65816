@@ -679,7 +679,7 @@ _prc.bgReady:
   ldx #143*2                        ; VAR(143) = room state (MI1 ENCD guard check)
   sta.w SCUMM.globalVars,x
 
-  ; Update camera limits + snap to followed actor (superfree helper)
+  ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
 
   ; Auto-start ENCD if present
@@ -5322,13 +5322,15 @@ _wait.done:
 ;-------------------------------------------------------------------
 op_drawObject:
   jsr _scummvm.fetchWord             ; object ID (always p16)
+  sta.w SCUMM.scratch                ; save obj_id
   jsr _scummvm.fetchByte             ; sub-opcode byte
   and #$001F
   cmp #$01
   beq _drawObj.setXY
   cmp #$02
   beq _drawObj.setState
-  ; $1F or default: no extra params
+  ; $1F or default: set state=1 (make visible)
+  jsl scummvm.drawObjectSetState1
   clc
   rts
 
@@ -5339,7 +5341,8 @@ _drawObj.setXY:
   rts
 
 _drawObj.setState:
-  jsr _scummvm.fetchWord             ; state
+  jsr _scummvm.fetchWord             ; state value
+  jsl scummvm.drawObjectSetStateN
   clc
   rts
 
@@ -5734,16 +5737,22 @@ op_actorFromPos:
   rts
 
 ;-------------------------------------------------------------------
-; result + p8[7] + p8[6] → return 0  (findObject, findInventory)
+; findObject ($35, $B5) — result + p8[7] screenX + p8[6] screenY
+; findInventory ($3D, $BD) — result + p8[7] + p8[6] → return 0
+; Shared: room.findObject does camera+AABB. For findInventory,
+; garbage coords → returns 0 (no AABB hit).
 ;-------------------------------------------------------------------
 op_findObject:
 op_findInventory:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte
+  jsr _scummvm.getVarOrDirectByte        ;param1 (screenX or owner)
+  pha
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte
-  lda #0
+  jsr _scummvm.getVarOrDirectByte        ;param2 (screenY or inv idx)
+  sta.w SCUMM.scratch                    ;scratch = screenY
+  pla                                    ;A = screenX
+  jsl room.findObject                    ;camera+AABB → A=objId
   jsr _scummvm.writeVariable
   clc
   rts
@@ -5772,8 +5781,8 @@ _afc.done:
   rts
 
 ;-------------------------------------------------------------------
-; putActorAtObject ($0E, $4E, $8E, $CE) — p8[7] + p16[6], no-op
-; walkActorToObject ($36, $76, $B6, $F6) — p8[7] + p16[6], no-op
+; putActorAtObject ($0E, $4E, $8E, $CE) — p8[7] + p16[6], stub
+; walkActorToObject ($36, $76, $B6, $F6) — p8[7] + p16[6], stub
 ;-------------------------------------------------------------------
 op_putActorAtObject:
 op_walkActorToObject:
@@ -7658,6 +7667,9 @@ _uc.noRight:
   ldx #45*2
   sta.w SCUMM.globalVars,x            ; VAR(45) = VAR_VIRT_MOUSE_Y
 
+  ;--- Per-frame object hover detection ---
+  jsl scummvm.updateObjectHover
+
   ;--- Handle A button click ---
   lda.w SCUMM.scratch2
   bit.w #JOY_BUTTON_A
@@ -7689,13 +7701,9 @@ _uc.noRight:
   sta.w SCUMM.actors.2.y
 _uc.posOk:
 
-  ;--- Convert screen X to room X ---
-  lda.w SCUMM.cursorX
-  clc
-  adc.w GLOBAL.room.cameraX           ; roomX = screenX + scrollX
-  pha                                  ; save target room X
-  lda.w SCUMM.cursorY                 ; roomY = cursorY (no Y scroll)
-  sta.w SCUMM.scratch
+  ;--- Resolve click target (object walk-to or cursor room pos) ---
+  jsl scummvm.resolveClickTarget      ;A = targetX, scratch = targetY
+  pha                                  ;save target X
 
   ; Set walk target for actor 1 (Guybrush)
   ; actor 1 word index = 2 (actor*2)
@@ -8404,7 +8412,7 @@ _rsl.clearLoop:
 
 _rsl.defaultLoop:
   lda.w SCUMM.scratch2
-  beq _rsl.done
+  beq _rsl.appendDefault
   dec.w SCUMM.scratch2
   sep #$20
   lda.l _rsl.defaultName,x
@@ -8452,7 +8460,7 @@ _rsl.foundVerb:
 
 _rsl.writeLoop:
   lda.w SCUMM.scratch2
-  beq _rsl.done
+  beq _rsl.appendObj
   dec.w SCUMM.scratch2
   sep #$20
   lda.w SCUMM.verbNames,y
@@ -8467,6 +8475,13 @@ _rsl.writeLoop:
   inx
   bra _rsl.writeLoop
 
+_rsl.appendDefault:
+  tyx                                    ;default loop: Y=tilemap offset → X
+_rsl.appendObj:
+  lda.w SCUMM.cursorObject
+  beq _rsl.done
+  jsl scummvm.appendObjectName           ;X = tilemap byte offset
+
 _rsl.done:
   stz.w SCUMM.sentenceDirty
   lda #1
@@ -8480,6 +8495,323 @@ _rsl.done:
 
 _rsl.defaultName:
   .db "Walk to"
+
+.ends
+
+
+;===================================================================
+; Object hover detection — called per frame from updateCursor
+; Sets SCUMM.cursorObject + SCUMM.sentenceDirty on change.
+;===================================================================
+.section "ScummVM object hover" superfree
+
+scummvm.updateObjectHover:
+  rep #$31
+  lda.w SCUMM.cursorY
+  cmp #144
+  bcs _oh.verb
+  ;room area — check object under cursor
+  sta.w SCUMM.scratch                   ;scratch = screenY
+  lda.w SCUMM.cursorX                   ;A = screenX
+  jsl room.findObject                   ;A = objId (0=none)
+  cmp.w SCUMM.cursorObject
+  beq _oh.done
+  sta.w SCUMM.cursorObject
+  lda #1
+  sta.w SCUMM.sentenceDirty
+  rtl
+_oh.verb:
+  ;verb area — clear object if any
+  lda.w SCUMM.cursorObject
+  beq _oh.done
+  stz.w SCUMM.cursorObject
+  lda #1
+  sta.w SCUMM.sentenceDirty
+_oh.done:
+  rtl
+
+.ends
+
+
+;===================================================================
+; Append hovered object name to sentence line tilemap
+; Input: X = tilemap byte offset (next free position)
+; Assumes DBR=$7E (called from sentence renderer context).
+;===================================================================
+.section "ScummVM appendObjectName" superfree
+
+scummvm.appendObjectName:
+  rep #$31
+
+  ;write a space tile
+  lda #$3C00                            ;space = tile 0, priority+pal7
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+
+  ;search roomObjTable for matching cursorObject ID
+  lda.w SCUMM.cursorObject
+  beq _aon.ret
+  phx                                   ;save tilemap position
+  ldx #0                                ;X = entry byte offset
+  stz.b tmp+2                           ;cumulative name byte offset
+  ldy.w SCUMM.roomObjCount
+  beq _aon.notFound
+
+_aon.search:
+  lda.l SCUMM.roomObjTable,x            ;obj_id at +$00
+  cmp.w SCUMM.cursorObject
+  beq _aon.found
+  ;add this entry's name_len to offset
+  lda.l SCUMM.roomObjTable+15,x         ;name_len at +$0F
+  and #$00FF
+  clc
+  adc.b tmp+2
+  sta.b tmp+2
+  ;next entry
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _aon.search
+
+_aon.notFound:
+  plx
+  rtl
+
+_aon.found:
+  ;read name_len for this object
+  lda.l SCUMM.roomObjTable+15,x
+  and #$00FF
+  beq _aon.notFound                     ;empty name
+  sta.b tmp+4                            ;char count
+
+  ;set up: X = name byte offset, Y = tilemap byte offset
+  ldx.b tmp+2
+  ply                                    ;Y = tilemap offset (from stack)
+
+_aon.writeChar:
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.roomObjNames,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sec
+  sbc #$20                              ;ASCII → tile index
+  ora #$3C00                            ;priority + palette 7 (white)
+  sta.w SCUMM.verbTilemap,y
+  inx
+  iny
+  iny
+  dec.b tmp+4
+  bne _aon.writeChar
+
+  tyx                                    ;X = updated tilemap position
+_aon.ret:
+  rtl
+
+.ends
+
+
+;===================================================================
+; drawObject state helpers — superfree to avoid dispatch growth
+;===================================================================
+.section "ScummVM drawObjectState" superfree
+
+;set objectState[SCUMM.scratch] = 1
+scummvm.drawObjectSetState1:
+  rep #$20
+  ldx.w SCUMM.scratch
+  sep #$20
+.ACCU 8
+  lda #1
+  sta.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+  rtl
+
+;set objectState[SCUMM.scratch] = A (low byte)
+scummvm.drawObjectSetStateN:
+  rep #$20
+  and #$00FF
+  ldx.w SCUMM.scratch
+  sep #$20
+.ACCU 8
+  sta.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+  rtl
+
+.ends
+
+
+;===================================================================
+; resolveClickTarget — returns walk target for room click
+; If cursorObject != 0, returns object walk-to point.
+; Otherwise returns cursor room position.
+; Output: A = targetX, SCUMM.scratch = targetY
+;===================================================================
+.section "ScummVM resolveClickTarget" superfree
+
+scummvm.resolveClickTarget:
+  rep #$31
+  lda.w SCUMM.cursorObject
+  beq _rct.cursorPos
+  ;object click — look up walk-to point from roomObjTable
+  sta.b tmp                            ;tmp = target obj_id
+  ldy.w SCUMM.roomObjCount
+  beq _rct.cursorPos
+  ldx #0
+_rct.search:
+  lda.l SCUMM.roomObjTable,x
+  cmp.b tmp
+  beq _rct.found
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _rct.search
+  bra _rct.cursorPos                   ;not found, fall back
+_rct.found:
+  lda.l SCUMM.roomObjTable+12,x       ;walk_y (signed LE16 at +$0C)
+  sta.w SCUMM.scratch
+  lda.l SCUMM.roomObjTable+10,x       ;walk_x (signed LE16 at +$0A)
+  rtl
+_rct.cursorPos:
+  lda.w SCUMM.cursorX
+  clc
+  adc.w GLOBAL.room.cameraX
+  pha
+  lda.w SCUMM.cursorY
+  sta.w SCUMM.scratch
+  pla
+  rtl
+
+.ends
+
+
+;===================================================================
+; lookupObjectWalkTo — find walk-to point for any object ID
+; Input: A = object ID
+; Output: A = walk_x, SCUMM.scratch = walk_y, carry set if found
+;===================================================================
+.section "ScummVM lookupObjectWalkTo" superfree
+
+scummvm.lookupObjectWalkTo:
+  rep #$31
+  sta.b tmp                            ;tmp = target obj_id
+  ldy.w SCUMM.roomObjCount
+  beq _lowt.fail
+  ldx #0
+_lowt.search:
+  lda.l SCUMM.roomObjTable,x
+  cmp.b tmp
+  beq _lowt.found
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _lowt.search
+_lowt.fail:
+  lda #0
+  sta.w SCUMM.scratch
+  clc                                  ;carry clear = not found
+  rtl
+_lowt.found:
+  lda.l SCUMM.roomObjTable+12,x       ;walk_y
+  sta.w SCUMM.scratch
+  lda.l SCUMM.roomObjTable+10,x       ;walk_x
+  sec                                  ;carry set = found
+  rtl
+
+.ends
+
+
+;===================================================================
+; putActorAtObject / walkActorToObject — unified implementation
+;===================================================================
+.section "ScummVM actorAtObj" superfree
+
+;-------------------------------------------------------------------
+; scummvm.actorAtObj_impl — put or walk actor to object's walk-to point
+; Input: A = object ID, SCUMM.scratch2 = actor struct offset
+;        carry SET = put (teleport), carry CLEAR = walk
+;-------------------------------------------------------------------
+scummvm.actorAtObj_impl:
+  php                                    ;save put/walk flag
+  rep #$31
+  jsl scummvm.lookupObjectWalkTo         ;A=walk_x, scratch=walk_y, C=found
+  bcc _aao.fail
+
+  plp                                    ;restore put/walk flag
+  bcc _aao.walk
+
+  ;--- PUT: teleport actor to walk-to point ---
+  ldx.w SCUMM.scratch2
+  sta.w SCUMM.actors.x,x                ;walk_x → actor X
+  lda.w SCUMM.scratch
+  sta.w SCUMM.actors.y,x                ;walk_y → actor Y
+  rtl
+
+  ;--- WALK: path-find to walk-to point ---
+_aao.walk:
+  pha                                    ;save walk_x
+  lda.w SCUMM.scratch2
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  sta.w SCUMM.scratch3                   ;actor index
+
+  ; Store walk targets
+  asl a                                  ;word index
+  tax
+  pla                                    ;walk_x
+  sta.w SCUMM.actorTargetX,x
+  lda.w SCUMM.scratch                    ;walk_y
+  sta.w SCUMM.actorTargetY,x
+
+  ; Set up buildWalkPath params: tmp=startXY, tmp+4=targetXY
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  lda.w SCUMM.scratch3
+  asl a
+  tax
+  lda.w SCUMM.actorTargetX,x
+  sta.b tmp+4
+  lda.w SCUMM.actorTargetY,x
+  sta.b tmp+6
+  lda.w SCUMM.scratch3
+  jsl scummvm.buildWalkPath_long
+
+  ; Init animation
+  lda.w SCUMM.scratch3
+  and #$000F
+  tax
+  .ACCU 16
+  lda #WALK_ANIM_SPEED
+  sep #$20
+  sta.w SCUMM.actorAnimTimer,x
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+
+  ; Set actor.moving = 1
+  ldx.w SCUMM.scratch2
+  lda #1
+  sta.w SCUMM.actors.moving,x
+  rep #$20
+  rtl
+
+_aao.fail:
+  plp                                    ;clean stack
+  rtl
 
 .ends
 
@@ -8607,6 +8939,16 @@ _mc.updateRoom:
 
 scummvm.initCameraVars:
   rep #$31
+  ;--- Init objectOwner: all objects owned by room ($0F) ---
+  lda #$0F0F
+  ldx #0
+_icv.ownerLoop:
+  sta.l SCUMM.objectOwner,x
+  inx
+  inx
+  cpx #SCUMM_MAX_OBJECTS
+  bcc _icv.ownerLoop
+  ;--- Camera state init ---
   stz.w SCUMM.cameraFollows
   stz.w SCUMM.cameraDest
   lda #128
@@ -8662,3 +9004,4 @@ _snap.done:
   rtl
 
 .ends
+

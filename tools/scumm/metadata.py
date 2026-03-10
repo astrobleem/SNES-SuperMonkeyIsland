@@ -221,12 +221,31 @@ def extract_metadata(room_resource, output_dir: Path, room_name: str = '') -> di
     if trns and len(trns.data) >= 2:
         meta['transparent_color'] = struct.unpack_from('<H', trns.data, 0)[0]
 
-    # Objects
+    # Objects — merge CDHD (walk coords, dir) with IMHD (image bounds)
+    # IMHD has proper 16-bit x/y/width/height; CDHD height is often 0
+    imhd_dims = {}
+    obims = room_resource.get_all_room_sub('OBIM')
+    for obim in obims:
+        for sub in iter_chunks(obim.data):
+            if sub.tag == 'IMHD' and len(sub.data) >= 16:
+                oid = struct.unpack_from('<H', sub.data, 0)[0]
+                ix = struct.unpack_from('<H', sub.data, 8)[0]
+                iy = struct.unpack_from('<H', sub.data, 10)[0]
+                iw = struct.unpack_from('<H', sub.data, 12)[0]
+                ih = struct.unpack_from('<H', sub.data, 14)[0]
+                imhd_dims[oid] = {'x': ix, 'y': iy, 'width': iw, 'height': ih}
+
     obcds = room_resource.get_all_room_sub('OBCD')
     objects = []
     for obcd in obcds:
         obj_data = _parse_obcd(obcd.data)
         if obj_data:
+            oid = obj_data.get('obj_id')
+            if oid in imhd_dims:
+                obj_data['x'] = imhd_dims[oid]['x']
+                obj_data['y'] = imhd_dims[oid]['y']
+                obj_data['width'] = imhd_dims[oid]['width']
+                obj_data['height'] = imhd_dims[oid]['height']
             objects.append(obj_data)
     if objects:
         meta['objects'] = objects

@@ -920,12 +920,13 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
 - [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync
 - [ ] Multi-actor walking (updateActors hardcoded to actor 1)
-- [ ] Mouse input: SNES Mouse position tracking, click detection
+- [x] Mouse input: SNES Mouse position tracking, click detection
 - [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
 - [x] Verb bar: render 10 verbs on BG2, HDMA per-scanline palette split, verb highlight (yellow on hover via palette 6/7 swap)
 - [ ] Object interaction: click detection, doSentence execution
 - [x] Dialog system: text rendering on BG3, auto-timed display, auto-clear
-- [x] Sentence line on BG3 row 17: shows currently selected verb
+- [x] Sentence line on BG2 verb row 0: "Walk to" default, verb name on click (matches original MI layout)
+- [x] Palette corruption fixes: cursor VRAM overflow guard, sentence moved from BG3→BG2 to eliminate CGRAM overlap
 - [x] Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
 - [ ] Inventory: display, scrolling, object combination
 - [ ] drawObject opcode (object rendering on room background)

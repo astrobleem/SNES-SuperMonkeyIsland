@@ -97,5 +97,10 @@ GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buf
 GLOBAL.room.refreshIdx     dw                 ;background refresh column offset (0-31)
 .ends
 
+;room object metadata limits (must match scummvm.h defines)
+.define ROOM_MAX_ROOM_OBJECTS   96   ;max objects per room
+.define ROOM_OBJ_ENTRY_SIZE     16   ;bytes per roomObjectEntry struct
+.define ROOM_OBJ_NAME_BUF_SIZE  512  ;max bytes for packed name strings
+
 .base BSL
 .bank 0 slot 0

@@ -597,6 +597,68 @@ room.load:
   ;load walkbox data by seeking directly to box_data offset in MSU
   jsl room.loadWalkboxData
 
+  ;--- Read room object data from MSU (positioned after box data) ---
+  lda.w SCUMM.boxDataSize
+  beq _rl.noObjData
+  ;read 4-byte header: obj_count (LE16) + name_table_size (LE16)
+  sep #$20
+.ACCU 8
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+.ACCU 16
+  sta.w SCUMM.roomObjCount
+  sep #$20
+.ACCU 8
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+.ACCU 16
+  sta.w SCUMM.roomObjNameSize
+  ;read object entries: count * 16 bytes
+  lda.w SCUMM.roomObjCount
+  beq _rl.noObjEntries
+  asl a
+  asl a
+  asl a
+  asl a
+  tay
+  ldx #0
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  sta.l SCUMM.roomObjTable,x
+  inx
+  dey
+  bne -
+  rep #$20
+.ACCU 16
+_rl.noObjEntries:
+  ;read name table
+  lda.w SCUMM.roomObjNameSize
+  beq _rl.objDone
+  tay
+  ldx #0
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  sta.l SCUMM.roomObjNames,x
+  inx
+  dey
+  bne -
+  rep #$20
+.ACCU 16
+  bra _rl.objDone
+_rl.noObjData:
+  stz.w SCUMM.roomObjCount
+  stz.w SCUMM.roomObjNameSize
+_rl.objDone:
+  jsl room.initObjectStates             ;set objectState=1 for loaded room objs
+
   ;initialize scroll state + tile cache
   jsr room.initScroll
   jsr room.initTileCache
@@ -620,6 +682,113 @@ room.load:
   sec
   rts
 
+.ends
+
+;===================================================================
+; room.findObject — AABB hit-test against room object table
+; Input:  A = screenX (16-bit), SCUMM.scratch = screenY (16-bit)
+; Output: A = object ID (0 = none found)
+; Converts screen→room coords, iterates reverse (SCUMM priority).
+;===================================================================
+.section "room findObject" superfree
+
+room.findObject:
+  rep #$31
+  clc
+  adc.w GLOBAL.room.cameraX            ;roomX = screenX + cameraX
+  sta.b tmp                             ;tmp = roomX
+  lda.w SCUMM.roomObjCount
+  beq _fo.none
+  dec a
+  asl a
+  asl a
+  asl a
+  asl a
+  tax                                   ;X = byte offset of last entry
+
+_fo.loop:
+  ;read obj_id, check visibility
+  lda.l SCUMM.roomObjTable,x           ;obj_id
+  tay
+  sep #$20
+.ACCU 8
+  lda.w SCUMM.objectState,y
+  rep #$20
+.ACCU 16
+  and #$00FF
+  beq _fo.next
+
+  ;AABB X: roomX >= x_px AND roomX < x_px + width_px
+  lda.l SCUMM.roomObjTable+6,x         ;width_px
+  beq _fo.next
+  clc
+  adc.l SCUMM.roomObjTable+2,x         ;x_right = x_px + width
+  sta.b tmp+2
+  lda.b tmp                             ;roomX
+  cmp.l SCUMM.roomObjTable+2,x         ;vs x_px
+  bcc _fo.next
+  cmp.b tmp+2                           ;vs x_right
+  bcs _fo.next
+
+  ;AABB Y: roomY >= y_px AND roomY < y_px + height_px
+  lda.l SCUMM.roomObjTable+8,x         ;height_px
+  beq _fo.next
+  clc
+  adc.l SCUMM.roomObjTable+4,x         ;y_bottom = y_px + height
+  sta.b tmp+2
+  lda.w SCUMM.scratch                   ;roomY (screenY, no Y scroll)
+  cmp.l SCUMM.roomObjTable+4,x         ;vs y_px
+  bcc _fo.next
+  cmp.b tmp+2                           ;vs y_bottom
+  bcs _fo.next
+
+  ;HIT — return obj_id (still in Y from earlier)
+  tya
+  rtl
+
+_fo.next:
+  txa
+  sec
+  sbc #16
+  tax
+  bpl _fo.loop
+
+_fo.none:
+  lda #0
+  rtl
+
+.ends
+
+;===================================================================
+; room.initObjectStates — set objectState=1 for loaded room objects
+;===================================================================
+.section "room initObjectStates" superfree
+
+room.initObjectStates:
+  rep #$31
+  lda.w SCUMM.roomObjCount
+  beq _ios.done
+  tay                                   ;Y = loop counter
+  ldx #0                                ;X = entry byte offset
+_ios.loop:
+  lda.l SCUMM.roomObjTable,x            ;obj_id
+  phx
+  tax
+  sep #$20
+.ACCU 8
+  lda #1
+  sta.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+  plx
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _ios.loop
+_ios.done:
+  rtl
 
 .ends
 
@@ -780,7 +949,6 @@ _box.mulLoop:
   mvn $7F, $7F
   plb                   ;restore data bank
 _box.copyDone:
-
   plp
   rtl
 

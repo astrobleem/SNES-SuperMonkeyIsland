@@ -1,0 +1,2 @@
+.include "src/object/room/room_objects.h"
+;room object loading is now handled inline in room.65816 walkbox loader

@@ -284,20 +284,6 @@ def _argb_to_png(width: int, height: int, argb_lines: list[str]) -> bytes:
     return png
 
 
-# Default menu-skip preamble: injects Start every 15 frames for the first
-# 600 frames to skip splash/title screens and reach the SCUMM interpreter.
-# Uses emu.setInput() via inputPolled — no sym lookup needed.
-_MENU_SKIP_PREAMBLE = r"""
--- Auto-skip menus: inject Start button during boot sequence
-emu.addEventCallback(function()
-    local frame = emu.getState()["ppu.frameCount"]
-    if frame < 600 and frame % 15 == 0 then
-        emu.setInput({start = true})
-    else
-        emu.setInput({})
-    end
-end, emu.eventType.inputPolled)
-"""
 
 # Lua screenshot script template.
 # Uses getScreenBuffer() ARGB array (reliable across Mesen versions).
@@ -345,7 +331,6 @@ end, emu.eventType.endFrame)
 def take_screenshot(
     wait_frames: int = 800,
     lua_preamble: str = "",
-    skip_menus: bool = True,
     timeout: int = 60,
 ) -> str:
     """Take a screenshot of the emulator at a specific PPU frame.
@@ -353,24 +338,16 @@ def take_screenshot(
     Runs a Lua script in Mesen that waits until the target frame, captures the
     screen buffer, converts to PNG, and saves to the distribution directory.
 
-    By default, injects Start button presses during the first 600 frames to
-    skip splash/title screens and reach the SCUMM interpreter.
-
     Args:
         wait_frames: PPU frame number at which to capture (default 800 = after boot + SCUMM init).
         lua_preamble: Optional Lua code inserted before the screenshot logic
-                      (e.g., input injection for room cycling). Overrides skip_menus.
-        skip_menus: Auto-inject Start presses to skip splash/title screens (default True).
-                    Ignored if lua_preamble is provided.
+                      (e.g., input injection for room cycling).
         timeout: Max seconds to wait for Mesen.
 
     Returns:
         Path to the saved PNG file, or an error message.
     """
-    # Build preamble: explicit preamble takes priority, then auto menu-skip
     effective_preamble = lua_preamble
-    if not effective_preamble and skip_menus:
-        effective_preamble = _MENU_SKIP_PREAMBLE
 
     lua_code = _SCREENSHOT_LUA.replace("{target_frame}", str(wait_frames))
     lua_code = lua_code.replace("{lua_preamble}", effective_preamble)

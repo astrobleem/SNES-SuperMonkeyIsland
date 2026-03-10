@@ -476,6 +476,7 @@ _play.nextSlot:
   rep #$31
   lda.w SCUMM.verbDirty
   beq _play.verbClean
+  sta.w SCUMM.sentenceDirty      ; verb bar clear wipes row 0; re-render sentence
   jsl scummvm.renderVerbBar
 _play.verbClean:
   ; Tick dialog timer
@@ -7096,7 +7097,7 @@ _idv.done:
 ; Table: id, x_pixel, y_pixel, nameLen, nameOffset (1 byte into _idv.names)
 _idv.table:
   ;     id   x    y   len  nameOff
-  .db  $01,   0, 144,   7, _idv.n0 - _idv.names, 0
+  ; "Walk to" removed from grid — it's the default sentence line on BG2 row 0
   .db  $04,   0, 152,   4, _idv.n1 - _idv.names, 0
   .db  $02,   0, 160,   4, _idv.n2 - _idv.names, 0
   .db  $03,   0, 168,   5, _idv.n3 - _idv.names, 0
@@ -7295,8 +7296,8 @@ scummvm.buildCgramHdmaTable:
   lda #$71
   sta.l $2121
 
-  ; -- Per-line 6 entries at scanlines 0-5: restore pal7 c1-c3 + pal6 c1-c3 --
-  lda #$86
+  ; -- Per-line 8 entries at scanlines 0-7: restore pal7 c1-c3 + pal6 c1-c3 + pal1 c12-c13 --
+  lda #$88
   sta.w 0,x
   ; Entry 0: CGRAM[$71] = room pal7 c1
   lda #$71
@@ -7351,96 +7352,131 @@ scummvm.buildCgramHdmaTable:
   lda.l $213B
   sta.w 24,x
 
+  ; --- Read palette 1 colors 12-13 from CGRAM $1C (= 2bpp pal7 c0-c1) ---
+  lda #$1C
+  sta.l $2121
+  ; Entry 6: CGRAM[$1C] = room pal1 c12 (= 2bpp pal7 c0)
+  lda #$1C
+  sta.w 25,x
+  sta.w 26,x
+  lda.l $213B
+  sta.w 27,x
+  lda.l $213B
+  sta.w 28,x
+  ; Entry 7: CGRAM[$1D] = room pal1 c13 (= 2bpp pal7 c1)
+  lda #$1D
+  sta.w 29,x
+  sta.w 30,x
+  lda.l $213B
+  sta.w 31,x
+  lda.l $213B
+  sta.w 32,x
+
   ; Restore display brightness (exit force blank)
   lda.w ScreenBrightness
   sta.l INIDSP
 
-  ; -- Scanlines 6-127: 122 lines, harmless CGRAM[$70] = $0000 --
-  lda #122
-  sta.w 25,x
+  ; -- Scanlines 8-127: 120 lines, harmless CGRAM[$70] = $0000 --
+  lda #120
+  sta.w 33,x
   lda #$70
-  sta.w 26,x
-  sta.w 27,x
-  stz.w 28,x
-  stz.w 29,x
+  sta.w 34,x
+  sta.w 35,x
+  stz.w 36,x
+  stz.w 37,x
 
-  ; -- Scanlines 128-136: 9 lines, harmless CGRAM[$70] = $0000 --
-  lda #9
-  sta.w 30,x
+  ; -- Scanlines 128-134: 7 lines, harmless CGRAM[$70] = $0000 --
+  lda #7
+  sta.w 38,x
   lda #$70
-  sta.w 31,x
-  sta.w 32,x
-  stz.w 33,x
-  stz.w 34,x
+  sta.w 39,x
+  sta.w 40,x
+  stz.w 41,x
+  stz.w 42,x
+
+  ; -- Scanlines 135-136: per-line 2, sentence palette (default harmless) --
+  lda #$82
+  sta.w 43,x
+  ; Entry 0: default harmless CGRAM[$70] = $0000
+  lda #$70
+  sta.w 44,x
+  sta.w 45,x
+  stz.w 46,x
+  stz.w 47,x
+  ; Entry 1: default harmless CGRAM[$70] = $0000
+  sta.w 48,x
+  sta.w 49,x
+  stz.w 50,x
+  stz.w 51,x
 
   ; -- Scanlines 137-143: per-line 7, set verb + highlight colors --
   lda #$87
-  sta.w 35,x
+  sta.w 52,x
   ; Entry 0: CGRAM[$00] = $0000 (backdrop = black)
-  stz.w 36,x
-  stz.w 37,x
-  stz.w 38,x
-  stz.w 39,x
+  stz.w 53,x
+  stz.w 54,x
+  stz.w 55,x
+  stz.w 56,x
   ; Entry 1: CGRAM[$71] = $6318 (light grey fill — normal)
   lda #$71
-  sta.w 40,x
-  sta.w 41,x
-  lda #$18
-  sta.w 42,x
-  lda #$63
-  sta.w 43,x
-  ; Entry 2: CGRAM[$72] = $294A (dark shadow — normal)
-  lda #$72
-  sta.w 44,x
-  sta.w 45,x
-  lda #$4A
-  sta.w 46,x
-  lda #$29
-  sta.w 47,x
-  ; Entry 3: CGRAM[$73] = $7FFF (white body — normal verb text)
-  lda #$73
-  sta.w 48,x
-  sta.w 49,x
-  lda #$FF
-  sta.w 50,x
-  lda #$7F
-  sta.w 51,x
-  ; Entry 4: CGRAM[$61] = $6318 (light grey fill — highlight)
-  lda #$61
-  sta.w 52,x
-  sta.w 53,x
-  lda #$18
-  sta.w 54,x
-  lda #$63
-  sta.w 55,x
-  ; Entry 5: CGRAM[$62] = $294A (dark shadow — highlight)
-  lda #$62
-  sta.w 56,x
   sta.w 57,x
-  lda #$4A
   sta.w 58,x
-  lda #$29
+  lda #$18
   sta.w 59,x
-  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body — highlight)
   lda #$63
   sta.w 60,x
+  ; Entry 2: CGRAM[$72] = $294A (dark shadow — normal)
+  lda #$72
   sta.w 61,x
-  lda #$FF
   sta.w 62,x
-  lda #$03
+  lda #$4A
   sta.w 63,x
+  lda #$29
+  sta.w 64,x
+  ; Entry 3: CGRAM[$73] = $7FFF (white body — normal verb text)
+  lda #$73
+  sta.w 65,x
+  sta.w 66,x
+  lda #$FF
+  sta.w 67,x
+  lda #$7F
+  sta.w 68,x
+  ; Entry 4: CGRAM[$61] = $6318 (light grey fill — highlight)
+  lda #$61
+  sta.w 69,x
+  sta.w 70,x
+  lda #$18
+  sta.w 71,x
+  lda #$63
+  sta.w 72,x
+  ; Entry 5: CGRAM[$62] = $294A (dark shadow — highlight)
+  lda #$62
+  sta.w 73,x
+  sta.w 74,x
+  lda #$4A
+  sta.w 75,x
+  lda #$29
+  sta.w 76,x
+  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body — highlight)
+  lda #$63
+  sta.w 77,x
+  sta.w 78,x
+  lda #$FF
+  sta.w 79,x
+  lda #$03
+  sta.w 80,x
 
   ; -- Scanlines 144-223: 80 lines, harmless CGRAM[$70] = $0000 --
   lda #80
-  sta.w 64,x
+  sta.w 81,x
   lda #$70
-  sta.w 65,x
-  sta.w 66,x
-  stz.w 67,x
-  stz.w 68,x
+  sta.w 82,x
+  sta.w 83,x
+  stz.w 84,x
+  stz.w 85,x
 
   ; Terminator
-  stz.w 69,x
+  stz.w 86,x
 
   plp
   rtl
@@ -7499,10 +7535,7 @@ scummvm.updateCursor:
   plb
   rep #$31
 
-  ;--- Init cursor palette buffer (DMA deferred to play method) ---
-  lda.w SCUMM.cursorTileDone
-  bne _uc.tileDone
-  ; Write palette colors to WRAM buffer (play() will DMA them)
+  ;--- Refresh cursor palette buffer every frame (guards against WRAM corruption) ---
   sep #$20
   stz.w SCUMM.cursorPalBuf
   stz.w SCUMM.cursorPalC1Hi
@@ -7511,6 +7544,9 @@ scummvm.updateCursor:
   lda #$7F
   sta.w SCUMM.cursorPalC2Hi
   rep #$20
+
+  lda.w SCUMM.cursorTileDone
+  bne _uc.tileDone
 _uc.tileDone:
 
   ;--- Mouse delta application ---
@@ -8009,13 +8045,10 @@ _rpd.fontReady:
   sta.w GLOBAL.dmaQueue.1.transferType,x
 _rpd.noDialog:
 
-  ;--- Dialog palette DMA (every frame while dialog or sentence active) ---
+  ;--- Dialog palette DMA (every frame while dialog active) ---
   rep #$20
   lda.w SCUMM.dialogActive
-  bne _rpd.doDialogPal
-  lda.w SCUMM.sentenceVerb
   beq _rpd.noDialogPal
-_rpd.doDialogPal:
   ; Build dynamic palette from dialogColor (or default white)
   lda.w SCUMM.dialogActive
   beq _rpd.palWhite
@@ -8318,12 +8351,9 @@ _cdt.clearLoop:
 
   lda #1
   sta.w SCUMM.dialogDmaPending
-  ; Re-dirty sentence so it re-renders after dialog clears row 17
-  lda.w SCUMM.sentenceVerb
-  beq +
-    lda #1
-    sta.w SCUMM.sentenceDirty
-+
+  ; Re-dirty sentence so it re-renders on BG2 after dialog clears
+  lda #1
+  sta.w SCUMM.sentenceDirty
 
   plb
   plx
@@ -8335,7 +8365,8 @@ _cdt.clearLoop:
 
 ;===================================================================
 ; Sentence line renderer — superfree
-; Renders the current verb name on BG3 tilemap row 17 (Y=136).
+; Renders the current verb/action on BG2 verb tilemap row 0 (Y=144).
+; Default "Walk to" when no verb selected.
 ;===================================================================
 .section "ScummVMSentenceRenderer" superfree
 
@@ -8350,27 +8381,52 @@ scummvm.renderSentenceLine:
   plb
   rep #$31
 
-  ; Clear row 17 of tilemap (offset $0440, 32 entries x 2 bytes = 64 bytes)
-  ldx #$0440
+  ; Clear row 0 of verb tilemap (32 entries x 2 bytes = 64 bytes)
+  ldx #0
   lda #0
   ldy #32
 _rsl.clearLoop:
-  sta.w SCUMM.dialogTilemap,x
+  sta.w SCUMM.verbTilemap,x
   inx
   inx
   dey
   bne _rsl.clearLoop
 
-  ; If sentenceVerb == 0, just clear and exit
+  ; If sentenceVerb != 0, find verb name from table
   lda.w SCUMM.sentenceVerb
-  beq _rsl.done
+  bne _rsl.findVerb
 
+  ; Default: write "Walk to" from ROM (X=string index, Y=tilemap offset)
+  ldx #0
+  ldy #2                              ; start at column 1 (byte offset 2)
+  lda #7                              ; "Walk to" is 7 chars
+  sta.w SCUMM.scratch2
+
+_rsl.defaultLoop:
+  lda.w SCUMM.scratch2
+  beq _rsl.done
+  dec.w SCUMM.scratch2
+  sep #$20
+  lda.l _rsl.defaultName,x
+  rep #$20
+  and #$00FF
+  sec
+  sbc #$20                            ; ASCII to tile index
+  ora #$3C00                          ; priority 1 + palette 7 (white)
+  sta.w SCUMM.verbTilemap,y
+  inx
+  iny
+  iny
+  bra _rsl.defaultLoop
+
+_rsl.findVerb:
   ; Find verb slot matching sentenceVerb
   ldy #0
   ldx #0
-_rsl.findVerb:
+
+_rsl.findVerbLoop:
   cpy #SCUMM_MAX_VERBS
-  bcs _rsl.done                      ; not found
+  bcs _rsl.done                       ; not found
   lda.w SCUMM.verbs.1.id,x
   and #$00FF
   cmp.w SCUMM.sentenceVerb
@@ -8380,7 +8436,7 @@ _rsl.findVerb:
   adc #_sizeof_scummVerb
   tax
   iny
-  bra _rsl.findVerb
+  bra _rsl.findVerbLoop
 
 _rsl.foundVerb:
   ; X = verb struct offset; read name pointer and length
@@ -8390,20 +8446,22 @@ _rsl.foundVerb:
   and #$00FF
   sta.w SCUMM.scratch2               ; char count
 
-  ; Write verb name to row 17, starting at column 1
+  ; Write verb name to row 0, starting at column 1
   ply                                 ; Y = namePtr (offset into verbNames)
-  ldx #$0442                         ; row 17, column 1
+  ldx #2                              ; start at column 1 (byte offset 2)
 
 _rsl.writeLoop:
   lda.w SCUMM.scratch2
   beq _rsl.done
   dec.w SCUMM.scratch2
+  sep #$20
   lda.w SCUMM.verbNames,y
+  rep #$20
   and #$00FF
   sec
-  sbc #$20                           ; ASCII to tile index
-  ora #$3C00                         ; priority 1 + palette 7
-  sta.w SCUMM.dialogTilemap,x
+  sbc #$20                            ; ASCII to tile index
+  ora #$3C00                          ; priority 1 + palette 7 (white)
+  sta.w SCUMM.verbTilemap,x
   iny
   inx
   inx
@@ -8412,13 +8470,16 @@ _rsl.writeLoop:
 _rsl.done:
   stz.w SCUMM.sentenceDirty
   lda #1
-  sta.w SCUMM.dialogDmaPending
+  sta.w SCUMM.verbDmaPending
 
   plb
   ply
   plx
   plp
   rtl
+
+_rsl.defaultName:
+  .db "Walk to"
 
 .ends
 

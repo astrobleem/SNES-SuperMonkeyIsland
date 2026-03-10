@@ -165,7 +165,7 @@ SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaCgramChannel    db      ;allocated HDMA channel id for CGRAM palette swap
-SCUMM.cgramHdmaTable      ds 72   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal)
+SCUMM.cgramHdmaTable      ds 88   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal + sentence)
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)
@@ -391,9 +391,9 @@ SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 .define SCUMM_VAR_CAMERA_FAST_X    36
 
 ; Cursor sprite (shares OBJ base with actors at VRAM word $6000)
-; Actor costume tiles use tile IDs 0-12; cursor at tile 16 ($10)
-.define CURSOR_TILE_VRAM_WORD $6100   ; VRAM word addr = $6000 + 16*16
-.define CURSOR_TILE_ID        $10     ; OAM tile index
+; Actor costume tiles can be up to 544 bytes (17 tiles); cursor at tile 32 ($20)
+.define CURSOR_TILE_VRAM_WORD $6200   ; VRAM word addr = $6000 + 32*16
+.define CURSOR_TILE_ID        $20     ; OAM tile index
 .define CURSOR_SPEED          2       ; pixels per frame for d-pad movement
 
 .base BSL

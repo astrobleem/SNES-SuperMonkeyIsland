@@ -599,8 +599,10 @@ room.load:
 
   ;--- Read room object data from MSU (positioned after box data) ---
   lda.w SCUMM.boxDataSize
-  beq _rl.noObjData
-  ;read 4-byte header: obj_count (LE16) + name_table_size (LE16)
+  bne +
+  jmp _rl.noObjData
++
+  ;read 8-byte header: count(2) + name_size(2) + verb_data_size(2) + reserved(2)
   sep #$20
 .ACCU 8
   lda.l MSU_DATA
@@ -619,6 +621,21 @@ room.load:
   rep #$20
 .ACCU 16
   sta.w SCUMM.roomObjNameSize
+  sep #$20
+.ACCU 8
+  lda.l MSU_DATA
+  xba
+  lda.l MSU_DATA
+  xba
+  rep #$20
+.ACCU 16
+  sta.w SCUMM.roomObjVerbSize
+  sep #$20
+.ACCU 8
+  lda.l MSU_DATA                           ;reserved lo
+  lda.l MSU_DATA                           ;reserved hi
+  rep #$20
+.ACCU 16
   ;read object entries: count * 16 bytes
   lda.w SCUMM.roomObjCount
   beq _rl.noObjEntries
@@ -638,9 +655,26 @@ room.load:
   rep #$20
 .ACCU 16
 _rl.noObjEntries:
+  ;read verb index: count * 4 bytes
+  lda.w SCUMM.roomObjCount
+  beq _rl.noVerbIdx
+  asl a
+  asl a
+  tay
+  ldx #0
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  sta.l SCUMM.roomObjVerbIdx,x
+  inx
+  dey
+  bne -
+  rep #$20
+.ACCU 16
+_rl.noVerbIdx:
   ;read name table
   lda.w SCUMM.roomObjNameSize
-  beq _rl.objDone
+  beq _rl.noNames
   tay
   ldx #0
   sep #$20
@@ -652,12 +686,31 @@ _rl.noObjEntries:
   bne -
   rep #$20
 .ACCU 16
+_rl.noNames:
+  ;read verb data blobs
+  lda.w SCUMM.roomObjVerbSize
+  beq _rl.objDone
+  tay
+  ldx #0
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  sta.l SCUMM.roomObjVerbData,x
+  inx
+  dey
+  bne -
+  rep #$20
+.ACCU 16
   bra _rl.objDone
 _rl.noObjData:
   stz.w SCUMM.roomObjCount
   stz.w SCUMM.roomObjNameSize
+  stz.w SCUMM.roomObjVerbSize
 _rl.objDone:
   jsl room.initObjectStates             ;set objectState=1 for loaded room objs
+
+  ;--- Load object patch (OCHR) data from MSU ---
+  jsl room.loadOchrData
 
   ;initialize scroll state + tile cache
   jsr room.initScroll
@@ -665,6 +718,9 @@ _rl.objDone:
 
   ;cache-aware initial viewport load (still in force blank)
   jsr room.loadInitialViewport
+
+  ;apply initial object patches (objects with state!=0)
+  jsl room.applyVisibleObjectPatches
 
   ;restore display brightness
   sep #$20
@@ -965,5 +1021,536 @@ _box.none:
   stz.w SCUMM.boxOrigMatrixPtr
   plp
   rtl
+
+.ends
+
+
+;===================================================================
+; room.loadOchrData — load object patch data from MSU into SCUMM.ochrData
+; MSU stream is already positioned after .obj data.
+; Uses header field ochr_size (offset $1E) for data size.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "room loadOchrData" free
+
+room.loadOchrData:
+  php
+  rep #$31
+
+  ;clear OCHR state
+  stz.w SCUMM.ochrDataSize
+  stz.w SCUMM.ochrObjCount
+  stz.w SCUMM.objDirtyFlag
+
+  ;check if this room has OCHR data
+  lda.w GLOBAL.room.hdr.ochr_size
+  beq _ochr.none
+
+  ;check if it fits in bank $7E buffer
+  cmp.w #SCUMM_OCHR_MAX_SIZE_7E + 1
+  bcs _ochr.tooLarge
+
+  ;store size and read MSU_DATA into SCUMM.ochrData
+  sta.w SCUMM.ochrDataSize
+  phy
+  tay                           ;Y = byte count
+  ldx #0
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  sta.l SCUMM.ochrData,x
+  inx
+  dey
+  bne -
+  rep #$20
+.ACCU 16
+  ply
+
+  ;parse OCHR header: obj_patch_count (LE16)
+  lda.l SCUMM.ochrData
+  sta.w SCUMM.ochrObjCount
+
+  plp
+  rtl
+
+_ochr.tooLarge:
+  ;drain bytes from MSU stream to keep position correct
+  tay
+  sep #$20
+.ACCU 8
+- lda.l MSU_DATA
+  dey
+  bne -
+  rep #$20
+.ACCU 16
+
+_ochr.none:
+  plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; room.applyVisibleObjectPatches — apply patches for all objects
+; whose objectState != 0 (called once at room load time after
+; tilemap is loaded into SCROLL_TILEMAP_WRAM).
+;
+; Iterates the OCHR index, checks each object's state, applies
+; patches to SCROLL_TILEMAP_WRAM for visible objects.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "room applyVisibleObjPatches" free
+
+room.applyVisibleObjectPatches:
+  php
+  rep #$31
+
+  lda.w SCUMM.ochrObjCount
+  beq _avop.done
+
+  ;walk OCHR index: starts at offset 4 (after 4-byte header)
+  ;each index entry: obj_id(LE16) + patch_offset(LE16) = 4 bytes
+  ;data section starts at: 4 + ochrObjCount * 4
+
+  lda.w SCUMM.ochrObjCount
+  asl a
+  asl a
+  clc
+  adc #4                        ;data_start = 4 + count * 4
+  sta.b tmp+4                   ;tmp+4 = data section offset within OCHR blob
+
+  lda.w SCUMM.ochrObjCount
+  sta.b tmp+6                   ;loop counter
+  lda #4
+  sta.b tmp+8                   ;index read offset (starts at 4)
+
+_avop.loop:
+  ;read index entry
+  ldx.b tmp+8
+  lda.l SCUMM.ochrData,x      ;obj_id
+  sta.b tmp                     ;save obj_id
+  lda.l SCUMM.ochrData+2,x    ;patch_offset (relative to data section)
+  sta.b tmp+2                   ;save patch_offset
+
+  ;advance index pointer
+  lda.b tmp+8
+  clc
+  adc #4
+  sta.b tmp+8
+
+  ;check if this object is visible (objectState != 0)
+  ldx.b tmp                     ;obj_id
+  sep #$20
+.ACCU 8
+  lda.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  beq _avop.next                ;state == 0, skip
+
+  ;apply this object's patches
+  ;absolute offset in OCHR blob = data_start + patch_offset
+  lda.b tmp+4
+  clc
+  adc.b tmp+2
+  tax                           ;X = absolute offset to this object's patch data
+  jsr room.applyPatchesAtX
+
+_avop.next:
+  dec.b tmp+6
+  bne _avop.loop
+
+_avop.done:
+  plp
+  rtl
+
+
+;--- Helper: apply patches starting at OCHR blob offset X ---
+;Reads patch_count, then iterates patches writing obj_words
+;to SCROLL_TILEMAP_WRAM at (col * height_tiles + row) * 2.
+;
+; X = byte offset within SCUMM.ochrData to start of patch blob
+; Clobbers: A, X, Y, tmp+10..tmp+18
+room.applyPatchesAtX:
+  rep #$31
+
+  ;read patch header
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData,x      ;patch_count
+  rep #$20
+.ACCU 16
+  and #$00FF
+  beq _apX.ret
+  sta.b tmp+10                  ;patch_count
+
+  ;skip 4-byte header (count, col_min, col_max, reserved)
+  txa
+  clc
+  adc #4
+  sta.b tmp+12                  ;offset to first patch entry
+
+  ;iterate patches: each is {col(u8), row(u8), obj_word(LE16)} = 4 bytes
+  lda.b tmp+10
+  sta.b tmp+14                  ;loop counter
+
+_apX.patchLoop:
+  ldx.b tmp+12
+  ;read col
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.b tmp+16                  ;col
+
+  ;read row
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+1,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.b tmp+18                  ;row
+
+  ;read obj_word
+  lda.l SCUMM.ochrData+2,x
+
+  ;compute WRAM offset: (col * height_tiles + row) * 2
+  pha                           ;save obj_word
+  lda.b tmp+16                  ;col
+  ;multiply col * height_tiles (shift-add, height_tiles in WRAM)
+  phy
+  tay                           ;Y = col (multiplicand counter)
+  lda #0
+  beq _apX.mulTest
+_apX.mulAdd:
+  clc
+  adc.w GLOBAL.room.roomHeightTiles
+_apX.mulTest:
+  dey
+  bpl _apX.mulAdd
+  ;A = col * height_tiles
+  clc
+  adc.b tmp+18                  ;+ row
+  asl a                         ;* 2 (word offset)
+  ply
+  tax                           ;X = WRAM byte offset
+
+  pla                           ;obj_word
+  sta.l SCROLL_TILEMAP_WRAM,x   ;write composited word
+
+  ;advance to next patch entry
+  lda.b tmp+12
+  clc
+  adc #4
+  sta.b tmp+12
+
+  dec.b tmp+14
+  bne _apX.patchLoop
+
+_apX.ret:
+  rts
+
+.ends
+
+
+;===================================================================
+; room.removeObjectPatch — restore background tilemap words for one
+; object. Reads bg_words from the patch blob and writes them back
+; to SCROLL_TILEMAP_WRAM. Sets dirty flag.
+;
+; Input: A = obj_id (16-bit)
+; Clobbers: tmp+0..tmp+22
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "room removeObjectPatch" free
+
+room.removeObjectPatch:
+  php
+  rep #$31
+
+  sta.b tmp                     ;obj_id
+
+  ;find this object in the OCHR index
+  lda.w SCUMM.ochrObjCount
+  bne _rop.hasData
+  jmp _rop.done
+_rop.hasData:
+  sta.b tmp+6                   ;loop counter
+
+  ;data section offset
+  asl a
+  asl a
+  clc
+  adc #4
+  sta.b tmp+4                   ;data_start
+
+  lda #4
+  sta.b tmp+8                   ;index offset
+
+_rop.search:
+  ldx.b tmp+8
+  lda.l SCUMM.ochrData,x      ;obj_id from index
+  cmp.b tmp
+  beq _rop.found
+
+  lda.b tmp+8
+  clc
+  adc #4
+  sta.b tmp+8
+  dec.b tmp+6
+  bne _rop.search
+  jmp _rop.done                 ;not found
+
+_rop.found:
+  ;get patch data offset
+  lda.l SCUMM.ochrData+2,x    ;patch_offset
+  clc
+  adc.b tmp+4                   ;+ data_start = absolute offset
+  tax
+
+  ;read patch_count from blob header
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  bne _rop.hasPatches
+  jmp _rop.done
+_rop.hasPatches:
+  sta.b tmp+10                  ;patch_count
+
+  ;read col_min, col_max for dirty tracking
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+1,x    ;col_min
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.w SCUMM.objDirtyColMin
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+2,x    ;col_max
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.w SCUMM.objDirtyColMax
+
+  ;offset to patch entries = blobOffset + 4
+  txa
+  clc
+  adc #4
+  sta.b tmp+12                  ;patches start
+
+  ;offset to bg_words = patches start + patch_count * 4
+  lda.b tmp+10
+  asl a
+  asl a
+  clc
+  adc.b tmp+12
+  sta.b tmp+14                  ;bg_words start
+
+  ;iterate: read bg_word, compute WRAM offset from patch entry, write
+  lda.b tmp+10
+  sta.b tmp+16                  ;loop counter
+
+_rop.loop:
+  ;read col, row from patch entry
+  ldx.b tmp+12
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData,x      ;col
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.b tmp+18                  ;col
+
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+1,x    ;row
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.b tmp+20                  ;row
+
+  ;read bg_word
+  ldx.b tmp+14
+  lda.l SCUMM.ochrData,x
+
+  ;compute WRAM offset: (col * heightTiles + row) * 2
+  pha
+  lda.b tmp+18                  ;col
+  phy
+  tay
+  lda #0
+  beq _rop.mulTest
+_rop.mulAdd:
+  clc
+  adc.w GLOBAL.room.roomHeightTiles
+_rop.mulTest:
+  dey
+  bpl _rop.mulAdd
+  clc
+  adc.b tmp+20                  ;+ row
+  asl a
+  ply
+  tax
+
+  pla                           ;bg_word
+  sta.l SCROLL_TILEMAP_WRAM,x
+
+  ;advance
+  lda.b tmp+12
+  clc
+  adc #4
+  sta.b tmp+12
+
+  lda.b tmp+14
+  clc
+  adc #2
+  sta.b tmp+14
+
+  dec.b tmp+16
+  bne _rop.loop
+
+  ;set dirty flag
+  lda #1
+  sta.w SCUMM.objDirtyFlag
+  lda.w SCUMM.objDirtyColMin
+  sta.w SCUMM.objDirtyNext
+
+_rop.done:
+  plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; room.applyObjectPatch — write composited tilemap words for one
+; object into SCROLL_TILEMAP_WRAM. Sets dirty flag.
+;
+; Input: A = obj_id (16-bit)
+; Clobbers: tmp+0..tmp+22
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "room applyObjectPatch" free
+
+room.applyObjectPatch:
+  php
+  rep #$31
+
+  sta.b tmp                     ;obj_id
+
+  ;find this object in the OCHR index
+  lda.w SCUMM.ochrObjCount
+  beq _aop.done
+  sta.b tmp+6
+
+  ;data section offset
+  asl a
+  asl a
+  clc
+  adc #4
+  sta.b tmp+4
+
+  lda #4
+  sta.b tmp+8
+
+_aop.search:
+  ldx.b tmp+8
+  lda.l SCUMM.ochrData,x
+  cmp.b tmp
+  beq _aop.found
+
+  lda.b tmp+8
+  clc
+  adc #4
+  sta.b tmp+8
+  dec.b tmp+6
+  bne _aop.search
+  bra _aop.done
+
+_aop.found:
+  ;get absolute blob offset
+  lda.l SCUMM.ochrData+2,x
+  clc
+  adc.b tmp+4
+  tax
+
+  ;read col_min/col_max for dirty tracking
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+1,x    ;col_min
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.w SCUMM.objDirtyColMin
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+2,x    ;col_max
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sta.w SCUMM.objDirtyColMax
+
+  ;apply patches using shared helper
+  jsr room.applyPatchesAtX
+
+  ;set dirty flag
+  lda #1
+  sta.w SCUMM.objDirtyFlag
+  lda.w SCUMM.objDirtyColMin
+  sta.w SCUMM.objDirtyNext
+
+_aop.done:
+  plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; room.refreshObjectColumns — stage dirty tilemap columns for NMI
+; after object patches change. Called per-frame from play loop.
+; Must be in bank 0 to use jsr room.stageColumnForNmi.
+;===================================================================
+.base BSL
+.bank 0 slot 0
+.section "room refreshObjectColumns" free
+
+room.refreshObjectColumns:
+  php
+  rep #$31
+
+  lda.w SCUMM.objDirtyFlag
+  beq _roc.done
+
+  ;stage one column
+  lda.w SCUMM.objDirtyNext
+  jsr room.stageColumnForNmi
+
+  ;advance to next dirty column
+  lda.w SCUMM.objDirtyNext
+  inc a
+  sta.w SCUMM.objDirtyNext
+  cmp.w SCUMM.objDirtyColMax
+  bcc _roc.done
+  beq _roc.done
+
+  ;all dirty columns staged — clear flag
+  stz.w SCUMM.objDirtyFlag
+
+_roc.done:
+  plp
+  rts
 
 .ends

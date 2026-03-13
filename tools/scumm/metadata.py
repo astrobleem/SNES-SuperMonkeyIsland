@@ -181,6 +181,27 @@ def _parse_obcd(data: bytes) -> dict:
                 result['walk_y'] = walk_y
                 result['actor_dir'] = (h & 0x07)
 
+        elif sub.tag == 'VERB':
+            # VERB chunk: verb table entries {verb_id:u8, offset:u16} terminated
+            # by verb_id=0x00, followed by object script bytecode.
+            # Offsets are relative to VERB chunk data start.
+            d = sub.data
+            pos = 0
+            verb_entries = []
+            while pos < len(d):
+                verb_id = d[pos]
+                pos += 1
+                if verb_id == 0:
+                    break
+                offset = struct.unpack_from('<H', d, pos)[0]
+                pos += 2
+                verb_entries.append({'verb_id': verb_id, 'offset': offset})
+            if verb_entries:
+                result['verb_entries'] = verb_entries
+            # Store the entire VERB data blob (verb table + bytecode)
+            # for packing into .obj files
+            result['verb_data'] = d
+
         elif sub.tag == 'OBNA':
             name = sub.data.split(b'\x00')[0].decode('ascii', errors='replace')
             name = name.rstrip('@')  # SCUMM uses @ as null padding
@@ -248,6 +269,14 @@ def extract_metadata(room_resource, output_dir: Path, room_name: str = '') -> di
                 obj_data['height'] = imhd_dims[oid]['height']
             objects.append(obj_data)
     if objects:
+        # Save per-object verb data as binary files (can't go in JSON)
+        verb_dir = output_dir / 'verbs'
+        for obj_data in objects:
+            verb_data = obj_data.pop('verb_data', None)
+            if verb_data and len(verb_data) > 1:  # >1 = has actual verb entries
+                oid = obj_data.get('obj_id', 0)
+                verb_dir.mkdir(parents=True, exist_ok=True)
+                (verb_dir / f'obj_{oid:04d}.verb').write_bytes(verb_data)
         meta['objects'] = objects
 
     # EPAL

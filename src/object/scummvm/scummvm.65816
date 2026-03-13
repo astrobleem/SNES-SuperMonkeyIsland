@@ -354,6 +354,12 @@ _init.zeroDialogTilemap:
   lda #1
   sta.w SCUMM.dialogDmaPending
 
+  ;--- Init inventory state ---
+  stz.w SCUMM.inventoryCount
+  stz.w SCUMM.inventoryScroll
+  stz.w SCUMM.inventoryDirty
+  stz.w SCUMM.invNameCount
+
   ;--- Init camera state (superfree helper) ---
   jsl scummvm.initCameraVars
 
@@ -470,6 +476,8 @@ _play.nextSlot:
   jsl scummvm.moveCamera
   ; Sync tile scroll streamer with new camera position
   jsr room.syncScroll
+  ; Refresh dirty tilemap columns from object patches
+  jsr room.refreshObjectColumns
 
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
@@ -3871,22 +3879,39 @@ op_loadRoom:
   rts
 
 ; setOwnerOf ($29, $69, $A9, $E9) -- p16[7]=object + p8[6]=owner
+; Triggers inventory rebuild when ownership changes to/from ego (1).
 op_setOwnerOf:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object ID
   pha                                ; save object ID
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; owner
-  sta.w SCUMM.scratch               ; save owner
+  sta.w SCUMM.scratch               ; save new owner
   pla                                ; object ID
   cmp #SCUMM_MAX_OBJECTS
-  bcs +                              ; out of range → skip
+  bcs _soo.skip                      ; out of range → skip
     tax
+    ; Check if old or new owner is ego (1)
+    lda.w SCUMM.objectOwner,x
+    and #$00FF
+    sta.w SCUMM.scratch2             ; save old owner
     lda.w SCUMM.scratch
     sep #$20
-    sta.w SCUMM.objectOwner,x
+    sta.w SCUMM.objectOwner,x       ; store new owner
     rep #$20
-+
+    ; Rebuild if old or new owner is ego
+    lda.w SCUMM.scratch2
+    cmp #1
+    beq _soo.rebuild
+    lda.w SCUMM.scratch
+    and #$00FF
+    cmp #1
+    bne _soo.skip
+_soo.rebuild:
+    phy
+    jsl scummvm.rebuildInventory
+    ply
+_soo.skip:
   clc
   rts
 
@@ -5443,6 +5468,7 @@ op_verbOps:
 ;-------------------------------------------------------------------
 ; doSentence ($19,$39,$59,$79,$99,$B9,$D9,$F9)
 ; verb + objectA + objectB, with special sentinels $FE/$FC
+; Executes the verb script on objectA if a handler exists.
 ;-------------------------------------------------------------------
 op_doSentence:
   lda.w SCUMM.currentOpcode
@@ -5461,10 +5487,35 @@ _doSentence.verbVar:
   jsr _scummvm.readVariable
 
 _doSentence.readObjects:
+  pha                                  ; push verb ID
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectWord    ; objectA (consumed but not stored yet)
+  jsr _scummvm.getVarOrDirectWord    ; objectA
+  pha                                  ; push objectA
   lda #SCUMM_FLAG_BIT5
-  jsr _scummvm.getVarOrDirectWord    ; objectB (consumed but not stored yet)
+  jsr _scummvm.getVarOrDirectWord    ; objectB (consumed, not used yet)
+
+  ;--- Look up verb entrypoint for objectA ---
+  lda 1,s                             ; objectA
+  sta.w SCUMM.scratch2                 ; scratch2 = obj_id for helper
+  lda 3,s                             ; verb ID
+  sta.w SCUMM.scratch                  ; scratch = verb_id
+  lda 1,s                             ; A = objectA
+  phy                                  ; save SCUMM PC
+  jsl scummvm.getVerbEntrypoint_impl   ; A = entry offset (0 = none)
+  ply                                  ; restore SCUMM PC
+  cmp #0
+  beq _doSentence.noHandler
+
+  ;--- Start the object script at this entry point ---
+  sta.w SCUMM.scratch                  ; scratch = entry offset
+  lda 1,s                             ; objectA
+  phy                                  ; save SCUMM PC
+  jsl scummvm.startObjectScript
+  ply                                  ; restore SCUMM PC
+
+_doSentence.noHandler:
+  pla                                  ; discard objectA
+  pla                                  ; discard verb ID
 
 _doSentence.done:
   clc
@@ -5472,13 +5523,36 @@ _doSentence.done:
 
 
 ;-------------------------------------------------------------------
-; startObject ($37,$77,$B7,$F7) -- p16 object + p8[6] script + varargs
+; startObject ($37,$77,$B7,$F7) -- p16 object + p8[6] entry + varargs
+; Starts an object's verb script at the given entry point.
 ;-------------------------------------------------------------------
 op_startObject:
   jsr _scummvm.fetchWord             ; object ID (always p16)
+  pha                                  ; push object ID
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte    ; script number
-  jsr _scummvm.skipWordVararg        ; variable args
+  jsr _scummvm.getVarOrDirectByte    ; entry point (verb number)
+  sta.w SCUMM.scratch3                 ; save entry/verb for lookup
+  jsr _scummvm.skipWordVararg        ; variable args (consumed, not used)
+
+  ;--- Look up verb entrypoint ---
+  lda.w SCUMM.scratch3                ; verb/entry number
+  sta.w SCUMM.scratch                  ; scratch = verb_id
+  lda 1,s                             ; object ID
+  phy                                  ; save SCUMM PC
+  jsl scummvm.getVerbEntrypoint_impl   ; A = entry offset
+  ply                                  ; restore SCUMM PC
+  cmp #0
+  beq _startObj.noHandler
+
+  ;--- Start the object script ---
+  sta.w SCUMM.scratch                  ; scratch = entry offset
+  lda 1,s                             ; object ID
+  phy                                  ; save SCUMM PC
+  jsl scummvm.startObjectScript
+  ply                                  ; restore SCUMM PC
+
+_startObj.noHandler:
+  pla                                  ; discard object ID
   clc
   rts
 
@@ -5654,6 +5728,17 @@ op_getActorWidth:
   rts
 
 op_getInventoryCount:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; actor
+  and #$00FF
+  phy
+  jsl scummvm.getInventoryCount_impl ; A = count
+  ply
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
 op_getStringWidth:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
@@ -5723,10 +5808,10 @@ op_getClosestObjActor:
   rts
 
 ;-------------------------------------------------------------------
-; result + p16[7] + p16[6] → return 0  (getDist, getVerbEntrypoint, actorFromPos)
+; getDist ($34, $B4) — result + p16[7] + p16[6] → return 0 (stub)
+; actorFromPos ($15, $55, $95, $D5) — result + p16[7] + p16[6] → 0
 ;-------------------------------------------------------------------
 op_getDist:
-op_getVerbEntrypoint:
 op_actorFromPos:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
@@ -5739,22 +5824,60 @@ op_actorFromPos:
   rts
 
 ;-------------------------------------------------------------------
-; findObject ($35, $B5) — result + p8[7] screenX + p8[6] screenY
-; findInventory ($3D, $BD) — result + p8[7] + p8[6] → return 0
-; Shared: room.findObject does camera+AABB. For findInventory,
-; garbage coords → returns 0 (no AABB hit).
+; getVerbEntrypoint ($0B, $4B, $8B, $CB)
+; result = getVerbEntrypoint(object, verb)
+; Returns offset into object's VERB data (>0 = has handler, 0 = none)
 ;-------------------------------------------------------------------
-op_findObject:
-op_findInventory:
+op_getVerbEntrypoint:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte        ;param1 (screenX or owner)
+  jsr _scummvm.getVarOrDirectWord
+  pha                                    ; push object ID
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectWord
+  sta.w SCUMM.scratch                   ; scratch = verb ID
+  pla                                    ; A = object ID
+  phy                                    ; save SCUMM PC
+  jsl scummvm.getVerbEntrypoint_impl
+  ply                                    ; restore SCUMM PC
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+;-------------------------------------------------------------------
+; findObject ($35, $B5) — result + p8[7] screenX + p8[6] screenY
+;-------------------------------------------------------------------
+op_findObject:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte        ;param1 = screenX
   pha
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte        ;param2 (screenY or inv idx)
+  jsr _scummvm.getVarOrDirectByte        ;param2 = screenY
   sta.w SCUMM.scratch                    ;scratch = screenY
   pla                                    ;A = screenX
   jsl room.findObject                    ;camera+AABB → A=objId
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+;-------------------------------------------------------------------
+; findInventory ($3D, $7D, $BD, $FD) — result + p8[7]=owner + p8[6]=index
+; Returns the Nth object owned by the given actor (1-based index).
+;-------------------------------------------------------------------
+op_findInventory:
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte        ;owner actor
+  pha
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectByte        ;index (1-based)
+  sta.w SCUMM.scratch                    ;scratch = index
+  pla
+  and #$00FF                             ;A = owner
+  phy
+  jsl scummvm.findInventory_impl         ;A = obj_id (0 if not found)
+  ply
   jsr _scummvm.writeVariable
   clc
   rts
@@ -5783,35 +5906,108 @@ _afc.done:
   rts
 
 ;-------------------------------------------------------------------
-; putActorAtObject ($0E, $4E, $8E, $CE) — p8[7] + p16[6], stub
-; walkActorToObject ($36, $76, $B6, $F6) — p8[7] + p16[6], stub
+; putActorAtObject ($0E, $4E, $8E, $CE) — p8[7] actor + p16[6] object
+; Teleports actor to object's walk-to point.
 ;-------------------------------------------------------------------
 op_putActorAtObject:
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; actor
+  and #$00FF
+  pha                                ; push actor number
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectWord    ; object
+  sta.w SCUMM.scratch3               ; scratch3 = object ID
+  pla                                ; actor number
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16 = actor struct offset
+  sta.w SCUMM.scratch2               ; scratch2 = actor struct offset
+  lda.w SCUMM.scratch3               ; A = object ID
+  phy                                ; save SCUMM PC
+  sec                                ; carry set = PUT (teleport)
+  jsl scummvm.actorAtObj_impl
+  ply                                ; restore SCUMM PC
+  clc
+  rts
+
+;-------------------------------------------------------------------
+; walkActorToObject ($36, $76, $B6, $F6) — p8[7] actor + p16[6] object
+; Walks actor to object's walk-to point via pathfinding.
+;-------------------------------------------------------------------
 op_walkActorToObject:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor
+  and #$00FF
+  pha                                ; push actor number
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectWord    ; object
+  sta.w SCUMM.scratch3               ; scratch3 = object ID
+  pla                                ; actor number
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16 = actor struct offset
+  sta.w SCUMM.scratch2               ; scratch2 = actor struct offset
+  lda.w SCUMM.scratch3               ; A = object ID
+  phy                                ; save SCUMM PC
+  clc                                ; carry clear = WALK (pathfind)
+  jsl scummvm.actorAtObj_impl
+  ply                                ; restore SCUMM PC
   clc
   rts
 
 ;-------------------------------------------------------------------
-; pickupObject ($25, $65, $A5, $E5) — p16[7] + p8[6], no-op
+; pickupObject ($25, $65, $A5, $E5) — p16[7]=obj + p8[6]=room
+; Sets owner to ego (1), hides from room, caches name, rebuilds list.
 ;-------------------------------------------------------------------
 op_pickupObject:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord    ; object
+  jsr _scummvm.getVarOrDirectWord    ; object id
+  sta.w SCUMM.scratch                ; save obj_id
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte    ; room
+  jsr _scummvm.getVarOrDirectByte    ; room (consumed, not used in MVP)
+  ldx.w SCUMM.scratch
+  cpx #SCUMM_MAX_OBJECTS
+  bcs _pickupObj.done
+  sep #$20
+  lda #1
+  sta.w SCUMM.objectOwner,x          ; owner = ego (actor 1)
+  lda #0
+  sta.w SCUMM.objectState,x          ; hide from room
+  rep #$20
+  lda.w SCUMM.scratch                ; A = obj_id
+  phy
+  jsl scummvm.cacheInventoryName
+  jsl scummvm.rebuildInventory
+  ply
+_pickupObj.done:
   clc
   rts
 
 ;-------------------------------------------------------------------
-; pickupObjectOld ($50, $D0) — p16[7] only, no-op
+; pickupObjectOld ($50, $D0) — p16[7]=obj only
+; Same as pickupObject but without room parameter.
 ;-------------------------------------------------------------------
 op_pickupObjectOld:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord    ; object
+  jsr _scummvm.getVarOrDirectWord    ; object id
+  sta.w SCUMM.scratch
+  ldx.w SCUMM.scratch
+  cpx #SCUMM_MAX_OBJECTS
+  bcs _pickupObjOld.done
+  sep #$20
+  lda #1
+  sta.w SCUMM.objectOwner,x
+  lda #0
+  sta.w SCUMM.objectState,x
+  rep #$20
+  lda.w SCUMM.scratch                ; A = obj_id
+  phy
+  jsl scummvm.cacheInventoryName
+  jsl scummvm.rebuildInventory
+  ply
+_pickupObjOld.done:
   clc
   rts
 
@@ -7282,8 +7478,110 @@ _rvb.nextVerb:
   jmp _rvb.verbLoop
 +
 
+  ;--- Render inventory items on row 4 (Y=176, tile row 4) ---
+  lda.w SCUMM.inventoryCount
+  beq _rvb.noInventory
+
+  lda.w SCUMM.inventoryScroll
+  asl a                                 ; scroll * 2 = byte offset into list
+  tax
+  ldy #0                                ; Y = visible item counter
+
+_rvb.invLoop:
+  cpy #INV_VISIBLE_ITEMS
+  bcs _rvb.noInventory
+  lda.w SCUMM.inventoryList,x
+  beq _rvb.noInventory                  ; 0 = end of list
+
+  ; Look up name from cache for this obj_id
+  sta.w SCUMM.scratch3                  ; scratch3 = obj_id to find
+  phx                                   ; save inventory list offset
+  phy                                   ; save visible counter
+
+  ; Compute tilemap start for this item: row 4, column = visibleIndex * 8
+  ; tilemap offset = (4 * 32 + visibleIndex * 8) * 2
+  tya
+  asl a
+  asl a
+  asl a                                 ; visibleIndex * 8
+  clc
+  adc #128                              ; + 4*32 = 128
+  asl a                                 ; * 2 = byte offset
+  sta.w SCUMM.actorOamCount             ; reuse as tilemap write ptr
+
+  ; Search invNameObjIds for matching obj_id
+  ldx #0
+  lda.w SCUMM.invNameCount
+  beq _rvb.invNameDone
+  sta.w SCUMM.scratch2                  ; search count
+
+_rvb.invNameSearch:
+  lda.w SCUMM.invNameObjIds,x
+  cmp.w SCUMM.scratch3
+  beq _rvb.invNameFound
+  inx
+  inx
+  dec.w SCUMM.scratch2
+  bne _rvb.invNameSearch
+  bra _rvb.invNameDone                  ; not found
+
+_rvb.invNameFound:
+  ; X = name slot * 2; compute name data offset = (slot * 16)
+  txa
+  lsr a                                 ; slot index
+  sta.w SCUMM.scratch2                  ; save slot index
+
+  ; Get name length
+  tax
+  lda.w SCUMM.invNameLens,x
+  and #$00FF
+  beq _rvb.invNameDone
+  pha                                   ; push char count
+
+  ; Name data offset = slot * 16
+  lda.w SCUMM.scratch2
+  asl a
+  asl a
+  asl a
+  asl a                                 ; * 16
+  tax                                   ; X = name data offset
+
+  ldy.w SCUMM.actorOamCount             ; Y = tilemap byte offset
+
+  ; Write name characters
+_rvb.invCharLoop:
+  sep #$20
+.ACCU 8
+  lda.w SCUMM.invNames,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sec
+  sbc #$20                              ; ASCII to tile index
+  ora #$3C00                            ; priority + palette 7 (white)
+  sta.w SCUMM.verbTilemap,y
+  inx
+  iny
+  iny
+  pla
+  dec a
+  beq _rvb.invNameDone
+  pha
+  bra _rvb.invCharLoop
+
+_rvb.invNameDone:
+  ply                                   ; restore visible counter
+  plx                                   ; restore list offset
+  iny                                   ; next visible slot
+  inx
+  inx                                   ; next list entry
+  bra _rvb.invLoop
+
+_rvb.noInventory:
+
   ; Clear dirty flag, set DMA pending flag
   stz.w SCUMM.verbDirty
+  stz.w SCUMM.inventoryDirty
   lda #1
   sta.w SCUMM.verbDmaPending
 
@@ -8534,7 +8832,7 @@ scummvm.updateObjectHover:
   rep #$31
   lda.w SCUMM.cursorY
   cmp #144
-  bcs _oh.verb
+  bcs _oh.verbArea
   ;room area — check object under cursor
   sta.w SCUMM.scratch                   ;scratch = screenY
   lda.w SCUMM.cursorX                   ;A = screenX
@@ -8545,8 +8843,40 @@ scummvm.updateObjectHover:
   lda #1
   sta.w SCUMM.sentenceDirty
   rtl
-_oh.verb:
-  ;verb area — clear object if any
+
+_oh.verbArea:
+  ;check if in inventory row: Y in [176, 184)
+  cmp #176
+  bcc _oh.verbOnly
+  cmp #184
+  bcs _oh.verbOnly
+  ;inventory row — compute which item slot
+  lda.w SCUMM.cursorX
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a                                 ;cursorX / 64 = visible item index
+  clc
+  adc.w SCUMM.inventoryScroll           ;+ scroll offset = absolute item index
+  cmp.w SCUMM.inventoryCount
+  bcs _oh.clearObj                      ;beyond inventory → clear
+  ;valid item — look up obj_id from list
+  asl a                                 ;* 2 = byte offset
+  tax
+  lda.w SCUMM.inventoryList,x
+  beq _oh.clearObj
+  cmp.w SCUMM.cursorObject
+  beq _oh.done                          ;same object, no change
+  sta.w SCUMM.cursorObject
+  lda #1
+  sta.w SCUMM.sentenceDirty
+  rtl
+
+_oh.verbOnly:
+  ;verb area (not inventory row) — clear object if any
+_oh.clearObj:
   lda.w SCUMM.cursorObject
   beq _oh.done
   stz.w SCUMM.cursorObject
@@ -8578,7 +8908,9 @@ scummvm.appendObjectName:
 
   ;search roomObjTable for matching cursorObject ID
   lda.w SCUMM.cursorObject
-  beq _aon.ret
+  bne +
+  rtl                                    ;no cursor object → early return
++
   phx                                   ;save tilemap position
   ldx #0                                ;X = entry byte offset
   stz.b tmp+2                           ;cumulative name byte offset
@@ -8604,6 +8936,68 @@ _aon.search:
   bne _aon.search
 
 _aon.notFound:
+  plx
+  ;--- Fallback: search inventory name cache ---
+  lda.w SCUMM.invNameCount
+  beq _aon.ret
+  sta.b tmp+6                           ;search count
+  phx                                   ;save tilemap position
+  ldx #0                                ;X = name slot * 2
+
+_aon.invSearch:
+  lda.w SCUMM.invNameObjIds,x
+  cmp.w SCUMM.cursorObject
+  beq _aon.invFound
+  inx
+  inx
+  dec.b tmp+6
+  bne _aon.invSearch
+  plx                                   ;not found in cache either
+  rtl
+
+_aon.invFound:
+  ;X = name slot * 2; get slot index
+  txa
+  lsr a                                 ;slot index
+  sta.b tmp+2                           ;save slot
+
+  ;get name length
+  tax
+  lda.w SCUMM.invNameLens,x
+  and #$00FF
+  beq _aon.invNotFoundPop
+  sta.b tmp+4                           ;char count
+
+  ;name data offset = slot * 16
+  lda.b tmp+2
+  asl a
+  asl a
+  asl a
+  asl a                                 ;* 16
+  tax                                   ;X = name data offset
+  ply                                   ;Y = tilemap offset (from stack)
+
+_aon.invWriteChar:
+  sep #$20
+.ACCU 8
+  lda.w SCUMM.invNames,x
+  rep #$20
+.ACCU 16
+  and #$00FF
+  sec
+  sbc #$20                              ;ASCII → tile index
+  ora #$3C00                            ;priority + palette 7 (white)
+  sta.w SCUMM.verbTilemap,y
+  inx
+  iny
+  iny
+  dec.b tmp+4
+  bne _aon.invWriteChar
+
+  tyx                                   ;X = updated tilemap position
+  rtl
+
+_aon.invNotFoundPop:
   plx
   rtl
 
@@ -8649,11 +9043,26 @@ _aon.ret:
 .base BSL
 .section "ScummVM drawObjectState" free
 
-;set objectState[SCUMM.scratch] = 1
+;set objectState[SCUMM.scratch] = 1 (show object)
 scummvm.drawObjectSetState1:
   rep #$20
   ldx.w SCUMM.scratch
+
+  ;check if transitioning from hidden to visible
   sep #$20
+.ACCU 8
+  lda.w SCUMM.objectState,x
+  bne _dos1.alreadyVisible      ;already visible, just update state
+  ;was hidden → becoming visible: apply patch
+  lda #1
+  sta.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+  lda.w SCUMM.scratch           ;obj_id
+  jsl room.applyObjectPatch
+  rtl
+
+_dos1.alreadyVisible:
 .ACCU 8
   lda #1
   sta.w SCUMM.objectState,x
@@ -8665,10 +9074,49 @@ scummvm.drawObjectSetState1:
 scummvm.drawObjectSetStateN:
   rep #$20
   and #$00FF
+  sta.b tmp+28                  ;save new state value
   ldx.w SCUMM.scratch
+
+  ;read old state
   sep #$20
 .ACCU 8
+  lda.w SCUMM.objectState,x
+  sta.b tmp+30                  ;old state (byte)
+
+  ;write new state
+  lda.b tmp+28
   sta.w SCUMM.objectState,x
+  rep #$20
+.ACCU 16
+
+  ;check transitions
+  sep #$20
+.ACCU 8
+  lda.b tmp+30                  ;old state
+  beq _dosN.wasHidden
+  ;was visible
+  lda.b tmp+28                  ;new state
+  bne _dosN.done                ;visible→visible, no change
+  ;visible→hidden: remove patch
+  rep #$20
+.ACCU 16
+  lda.w SCUMM.scratch
+  jsl room.removeObjectPatch
+  rtl
+
+_dosN.wasHidden:
+.ACCU 8
+  lda.b tmp+28                  ;new state
+  beq _dosN.done                ;hidden→hidden, no change
+  ;hidden→visible: apply patch
+  rep #$20
+.ACCU 16
+  lda.w SCUMM.scratch
+  jsl room.applyObjectPatch
+  rtl
+
+_dosN.done:
+.ACCU 8
   rep #$20
 .ACCU 16
   rtl
@@ -9038,6 +9486,522 @@ scummvm.snapCameraToRoom:
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
 _snap.done:
+  rtl
+
+.ends
+
+;===================================================================
+; scummvm.getVerbEntrypoint_impl — superfree
+; Input:  A = object ID, SCUMM.scratch = verb ID
+; Output: A = verb entry offset (>0 = handler exists, 0 = none)
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "scummvm getVerbEntrypoint" free
+
+scummvm.getVerbEntrypoint_impl:
+  rep #$31
+  ;--- Find the object's index in roomObjTable ---
+  sta.w SCUMM.scratch2                ; scratch2 = target obj_id
+  lda.w SCUMM.roomObjCount
+  beq _gve.notfound
+  tay                                  ; Y = remaining count
+  ldx #0                              ; X = entry byte offset
+_gve.scanObj:
+  lda.l SCUMM.roomObjTable,x          ; obj_id at this entry
+  cmp.w SCUMM.scratch2
+  beq _gve.foundObj
+  txa
+  clc
+  adc #16                             ; next entry (16 bytes each)
+  tax
+  dey
+  bne _gve.scanObj
+_gve.notfound:
+  lda #0
+  rtl
+
+_gve.foundObj:
+  ;--- X/16 = object index. Read verb index entry ---
+  ; verbIdx = index * 4 (verb_data_off + verb_data_len)
+  txa
+  lsr a
+  lsr a                               ; index * 4 (16/4 = 4)
+  tax
+  lda.l SCUMM.roomObjVerbIdx+2,x      ; verb_data_len
+  beq _gve.notfound                   ; no verb data
+  lda.l SCUMM.roomObjVerbIdx,x        ; verb_data_off
+  tax                                  ; X = offset into roomObjVerbData
+
+  ;--- Scan verb table: {verb_id:u8, offset:u16}* terminated by 0x00 ---
+  lda.w SCUMM.scratch                  ; target verb_id
+  and #$00FF
+  sta.w SCUMM.scratch3                 ; scratch3 = target verb_id (8-bit in 16-bit reg)
+_gve.scanVerb:
+  lda.l SCUMM.roomObjVerbData,x       ; read verb_id byte
+  and #$00FF
+  beq _gve.notfound                   ; 0x00 = end of table
+  cmp.w SCUMM.scratch3
+  beq _gve.foundVerb
+  inx
+  inx
+  inx                                  ; skip verb_id(1) + offset(2)
+  bra _gve.scanVerb
+
+_gve.foundVerb:
+  inx                                  ; skip verb_id byte
+  lda.l SCUMM.roomObjVerbData,x       ; read offset (LE16)
+  rtl
+
+.ends
+
+;===================================================================
+; scummvm.startObjectScript — superfree
+; Start executing an object's verb script in a new slot.
+; Input:  A = object ID, SCUMM.scratch = entry offset within VERB data
+; Output: none
+; The object's verb data blob is copied to the script cache, a new
+; slot is initialized with pc = entry offset.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "scummvm startObjectScript" free
+
+scummvm.startObjectScript:
+  rep #$31
+  sta.w SCUMM.scratch2                ; scratch2 = obj_id
+
+  ;--- Find object index in roomObjTable ---
+  lda.w SCUMM.roomObjCount
+  beq _sos.bail
+  tay
+  ldx #0
+_sos.scanObj:
+  lda.l SCUMM.roomObjTable,x
+  cmp.w SCUMM.scratch2
+  beq _sos.foundObj
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _sos.scanObj
+_sos.bail:
+  rtl
+
+_sos.foundObj:
+  ;--- Read verb index: index = X/16, verbIdx offset = index*4 ---
+  ; X = obj entry byte offset (index * 16)
+  ; We need index * 4 for verb idx table
+  txa
+  lsr a
+  lsr a                               ; X/16 * 4 = X/4
+  tax
+  lda.l SCUMM.roomObjVerbIdx+2,x      ; verb_data_len
+  beq _sos.bail
+  sta.w SCUMM.scratch3                 ; scratch3 = verb_data_len
+  lda.l SCUMM.roomObjVerbIdx,x        ; verb_data_off
+  tax                                  ; X = source offset in roomObjVerbData
+
+  ;--- Check cache space ---
+  lda.w SCUMM.cacheWritePtr
+  clc
+  adc.w SCUMM.scratch3                 ; cacheWritePtr + verb_data_len
+  cmp #SCUMM_CACHE_SIZE
+  bcc _sos.cacheOk
+  rtl                                  ; cache full, bail
+_sos.cacheOk:
+
+  ;--- Copy verb data blob to script cache ($7F:6400+) ---
+  ; X = source offset in roomObjVerbData, scratch3 = byte count
+  lda.w SCUMM.cacheWritePtr
+  sta.w SCUMM.scratch2                 ; scratch2 = cachePtr (start of cached blob)
+  phy                                  ; save caller's Y
+  ldy.w SCUMM.scratch3                 ; Y = bytes remaining
+_sos.copy:
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.roomObjVerbData,x       ; read from $7E WRAM
+  phx                                  ; save source index
+  ldx.w SCUMM.cacheWritePtr
+  sta.l SCUMM_CACHE_WRAM,x            ; write to $7F cache
+  inx
+  stx.w SCUMM.cacheWritePtr           ; 16-bit store (X flag still clear)
+  plx                                  ; restore source index
+  rep #$20
+.ACCU 16
+  inx
+  dey
+  bne _sos.copy
+  ply                                  ; restore caller's Y
+
+  ;--- Find a dead script slot ---
+  phx                                  ; save (unused but balance)
+  ldx #0
+  ldy #0
+_sos.findSlot:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _sos.gotSlot
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _sos.findSlot
+  plx
+  rtl                                  ; no free slot
+
+_sos.gotSlot:
+  plx                                  ; discard saved X
+  ;--- Initialize the slot ---
+  ; X = slot byte offset
+  sep #$20
+.ACCU 8
+  lda #0                               ; script "number" = 0 for object scripts
+  sta.w SCUMM.slots.number,x
+  lda #SCUMM_SLOT_RUNNING
+  sta.w SCUMM.slots.status,x
+  lda #SCUMM_WHERE_ROOM
+  sta.w SCUMM.slots.where,x
+  lda #0
+  sta.w SCUMM.slots.freezeCount,x
+  sta.w SCUMM.slots.cutsceneOverride,x
+  rep #$20
+.ACCU 16
+  lda.w SCUMM.scratch2                 ; cachePtr
+  sta.w SCUMM.slots.cachePtr,x
+  lda.w SCUMM.scratch3                 ; cacheLen (= verb_data_len)
+  sta.w SCUMM.slots.cacheLen,x
+  lda.w SCUMM.scratch                  ; entry offset (pc start)
+  sta.w SCUMM.slots.pc,x
+  lda #0
+  sta.w SCUMM.slots.delay,x
+
+  ;--- Zero local variables ---
+  phx
+  ldy #0
+_sos.zeroLocals:
+  sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  cpy #SCUMM_MAX_LOCALS
+  bcc _sos.zeroLocals
+  plx
+
+  rtl
+
+.ends
+
+
+;===================================================================
+; rebuildInventory — scan objectOwner for ego (actor 1), rebuild list
+; Sets inventoryDirty + verbDirty. JSL/RTL.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "ScummVM rebuildInventory" free
+
+scummvm.rebuildInventory:
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ; Clear inventoryList (32 slots x 2B = 64 bytes)
+  ldx #0
+  lda #0
+-
+  sta.w SCUMM.inventoryList,x
+  inx
+  inx
+  cpx #INV_MAX_ITEMS * 2
+  bcc -
+
+  ; Scan objectOwner[0..1023] for owner == 1
+  ldx #0                              ; X = object index
+  ldy #0                              ; Y = inventory slot byte offset
+
+_rbi.scan:
+  lda.w SCUMM.objectOwner,x
+  and #$00FF
+  cmp #1
+  bne _rbi.next
+  ; Found an ego-owned item — store obj_id
+  cpy #INV_MAX_ITEMS * 2              ; cap at 32 items
+  bcs _rbi.next
+  txa                                  ; A = obj_id (== object index)
+  sta.w SCUMM.inventoryList,y
+  iny
+  iny
+_rbi.next:
+  inx
+  cpx #SCUMM_MAX_OBJECTS
+  bcc _rbi.scan
+
+  ; Store count (byte offset / 2)
+  tya
+  lsr a
+  sta.w SCUMM.inventoryCount
+
+  ; Clamp scroll
+  lda.w SCUMM.inventoryScroll
+  cmp.w SCUMM.inventoryCount
+  bcc +
+  stz.w SCUMM.inventoryScroll
++
+
+  ; Set dirty flags
+  lda #1
+  sta.w SCUMM.inventoryDirty
+  sta.w SCUMM.verbDirty               ; trigger full verb+inventory re-render
+
+  plb
+  rtl
+
+.ends
+
+
+;===================================================================
+; cacheInventoryName — cache object name from current room data
+; Input: A = obj_id. Searches roomObjTable for matching object,
+; copies name into invNameCache. JSL/RTL.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "ScummVM cacheInventoryName" free
+
+scummvm.cacheInventoryName:
+  phb
+  phx
+  phy
+  sep #$20
+  pha
+  lda #$7E
+  pha
+  plb
+  rep #$31
+  pla
+  and #$00FF                           ; A = obj_id (clean 16-bit)
+  sta.w SCUMM.scratch                  ; scratch = obj_id
+
+  ; Check if already cached
+  ldx #0
+  lda.w SCUMM.invNameCount
+  beq _cin.searchRoom
+  sta.w SCUMM.scratch2                 ; search count
+
+_cin.checkExisting:
+  lda.w SCUMM.invNameObjIds,x
+  cmp.w SCUMM.scratch
+  beq _cin.alreadyCached               ; already in cache, skip
+  inx
+  inx
+  dec.w SCUMM.scratch2
+  bne _cin.checkExisting
+
+_cin.searchRoom:
+  ; Search roomObjTable for matching obj_id
+  ldx #0                              ; X = entry byte offset
+  stz.w SCUMM.scratch3                ; cumulative name byte offset
+  ldy.w SCUMM.roomObjCount
+  beq _cin.notFound
+
+_cin.roomSearch:
+  lda.l SCUMM.roomObjTable,x          ; obj_id at +$00
+  cmp.w SCUMM.scratch
+  beq _cin.roomFound
+  ; Accumulate name offset
+  lda.l SCUMM.roomObjTable+15,x       ; name_len at +$0F
+  and #$00FF
+  clc
+  adc.w SCUMM.scratch3
+  sta.w SCUMM.scratch3
+  ; Next entry
+  txa
+  clc
+  adc #16
+  tax
+  dey
+  bne _cin.roomSearch
+
+_cin.notFound:
+_cin.alreadyCached:
+  ply
+  plx
+  plb
+  rtl
+
+_cin.roomFound:
+  ; Get name_len for this object
+  lda.l SCUMM.roomObjTable+15,x
+  and #$00FF
+  beq _cin.notFound
+  cmp #INV_NAME_MAX_LEN + 1
+  bcc +
+  lda #INV_NAME_MAX_LEN                ; clamp to 16 chars
++
+  sta.w SCUMM.scratch2                 ; char count
+
+  ; Allocate a cache slot
+  lda.w SCUMM.invNameCount
+  cmp #INV_MAX_ITEMS
+  bcs _cin.notFound                    ; cache full
+  asl a                                ; slot * 2 for objId array
+  tax
+  lda.w SCUMM.scratch
+  sta.w SCUMM.invNameObjIds,x          ; store obj_id
+
+  ; Store name length
+  lda.w SCUMM.invNameCount
+  tax
+  lda.w SCUMM.scratch2
+  sep #$20
+.ACCU 8
+  sta.w SCUMM.invNameLens,x
+  rep #$20
+.ACCU 16
+
+  ; Compute name data destination: slot * 16
+  lda.w SCUMM.invNameCount
+  asl a
+  asl a
+  asl a
+  asl a                                ; * 16
+  tay                                  ; Y = dest offset in invNames
+
+  ; Copy name chars from roomObjNames
+  ldx.w SCUMM.scratch3                 ; X = source offset in roomObjNames
+  lda.w SCUMM.scratch2                 ; char count
+  sta.w SCUMM.scratch3                 ; reuse scratch3 as counter
+
+_cin.copyLoop:
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.roomObjNames,x
+  sta.w SCUMM.invNames,y
+  rep #$20
+.ACCU 16
+  inx
+  iny
+  dec.w SCUMM.scratch3
+  bne _cin.copyLoop
+
+  ; Increment cache count
+  inc.w SCUMM.invNameCount
+
+  ply
+  plx
+  plb
+  rtl
+
+.ends
+
+
+;===================================================================
+; findInventory_impl — find Nth object owned by actor
+; Input: A = owner actor, SCUMM.scratch = index (1-based)
+; Output: A = obj_id (0 if not found). JSL/RTL.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "ScummVM findInventory impl" free
+
+scummvm.findInventory_impl:
+  phb
+  phx
+  phy
+  sep #$20
+  pha
+  lda #$7E
+  pha
+  plb
+  rep #$31
+  pla
+  and #$00FF                           ; A = owner
+  sta.w SCUMM.scratch2                 ; scratch2 = target owner
+
+  lda.w SCUMM.scratch
+  and #$00FF                           ; index (1-based)
+  beq _fi.zero                         ; index 0 = invalid
+  sta.w SCUMM.scratch3                 ; scratch3 = remaining count
+
+  ldx #0                              ; X = object index
+_fi.scan:
+  lda.w SCUMM.objectOwner,x
+  and #$00FF
+  cmp.w SCUMM.scratch2
+  bne _fi.next
+  ; Found a match — decrement counter
+  dec.w SCUMM.scratch3
+  bne _fi.next
+  ; This is the Nth item — return obj_id
+  txa                                  ; A = obj_id
+  ply
+  plx
+  plb
+  rtl
+
+_fi.next:
+  inx
+  cpx #SCUMM_MAX_OBJECTS
+  bcc _fi.scan
+
+_fi.zero:
+  lda #0
+  ply
+  plx
+  plb
+  rtl
+
+.ends
+
+
+;===================================================================
+; getInventoryCount_impl — count objects owned by actor
+; Input: A = owner actor
+; Output: A = count. JSL/RTL.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "ScummVM getInventoryCount impl" free
+
+scummvm.getInventoryCount_impl:
+  phb
+  phx
+  phy
+  sep #$20
+  pha
+  lda #$7E
+  pha
+  plb
+  rep #$31
+  pla
+  and #$00FF                           ; A = owner
+  sta.w SCUMM.scratch2                 ; target owner
+  ldy #0                              ; Y = count
+  ldx #0                              ; X = object index
+
+_gic.scan:
+  lda.w SCUMM.objectOwner,x
+  and #$00FF
+  cmp.w SCUMM.scratch2
+  bne _gic.next
+  iny
+_gic.next:
+  inx
+  cpx #SCUMM_MAX_OBJECTS
+  bcc _gic.scan
+
+  tya                                  ; A = count
+  ply
+  plx
+  plb
   rtl
 
 .ends

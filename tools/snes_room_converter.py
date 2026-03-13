@@ -227,8 +227,15 @@ def build_column_index(map_data, width_tiles, height_tiles):
 
 def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
                       num_tiles, pal_size, chr_size, map_size, col_size,
-                      box_size=0):
-    """Build 32-byte room header."""
+                      box_size=0, ochr_size=0):
+    """Build 32-byte room header.
+
+    The box_size field is 32-bit but always fits in 16 bits. The high 16 bits
+    at offset $1E are repurposed as ochr_size (object patch data size).
+    """
+    # Pack box_size as 16-bit (low) + ochr_size as 16-bit (high) into the
+    # 32-bit box_size field at offset $1C-$1F.
+    box_field_32 = (box_size & 0xFFFF) | ((ochr_size & 0xFFFF) << 16)
     return struct.pack('<HHHHHHHHIIII',
         room_id,
         width_px,
@@ -241,7 +248,7 @@ def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
         chr_size,
         map_size,
         col_size,
-        box_size,
+        box_field_32,
     )
 
 
@@ -336,15 +343,275 @@ def parse_room_dir(room_dir):
     raise ValueError(f"Cannot determine room info from {room_dir}")
 
 
+def _rgb_to_bgr555_array(rgb_array):
+    """Convert (H, W, 3) uint8 RGB array to (H, W) uint16 BGR555."""
+    a = rgb_array.astype(np.int32)
+    return (
+        ((a[:, :, 0] >> 3) & 0x1F) |
+        (((a[:, :, 1] >> 3) & 0x1F) << 5) |
+        (((a[:, :, 2] >> 3) & 0x1F) << 10)
+    ).astype(np.uint16)
+
+
+# Magic pink transparent color in SCUMM MI1 (palette index 5)
+SCUMM_TRANS_RGB = (171, 0, 171)
+
+
+def _load_room_objects(room_dir, bg_width, bg_height):
+    """Load object images and metadata for compositing.
+
+    Returns list of dicts: {obj_id, x, y, width, height, rgb_array, name}
+    Only includes objects that have extracted PNGs and fall within bg bounds.
+    """
+    meta_path = room_dir / "metadata.json"
+    if not meta_path.exists():
+        return []
+
+    with open(meta_path) as f:
+        meta = json.load(f)
+
+    objects_meta = meta.get('objects', [])
+    if not objects_meta:
+        return []
+
+    obj_dir = room_dir / "objects"
+    if not obj_dir.exists():
+        return []
+
+    result = []
+    for obj in objects_meta:
+        oid = obj.get('obj_id', 0)
+        x = obj.get('x', 0)
+        y = obj.get('y', 0)
+        w = obj.get('width', 0)
+        h = obj.get('height', 0)
+        name = obj.get('name', '')
+
+        if w == 0 or h == 0:
+            continue
+
+        # Find PNG (may have name suffix)
+        candidates = list(obj_dir.glob(f'obj_{oid:04d}*.png'))
+        # Skip multi-state PNGs (we only want state 0 = default image)
+        candidates = [c for c in candidates if '_state' not in c.name]
+        if not candidates:
+            continue
+
+        # Verify object fits within background bounds
+        if x < 0 or y < 0 or x + w > bg_width or y + h > bg_height:
+            log.debug("  Object %d out of bounds (%d,%d %dx%d vs %dx%d), skipping",
+                      oid, x, y, w, h, bg_width, bg_height)
+            continue
+
+        img = Image.open(candidates[0]).convert('RGB')
+        if img.size != (w, h):
+            # Metadata dimensions may not match image; use image dimensions
+            w, h = img.size
+            if x + w > bg_width or y + h > bg_height:
+                continue
+
+        result.append({
+            'obj_id': oid,
+            'x': x, 'y': y,
+            'width': w, 'height': h,
+            'rgb': np.array(img, dtype=np.uint8),
+            'name': name,
+        })
+
+    return result
+
+
+def _composite_object_tiles(bg_rgb, obj_info, width_tiles, height_tiles):
+    """Composite one object onto the background, returning affected tile data.
+
+    Args:
+        bg_rgb: (H, W, 3) uint8 background RGB array
+        obj_info: dict with x, y, width, height, rgb keys
+        width_tiles, height_tiles: background tile dimensions
+
+    Returns list of (col, row, composited_tile_bgr555) for tiles that differ
+    from the background. composited_tile_bgr555 is (8, 8) uint16.
+    """
+    ox, oy = obj_info['x'], obj_info['y']
+    ow, oh = obj_info['width'], obj_info['height']
+    obj_rgb = obj_info['rgb']
+
+    # Determine tile range covered by this object
+    col_min = ox // TILE_SIZE
+    col_max = (ox + ow - 1) // TILE_SIZE
+    row_min = oy // TILE_SIZE
+    row_max = (oy + oh - 1) // TILE_SIZE
+
+    # Clamp to room bounds
+    col_max = min(col_max, width_tiles - 1)
+    row_max = min(row_max, height_tiles - 1)
+
+    result = []
+    for col in range(col_min, col_max + 1):
+        for row in range(row_min, row_max + 1):
+            # Extract background tile
+            ty = row * TILE_SIZE
+            tx = col * TILE_SIZE
+            bg_tile = bg_rgb[ty:ty+TILE_SIZE, tx:tx+TILE_SIZE].copy()
+
+            # Composite object pixels over background
+            has_obj_pixel = False
+            for py in range(TILE_SIZE):
+                for px in range(TILE_SIZE):
+                    # Room-space coords of this pixel
+                    rx = tx + px
+                    ry = ty + py
+                    # Object-local coords
+                    lx = rx - ox
+                    ly = ry - oy
+                    if 0 <= lx < ow and 0 <= ly < oh:
+                        r, g, b = int(obj_rgb[ly, lx, 0]), int(obj_rgb[ly, lx, 1]), int(obj_rgb[ly, lx, 2])
+                        if (r, g, b) != SCUMM_TRANS_RGB:
+                            bg_tile[py, px] = obj_rgb[ly, lx]
+                            has_obj_pixel = True
+
+            if not has_obj_pixel:
+                continue
+
+            # Convert composited tile to BGR555
+            comp_bgr = _rgb_to_bgr555_array(bg_tile.reshape(1, TILE_SIZE * TILE_SIZE, 3)
+                                             .reshape(TILE_SIZE, TILE_SIZE, 3))
+            result.append((col, row, comp_bgr))
+
+    return result
+
+
+def _build_object_patches(bg_entries, obj_comp_entries, obj_infos,
+                          width_tiles, height_tiles):
+    """Build per-object patch tables from composited tile entries.
+
+    Args:
+        bg_entries: list of (tile_id, pal_id, hflip, vflip) for background tiles
+                    in row-major order (row * width_tiles + col)
+        obj_comp_entries: dict mapping (obj_id, col, row) to
+                         (tile_id, pal_id, hflip, vflip) from dedup
+        obj_infos: list of object info dicts
+
+    Returns list of per-object patch dicts:
+        {obj_id, patches: [(col, row, obj_word)], bg_words: [word]}
+    """
+    patches_by_obj = []
+
+    for obj in obj_infos:
+        oid = obj['obj_id']
+        ox, oy = obj['x'], obj['y']
+        ow, oh = obj['width'], obj['height']
+
+        col_min = ox // TILE_SIZE
+        col_max = min((ox + ow - 1) // TILE_SIZE, width_tiles - 1)
+        row_min = oy // TILE_SIZE
+        row_max = min((oy + oh - 1) // TILE_SIZE, height_tiles - 1)
+
+        patches = []
+        bg_words = []
+
+        for col in range(col_min, col_max + 1):
+            for row in range(row_min, row_max + 1):
+                key = (oid, col, row)
+                if key not in obj_comp_entries:
+                    continue
+
+                # Get composited entry
+                c_tid, c_pal, c_hf, c_vf = obj_comp_entries[key]
+                c_word = encode_tilemap_word(c_tid, c_pal, c_hf, c_vf)
+
+                # Get background entry
+                bg_idx = row * width_tiles + col
+                b_tid, b_pal, b_hf, b_vf = bg_entries[bg_idx]
+                b_word = encode_tilemap_word(b_tid, b_pal, b_hf, b_vf)
+
+                if c_word != b_word:
+                    patches.append((col, row, c_word))
+                    bg_words.append(b_word)
+
+        if patches:
+            patches_by_obj.append({
+                'obj_id': oid,
+                'patches': patches,
+                'bg_words': bg_words,
+                'col_min': min(p[0] for p in patches),
+                'col_max': max(p[0] for p in patches),
+            })
+
+    return patches_by_obj
+
+
+def _encode_ochr(patches_by_obj):
+    """Encode per-object patch data into .ochr binary.
+
+    Format:
+      Header:
+        obj_patch_count (LE16)  — number of objects with patches
+        total_data_size (LE16)  — total bytes of patch data section
+      Index (per object):
+        obj_id       (LE16)
+        patch_offset (LE16)  — offset into data section
+      Data (per object):
+        patch_count  (u8)
+        col_min      (u8)
+        col_max      (u8)
+        reserved     (u8)
+        patches[n]:  { col(u8), row(u8), obj_word(LE16) }  — 4 bytes each
+        bg_words[n]: LE16[]  — original background words
+    """
+    if not patches_by_obj:
+        return b''
+
+    # Build data blobs
+    data_blobs = []
+    for obj_patch in patches_by_obj:
+        patches = obj_patch['patches']
+        bg_words = obj_patch['bg_words']
+        count = len(patches)
+
+        blob = struct.pack('<BBBB',
+            count,
+            obj_patch['col_min'],
+            obj_patch['col_max'],
+            0,  # reserved
+        )
+        for col, row, obj_word in patches:
+            blob += struct.pack('<BBH', col, row, obj_word)
+        for bw in bg_words:
+            blob += struct.pack('<H', bw)
+        data_blobs.append(blob)
+
+    # Compute offsets
+    index_size = len(patches_by_obj) * 4  # 4 bytes per index entry
+    offsets = []
+    pos = 0
+    for blob in data_blobs:
+        offsets.append(pos)
+        pos += len(blob)
+
+    total_data_size = pos
+
+    # Build binary
+    result = struct.pack('<HH', len(patches_by_obj), total_data_size)
+    for i, obj_patch in enumerate(patches_by_obj):
+        result += struct.pack('<HH', obj_patch['obj_id'], offsets[i])
+    for blob in data_blobs:
+        result += blob
+
+    return result
+
+
 def convert_room(room_dir, output_dir, verbose=False, verify=False):
     """Convert a single room's background to SNES tile format.
 
     Pipeline:
-        1. Load RGB image, convert to SNES BGR555 color space
-        2. Build 8 sub-palettes (gracon-style: collect, reduce, partition)
-        3. Assign each 8x8 tile to best sub-palette, remap pixels (lossy)
-        4. Deduplicate tiles with horizontal/vertical flip detection
-        5. Encode binary outputs: palette, tileset, tilemap, column index, header
+        1. Load RGB image + object images, convert to SNES BGR555
+        2. Composite object tiles over background tiles
+        3. Build 8 sub-palettes jointly (gracon-style: collect, reduce, partition)
+        4. Assign each 8x8 tile to best sub-palette, remap pixels (lossy)
+        5. Deduplicate tiles with horizontal/vertical flip detection
+        6. Generate per-object patch tables (composited vs background tile IDs)
+        7. Encode binary outputs: palette, tileset, tilemap, column index, header, ochr
 
     Returns a stats dict on success, or None on failure.
     """
@@ -372,43 +639,90 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
 
     width_tiles = width_px // TILE_SIZE
     height_tiles = height_px // TILE_SIZE
+    bg_rgb = np.array(img, dtype=np.uint8)
 
-    # Convert to SNES color space (BGR555)
-    rgb = np.array(img, dtype=np.int32)
-    snes_pixels = (
-        ((rgb[:, :, 0] >> 3) & 0x1F) |
-        (((rgb[:, :, 1] >> 3) & 0x1F) << 5) |
-        (((rgb[:, :, 2] >> 3) & 0x1F) << 10)
-    ).astype(np.uint16)
+    # Convert background to SNES color space (BGR555)
+    snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))
 
-    # Step 1+2: Split into tiles, build palettes, and palettize (tile-aware)
     t0 = time.time()
-    snes_tiles = snes_pixels.reshape(
+
+    # Load object images for this room
+    obj_infos = _load_room_objects(room_dir, width_px, height_px)
+
+    # Composite object tiles over background
+    # Track: (obj_id, col, row) -> index into extra_tiles array
+    obj_comp_map = {}  # (obj_id, col, row) -> index in extra_snes_tiles
+    extra_snes_tiles = []
+
+    for obj in obj_infos:
+        comp_tiles = _composite_object_tiles(bg_rgb, obj, width_tiles, height_tiles)
+        for col, row, comp_bgr in comp_tiles:
+            obj_comp_map[(obj['obj_id'], col, row)] = len(extra_snes_tiles)
+            extra_snes_tiles.append(comp_bgr)
+
+    # Split background into tiles
+    bg_snes_tiles = snes_pixels.reshape(
         height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
     ).transpose(0, 2, 1, 3).reshape(-1, TILE_SIZE, TILE_SIZE)
 
-    palettes, indexed_tiles, tile_pal_ids = build_palettes_tileaware(snes_tiles)
+    # Joint palette quantization: background tiles + composited object tiles
+    if extra_snes_tiles:
+        all_snes_tiles = np.concatenate(
+            [bg_snes_tiles, np.array(extra_snes_tiles, dtype=np.uint16)],
+            axis=0
+        )
+    else:
+        all_snes_tiles = bg_snes_tiles
+
+    palettes, all_indexed_tiles, all_tile_pal_ids = build_palettes_tileaware(all_snes_tiles)
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
 
-    # Step 3: Deduplicate
-    unique_tiles, tilemap_entries = dedup_tiles(indexed_tiles, tile_pal_ids)
+    # Separate background and object indexed tiles
+    bg_count = len(bg_snes_tiles)
+    bg_indexed = all_indexed_tiles[:bg_count]
+    bg_pal_ids = all_tile_pal_ids[:bg_count]
+    obj_indexed = all_indexed_tiles[bg_count:]
+    obj_pal_ids = all_tile_pal_ids[bg_count:]
 
-    # Step 4: Encode outputs
+    # Deduplicate combined tileset (bg + object tiles together)
+    all_indexed_combined = list(bg_indexed) + list(obj_indexed)
+    all_pal_combined = list(bg_pal_ids) + list(obj_pal_ids)
+    unique_tiles, all_entries = dedup_tiles(all_indexed_combined, all_pal_combined)
+
+    # Split entries back
+    bg_entries = all_entries[:bg_count]
+    obj_entries = all_entries[bg_count:]
+
+    # Map composited tile entries back to (obj_id, col, row)
+    obj_comp_entries = {}
+    for (oid, col, row), extra_idx in obj_comp_map.items():
+        obj_comp_entries[(oid, col, row)] = obj_entries[extra_idx]
+
+    # Build per-object patch tables
+    obj_patches = _build_object_patches(
+        bg_entries, obj_comp_entries, obj_infos,
+        width_tiles, height_tiles
+    )
+
+    # Encode binary outputs
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"room_{room_id:03d}"
 
     pal_data = encode_palette(palettes)
     chr_data = encode_tileset(unique_tiles)
-    map_data = encode_tilemap_column_major(tilemap_entries, width_tiles, height_tiles)
+    map_data = encode_tilemap_column_major(bg_entries, width_tiles, height_tiles)
     col_data = build_column_index(map_data, width_tiles, height_tiles)
 
-    # Copy walkbox binary from extracted data (if present)
+    # Walkbox binary
     box_path = room_dir / "walkbox.box"
     if box_path.exists():
         box_data = box_path.read_bytes()
     else:
-        box_data = struct.pack('<H', 0)  # no walkboxes
+        box_data = struct.pack('<H', 0)
+
+    # Object patch binary (.ochr)
+    ochr_data = _encode_ochr(obj_patches)
 
     hdr_data = build_room_header(
         room_id=room_id,
@@ -422,6 +736,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         map_size=len(map_data),
         col_size=len(col_data),
         box_size=len(box_data),
+        ochr_size=len(ochr_data),
     )
 
     # Write files
@@ -430,6 +745,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     (output_dir / f"{prefix}.map").write_bytes(map_data)
     (output_dir / f"{prefix}.col").write_bytes(col_data)
     (output_dir / f"{prefix}.box").write_bytes(box_data)
+    (output_dir / f"{prefix}.ochr").write_bytes(ochr_data)
     (output_dir / f"{prefix}.hdr").write_bytes(hdr_data)
 
     elapsed = time.time() - t0
@@ -447,6 +763,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
             log.info("  Verification: %s", vpath.name)
 
     exceeds = num_tiles > MAX_TILE_ID
+    obj_patch_count = sum(len(p['patches']) for p in obj_patches)
 
     stats = {
         'room_id': room_id,
@@ -464,15 +781,19 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         'map_bytes': len(map_data),
         'col_bytes': len(col_data),
         'box_bytes': len(box_data),
+        'ochr_bytes': len(ochr_data),
+        'ochr_objects': len(obj_patches),
+        'ochr_patches': obj_patch_count,
         'hdr_bytes': len(hdr_data),
         'exceeds_tile_limit': exceeds,
         'time_s': round(elapsed, 2),
     }
 
     flag = ' !!!' if exceeds else ''
-    log.info("Room %03d %-16s %4dx%-3d  %4d tiles (%4.0f%% dedup)  %d pals  %.1fs%s",
+    obj_str = f'  {len(obj_patches)}obj/{obj_patch_count}pat' if obj_patches else ''
+    log.info("Room %03d %-16s %4dx%-3d  %4d tiles (%4.0f%% dedup)  %d pals  %.1fs%s%s",
              room_id, room_name, width_px, height_px, num_tiles,
-             dedup * 100, pals_used, elapsed, flag)
+             dedup * 100, pals_used, elapsed, obj_str, flag)
 
     return stats
 

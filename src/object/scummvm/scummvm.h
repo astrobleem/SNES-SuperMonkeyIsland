@@ -216,14 +216,33 @@ SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
 .ramsection "scumm room objects" bank 0 slot 1
 SCUMM.roomObjCount     dw                                              ; object count for current room
 SCUMM.roomObjNameSize  dw                                              ; name table size in bytes
+SCUMM.roomObjVerbSize  dw                                              ; verb data total size in bytes
 SCUMM.roomObjTable     INSTANCEOF roomObjectEntry SCUMM_MAX_ROOM_OBJECTS ; 96 x 16 = 1536 bytes
 SCUMM.roomObjNames     ds 512                                          ; packed name string table
+.ends
+
+; Per-object verb data index (4 bytes per object: offset LE16 + len LE16)
+.ramsection "scumm room obj verbs" bank 0 slot 1
+SCUMM.roomObjVerbIdx   ds SCUMM_MAX_ROOM_OBJECTS * 4                   ; 96 x 4 = 384 bytes
+SCUMM.roomObjVerbData  ds 4096                                         ; concatenated verb data blobs (max ~3.4KB)
 .ends
 
 ; Cursor object tracking
 .ramsection "scumm cursor object" bank 0 slot 1
 SCUMM.cursorObject     dw      ; object ID under cursor (0 = none)
 SCUMM.sentenceObject   dw      ; object ID shown in sentence line (0 = none)
+.ends
+
+; Object rendering patch state + data buffer (all in bank $7E)
+.define SCUMM_OCHR_MAX_SIZE_7E  6016    ; max OCHR data (covers room 28 = 5986B)
+.ramsection "scumm object render" bank 0 slot 1
+SCUMM.ochrDataSize     dw      ; loaded OCHR data size (0 = none)
+SCUMM.ochrObjCount     dw      ; number of objects with visual patches
+SCUMM.objDirtyFlag     dw      ; nonzero = tilemap columns need refresh
+SCUMM.objDirtyColMin   dw      ; leftmost dirty column
+SCUMM.objDirtyColMax   dw      ; rightmost dirty column
+SCUMM.objDirtyNext     dw      ; next dirty column to stage for NMI
+SCUMM.ochrData         ds SCUMM_OCHR_MAX_SIZE_7E  ; OCHR data buffer (~6KB)
 .ends
 
 ; Actor rendering scratch (used by renderActors)
@@ -413,6 +432,29 @@ SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 .define VERB_FONT_VRAM_ADDR   $8000   ; byte addr for font tiles (word $4000)
 .define VERB_TILEMAP_VRAM_ADDR $9000  ; byte addr for BG2 tilemap (word $4800)
 .define VERB_TILEMAP_SIZE     2048    ; 32x32 x 2 bytes
+
+;---------------------------------------------------------------------------
+; Inventory state (cached list + name storage)
+;---------------------------------------------------------------------------
+.define INV_MAX_ITEMS       32     ; max inventory items tracked
+.define INV_NAME_MAX_LEN    16     ; max chars per item name
+.define INV_VISIBLE_ITEMS   4      ; items visible per row (64px each)
+
+.ramsection "scumm inventory state" bank 0 slot 1
+SCUMM.inventoryList      ds INV_MAX_ITEMS * 2    ; 32 x 2B obj_id (0=empty)
+SCUMM.inventoryCount     dw                      ; items owned by ego
+SCUMM.inventoryScroll    dw                      ; first visible item index
+SCUMM.inventoryDirty     dw                      ; re-render flag
+.ends
+
+; Inventory name cache — indexed by cache slot (not inventory list order).
+; Names are cached at pickup time because roomObjNames gets overwritten on room change.
+.ramsection "scumm inventory names" bank 0 slot 1
+SCUMM.invNameObjIds      ds INV_MAX_ITEMS * 2    ; 32 x 2B: obj_id per name slot
+SCUMM.invNameLens        ds INV_MAX_ITEMS        ; 32 x 1B: name length
+SCUMM.invNames           ds INV_MAX_ITEMS * INV_NAME_MAX_LEN  ; 32 x 16B: name chars
+SCUMM.invNameCount       dw                      ; number of cached names
+.ends
 
 ; Camera variable indices (SCUMM v5 MI1)
 .define SCUMM_VAR_CAMERA_POS_X     2

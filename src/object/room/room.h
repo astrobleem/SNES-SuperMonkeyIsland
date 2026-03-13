@@ -57,8 +57,8 @@
   map_size_hi   dw      ;+$16
   col_size      dw      ;+$18  low 16 bits of column index size
   col_size_hi   dw      ;+$1A
-  box_size      dw      ;+$1C  walkbox data size (bytes)
-  box_size_hi   dw      ;+$1E
+  box_size      dw      ;+$1C  walkbox data size (bytes, always <64KB)
+  ochr_size     dw      ;+$1E  object patch data size (repurposed from box_size_hi)
 .endst
 
 ;room index entry struct (8 bytes from MSU-1 index table)
@@ -101,6 +101,9 @@ GLOBAL.room.refreshIdx     dw                 ;background refresh column offset 
 .define ROOM_MAX_ROOM_OBJECTS   96   ;max objects per room
 .define ROOM_OBJ_ENTRY_SIZE     16   ;bytes per roomObjectEntry struct
 .define ROOM_OBJ_NAME_BUF_SIZE  512  ;max bytes for packed name strings
+
+;object patch (OCHR) — data buffer is SCUMM.ochrData in scummvm.h (bank $7E)
+.define SCUMM_OCHR_MAX_SIZE_7E  6016    ;max OCHR data in bank $7E buffer
 
 .base BSL
 .bank 0 slot 0

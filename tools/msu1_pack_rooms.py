@@ -26,7 +26,7 @@ VERSION = 1
 HEADER_SIZE = 256
 INDEX_ENTRY_SIZE = 8
 BLOCK_ALIGNMENT = 512
-ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj')
+ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr')
 
 
 def align_to(offset, alignment):
@@ -71,7 +71,7 @@ def load_room_files(rooms_dir):
 
 def build_room_data_block(room):
     """Concatenate hdr+pal+chr+map+col into a single room data block."""
-    return room['hdr'] + room['pal'] + room['chr'] + room['map'] + room['col'] + room['box'] + room['obj']
+    return room['hdr'] + room['pal'] + room['chr'] + room['map'] + room['col'] + room['box'] + room['obj'] + room['ochr']
 
 
 def build_file_header(room_count, room_index_offset, room_data_offset,

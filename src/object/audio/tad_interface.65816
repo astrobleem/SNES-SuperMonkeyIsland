@@ -25,8 +25,9 @@
 ;
 ; A8, I16, DB = $80 (register bank)
 
+.bank 2 slot 0
 .base BSL
-.section "TAD LoadAudioData" superfree
+.section "TAD LoadAudioData" free
 Tad_LoadAudioData:
     cmp.b #TAD_N_DATA_ITEMS
     bcc _lad_valid
@@ -75,8 +76,9 @@ Tad_BlankSongData:
 ; TAD API Functions (superfree)
 ; ============================
 
+.bank 2 slot 0
 .base BSL
-.section "TAD API" superfree
+.section "TAD API" free
 
 
 ; -------------------------------------------------------

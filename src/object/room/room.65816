@@ -690,7 +690,9 @@ _rl.objDone:
 ; Output: A = object ID (0 = none found)
 ; Converts screen→room coords, iterates reverse (SCUMM priority).
 ;===================================================================
-.section "room findObject" superfree
+.bank 5 slot 0
+.base BSL
+.section "room findObject" free
 
 room.findObject:
   rep #$31
@@ -762,7 +764,9 @@ _fo.none:
 ;===================================================================
 ; room.initObjectStates — set objectState=1 for loaded room objects
 ;===================================================================
-.section "room initObjectStates" superfree
+.bank 5 slot 0
+.base BSL
+.section "room initObjectStates" free
 
 room.initObjectStates:
   rep #$31
@@ -795,7 +799,9 @@ _ios.done:
 ;===================================================================
 ; Walkbox loader — superfree to avoid growing bank 0
 ;===================================================================
-.section "room walkbox loader" superfree
+.bank 5 slot 0
+.base BSL
+.section "room walkbox loader" free
 
 /**
 * Load walkbox data via MSU seek (avoids draining col_size bytes).

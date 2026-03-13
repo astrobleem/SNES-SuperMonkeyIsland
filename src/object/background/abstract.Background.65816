@@ -5,6 +5,9 @@
 
 
 .include "src/object/background/abstract.Background.h"
+
+.bank 0 slot 0
+.base BSL
 .section "abstract.Background"
 
   METHOD init

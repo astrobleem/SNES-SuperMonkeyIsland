@@ -221,11 +221,14 @@ _return:
     plx
     pla
     ;--- PBR guard: fix corrupted Program Bank Register before rti ---
+    ;On 65816, interrupts set PBR=$00. rti restores PBR from stack.
+    ;If the stacked PBR is corrupted, jsr(0,x) dispatch reads wrong bank.
+    ;Accept any ROM bank ($C0+) as valid — code lives in banks 0-5.
     sep #$20
     pha
     lda 5,s
     cmp #ROM
-    beq +
+    bcs +
       lda #ROM
       sta 5,s
 +

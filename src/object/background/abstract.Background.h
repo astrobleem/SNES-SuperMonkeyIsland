@@ -21,10 +21,10 @@ zpLen ds 0
 .define CLASS.ZP_LENGTH zpLen
 .define CLASS.IMPLEMENTS interface.dimension
 
+.bank 3 slot 0
 .base BSL
-.bank 0 slot 0
 
-.section "BgBitflagLUT" superfree
+.section "BgBitflagLUT" free
 BgBitflagLUT:
   .db T_BG1_ENABLE
   .db T_BG2_ENABLE
@@ -32,7 +32,9 @@ BgBitflagLUT:
   .db T_BG4_ENABLE
 .ends
 
-.section "palette_granularity_lut" superfree
+.bank 3 slot 0
+.base BSL
+.section "palette_granularity_lut" free
 PALETTE.GRANULARITY.LUT:
   .dw PALETTE.GRANULARITY.1BPP
   .dw PALETTE.GRANULARITY.2BPP
@@ -41,7 +43,9 @@ PALETTE.GRANULARITY.LUT:
   .dw PALETTE.GRANULARITY.8BPP
 .ends
 
-.section "tilemap_length_lut" superfree
+.bank 3 slot 0
+.base BSL
+.section "tilemap_length_lut" free
 TILEMAP.LENGTH.LUT:
   .dw TILEMAP.SIZE.SINGLE
   .dw TILEMAP.SIZE.DUAL
@@ -49,7 +53,9 @@ TILEMAP.LENGTH.LUT:
   .dw TILEMAP.SIZE.QUADRUPLE
 .ends
 
-.section "tiles_mask_lut" superfree
+.bank 3 slot 0
+.base BSL
+.section "tiles_mask_lut" free
 TILES.MASK.LUT:
   .dw $fff0
   .dw $ff0f
@@ -57,7 +63,9 @@ TILES.MASK.LUT:
   .dw $0fff
 .ends
 
-.section "tiles_shift_lut" superfree
+.bank 3 slot 0
+.base BSL
+.section "tiles_shift_lut" free
 TILES.SHIFT.LUT:
   .dw 0
   .dw 4
@@ -65,10 +73,18 @@ TILES.SHIFT.LUT:
   .dw 12
 .ends
 
-.Section "BackgroundAnimationLUT" superfree
+.bank 3 slot 0
+.base BSL
+.Section "BackgroundAnimationLUT" free
 BackgroundAnimationLUT:
   PTRLONG BackgroundAnimationLUT BG.msu1
 
 .ends
-  BG_ANIMATION msu1 gfx_bg
+; BG.msu1 pinned to bank 3 (~28KB)
+.bank 3 slot 0
+.base BSL
+.section "msu1.gfx_bg.animation" free
+  BG.msu1:
+  .incbin "build/data/backgrounds/msu1.gfx_bg.animation"
+.ends
 

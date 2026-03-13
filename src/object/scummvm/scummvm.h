@@ -433,7 +433,9 @@ SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 ;---------------------------------------------------------------------------
 ; Verb font data (4bpp 8x8 font, 96 glyphs)
 ;---------------------------------------------------------------------------
-.section "VerbFontData" superfree
+.bank 4 slot 0
+.base BSL
+.section "VerbFontData" free
   FILEINC VerbFontTiles "build/data/font/fixed8x8.gfx_font4bpp.tiles"
 .ends
 
@@ -442,7 +444,9 @@ SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 ; Format: {count, value} pairs, $00 = end
 ; Register target: $212C (TM / MainScreen)
 ;---------------------------------------------------------------------------
-.section "VerbHdmaTable" superfree
+.bank 5 slot 0
+.base BSL
+.section "VerbHdmaTable" free
 VerbHdmaTable:
   .db 128                               ; scanlines 0-127: room area
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
@@ -466,7 +470,9 @@ VerbHdmaTable:
 ;   - CGRAM[$73] = $7FFF (pal7 color3 = white letter body)
 ; Room palette 7 preserved for room area (only color0 touched, always transparent).
 ;---------------------------------------------------------------------------
-.section "VerbCgramHdmaTable" superfree
+.bank 5 slot 0
+.base BSL
+.section "VerbCgramHdmaTable" free
 VerbCgramHdmaTable:
   .db 128                               ; scanlines 0-127: room area
   .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (pal7 color0, transparent)

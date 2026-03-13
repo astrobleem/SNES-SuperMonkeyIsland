@@ -13,6 +13,8 @@
 
 .include "src/object/scummvm/scummvm.h"
 
+.bank 0 slot 0
+.base BSL
 .section "scummvm class"
 
 ;===================================================================
@@ -1553,7 +1555,9 @@ scummvm.triggerBadOpcode:
 ; buildWalkPath.  All routines use jsr/rts internally.
 ; Entry points are jsl/rtl wrappers.
 ;===================================================================
-.section "ScummVM walkbox pathfinding" superfree
+.bank 4 slot 0
+.base BSL
+.section "ScummVM walkbox pathfinding" free
 
 ;-------------------------------------------------------------------
 ; pointInBox — test if point (px, py) is inside walkbox boxIdx
@@ -2520,10 +2524,6 @@ scummvm.createBoxMatrix_long:
   jsr scummvm.createBoxMatrix
   rtl
 
-;pad to stabilize WLA-DX linker bin-packing
-;(prevents TAD audio sections from being reshuffled to bank 1)
-.dsb 700 $EA
-
 .ends
 
 ;===================================================================
@@ -2533,7 +2533,9 @@ scummvm.createBoxMatrix_long:
 ; handlers, parameter helpers, math/audio helpers, updateActors.
 ; Moved from bank 0 to free ~3.5KB.
 ;===================================================================
-.section "ScummVM dispatch" superfree
+.bank 4 slot 0
+.base BSL
+.section "ScummVM dispatch" free
 
 ;-------------------------------------------------------------------
 ; _scummvm.updateActors entry (jsl wrapper)
@@ -6256,7 +6258,9 @@ _ua.animDone:
 ; Costume frame data — embedded in ROM (superfree bank)
 ; Guybrush standing south idle (cost_017 pic00: 19x47, 13 tiles)
 ;===================================================================
-.section "CostumeData" superfree
+.bank 5 slot 0
+.base BSL
+.section "CostumeData" free
 
 ;--- Walk cycle table (12 steps → pic index) ---
 WalkCycleTable:
@@ -6353,7 +6357,9 @@ Costume_pic09_oam: .incbin "data/snes_converted/costumes/cost_017/pic09.oam"
 ; D register = ScummVM object ZP (preserved across jsl).
 ; DBR = $7E (WRAM bank, preserved across jsl).
 ;===================================================================
-.section "scummvm render impl" superfree
+.bank 5 slot 0
+.base BSL
+.section "scummvm render impl" free
 
 scummvm.renderActors_impl:
   rep #$31
@@ -6621,7 +6627,9 @@ _ri.done:
 ; Called via jsl from op_verbOps. Y = SCUMM PC, [tmp] = script base.
 ; SCUMM.resultVar = verb ID. All sub-opcodes handled here.
 ;===========================================================================
-.section "scummvm verbOps impl" superfree
+.bank 5 slot 0
+.base BSL
+.section "scummvm verbOps impl" free
 
 scummvm.verbOps_impl:
   ; Set data bank to $7E for WRAM access
@@ -7008,7 +7016,9 @@ _voi.xySkip:
 ;   id(1), x_pixel(1), y_pixel(1), nameLen(1), nameOffset(2), pad(2)
 ; Names stored separately for easy addressing.
 ;===================================================================
-.section "ScummVMDefaultVerbs" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMDefaultVerbs" free
 
 scummvm.initDefaultVerbs:
   phb
@@ -7137,7 +7147,9 @@ _idv.n9: .db "Pull"
 ; Verb bar renderer (superfree — called via jsl from play method)
 ; Builds BG2 tilemap from verb table, then DMA uploads it.
 ;===================================================================
-.section "ScummVMVerbRenderer" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMVerbRenderer" free
 
 scummvm.renderVerbBar:
   phb
@@ -7287,8 +7299,9 @@ _rvb.nextVerb:
 ; Table restores room colors at scanline 0, sets verb colors at 140.
 ; JSL/RTL. DBR=$7E assumed for absolute addressing.
 ;-------------------------------------------------------------------
+.bank 5 slot 0
 .base BSL
-.section "ScummVMBuildCgramHdma" superfree
+.section "ScummVMBuildCgramHdma" free
 
 scummvm.buildCgramHdmaTable:
   php
@@ -7497,7 +7510,9 @@ scummvm.buildCgramHdmaTable:
 ; Cursor tile data — 8x8 4bpp arrow sprite (32 bytes)
 ; Hardcoded arrow pointing upper-left
 ;===================================================================
-.section "CursorTileData" superfree
+.bank 5 slot 0
+.base BSL
+.section "CursorTileData" free
 
 CursorTileData:
 ; 8x8 4bpp tile: 2 bitplanes interleaved per row (planes 0-1), then planes 2-3
@@ -7534,7 +7549,9 @@ CursorTileDataEnd:
 ; Reads joypad, moves cursor, writes SCUMM vars, handles A-button
 ; click for walk and verb selection.
 ;===================================================================
-.section "ScummVMCursorUpdate" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMCursorUpdate" free
 
 scummvm.updateCursor:
   phb
@@ -7918,7 +7935,9 @@ _uc.highlightDone:
 ; Directly writes DMA queue entries for pending CHR/cursor/verb
 ; transfers. Avoids bank 0 bloat from inline registerTransfer calls.
 ;===================================================================
-.section "ScummVMDmaRegistration" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMDmaRegistration" free
 
 scummvm.registerPendingDma:
   php
@@ -8148,7 +8167,9 @@ _scummTalkColorLUT:
 ; renders to BG3 tilemap buffer, sets dialog state.
 ; clearDialogTilemap: fills tilemap with $0000, flags DMA.
 ;===================================================================
-.section "ScummVMDialogRenderer" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMDialogRenderer" free
 
 scummvm.extractAndRenderString:
   php
@@ -8376,7 +8397,9 @@ _cdt.clearLoop:
 ; Renders the current verb/action on BG2 verb tilemap row 0 (Y=144).
 ; Default "Walk to" when no verb selected.
 ;===================================================================
-.section "ScummVMSentenceRenderer" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVMSentenceRenderer" free
 
 scummvm.renderSentenceLine:
   php
@@ -8503,7 +8526,9 @@ _rsl.defaultName:
 ; Object hover detection — called per frame from updateCursor
 ; Sets SCUMM.cursorObject + SCUMM.sentenceDirty on change.
 ;===================================================================
-.section "ScummVM object hover" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM object hover" free
 
 scummvm.updateObjectHover:
   rep #$31
@@ -8538,7 +8563,9 @@ _oh.done:
 ; Input: X = tilemap byte offset (next free position)
 ; Assumes DBR=$7E (called from sentence renderer context).
 ;===================================================================
-.section "ScummVM appendObjectName" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM appendObjectName" free
 
 scummvm.appendObjectName:
   rep #$31
@@ -8618,7 +8645,9 @@ _aon.ret:
 ;===================================================================
 ; drawObject state helpers — superfree to avoid dispatch growth
 ;===================================================================
-.section "ScummVM drawObjectState" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM drawObjectState" free
 
 ;set objectState[SCUMM.scratch] = 1
 scummvm.drawObjectSetState1:
@@ -8653,7 +8682,9 @@ scummvm.drawObjectSetStateN:
 ; Otherwise returns cursor room position.
 ; Output: A = targetX, SCUMM.scratch = targetY
 ;===================================================================
-.section "ScummVM resolveClickTarget" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM resolveClickTarget" free
 
 scummvm.resolveClickTarget:
   rep #$31
@@ -8698,7 +8729,9 @@ _rct.cursorPos:
 ; Input: A = object ID
 ; Output: A = walk_x, SCUMM.scratch = walk_y, carry set if found
 ;===================================================================
-.section "ScummVM lookupObjectWalkTo" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM lookupObjectWalkTo" free
 
 scummvm.lookupObjectWalkTo:
   rep #$31
@@ -8734,7 +8767,9 @@ _lowt.found:
 ;===================================================================
 ; putActorAtObject / walkActorToObject — unified implementation
 ;===================================================================
-.section "ScummVM actorAtObj" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM actorAtObj" free
 
 ;-------------------------------------------------------------------
 ; scummvm.actorAtObj_impl — put or walk actor to object's walk-to point
@@ -8819,7 +8854,9 @@ _aao.fail:
 ;===================================================================
 ; Camera system — per-frame camera position update
 ;===================================================================
-.section "ScummVM camera" superfree
+.bank 5 slot 0
+.base BSL
+.section "ScummVM camera" free
 
 ;-------------------------------------------------------------------
 ; scummvm.moveCamera — update camera position per frame

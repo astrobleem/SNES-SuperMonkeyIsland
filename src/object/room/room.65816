@@ -716,11 +716,12 @@ _rl.objDone:
   jsr room.initScroll
   jsr room.initTileCache
 
+  ;apply OCHR patches BEFORE viewport load so composited tile IDs
+  ;are in SCROLL_TILEMAP_WRAM when loadInitialViewport caches tiles
+  jsl room.applyVisibleObjectPatches
+
   ;cache-aware initial viewport load (still in force blank)
   jsr room.loadInitialViewport
-
-  ;apply initial object patches (objects with state!=0)
-  jsl room.applyVisibleObjectPatches
 
   ;restore display brightness
   sep #$20
@@ -818,7 +819,10 @@ _fo.none:
 .ends
 
 ;===================================================================
-; room.initObjectStates — set objectState=1 for loaded room objects
+; room.initObjectStates — read initial_state bytes from MSU stream
+; and set objectState[obj_id] = state for each loaded room object.
+; The state table (1 byte per object) is appended to the .obj data
+; in the MSU stream, positioned right after verb data.
 ;===================================================================
 .bank 5 slot 0
 .base BSL
@@ -831,19 +835,21 @@ room.initObjectStates:
   tay                                   ;Y = loop counter
   ldx #0                                ;X = entry byte offset
 _ios.loop:
-  lda.l SCUMM.roomObjTable,x            ;obj_id
+  lda.l SCUMM.roomObjTable,x            ;obj_id (16-bit)
   phx
-  tax
+  phy
+  tax                                   ;X = obj_id
   sep #$20
 .ACCU 8
-  lda #1
+  lda.l MSU_DATA                        ;read initial_state from MSU stream
   sta.w SCUMM.objectState,x
   rep #$20
 .ACCU 16
+  ply
   plx
   txa
   clc
-  adc #16
+  adc #16                               ;advance to next 16-byte entry
   tax
   dey
   bne _ios.loop
@@ -1043,6 +1049,21 @@ room.loadOchrData:
   stz.w SCUMM.ochrObjCount
   stz.w SCUMM.objDirtyFlag
 
+  ;DEBUG: skip all OCHR data loading
+  lda.w GLOBAL.room.hdr.ochr_size
+  beq _ochr.none
+  ;drain bytes to keep MSU position correct
+  tay
+  sep #$20
+.ACCU 8
+_ochr_debug_drain:
+  lda.l MSU_DATA
+  dey
+  bne _ochr_debug_drain
+  rep #$20
+.ACCU 16
+  bra _ochr.none
+
   ;check if this room has OCHR data
   lda.w GLOBAL.room.hdr.ochr_size
   beq _ochr.none
@@ -1107,6 +1128,9 @@ _ochr.none:
 room.applyVisibleObjectPatches:
   php
   rep #$31
+
+  ;DEBUG: skip OCHR patches to test base background
+  bra _avop.done
 
   lda.w SCUMM.ochrObjCount
   beq _avop.done

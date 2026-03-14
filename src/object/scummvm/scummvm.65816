@@ -62,6 +62,17 @@ _init.zeroBits:
   cpx #256
   bcc _init.zeroBits
 
+  ; Set bitVar[361] — "game initialized" flag
+  ; Normally set by script 188 (game-init kickstart), which is not in our
+  ; MI1 extraction.  Without this bit, room 1 ENCD skips starting LSCR 200
+  ; and Guybrush never gets placed.
+  ; Bit 361 = byte 45, bit 1 → mask $02
+  sep #$20
+  ldx #45
+  lda #$02
+  sta.w SCUMM.bitVars,x
+  rep #$20
+
   ;zero VM state
   stz.w SCUMM.running
   stz.w SCUMM.currentSlot
@@ -310,9 +321,15 @@ _init.zeroCache:
   lda #1
   ldx #49*2
   sta.w SCUMM.globalVars,x          ; VAR(49) = VAR_FIXEDDISK = 1
-  lda #17
+  lda #$0100
   ldx #7*2
-  sta.w SCUMM.globalVars,x          ; VAR(7) = room 1 key object (MI1 boot)
+  sta.w SCUMM.globalVars,x          ; VAR(7) = $0100 = Part 1 fresh start (script 188 switch)
+  ; Set objectState[256] = 1 so script 35's getObjectState check passes
+  sep #$20
+  lda #1
+  ldx #256
+  sta.w SCUMM.objectState,x
+  rep #$20
 
   ;--- Init cursor state ---
   lda #128
@@ -368,6 +385,23 @@ _init.zeroDialogTilemap:
   lda #1
   sta.w SCUMM.newRoom
 
+  ;--- Pre-seed ego for room 1 (skipping MI1 intro) ---
+  ; Set costume 17 (Guybrush standard) so loadActorCostumes DMAs correct data.
+  ; ENCD may override this, triggering dirty-slot CHR+palette DMA.
+  ldx #1*16                         ; actor 1 struct offset
+  lda #160
+  sta.w SCUMM.actors.x,x
+  lda #100
+  sta.w SCUMM.actors.y,x
+  sep #$20
+  lda #17
+  sta.w SCUMM.actors.costume,x
+  lda #90                           ; facing east
+  sta.w SCUMM.actors.facing,x
+  lda #1
+  sta.w SCUMM.actors.visible,x
+  rep #$20
+
   ;--- Zero walk path state (prevent garbage movement before walkActorTo) ---
   ldx #0
   lda #0
@@ -380,22 +414,42 @@ _init.zeroWalkPaths:
   cpx #SCUMM_WALK_ACTORS
   bcc _init.zeroWalkPaths
 
-  ;--- Seed ego actor as "moving" so boot script wait loop exits ---
-  ; MI1 boot script (script 1) loops on getActorMoving(VAR_EGO) waiting
-  ; for the intro cutscene to walk the ego. We skip the intro, so seed
-  ; actor 1's moving field directly.
+  ;--- Init actorLastFrame to $FF (force CHR DMA on first render) ---
   sep #$20
-  lda #1
-  sta.w SCUMM.actors.2.moving
+  ldx #0
+  lda #$FF
+_init.lastFrame:
+  sta.w SCUMM.actorLastFrame,x
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _init.lastFrame
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
+  ; Boot script puts actors 8-11 in room 0 then loops waiting for ego to
+  ; be moving before calling startScript(35).  With correct SCUMM
+  ; conditional semantics the loop waits for moving!=0, but updateActors
+  ; clears the seed before the check runs.  Start script 35 directly to
+  ; bypass the wait; boot script continues its loop independently.
   lda #1
+  jsr _scummvm.startScriptSlot
+
+  ;--- Start script 35 directly (bypass boot script's ego-moving wait) ---
+  ; Boot script 1 loops waiting for ego moving before calling
+  ; startScript(35).  We start 35 directly so the game-init chain runs
+  ; immediately.  gv7 (VAR_BOOT_PARAM) is already set to $0100 above.
+  lda #35
   jsr _scummvm.startScriptSlot
 
   ;--- Mark VM as running ---
   lda #1
   sta.w SCUMM.running
+
+  ;--- Request ego costume fixup after first scheduler pass ---
+  ; Boot script + ENCD both set costume 1 (large intro sprite, 81 tiles).
+  ; Our renderer supports max 48 tiles per actor slot.  Force costume 17
+  ; (standard Guybrush, 17 tiles) after the ENCD has executed.
+  sta.w SCUMM.egoFixupPending
 
   ;--- Init default verb bar (room 10 scripts don't run yet) ---
   jsl scummvm.initDefaultVerbs
@@ -468,6 +522,27 @@ _play.nextSlot:
   sta.w SCUMM.currentSlot
   cmp #SCUMM_MAX_SLOTS
   bcc _play.slotLoop
+
+  ; Post-ENCD ego costume fixup: force costume 17 if pending
+  lda.w SCUMM.egoFixupPending
+  beq _play.noEgoFixup
+  stz.w SCUMM.egoFixupPending
+  ldx #1*16                         ; actor 1 struct offset
+  sep #$20
+  lda #17
+  sta.w SCUMM.actors.costume,x
+  ; Update render slot 0 to match
+  ldx #0
+  sta.w SCUMM.renderSlotCostume,x
+  lda #$FF
+  sta.w SCUMM.renderSlotLastPic,x
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x
+  rep #$20
+  ; Re-enable cursor (boot script disables via cursorCommand sub-op $02)
+  lda #1
+  sta.w SCUMM.cursorEnabled
+_play.noEgoFixup:
 
   ; Update actor movement + animation (after scripts have run)
   jsl scummvm.updateActors
@@ -684,7 +759,7 @@ _prc.bgReady:
   ; (ENCD uses currentRoom for putActor, getActorRoom, etc.)
   lda.w SCUMM.newRoom
   sta.w SCUMM.currentRoom
-  ldx #4*2                          ; VAR(4) = VAR_ROOM
+  ldx #4*2                          ; VAR(4) = VAR_ROOM (SCUMM v5)
   sta.w SCUMM.globalVars,x
   ldx #143*2                        ; VAR(143) = room state (MI1 ENCD guard check)
   sta.w SCUMM.globalVars,x
@@ -885,6 +960,37 @@ _loadGlobal.cacheOk:
 _scummvm.startScriptSlot:
   sta.w SCUMM.scratch
 
+  ; Stop any existing instance of this script (ScummVM: runScript calls stopScript first)
+  and #$00FF
+  pha                           ; save script number
+  ldx #0
+  ldy #0
+_startScript.stopLoop:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _startScript.stopNext
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  cmp 1,s                      ; compare with saved script number on stack
+  bne _startScript.stopNext
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  bra _startScript.stopDone     ; only one instance possible
+_startScript.stopNext:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _startScript.stopLoop
+_startScript.stopDone:
+  pla                           ; restore script number
+  sta.w SCUMM.scratch
+
   ; Find a dead slot
   ldx #0
   ldy #0
@@ -902,6 +1008,7 @@ _startScript.findSlot:
   bcc _startScript.findSlot
 
   ; No free slot
+  clc
   rts
 
 _startScript.foundSlot:
@@ -927,6 +1034,7 @@ _startScript.foundSlot:
 
   pla                           ;discard saved script number
   plx
+  clc
   rts
 
 _startScript.globalInit:
@@ -962,6 +1070,7 @@ _startScript.local:
 _startScript.localNone:
   pla                            ; discard script number
   plx                            ; discard slot offset
+  clc
   rts
 
   ;--- Common slot initialization ---
@@ -1000,6 +1109,7 @@ _startScript.zeroLocals:
   bcc _startScript.zeroLocals
   plx
 
+  sec                            ; carry = success
   rts
 
 
@@ -1431,8 +1541,9 @@ _startEncd.found:
 
 ;===================================================================
 ; _scummvm.loadActorCostumes
-; DMA costume tiles + palette to VRAM/CGRAM during room change.
-; MVP: always loads costume 1 (Guybrush standing frame).
+; Multi-actor: scan actors in current room, assign render slots,
+; DMA palettes + stand-frame CHR per slot. Bank 0 handles NMI/brightness;
+; superfree impl does slot assignment + DMA.
 ;===================================================================
 _scummvm.loadActorCostumes:
   rep #$31
@@ -1440,9 +1551,8 @@ _scummvm.loadActorCostumes:
   ; Save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
   lda.w ScreenBrightness
   and #$00FF
-  pha                               ; save on stack (16-bit push)
+  pha
 
-  ; Disable both NMI and IRQ — DMA queue IRQ also corrupts VMADDL/VMAIN
   jsr core.nmi.stop
   sei
   sep #$20
@@ -1450,75 +1560,14 @@ _scummvm.loadActorCostumes:
   sta.l INIDSP
   rep #$20
 
-  ; --- DMA costume palette to CGRAM sprite palette 0 (color 128) ---
-  sep #$20
-  lda.b #128                          ; color index 128 = sprite palette 0
-  sta.l CGADD
-
-  lda.b #$00                          ; A→B, increment source, 1-reg write
-  sta.l $4360                         ; DMA6 control
-  lda.b #$22                          ; destination: CGDATA ($2122)
-  sta.l $4361
-  rep #$20
-  lda.w #Costume1Pal
-  sta.l $4362                         ; source address low
-  sep #$20
-  lda.b #:Costume1Pal
-  sta.l $4364                         ; source bank
-  rep #$20
-  lda.w #32                           ; 16 colors x 2 bytes
-  sta.l $4365                         ; transfer length
-  sep #$20
-  lda.b #$40                          ; channel 6 bit
-  sta.l MDMAEN                        ; start DMA
-
-  ; --- DMA costume CHR to VRAM word $6000 (byte $C000) ---
-  ; ObjSel=3 means sprite name base at word $6000
-  lda.b #VMAIN_INCREMENT_MODE         ; word-access, increment on high byte write
-  sta.l VMAIN
-  rep #$20
-  lda #$6000                          ; VRAM word address
-  sta.l VMADDL
-
-  ; DMA channel 7: A→B, increment source, write to $2118/$2119 (VMDATAL/H)
-  sep #$20
-  lda.b #$01                          ; A→B, increment, 2-reg write (word)
-  sta.l $4370                         ; DMA7 control
-  lda.b #$18                          ; destination: VMDATAL ($2118)
-  sta.l $4371
-  rep #$20
-  lda.w #Costume1Chr
-  sta.l $4372                         ; source address low
-  sep #$20
-  lda.b #:Costume1Chr
-  sta.l $4374                         ; source bank
-  rep #$20
-  lda.w #Costume1ChrEnd - Costume1Chr
-  sta.l $4375                         ; transfer length
-  sep #$20
-  lda.b #$80                          ; channel 7 bit
-  sta.l MDMAEN                        ; start DMA
-
-  ; Set ObjSel so sprites read tiles from VRAM word $6000 (byte $C000)
-  ; Bits 0-1 = 11 = name base at word $6000
-  lda.b #$03
-  sta.w ObjSel
+  jsl scummvm.loadActorCostumes_impl
 
   ; Restore display + re-enable NMI/IRQ
   rep #$20
-  pla                               ; restore saved brightness (16-bit pull)
+  pla
   sep #$20
   sta.l INIDSP
-  sta.w ScreenBrightness            ; restore WRAM copy too
-
-  ; Initialize actor 1 animation state
-  ldx #1                              ; actor 1 byte offset
-  lda #$FF
-  sta.w SCUMM.actorLastFrame,x        ; force DMA on first render
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-  sta.w SCUMM.actorAnimTimer,x
-
+  sta.w ScreenBrightness
   cli
   rep #$20
   jsr core.nmi.start
@@ -2715,6 +2764,32 @@ _scummvm.skipWordVararg:
 
 
 ;-------------------------------------------------------------------
+; _scummvm.readWordVararg -- read getWordVararg args into SCUMM.argBuffer
+; SCUMM v5 format: { sentinel_byte, word_arg } ... 0xFF
+; Word encoding (literal vs var ref) controlled by main opcode bit 7.
+; Output: SCUMM.argBuffer filled, SCUMM.argCount = byte count of args
+; Clobbers: A, X. Preserves: Y (SCUMM PC).
+;-------------------------------------------------------------------
+_scummvm.readWordVararg:
+  ldx #0                               ; X = byte offset into argBuffer
+-
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq +
+  phx                                  ; save buffer offset (getVarOrDirectWord clobbers X)
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord      ; A = resolved arg value
+  plx                                  ; restore buffer offset
+  sta.w SCUMM.argBuffer,x
+  inx
+  inx
+  bra -
++
+  stx.w SCUMM.argCount                 ; store byte count
+  rts
+
+
+;-------------------------------------------------------------------
 ; _scummvm.skipP8fromScratch -- skip one p8 param using SCUMM.scratch
 ; Input: A = flag bitmask to test against SCUMM.scratch
 ; If flag SET: fetchWord (2-byte var ref), else fetchByte (1-byte literal)
@@ -2997,12 +3072,27 @@ op_move:
 op_startScript:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
-  pha
-  jsr _scummvm.skipWordVararg
-  pla
-  phy                           ; save SCUMM PC (startScriptSlot clobbers Y)
+  pha                             ; push script number
+  jsr _scummvm.readWordVararg     ; read args into argBuffer/argCount
+  pla                             ; A = script number
+  phy                             ; save SCUMM PC
   jsl scummvm.startScriptSlot_long
-  ply                           ; restore SCUMM PC
+  bcc _startScript.noArgs         ; slot creation failed
+  ; X = new slot byte offset; copy args to slot's localVars
+  ldy #0
+_startScript.copyArgs:
+  cpy.w SCUMM.argCount
+  bcs _startScript.argsDone
+  lda.w SCUMM.argBuffer,y
+  sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  iny
+  bra _startScript.copyArgs
+_startScript.argsDone:
+_startScript.noArgs:
+  ply                             ; restore SCUMM PC
   clc
   rts
 
@@ -3038,8 +3128,8 @@ _stopScript.self:
 ;-------------------------------------------------------------------
 
 ; SCUMM v5 conditional convention (from ScummVM source):
-;   if (condition TRUE) jumpRelative();      // Y += signed offset
-;   else ignoreScriptWord();                 // skip 2 bytes (already consumed)
+;   jumpRelative(cond): if (!cond) scriptPointer += offset → jump when FALSE
+;   Condition name = what makes it TRUE (continue). Jump taken when FALSE.
 ; Jump targets are signed relative offsets from the byte AFTER the target word.
 
 ; Helper: apply relative jump from SCUMM.scratch2 to Y
@@ -3051,7 +3141,7 @@ _scummvm.takeRelJump:
   rts
 
 ; isEqual ($48, $C8) -- getVar + p16[7] + jump
-; ScummVM: if(b==a) skip, else jump → jump when NOT equal
+; ScummVM: jumpRelative(b == a) → jump when NOT equal (cond FALSE)
 op_isEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3064,14 +3154,14 @@ op_isEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; equal → condition TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not equal → condition FALSE → take jump
+  beq +                          ; equal → cond TRUE → skip jump
+    jsr _scummvm.takeRelJump     ; not equal → cond FALSE → take jump
 +
   clc
   rts
 
 ; isNotEqual ($08, $88) -- getVar + p16[7] + jump
-; ScummVM: if(b!=a) skip, else jump → jump when equal
+; ScummVM: jumpRelative(b != a) → jump when equal (cond FALSE)
 op_isNotEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3084,14 +3174,14 @@ op_isNotEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bne +                          ; not equal → condition TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; equal → condition FALSE → take jump
+  bne +                          ; not equal → cond TRUE → skip jump
+    jsr _scummvm.takeRelJump     ; equal → cond FALSE → take jump
 +
   clc
   rts
 
 ; notEqualZero ($A8) -- getVar + jump
-; ScummVM: if(a!=0) skip, else jump → jump when zero
+; ScummVM: jumpRelative(a != 0) → jump when zero (cond FALSE)
 op_notEqualZero:
   jsr _scummvm.fetchWord
   jsr _scummvm.readVariable
@@ -3100,14 +3190,14 @@ op_notEqualZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  bne +                          ; not zero → condition TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; zero → condition FALSE → take jump
+  bne +                          ; not zero → cond TRUE → skip jump
+    jsr _scummvm.takeRelJump     ; zero → cond FALSE → take jump
 +
   clc
   rts
 
 ; equalZero ($28) -- getVar + jump
-; ScummVM: if(a==0) skip, else jump → jump when NOT zero
+; ScummVM: jumpRelative(a == 0) → jump when not zero (cond FALSE)
 op_equalZero:
   jsr _scummvm.fetchWord
   jsr _scummvm.readVariable
@@ -3116,14 +3206,14 @@ op_equalZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  beq +                          ; zero → condition TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not zero → condition FALSE → take jump
+  beq +                          ; zero → cond TRUE → skip jump
+    jsr _scummvm.takeRelJump     ; not zero → cond FALSE → take jump
 +
   clc
   rts
 
 ; isGreater ($78, $F8) -- getVar + p16[7] + jump
-; ScummVM: if(b>a) skip, else jump → skip when A < scratch
+; ScummVM: jumpRelative(b > a) → jump when b <= a (cond FALSE)
 op_isGreater:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3136,14 +3226,14 @@ op_isGreater:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → b > a → condition TRUE → skip
-    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → condition FALSE → jump
+  bcc +                          ; A < scratch → b > a → cond TRUE → skip
+    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond FALSE → jump
 +
   clc
   rts
 
 ; isLess ($44, $C4) -- getVar + p16[7] + jump
-; ScummVM: if(b<a) skip, else jump → skip when A > scratch
+; ScummVM: jumpRelative(b < a) → jump when b >= a (cond FALSE)
 op_isLess:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3156,16 +3246,16 @@ op_isLess:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq _isLess.doJump             ; A == scratch → b >= a → condition FALSE → jump
-  bcs +                          ; A > scratch → b < a → condition TRUE → skip
-_isLess.doJump:
-    jsr _scummvm.takeRelJump     ; A <= scratch → b >= a → condition FALSE → jump
+  beq _isL.doJump                ; A == scratch → b == a → b >= a → jump
+  bcs +                          ; A > scratch → b < a → cond TRUE → skip
+_isL.doJump:
+    jsr _scummvm.takeRelJump     ; A <= scratch → b >= a → cond FALSE → jump
 +
   clc
   rts
 
 ; isLessEqual ($38, $B8) -- getVar + p16[7] + jump
-; ScummVM: if(b<=a) skip, else jump → skip when A >= scratch
+; ScummVM: jumpRelative(b <= a) → jump when b > a (cond FALSE)
 op_isLessEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3178,14 +3268,14 @@ op_isLessEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcs +                          ; A >= scratch → b <= a → condition TRUE → skip
-    jsr _scummvm.takeRelJump     ; A < scratch → b > a → condition FALSE → jump
+  bcs +                          ; A >= scratch → b <= a → cond TRUE → skip
+    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond FALSE → jump
 +
   clc
   rts
 
 ; isGreaterEqual ($04, $84) -- getVar + p16[7] + jump
-; ScummVM: if(b>=a) skip, else jump → skip when A <= scratch
+; ScummVM: jumpRelative(b >= a) → jump when b < a (cond FALSE)
 op_isGreaterEqual:
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
@@ -3198,9 +3288,9 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; A == scratch → b >= a → condition TRUE → skip
-  bcc +                          ; A < scratch → b > a → condition TRUE → skip
-    jsr _scummvm.takeRelJump     ; A > scratch → b < a → condition FALSE → jump
+  beq +                          ; A == scratch → b >= a → cond TRUE → skip
+  bcc +                          ; A < scratch → b > a → b >= a → cond TRUE → skip
+    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond FALSE → jump
 +
   clc
   rts
@@ -3510,6 +3600,8 @@ _expression.notEnd:
   beq _expression.mul            ; 0x04 = MUL
   cmp #$05
   beq _expression.div            ; 0x05 = DIV
+  cmp #$06
+  beq _expression.execOpcode     ; 0x06 = execute embedded opcode, push result
   bra _expression.loop           ; unknown sub-op → skip
 
 _expression.number:
@@ -3566,6 +3658,22 @@ _expression.divZero:
   pha
   jmp _expression.loop
 
+_expression.execOpcode:
+  ; Sub-op 6: fetch next byte as opcode, execute it, push VAR_RESULT
+  lda.w SCUMM.currentOpcode
+  pha                              ; save expression's outer opcode
+  jsr _scummvm.fetchByte           ; fetch embedded opcode byte
+  sta.w SCUMM.currentOpcode        ; set for embedded opcode's flag checks
+  asl a
+  tax
+  jsr (_scummvm.dispatchTable,x)   ; execute the embedded opcode
+  ; ignore carry (don't yield mid-expression)
+  pla
+  sta.w SCUMM.currentOpcode        ; restore outer opcode
+  lda.w SCUMM.globalVars           ; var[0] = VAR_RESULT
+  pha                              ; push result onto RPN stack
+  jmp _expression.loop
+
 _expression.end:
   pla
   jsr _scummvm.writeVariable
@@ -3576,17 +3684,32 @@ _expression.end:
 op_chainScript:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
-  pha
-  jsr _scummvm.skipWordVararg
+  pha                             ; push script number
+  jsr _scummvm.readWordVararg     ; read args into argBuffer/argCount
   ldx.w SCUMM.currentSlotPtr
   sep #$20
   lda #SCUMM_SLOT_DEAD
   sta.w SCUMM.slots.status,x
   rep #$20
-  pla
-  phy                           ; save Y (startScriptSlot clobbers Y)
+  pla                             ; A = script number
+  phy                             ; save SCUMM PC
   jsl scummvm.startScriptSlot_long
-  ply                           ; restore Y
+  bcc _chainScript.noArgs         ; slot creation failed
+  ; X = new slot byte offset; copy args to slot's localVars
+  ldy #0
+_chainScript.copyArgs:
+  cpy.w SCUMM.argCount
+  bcs _chainScript.argsDone
+  lda.w SCUMM.argBuffer,y
+  sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  iny
+  bra _chainScript.copyArgs
+_chainScript.argsDone:
+_chainScript.noArgs:
+  ply                             ; restore SCUMM PC
   sec
   rts
 
@@ -3817,6 +3940,7 @@ op_putActor:
   sta.w SCUMM.actors.room,x
   lda #1
   sta.w SCUMM.actors.visible,x
+  stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
   rep #$20
 
   clc
@@ -3862,7 +3986,7 @@ op_setCameraAt:
 op_lights:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; luminance
-  ldx #72 * 2
+  ldx #9 * 2                        ; VAR(9) = VAR_CURRENT_LIGHTS (SCUMM v5)
   sta.w SCUMM.globalVars,x
   jsr _scummvm.fetchByte             ; color1
   jsr _scummvm.fetchByte             ; color2
@@ -4115,6 +4239,36 @@ _actorOps.sub_setCostume:
   pla
   sep #$20
   sta.w SCUMM.actors.costume,x
+  ; Mark render slot dirty if this actor is in a slot
+  ; Push order: phx first (2B, 16-bit X), then pha (1B, 8-bit A)
+  ; so costume is on TOP of stack for correct pla in foundSlot path
+  phx                                ; save actor offset (2 bytes, X is 16-bit)
+  pha                                ; save costume (1 byte, A is 8-bit)
+  ; Compute actor number from struct offset: offset / 16
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = actor number (8-bit)
+  ldx #0
+_asc.findSlot:
+  cmp.w SCUMM.renderSlotActor,x
+  beq _asc.foundSlot
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _asc.findSlot
+  bra _asc.noSlot
+_asc.foundSlot:
+  pla                                ; costume (1 byte from top of stack)
+  sta.w SCUMM.renderSlotCostume,x
+  lda #$FF
+  sta.w SCUMM.renderSlotLastPic,x
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x
+  pha                                ; re-push to match stack
+_asc.noSlot:
+  pla                                ; pop costume (1 byte)
+  plx                                ; pop actor offset (2 bytes)
   rep #$20
   jmp _actorOps.subLoop
 
@@ -4672,18 +4826,69 @@ _scummvm.msu1IsPlaying:
 
 
 ;-------------------------------------------------------------------
-; setClass ($5D, $DD) -- p16 object + vararg class list, no-op
+; setClass ($5D, $DD) -- p16[7] object + vararg class list
+; Each class arg: bit 7 = set flag, bits 6-0 = class number
+; Class 0 = clear all classes for this object
 ;-------------------------------------------------------------------
 op_setClass:
-  jsr _scummvm.fetchWord             ; object ID (always p16)
-  ; Vararg: {aux_byte, word_value}* terminated by $FF
--
-  jsr _scummvm.fetchByte
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord    ; object ID
+  sta.w SCUMM.scratch3               ; save obj ID
+_setClass.loop:
+  jsr _scummvm.fetchByte             ; aux byte (flag for next arg)
+  and #$00FF
   cmp #$00FF
-  beq +
-  jsr _scummvm.fetchWord             ; class word arg
-  bra -
-+
+  beq _setClass.done
+  sta.w SCUMM.currentOpcode          ; treat aux byte as opcode for getVarOrDirectWord
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord    ; class value
+  ; A = class value. Bit 7 = set. Bits 6-0 = class number.
+  sta.w SCUMM.scratch                ; save class value
+  and #$00FF
+  beq _setClass.clearAll             ; cls == 0 → clear all
+  ; Compute class bit: class_number = (cls & $7F), normalized = class_number - 17
+  and #$007F                         ; class number (1-127)
+  sec
+  sbc #17                            ; normalize: class 17 → 0, class 32 → 15
+  bmi _setClass.loop                 ; class < 17, unsupported
+  cmp #16
+  bcs _setClass.loop                 ; class > 32, unsupported
+  asl a                              ; x2 for word table lookup
+  tax
+  lda.l scummvm.classBitLut,x               ; bit mask for this class position
+  sta.w SCUMM.scratch2               ; save bit mask
+  ; Compute object word offset
+  ldx.w SCUMM.scratch3               ; obj ID
+  cpx #SCUMM_MAX_OBJECTS
+  bcs _setClass.loop                 ; out of bounds
+  txa
+  asl a                              ; obj * 2
+  tax
+  ; Check set/clear flag (bit 7 of class value)
+  lda.w SCUMM.scratch
+  and #$0080
+  beq _setClass.clearBit
+  ; Set bit
+  lda.w SCUMM.objectClass,x
+  ora.w SCUMM.scratch2
+  sta.w SCUMM.objectClass,x
+  bra _setClass.loop
+_setClass.clearBit:
+  lda.w SCUMM.scratch2
+  eor #$FFFF                         ; invert mask
+  and.w SCUMM.objectClass,x
+  sta.w SCUMM.objectClass,x
+  bra _setClass.loop
+_setClass.clearAll:
+  ldx.w SCUMM.scratch3
+  cpx #SCUMM_MAX_OBJECTS
+  bcs _setClass.loop
+  txa
+  asl a
+  tax
+  stz.w SCUMM.objectClass,x
+  bra _setClass.loop
+_setClass.done:
   clc
   rts
 
@@ -5012,7 +5217,7 @@ op_loadRoomWithEgo:
   sta.w SCUMM.actors.room,x
   lda #1
   sta.w SCUMM.actors.visible,x
-  sta.w SCUMM.actors.moving,x       ; ScummVM: startWalkActor sets moving
+  stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
   rep #$20
 _loadRoomEgo.done:
   clc
@@ -5021,7 +5226,7 @@ _loadRoomEgo.done:
 
 ; ifState ($4F, $CF) / ifNotState ($2F, $6F, $AF, $EF)
 ; p16[7] + p8[6] + jump(2) — always skip branch (stub)
-; ifState ($0F variant) — if objectState[obj] == state, skip; else jump
+; ifState ($0F variant) — jumpRelative(state == expected) → jump when match
 op_ifState:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object ID
@@ -5032,18 +5237,17 @@ op_ifState:
   ; Look up actual state
   ldx.w SCUMM.scratch
   cpx #SCUMM_MAX_OBJECTS
-  bcs _ifState.jump                  ; out of bounds → treat as 0, probably mismatch
+  bcs +                              ; out of bounds → treat as 0, no match → skip
   lda.w SCUMM.objectState,x
   and #$00FF
   cmp.w SCUMM.scratch2
-  beq +                              ; match → skip jump (condition TRUE)
-_ifState.jump:
-    jsr _scummvm.takeRelJump         ; no match → take jump
+  bne +                              ; no match → skip jump
+    jsr _scummvm.takeRelJump         ; match → take jump
 +
   clc
   rts
 
-; ifNotState ($2F variant) — if objectState[obj] != state, skip; else jump
+; ifNotState ($2F variant) — jumpRelative(state != expected) → jump when no match
 op_ifNotState:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object ID
@@ -5053,12 +5257,13 @@ op_ifNotState:
   sta.w SCUMM.scratch2
   ldx.w SCUMM.scratch
   cpx #SCUMM_MAX_OBJECTS
-  bcs +                              ; out of bounds → state=0, != anything → skip
+  bcs _ifNotState.doJump             ; out of bounds → state=0, != anything → jump
   lda.w SCUMM.objectState,x
   and #$00FF
   cmp.w SCUMM.scratch2
-  bne +                              ; not equal → skip jump (condition TRUE)
-    jsr _scummvm.takeRelJump         ; equal → take jump
+  beq +                              ; equal → skip jump
+_ifNotState.doJump:
+    jsr _scummvm.takeRelJump         ; not equal → take jump
 +
   clc
   rts
@@ -5131,6 +5336,8 @@ op_walkActorToActor:
   lda.w SCUMM.scratch               ; target y
   sta.w SCUMM.actorTargetY,x
 
+  ; Save SCUMM PC (Y) — walkActorTo body destroys Y
+  phy
   ; Reuse walkActorTo path-building logic
   jmp _walkActorTo.checkBoxes
 
@@ -5149,6 +5356,9 @@ op_walkActorTo:
   lda #SCUMM_FLAG_BIT5
   jsr _scummvm.getVarOrDirectWord    ; y
   sta.w SCUMM.scratch               ; target y
+
+  ; Save SCUMM PC (Y) — walkActorTo body destroys Y via buildWalkPath/direct path
+  phy
 
   ; Derive actor number from struct offset (offset / 16)
   lda.w SCUMM.scratch2
@@ -5195,8 +5405,16 @@ _walkActorTo.checkBoxes:
   sta.b tmp+4
   lda.w SCUMM.actorTargetY,x       ; targetY
   sta.b tmp+6
-  lda.w SCUMM.scratch3             ; actor index
+  ; Save scratch2/scratch3 — buildWalkPath clobbers them via findBox
+  lda.w SCUMM.scratch2
+  pha
+  lda.w SCUMM.scratch3             ; actor index (also the param for buildWalkPath)
+  pha
   jsl scummvm.buildWalkPath_long
+  pla
+  sta.w SCUMM.scratch3
+  pla
+  sta.w SCUMM.scratch2
   bra _walkActorTo.anim
 
 _walkActorTo.direct:
@@ -5231,7 +5449,7 @@ _walkActorTo.anim:
   lda.w SCUMM.scratch3
   and #$000F
   tax
-  lda #WALK_ANIM_SPEED
+  lda #COSTUME_WALK_ANIM_SPEED
   sep #$20
   sta.w SCUMM.actorAnimTimer,x
   lda #0
@@ -5243,6 +5461,8 @@ _walkActorTo.anim:
   sta.w SCUMM.actors.moving,x
   rep #$20
 
+  ; Restore SCUMM PC (Y) saved before walkActorTo body
+  ply
   clc
   rts
 
@@ -5275,12 +5495,11 @@ op_isActorInBox:
 
   jsl scummvm.findBox_long           ; tmp+0/+2 = point, returns A=boxIdx
   cmp.w SCUMM.scratch               ; found box == requested box?
-  beq _isActorInBox.yes
+  bne _isActorInBox.no
 
-_isActorInBox.no:
-  ; NOT in box → take jump
+  ; IN box → take jump (ScummVM: jumpRelative(true) when in box)
   jsr _scummvm.takeRelJump
-_isActorInBox.yes:
+_isActorInBox.no:
   clc
   rts
 
@@ -5432,7 +5651,7 @@ _print.clipping:
 
 _print.text:
   jsl scummvm.extractAndRenderString
-  jmp _print.subLoop
+  jmp _print.done                     ; ScummVM: case 15 returns WITHOUT consuming $FF
 
 _print.done:
   clc
@@ -6055,21 +6274,85 @@ _op_div.zero_stk:
   rts
 
 ;-------------------------------------------------------------------
-; ifClassOfIs ($1D, $9D) — p16[7] + varargs(word until 0) + jump(2)
-; Always skip branch (class check fails)
+; ifClassOfIs ($1D, $9D) — p16[7] + varargs(word until $FF) + jump(2)
+; Checks all class conditions; if ALL match → skip jump, else → take jump
 ;-------------------------------------------------------------------
 op_ifClassOfIs:
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord    ; object
-  ; Vararg: {aux_byte, word_value}* terminated by $FF (same as setClass)
--
-  jsr _scummvm.fetchByte
+  jsr _scummvm.getVarOrDirectWord    ; object ID
+  sta.w SCUMM.scratch3               ; save obj ID
+  ; Load object class word
+  cmp #SCUMM_MAX_OBJECTS
+  bcs _icoi.objOOB
+  asl a                              ; obj * 2
+  tax
+  lda.w SCUMM.objectClass,x
+  sta.w SCUMM.actorOamCount          ; borrow as temp: obj class bits
+  lda #1
+  bra _icoi.loopStart
+_icoi.objOOB:
+  ; Out-of-bounds object: class bits = 0
+  stz.w SCUMM.actorOamCount
+  lda #1                             ; cond = true initially
+_icoi.loopStart:
+  sta.w SCUMM.scratch                ; cond flag (1=true, 0=false)
+_icoi.loop:
+  jsr _scummvm.fetchByte             ; aux byte
+  and #$00FF
   cmp #$00FF
-  beq +
-  jsr _scummvm.fetchWord             ; class word arg
-  bra -
+  beq _icoi.loopDone
+  sta.w SCUMM.currentOpcode          ; set as opcode for getVarOrDirectWord
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord    ; class value
+  ; A = class value
+  and #$00FF
+  beq _icoi.clsZero                  ; cls == 0: check if ANY class set
+  ; Extract class number and check/negate flag
+  pha                                ; save full cls
+  and #$007F
+  sec
+  sbc #17
+  bmi _icoi.skipCls                  ; class < 17, unsupported → skip
+  cmp #16
+  bcs _icoi.skipCls                  ; class > 32, unsupported → skip
+  asl a
+  tax
+  lda.l scummvm.classBitLut,x               ; bit mask
+  sta.w SCUMM.scratch2               ; save mask
+  pla                                ; recover full cls
+  and #$0080                         ; test set flag (bit 7)
+  beq _icoi.clsClear
+  ; cls & 0x80: condition fails if class NOT set
+  lda.w SCUMM.actorOamCount          ; obj class bits
+  and.w SCUMM.scratch2
+  bne _icoi.loop                     ; class IS set → condition holds
+  stz.w SCUMM.scratch                ; cond = false
+  bra _icoi.loop
+_icoi.clsClear:
+  ; !(cls & 0x80): condition fails if class IS set
+  lda.w SCUMM.actorOamCount          ; obj class bits
+  and.w SCUMM.scratch2
+  beq _icoi.loop                     ; class NOT set → condition holds
+  stz.w SCUMM.scratch                ; cond = false
+  bra _icoi.loop
+_icoi.skipCls:
+  pla                                ; discard saved cls
+  bra _icoi.loop
+_icoi.clsZero:
+  ; cls == 0: condition fails if object has ANY class bits set
+  lda.w SCUMM.actorOamCount
+  beq _icoi.loop                     ; no classes → condition holds
+  stz.w SCUMM.scratch                ; cond = false
+  bra _icoi.loop
+_icoi.loopDone:
+  ; Read jump offset
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.scratch2               ; jump offset
+  ; ScummVM: jumpRelative(cond) → jump when cond FALSE
+  lda.w SCUMM.scratch
+  bne +                              ; cond=true → skip (don't jump)
+  jsr _scummvm.takeRelJump           ; cond=false → take jump
 +
-  jsr _scummvm.fetchWord             ; jump offset (skip — always false stub)
   clc
   rts
 
@@ -6263,53 +6546,95 @@ _div16.pos:
 ;===================================================================
 ; _scummvm.updateActors
 ; Per-frame walk movement + animation with waypoint following.
-; MVP: actor 1 only. Uses walkPath arrays for box-constrained routing.
+; Loops over all 16 walk slots. Each slot index = actor number.
 ;===================================================================
 .define WALK_SPEED 2
 
 _scummvm.updateActors_body:
   rep #$31
+  stz.w SCUMM.scratch3               ; slot = 0
 
-  ; Skip if actor not placed in a room yet (room=0 means not initialized)
-  lda.w SCUMM.actors.2.room
+_ua.slotLoop:
+  ; Compute actor struct offset: slot * 16
+  lda.w SCUMM.scratch3
   and #$00FF
-  bne +
-  rts
-+
-  ; Check if actor 1 is moving
-  lda.w SCUMM.actors.2.moving
+  asl a
+  asl a
+  asl a
+  asl a                               ; * 16 = sizeof(scummActor)
+  sta.w SCUMM.uaActorStructOfs
+  tax
+
+  ; Skip if actor not placed in a room (room=0)
+  lda.w SCUMM.actors.room,x
   and #$00FF
-  bne +
-  rts
-+
+  beq _ua.skipSlot
+
+  ; Check if this actor is in the current room
+  cmp.w SCUMM.currentRoom
+  bne _ua.skipSlot
+
+  ; Check if actor is moving
+  lda.w SCUMM.actors.moving,x
+  and #$00FF
+  beq _ua.skipSlot
+
   ; Check if walk path is valid (pathLen > 0)
-  ; moving=1 may be seeded by init before walkActorTo has run
-  ldx #1
+  ldx.w SCUMM.scratch3
   lda.w SCUMM.walkPathLen,x
   and #$00FF
   bne +
-  rts
+_ua.skipSlot:
+  jmp _ua.nextSlot
 +
+
   ; Get current waypoint from walk path
-  ; Actor 1: byte index=1, waypoint array base = SCUMM.walkPathX + 1*16 = +16
-  ldx #1
+  ; waypointArrayOfs = slot * WALK_MAX_WAYPOINTS * 2 + waypointIdx * 2
   lda.w SCUMM.walkPathIdx,x
   and #$00FF
-  asl a                             ; * 2 for word index into waypoint array
+  asl a                               ; * 2 for word index
+  sta.w SCUMM.actorOamCount           ; save waypointIdx * 2
+  lda.w SCUMM.scratch3
+  and #$00FF
+  ; slot * WALK_MAX_WAYPOINTS * 2 = slot * 8 * 2 = slot * 16
+  asl a
+  asl a
+  asl a
+  asl a                               ; slot * 16
   clc
-  adc #1 * WALK_MAX_WAYPOINTS * 2   ; actor 1 base offset (=16)
+  adc.w SCUMM.actorOamCount           ; + waypointIdx * 2
   tax
 
-  ; dx = waypointX - x
+  ; dx = waypointX - actor.x
   lda.w SCUMM.walkPathX,x
+  pha                                 ; save waypointX
+  ldx.w SCUMM.uaActorStructOfs
   sec
-  sbc.w SCUMM.actors.2.x
-  sta.w SCUMM.scratch               ; dx
+  sbc.w SCUMM.actors.x,x
+  sta.w SCUMM.scratch                 ; dx
 
+  ; dy = waypointY - actor.y
+  ; Recompute waypoint X offset for Y array
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.walkPathIdx,x
+  and #$00FF
+  asl a
+  sta.w SCUMM.actorOamCount
+  lda.w SCUMM.scratch3
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  clc
+  adc.w SCUMM.actorOamCount
+  tax
   lda.w SCUMM.walkPathY,x
+  pha                                 ; save waypointY
+  ldx.w SCUMM.uaActorStructOfs
   sec
-  sbc.w SCUMM.actors.2.y
-  sta.w SCUMM.scratch2              ; dy
+  sbc.w SCUMM.actors.y,x
+  sta.w SCUMM.scratch2                ; dy
 
   ; |dx|
   lda.w SCUMM.scratch
@@ -6317,7 +6642,7 @@ _scummvm.updateActors_body:
   eor #$FFFF
   inc a
 +
-  sta.w SCUMM.actorOamCount         ; |dx| temp
+  sta.w SCUMM.actorOamCount           ; |dx| temp
 
   ; |dy|
   lda.w SCUMM.scratch2
@@ -6327,61 +6652,59 @@ _scummvm.updateActors_body:
 +
   ; A = |dy|
   clc
-  adc.w SCUMM.actorOamCount         ; |dx|+|dy|
+  adc.w SCUMM.actorOamCount           ; |dx|+|dy|
   cmp #WALK_SPEED + 1
   bcs _ua.notArrived
 
-  ; --- Arrived at waypoint ---
-  ; Snap to waypoint position
-  ldx #1
-  lda.w SCUMM.walkPathIdx,x
-  and #$00FF
-  asl a
-  clc
-  adc #1 * WALK_MAX_WAYPOINTS * 2
-  tax
-  lda.w SCUMM.walkPathX,x
-  sta.w SCUMM.actors.2.x
-  lda.w SCUMM.walkPathY,x
-  sta.w SCUMM.actors.2.y
+  ; --- Arrived at waypoint: snap position ---
+  pla                                 ; waypointY
+  ldx.w SCUMM.uaActorStructOfs
+  sta.w SCUMM.actors.y,x
+  pla                                 ; waypointX
+  sta.w SCUMM.actors.x,x
 
   ; Advance to next waypoint
   sep #$20
-  ldx #1
+  ldx.w SCUMM.scratch3
   lda.w SCUMM.walkPathIdx,x
   inc a
   cmp.w SCUMM.walkPathLen,x
   bcs _ua.fullyArrived
   sta.w SCUMM.walkPathIdx,x
   rep #$20
-  rts                               ; keep moving=1, next frame targets new waypoint
+  jmp _ua.nextSlot                    ; keep moving=1, next frame targets new waypoint
 
 _ua.fullyArrived:
   .ACCU 8
-  stz.w SCUMM.actors.2.moving
-  ldx #1
+  ldx.w SCUMM.uaActorStructOfs
+  stz.w SCUMM.actors.moving,x
+  ldx.w SCUMM.scratch3
   stz.w SCUMM.actorAnimFrame,x
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
   rep #$20
   .ACCU 16
-  rts
+  jmp _ua.nextSlot
 
 _ua.notArrived:
+  pla                                 ; discard saved waypointY
+  pla                                 ; discard saved waypointX
+
   ; Move X toward current waypoint
-  lda.w SCUMM.actorOamCount         ; |dx|
+  lda.w SCUMM.actorOamCount           ; |dx|
   cmp #WALK_SPEED + 1
   bcc +
   lda #WALK_SPEED
 +
-  ldx.w SCUMM.scratch               ; dx sign
+  ldx.w SCUMM.scratch                 ; dx sign
   bpl _ua.dxPos
   eor #$FFFF
   inc a
 _ua.dxPos:
+  ldx.w SCUMM.uaActorStructOfs
   clc
-  adc.w SCUMM.actors.2.x
-  sta.w SCUMM.actors.2.x
+  adc.w SCUMM.actors.x,x
+  sta.w SCUMM.actors.x,x
 
   ; Move Y toward current waypoint
   lda.w SCUMM.scratch2
@@ -6393,14 +6716,15 @@ _ua.dxPos:
   bcc +
   lda #WALK_SPEED
 +
-  ldx.w SCUMM.scratch2              ; dy sign
+  ldx.w SCUMM.scratch2                ; dy sign
   bpl _ua.dyPos
   eor #$FFFF
   inc a
 _ua.dyPos:
+  ldx.w SCUMM.uaActorStructOfs
   clc
-  adc.w SCUMM.actors.2.y
-  sta.w SCUMM.actors.2.y
+  adc.w SCUMM.actors.y,x
+  sta.w SCUMM.actors.y,x
 
   ; Update facing: recompute |dy|
   lda.w SCUMM.scratch2
@@ -6408,7 +6732,7 @@ _ua.dyPos:
   eor #$FFFF
   inc a
 +
-  cmp.w SCUMM.actorOamCount         ; |dy| vs |dx|
+  cmp.w SCUMM.actorOamCount           ; |dy| vs |dx|
   bcs _ua.faceVertical
   lda.w SCUMM.scratch
   bmi _ua.faceWest
@@ -6425,170 +6749,485 @@ _ua.faceVertical:
 _ua.faceNorth:
   lda #0
 _ua.setFacing:
-  sta.w SCUMM.actors.2.facing
+  ldx.w SCUMM.uaActorStructOfs
+  sta.w SCUMM.actors.facing,x
 
   ; Advance walk animation
   sep #$20
-  ldx #1
+  ldx.w SCUMM.scratch3
   lda.w SCUMM.actorAnimTimer,x
   dec a
   sta.w SCUMM.actorAnimTimer,x
   bne _ua.animDone
-  lda #WALK_ANIM_SPEED
+  lda #COSTUME_WALK_ANIM_SPEED
   sta.w SCUMM.actorAnimTimer,x
   lda.w SCUMM.actorAnimFrame,x
   inc a
-  cmp #WALK_CYCLE_LEN
+  cmp #COSTUME_WALK_CYCLE_LEN
   bcc +
   lda #0
 +
   sta.w SCUMM.actorAnimFrame,x
 _ua.animDone:
   rep #$20
+
+_ua.nextSlot:
+  ; Advance to next slot
+  sep #$20
+  lda.w SCUMM.scratch3
+  inc a
+  sta.w SCUMM.scratch3
+  cmp #SCUMM_WALK_ACTORS
+  rep #$20
+  .ACCU 16
+  bcs +
+  jmp _ua.slotLoop
++
   rts
 
 .ends
 
 
 ;===================================================================
-; Costume frame data — embedded in ROM (superfree bank)
-; Guybrush standing south idle (cost_017 pic00: 19x47, 13 tiles)
+; Class bit lookup table (16 entries, superfree)
 ;===================================================================
 .bank 5 slot 0
 .base BSL
-.section "CostumeData" free
+.section "ClassBitLut" free
+scummvm.classBitLut:
+  .dw $0001, $0002, $0004, $0008, $0010, $0020, $0040, $0080
+  .dw $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
+.ends
 
-;--- Walk cycle table (12 steps → pic index) ---
-WalkCycleTable:
-  .db 0, 1, 2, 3, 3, 2, 4, 5, 6, 7, 8, 9
-.define WALK_CYCLE_LEN 12
-.define WALK_ANIM_SPEED 5
 
-;--- Frame lookup tables (10 entries for pics 0-9) ---
-CostumeFrameChrLo:
-  .dw Costume_pic00_chr, Costume_pic01_chr, Costume_pic02_chr, Costume_pic03_chr, Costume_pic04_chr
-  .dw Costume_pic05_chr, Costume_pic06_chr, Costume_pic07_chr, Costume_pic08_chr, Costume_pic09_chr
+;===================================================================
+; loadActorCostumes_impl — superfree bank
+; Scans actors in current room, assigns render slots (5 max),
+; DMAs palettes + stand-frame CHR per slot during force-blank.
+; Called via jsl from bank 0 wrapper.
+;===================================================================
+.section "scummvm loadCostumes impl" superfree
+.base BSL
 
-CostumeFrameChrHi:
-  .db :Costume_pic00_chr, :Costume_pic01_chr, :Costume_pic02_chr, :Costume_pic03_chr, :Costume_pic04_chr
-  .db :Costume_pic05_chr, :Costume_pic06_chr, :Costume_pic07_chr, :Costume_pic08_chr, :Costume_pic09_chr
+scummvm.loadActorCostumes_impl:
+  rep #$31
 
-CostumeFrameChrLen:
-  .dw Costume_pic00_chrEnd - Costume_pic00_chr
-  .dw Costume_pic01_chrEnd - Costume_pic01_chr
-  .dw Costume_pic02_chrEnd - Costume_pic02_chr
-  .dw Costume_pic03_chrEnd - Costume_pic03_chr
-  .dw Costume_pic04_chrEnd - Costume_pic04_chr
-  .dw Costume_pic05_chrEnd - Costume_pic05_chr
-  .dw Costume_pic06_chrEnd - Costume_pic06_chr
-  .dw Costume_pic07_chrEnd - Costume_pic07_chr
-  .dw Costume_pic08_chrEnd - Costume_pic08_chr
-  .dw Costume_pic09_chrEnd - Costume_pic09_chr
+  ; Set ObjSel so sprites read tiles from VRAM word $6000
+  sep #$20
+  lda.b #$03
+  sta.w ObjSel
+  rep #$20
 
-CostumeFrameOamLo:
-  .dw Costume_pic00_oam, Costume_pic01_oam, Costume_pic02_oam, Costume_pic03_oam, Costume_pic04_oam
-  .dw Costume_pic05_oam, Costume_pic06_oam, Costume_pic07_oam, Costume_pic08_oam, Costume_pic09_oam
+  ; --- Clear all render slots ---
+  sep #$20
+  ldx #SCUMM_MAX_RENDER_SLOTS - 1
+  lda #0
+_lac.clearLoop:
+  sta.w SCUMM.renderSlotActor,x
+  sta.w SCUMM.renderSlotCostume,x
+  sta.w SCUMM.renderSlotDirty,x
+  lda #$FF
+  sta.w SCUMM.renderSlotLastPic,x
+  lda #0
+  dex
+  bpl _lac.clearLoop
+  rep #$20
 
-CostumeFrameOamHi:
-  .db :Costume_pic00_oam, :Costume_pic01_oam, :Costume_pic02_oam, :Costume_pic03_oam, :Costume_pic04_oam
-  .db :Costume_pic05_oam, :Costume_pic06_oam, :Costume_pic07_oam, :Costume_pic08_oam, :Costume_pic09_oam
+  ; Store VRAM base addresses and palette slot numbers for each render slot
+  ; Use X-indexed stores to avoid WRAM+offset overflow
+  ldx #0
+  lda #ACTOR_VRAM_SLOT0
+  sta.w SCUMM.renderSlotTileBase,x
+  ldx #2
+  lda #ACTOR_VRAM_SLOT1
+  sta.w SCUMM.renderSlotTileBase,x
+  ldx #4
+  lda #ACTOR_VRAM_SLOT2
+  sta.w SCUMM.renderSlotTileBase,x
+  ldx #6
+  lda #ACTOR_VRAM_SLOT3
+  sta.w SCUMM.renderSlotTileBase,x
+  ldx #8
+  lda #ACTOR_VRAM_SLOT4
+  sta.w SCUMM.renderSlotTileBase,x
+  sep #$20
+  ldx #0
+  lda #0
+  sta.w SCUMM.renderSlotPalSlot,x
+  inx
+  lda #1
+  sta.w SCUMM.renderSlotPalSlot,x
+  inx
+  lda #2
+  sta.w SCUMM.renderSlotPalSlot,x
+  inx
+  lda #3
+  sta.w SCUMM.renderSlotPalSlot,x
+  inx
+  lda #4
+  sta.w SCUMM.renderSlotPalSlot,x
+  rep #$20
 
-;--- Backward-compat aliases for loadActorCostumes ---
-Costume1Chr:
-Costume_pic00_chr: .incbin "data/snes_converted/costumes/cost_017/pic00.chr"
-Costume_pic00_chrEnd:
-Costume1ChrEnd:
+  ; --- Assign slot 0 = actor 1 (ego) always ---
+  sep #$20
+  lda #1
+  sta.w SCUMM.renderSlotActor
+  ; Read costume number from actor struct (16B per actor, costume at offset 1)
+  rep #$20
+  ldx #17                             ; actor 1: struct offset 16 + costume field 1
+  lda.w SCUMM.actors,x
+  and #$00FF
+  sep #$20
+  sta.w SCUMM.renderSlotCostume
+  rep #$20
 
-Costume1Pal:
-CostumePal: .incbin "data/snes_converted/costumes/cost_017/palette.pal"
+  ; --- Scan actors 2-15 for others in current room ---
+  ; scratch = next free render slot (1-4)
+  lda #1
+  sta.w SCUMM.scratch2                ; next free slot index
 
-Costume1Oam:
-Costume_pic00_oam: .incbin "data/snes_converted/costumes/cost_017/pic00.oam"
-Costume1OamEnd:
+  ldx #2                              ; start scanning at actor 2
+_lac.scanLoop:
+  ; Compute actor struct offset: actor_num * 16
+  txa
+  asl a
+  asl a
+  asl a
+  asl a
+  tay                                 ; Y = struct offset (room at +0)
 
-;--- Remaining walk frames (pics 1-9) ---
-Costume_pic01_chr: .incbin "data/snes_converted/costumes/cost_017/pic01.chr"
-Costume_pic01_chrEnd:
-Costume_pic01_oam: .incbin "data/snes_converted/costumes/cost_017/pic01.oam"
+  ; Check room == currentRoom
+  lda.w SCUMM.actors,y               ; room byte at offset 0
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  bne _lac.scanNext
 
-Costume_pic02_chr: .incbin "data/snes_converted/costumes/cost_017/pic02.chr"
-Costume_pic02_chrEnd:
-Costume_pic02_oam: .incbin "data/snes_converted/costumes/cost_017/pic02.oam"
+  ; Check visible: add 11 to Y for visible field
+  phy                                 ; save base struct offset
+  tya
+  clc
+  adc #11
+  tay
+  lda.w SCUMM.actors,y               ; visible at offset 11
+  and #$00FF
+  ply                                 ; restore base offset
+  beq _lac.scanNext
 
-Costume_pic03_chr: .incbin "data/snes_converted/costumes/cost_017/pic03.chr"
-Costume_pic03_chrEnd:
-Costume_pic03_oam: .incbin "data/snes_converted/costumes/cost_017/pic03.oam"
+  ; Check costume != 0: offset 1
+  phy
+  iny                                 ; Y = struct offset + 1 (costume)
+  lda.w SCUMM.actors,y               ; costume at offset 1
+  and #$00FF
+  ply                                 ; restore base offset
+  beq _lac.scanNext
 
-Costume_pic04_chr: .incbin "data/snes_converted/costumes/cost_017/pic04.chr"
-Costume_pic04_chrEnd:
-Costume_pic04_oam: .incbin "data/snes_converted/costumes/cost_017/pic04.oam"
+  ; Assign this actor to next free render slot
+  phx
+  phy
+  ldx.w SCUMM.scratch2               ; slot index
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcs _lac.scanFull                   ; no more slots
 
-Costume_pic05_chr: .incbin "data/snes_converted/costumes/cost_017/pic05.chr"
-Costume_pic05_chrEnd:
-Costume_pic05_oam: .incbin "data/snes_converted/costumes/cost_017/pic05.oam"
+  sep #$20
+  .ACCU 8
+  ; Get actor number from stack: pushed X (2B) then Y (2B)
+  ; Stack: 1,s=Y_lo, 2,s=Y_hi, 3,s=X_lo, 4,s=X_hi
+  lda 3,s                            ; original X = actor number
+  sta.w SCUMM.renderSlotActor,x
+  ; Read costume: struct base is in Y on stack, need +1
+  ply                                 ; Y = struct base offset
+  iny                                 ; Y = struct + 1 (costume)
+  phy                                 ; re-push for later ply
+  lda.w SCUMM.actors,y               ; costume
+  sta.w SCUMM.renderSlotCostume,x
+  rep #$20
+  .ACCU 16
 
-Costume_pic06_chr: .incbin "data/snes_converted/costumes/cost_017/pic06.chr"
-Costume_pic06_chrEnd:
-Costume_pic06_oam: .incbin "data/snes_converted/costumes/cost_017/pic06.oam"
+  ; Advance slot index
+  lda.w SCUMM.scratch2
+  inc a
+  sta.w SCUMM.scratch2
 
-Costume_pic07_chr: .incbin "data/snes_converted/costumes/cost_017/pic07.chr"
-Costume_pic07_chrEnd:
-Costume_pic07_oam: .incbin "data/snes_converted/costumes/cost_017/pic07.oam"
+_lac.scanFull:
+  ply
+  plx
 
-Costume_pic08_chr: .incbin "data/snes_converted/costumes/cost_017/pic08.chr"
-Costume_pic08_chrEnd:
-Costume_pic08_oam: .incbin "data/snes_converted/costumes/cost_017/pic08.oam"
+_lac.scanNext:
+  inx
+  cpx #16
+  bcc _lac.scanLoop
 
-Costume_pic09_chr: .incbin "data/snes_converted/costumes/cost_017/pic09.chr"
-Costume_pic09_chrEnd:
-Costume_pic09_oam: .incbin "data/snes_converted/costumes/cost_017/pic09.oam"
+  ; --- DMA palettes + stand-frame CHR for each occupied render slot ---
+  stz.w SCUMM.scratch3                ; render slot index (0-4)
+
+_lac.dmaLoop:
+  ldx.w SCUMM.scratch3
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc +
+  jmp _lac.dmaDone
++
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotActor,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  bne +
+  jmp _lac.dmaNext                    ; empty slot
++
+
+  ; Look up costume in CostumeDirTable (8 bytes per entry)
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a
+  asl a                               ; costume * 8
+  tax                                 ; X = dir table offset
+
+  ; --- DMA palette: 32 bytes from CostumeDirTable[costume].pal ---
+  sep #$20
+  .ACCU 8
+  ; CGRAM target: color index = 128 + palSlot*16
+  phy
+  ldy.w SCUMM.scratch3               ; render slot index
+  lda.w SCUMM.renderSlotPalSlot,y
+  ply
+  asl a
+  asl a
+  asl a
+  asl a                               ; palSlot * 16
+  clc
+  adc #128                            ; OBJ palette base
+  sta.l CGADD
+
+  lda.b #$00
+  sta.l $4360
+  lda.b #$22
+  sta.l $4361
+  rep #$20
+  .ACCU 16
+  lda.l CostumeDirTable,x             ; palette addr low
+  sta.l $4362
+  sep #$20
+  .ACCU 8
+  lda.l CostumeDirTable + 2,x         ; palette bank
+  sta.l $4364
+  rep #$20
+  .ACCU 16
+  lda #32
+  sta.l $4365
+  sep #$20
+  .ACCU 8
+  lda.b #$40
+  sta.l MDMAEN
+
+  ; --- DMA stand frame CHR (pic 0) ---
+  rep #$20
+  .ACCU 16
+  lda.l CostumeDirTable + 4,x         ; ChrLo table addr
+  sta.b _costDirPtr
+  sep #$20
+  .ACCU 8
+  lda.l CostumeDirTable + 6,x         ; ChrLo table bank
+  sta.b _costDirPtr + 2
+  rep #$20
+  .ACCU 16
+
+  ; Get numPics from CostumeDirTable+3
+  lda.l CostumeDirTable + 3,x
+  and #$00FF
+  sta.w SCUMM.scratch                 ; numPics
+
+  ; Read pic 0 CHR address from ChrLo[0]
+  ldy #0
+  lda [_costDirPtr],y
+  sta.w SCUMM.scratch2                ; save CHR addr
+
+  ; ChrHi = ChrLo_base + numPics*2
+  lda.w SCUMM.scratch
+  asl a
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrHi table
+  ; Read ChrHi[0]
+  lda [_costDirPtr],y
+  and #$00FF
+  sta.w SCUMM.actorOamCount           ; temp: CHR bank
+
+  ; ChrLen = ChrHi_base + numPics
+  lda.w SCUMM.scratch                 ; numPics
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrLen table
+  ; Read ChrLen[0]
+  lda [_costDirPtr],y
+  pha                                 ; save CHR length on stack
+
+  ; Set up VRAM target
+  sep #$20
+  .ACCU 8
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+  .ACCU 16
+  ; Get VRAM addr from renderSlotTileBase (word array at slot*2)
+  lda.w SCUMM.scratch3                ; render slot
+  asl a
+  tax
+  lda.w SCUMM.renderSlotTileBase,x
+  lsr a                               ; byte -> word addr
+  sta.l VMADDL
+
+  ; DMA channel 7: CHR -> VRAM
+  sep #$20
+  .ACCU 8
+  lda.b #$01
+  sta.l $4370
+  lda.b #$18
+  sta.l $4371
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch2                ; CHR source addr
+  sta.l $4372
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorOamCount           ; CHR bank
+  sta.l $4374
+  rep #$20
+  .ACCU 16
+  pla                                 ; CHR length
+  sta.l $4375
+  sep #$20
+  .ACCU 8
+  lda.b #$80
+  sta.l MDMAEN
+  rep #$20
+  .ACCU 16
+
+  ; Init animation state for this actor
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotActor,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x
+  lda #0
+  sta.w SCUMM.actorAnimFrame,x
+  sta.w SCUMM.actorAnimTimer,x
+  rep #$20
+  .ACCU 16
+
+_lac.dmaNext:
+  inc.w SCUMM.scratch3
+  jmp _lac.dmaLoop
+
+_lac.dmaDone:
+  rtl
 
 .ends
 
 
 ;===================================================================
-; Dynamic actor renderer — superfree bank (called via jsl from bank 0)
-; Looks up current walk cycle frame, DMAs CHR on frame change,
-; renders OAM entries using [_oamSrcPtr],y indirect long addressing.
-; D register = ScummVM object ZP (preserved across jsl).
-; DBR = $7E (WRAM bank, preserved across jsl).
+; renderActors_impl — superfree bank
+; Multi-actor OAM renderer. Loops over render slots, computes screen
+; position, looks up current pic via CostumeDirTable, writes OAM.
+; D register = ScummVM object ZP. DBR = $7E.
 ;===================================================================
-.bank 5 slot 0
+.section "scummvm render impl" superfree
 .base BSL
-.section "scummvm render impl" free
+
+; VRAM tile base table (word per slot: tile_id_base * 2 for quick lookup)
+_ri.tileBaseLut:
+  .db $00, $30, $60, $90, $C0
+
+; Palette OAM bits table: (palSlot << 1) for OAM attr byte bits 1-3
+_ri.palBitsLut:
+  .db $00, $02, $04, $06, $08
 
 scummvm.renderActors_impl:
   rep #$31
 
-  ; Check actor 1 (Guybrush) is visible in current room
-  lda.w SCUMM.actors.2.visible
+  ; --- Clear OAM Table 1 (hi bits) for first 80 sprites (20 bytes) ---
+  sep #$20
+  lda #0
+  ldx #19
+- sta.w GLOBAL.oamTable1,x
+  dex
+  bpl -
+  rep #$20
+
+  ; --- Loop over render slots ---
+  stz.w SCUMM.scratch3                ; scratch3 = current render slot index (0-4)
+
+_ri.slotLoop:
+  ldx.w SCUMM.scratch3
+  sep #$20
+  lda.w SCUMM.renderSlotActor,x
+  rep #$20
   and #$00FF
   bne +
-  jmp _ri.skipActors
+  jmp _ri.nextSlot
 +
-  lda.w SCUMM.actors.2.room
+  sta.w SCUMM.actorOamCount           ; temporarily store actor number
+
+  ; Compute actor struct offset: actor_number * 16
+  asl a
+  asl a
+  asl a
+  asl a
+  tay                                 ; Y = actor struct offset
+
+  ; Check room == currentRoom (room at struct offset 0)
+  lda.w SCUMM.actors,y
   and #$00FF
   cmp.w SCUMM.currentRoom
   beq +
-  jmp _ri.skipActors
+  jmp _ri.nextSlot
++
+
+  ; Check visible (struct offset 11)
+  phy
+  tya
+  clc
+  adc #11
+  tay
+  lda.w SCUMM.actors,y
+  and #$00FF
+  ply                                 ; restore Y = struct base
+  bne +
+  jmp _ri.nextSlot
 +
 
   ; --- Determine current pic index from walk cycle ---
-  sep #$20
-  ldx #1                              ; actor 1 byte index
-  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-11)
-  rep #$20
+  ; Get actor number for walk array indexing
+  lda.w SCUMM.actorOamCount           ; actor number
   and #$00FF
   tax
-  lda.l WalkCycleTable,x
-  and #$00FF
-  sta.w SCUMM.scratch                 ; pic index (0-9)
-
-  ; --- CHR DMA if frame changed ---
   sep #$20
-  ldx #1
+  .ACCU 8
+  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-11)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  phx                                 ; save actor number
+  tax
+  lda.l CostumeWalkCycle,x
+  and #$00FF
+  sta.w SCUMM.scratch                 ; pic index
+  plx                                 ; restore actor number
+
+  ; --- Check if frame changed -> stage CHR DMA for this slot ---
+  sep #$20
+  .ACCU 8
   lda.w SCUMM.actorLastFrame,x
   rep #$20
+  .ACCU 16
   and #$00FF
   cmp.w SCUMM.scratch
   bne +
@@ -6598,99 +7237,233 @@ scummvm.renderActors_impl:
   ; Store new lastFrame
   lda.w SCUMM.scratch
   sep #$20
-  ldx #1
+  .ACCU 8
   sta.w SCUMM.actorLastFrame,x
   rep #$20
+  .ACCU 16
 
-  ; --- Store CHR DMA parameters for VBlank queue (no mid-frame force-blank) ---
-  lda.w SCUMM.scratch                 ; pic index
-  asl a                               ; x2 for word tables
-  tax
-  lda.l CostumeFrameChrLo,x
-  sta.w SCUMM.chrDmaSrcLo
-  lda.l CostumeFrameChrLen,x
-  sta.w SCUMM.chrDmaLen
-
-  ; Bank byte (byte table, needs original pic index)
-  lda.w SCUMM.scratch
+  ; Look up costume in CostumeDirTable to find CHR source
+  phx                                 ; save actor number
+  phy                                 ; save struct offset
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.w SCUMM.renderSlotCostume,x
   and #$00FF
-  tax
+  asl a
+  asl a
+  asl a                               ; costume * 8
+  tax                                 ; X = CostumeDirTable offset
+
+  ; Get ChrLo table pointer
+  lda.l CostumeDirTable + 4,x         ; ChrLo table addr
+  sta.b _costDirPtr
   sep #$20
-  lda.l CostumeFrameChrHi,x
-  sta.w SCUMM.chrDmaSrcHi
-  lda #1
-  sta.w SCUMM.chrDmaPending
+  lda.l CostumeDirTable + 6,x         ; ChrLo table bank
+  sta.b _costDirPtr + 2
   rep #$20
 
-_ri.chrReady:
-  ; --- Set up OAM source pointer (24-bit) in ZP ---
+  ; Get numPics for computing ChrHi/ChrLen offsets
+  lda.l CostumeDirTable + 3,x
+  and #$00FF
+  sta.w SCUMM.scratch2                ; numPics
+
+  ; Read ChrLo[pic]
   lda.w SCUMM.scratch                 ; pic index
   asl a                               ; x2 for word table
-  tax
-  lda.l CostumeFrameOamLo,x
-  sta.b _oamSrcPtr                    ; low 16 bits
+  tay
+  lda [_costDirPtr],y                 ; ChrLo[pic] = CHR source addr
+  pha                                 ; save CHR addr
 
-  lda.w SCUMM.scratch
+  ; Compute ChrHi = ChrLo_base + numPics*2
+  lda.w SCUMM.scratch2                ; numPics
+  asl a
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrHi table
+
+  ; Read ChrHi[pic] (byte table)
+  lda.w SCUMM.scratch                 ; pic index
   and #$00FF
-  tax
+  tay
+  lda [_costDirPtr],y
+  and #$00FF
+  pha                                 ; save CHR bank
+
+  ; Compute ChrLen = ChrHi_base + numPics
+  lda.w SCUMM.scratch2                ; numPics
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrLen table
+
+  ; Read ChrLen[pic] (word table)
+  lda.w SCUMM.scratch                 ; pic index
+  asl a
+  tay
+  lda [_costDirPtr],y                 ; CHR length
+  sta.w SCUMM.scratch2                ; save CHR length
+
+  ; Store per-slot DMA params
+  ldx.w SCUMM.scratch3                ; render slot
+  pla                                 ; CHR bank
   sep #$20
-  lda.l CostumeFrameOamHi,x
-  sta.b _oamSrcPtr + 2               ; bank byte
+  .ACCU 8
+  sta.w SCUMM.slotChrSrcHi,x
+  rep #$20
+  .ACCU 16
+  ; Slot arrays use word-per-slot indexing for word fields
+  txa
+  asl a                               ; slot * 2
+  tax
+  pla                                 ; CHR addr
+  sta.w SCUMM.slotChrSrcLo,x
+  lda.w SCUMM.scratch2                ; CHR length
+  sta.w SCUMM.slotChrLen,x
+  ; renderSlotTileBase is word-per-slot (slot*2)
+  lda.w SCUMM.scratch3
+  asl a
+  tax
+  lda.w SCUMM.renderSlotTileBase,x
+  sta.w SCUMM.slotChrVram,x           ; VRAM byte addr target
+  ldx.w SCUMM.scratch3
+
+  ; Mark slot dirty
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x
+  rep #$20
+  .ACCU 16
+
+  ply                                 ; restore struct offset
+  plx                                 ; restore actor number
+
+_ri.chrReady:
+  ; --- Set up OAM source pointer for current frame ---
+  ; Look up OAM data from CostumeDirOamTable
+  phx                                 ; save actor number
+  phy                                 ; save struct offset
+
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a
+  asl a                               ; costume * 8
+  tax                                 ; X = OAM dir table offset
+
+  ; OamLo table pointer
+  lda.l CostumeDirOamTable,x
+  sta.b _costDirPtr
+  sep #$20
+  lda.l CostumeDirOamTable + 2,x
+  sta.b _costDirPtr + 2
   rep #$20
 
+  ; Read OamLo[pic] (word table)
+  lda.w SCUMM.scratch                 ; pic index
+  asl a
+  tay
+  lda [_costDirPtr],y
+  sta.b _oamSrcPtr                    ; OAM data addr low 16
+
+  ; OamHi table pointer
+  lda.l CostumeDirOamTable + 4,x      ; OamHi addr
+  sta.b _costDirPtr
+  sep #$20
+  lda.l CostumeDirOamTable + 6,x      ; OamHi bank
+  sta.b _costDirPtr + 2
+  rep #$20
+
+  ; Read OamHi[pic] (byte table)
+  lda.w SCUMM.scratch                 ; pic index
+  and #$00FF
+  tay
+  lda [_costDirPtr],y
+  sep #$20
+  .ACCU 8
+  sta.b _oamSrcPtr + 2               ; OAM bank byte
+  rep #$20
+  .ACCU 16
+
+  ply                                 ; restore struct offset (Y)
+  plx                                 ; restore actor number
+
   ; Read entry count from OAM header byte 0
+  phy
   ldy #0
   lda [_oamSrcPtr],y
   and #$00FF
   sta.w SCUMM.actorOamCount
+  ply
 
-  ; Compute screen X = actor.x - cameraX
-  lda.w SCUMM.actors.2.x
+  ; Compute screen X = actor.x - cameraX (x at struct offset +2)
+  phy                                 ; save base struct offset
+  iny
+  iny                                 ; Y = struct + 2
+  lda.w SCUMM.actors,y               ; actor.x
   sec
   sbc.w GLOBAL.room.cameraX
   sta.w SCUMM.actorScreenX
 
-  ; Screen Y = actor.y (no vertical scroll in MI1)
-  lda.w SCUMM.actors.2.y
+  ; Screen Y = actor.y (struct offset +4)
+  iny
+  iny                                 ; Y = struct + 4
+  lda.w SCUMM.actors,y               ; actor.y
   sta.w SCUMM.actorScreenY
 
-  ; Default position if both zero (actor not yet positioned)
+  ; Read facing (struct offset +6)
+  iny
+  iny                                 ; Y = struct + 6
+  lda.w SCUMM.actors,y               ; facing
+  sta.w SCUMM.scratch2                ; save facing for later
+  ply                                 ; restore Y = struct base
+
+  ; Skip if position is (0,0) — actor not placed yet
   lda.w SCUMM.actorScreenX
   ora.w SCUMM.actorScreenY
   bne _ri.posReady
-  lda #128
-  sta.w SCUMM.actorScreenX
-  lda #110
-  sta.w SCUMM.actorScreenY
+  jmp _ri.nextSlot
 _ri.posReady:
 
-  ; Clear OAM Table 1 bytes for our sprites (5 bytes covers sprites 0-19)
+  ; Compute flip mask: priority 3 + palette bits + optional H-flip
+  ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   sep #$20
-  lda #0
-  ldx #4
-- sta.w GLOBAL.oamTable1,x
-  dex
-  bpl -
-
-  ; Compute flip mask based on facing direction
-  ; Facing 270 (west) = H-flip all sprites
-  lda #$30                            ; default: priority 3, no flip
-  ldx.w SCUMM.actors.2.facing
-  cpx #270
-  bne +
-  lda #$70                            ; priority 3 + H-flip ($40)
-+
+  .ACCU 8
+  ldx.w SCUMM.scratch3               ; render slot
+  lda.l _ri.palBitsLut,x             ; palette bits (PPP << 1)
+  ora #$30                            ; priority 3
   sta.w SCUMM.actorFlipMask
 
-  ; --- OAM render loop ---
-  ; Y = source offset into OAM data (skip 6-byte header)
-  ; X = destination offset into GLOBAL.oamBuffer
+  ; Check facing: 270 = west = H-flip
   rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch2                ; facing (saved above)
+  cmp #270
+  bne +
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorFlipMask
+  ora #$40                            ; H-flip
+  sta.w SCUMM.actorFlipMask
+  rep #$20
+  .ACCU 16
++
+
+  ; Get tile base for this slot
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda.l _ri.tileBaseLut,x
+  sta.w SCUMM.scratch2                ; tile base (byte, low 8 bits of scratch2)
+  rep #$20
+  .ACCU 16
+
+  ; --- OAM render loop ---
   ldx.w GLOBAL.currentOamSlot
-  ldy #6
+  ldy #6                              ; skip 6-byte OAM header
 
 _ri.entryLoop:
   rep #$20
+  .ACCU 16
   lda [_oamSrcPtr],y                  ; dx byte
   iny
   and #$00FF
@@ -6701,15 +7474,17 @@ _ri.entryLoop:
   ; If facing west, mirror dx: new_dx = -(dx + 8)
   pha
   sep #$20
+  .ACCU 8
   lda.w SCUMM.actorFlipMask
   rep #$20
-  and #$0040                          ; test H-flip bit
+  .ACCU 16
+  and #$0040
   beq _ri.noFlipDx
   pla
   clc
   adc #8
   eor #$FFFF
-  inc a                               ; negate
+  inc a
   bra _ri.applyDx
 _ri.noFlipDx:
   pla
@@ -6727,39 +7502,50 @@ _ri.applyDx:
 +
   clc
   adc.w SCUMM.actorScreenY
-  sta.w SCUMM.scratch2
+  pha                                 ; save computed Y on stack
 
-  ; Bounds check
+  ; Bounds check X
   lda.w SCUMM.scratch
   bmi _ri.hideEntry
   cmp #$0100
   bcs _ri.hideEntry
-  lda.w SCUMM.scratch2
+  ; Bounds check Y
+  pla
+  pha
   bmi _ri.hideEntry
   cmp #$00E0
   bcs _ri.hideEntry
 
   ; Write visible OAM entry
+  pla                                 ; computed Y (16-bit pull matches 16-bit push)
   sep #$20
-  lda.w SCUMM.scratch
+  .ACCU 8
+  pha                                 ; re-push Y low byte (8-bit, 1 byte)
+  lda.w SCUMM.scratch                 ; screen X
   sta.w GLOBAL.oamBuffer,x
   inx
-  lda.w SCUMM.scratch2
+  pla                                 ; pull Y low byte (8-bit, 1 byte)
   sta.w GLOBAL.oamBuffer,x
   inx
   lda [_oamSrcPtr],y                  ; tile_id
+  clc
+  adc.w SCUMM.scratch2               ; + tile base for this slot
   sta.w GLOBAL.oamBuffer,x
   iny
   inx
-  lda [_oamSrcPtr],y                  ; flags
-  ora.w SCUMM.actorFlipMask           ; priority 3 + H-flip if facing west
+  lda [_oamSrcPtr],y                  ; flags from OAM data
+  ora.w SCUMM.actorFlipMask           ; priority + palette + flip
   sta.w GLOBAL.oamBuffer,x
   iny
   inx
+  rep #$20
+  .ACCU 16
   bra _ri.nextEntry
 
 _ri.hideEntry:
+  pla                                 ; discard saved Y
   sep #$20
+  .ACCU 8
   lda #0
   sta.w GLOBAL.oamBuffer,x
   inx
@@ -6768,29 +7554,42 @@ _ri.hideEntry:
   inx
   lda #0
   sta.w GLOBAL.oamBuffer,x
-  iny                                 ; skip tile_id in source
+  iny                                 ; skip tile_id
   inx
   sta.w GLOBAL.oamBuffer,x
-  iny                                 ; skip flags in source
+  iny                                 ; skip flags
   inx
+  rep #$20
+  .ACCU 16
 
 _ri.nextEntry:
-  rep #$20
   dec.w SCUMM.actorOamCount
   beq +
   jmp _ri.entryLoop
 +
-
   stx.w GLOBAL.currentOamSlot
 
+_ri.nextSlot:
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch3
+  inc a
+  sta.w SCUMM.scratch3
+  cmp #SCUMM_MAX_RENDER_SLOTS
+  bcc +
+  jmp _ri.skipActors
++
+  jmp _ri.slotLoop
+
 _ri.skipActors:
-  ; --- Cursor OAM entry (appended after actor sprites) ---
+  ; --- Cursor OAM entry (appended after all actor sprites) ---
   rep #$20
   lda.w SCUMM.cursorEnabled
   beq _ri.noCursor
 
   ldx.w GLOBAL.currentOamSlot
   sep #$20
+  .ACCU 8
   lda.w SCUMM.cursorX
   sta.w GLOBAL.oamBuffer,x
   inx
@@ -6800,20 +7599,22 @@ _ri.skipActors:
   lda.b #CURSOR_TILE_ID
   sta.w GLOBAL.oamBuffer,x
   inx
-  lda.b #$32                          ; priority 3, OBJ palette 1
+  lda.b #CURSOR_OAM_FLAGS
   sta.w GLOBAL.oamBuffer,x
   inx
   rep #$20
+  .ACCU 16
   stx.w GLOBAL.currentOamSlot
 _ri.noCursor:
 
   ; Signal engine to upload OAM buffer during next VBlank
   sep #$20
+  .ACCU 8
   lda #1
   sta.w GLOBAL.oamUploadFlag
   rep #$20
+  .ACCU 16
 
-_ri.done:
   rtl
 
 .ends
@@ -8052,7 +8853,7 @@ _uc.walkDone:
   ; Init walk animation
   ldx #1                              ; actor 1 byte index
   sep #$20
-  lda #WALK_ANIM_SPEED
+  lda #COSTUME_WALK_ANIM_SPEED
   sta.w SCUMM.actorAnimTimer,x
   lda #0
   sta.w SCUMM.actorAnimFrame,x
@@ -8244,25 +9045,133 @@ scummvm.registerPendingDma:
   phy
   sei
 
-  ;--- CHR DMA (costume animation frame → VRAM $6000) ---
-  sep #$20
-  lda.w SCUMM.chrDmaPending
-  beq _rpd.noChr
-  stz.w SCUMM.chrDmaPending
+  ;--- Per-slot CHR DMA (costume animation frame changes) ---
+  ; Process up to 2 dirty render slots per frame
   rep #$20
-  jsr _rpd.findSlot
-  bcc _rpd.noChr
-  lda.w SCUMM.chrDmaLen
+  stz.w SCUMM.scratch                 ; DMA count this frame
+  stz.w SCUMM.scratch2                ; render slot scan index
+
+_rpd.chrSlotLoop:
+  ldx.w SCUMM.scratch2
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc +
+  jmp _rpd.noChr
++
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotDirty,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  bne +
+  jmp _rpd.chrSlotNext
++
+
+  ; This slot is dirty — clear flag and register DMA
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.renderSlotDirty,x
+  rep #$20
+  .ACCU 16
+
+  jsr _rpd.findSlot                   ; X = free DMA queue slot offset
+  bcs +
+  jmp _rpd.chrSlotNext                ; queue full, skip
++
+
+  ; Read per-slot DMA params using scratch2 as render slot index
+  ; Word arrays: slotChrSrcLo, slotChrLen, slotChrVram indexed by slot*2
+  ; Byte array: slotChrSrcHi indexed by slot
+  phy                                 ; save Y
+  ldy.w SCUMM.scratch2                ; render slot index
+  phy                                 ; save render slot on stack
+  tya
+  asl a                               ; slot * 2
+  tay                                 ; Y = word index
+
+  lda.w SCUMM.slotChrLen,y
   sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #$C000
+  lda.w SCUMM.slotChrVram,y
   sta.w GLOBAL.dmaQueue.1.targetAdress,x
-  lda.w SCUMM.chrDmaSrcLo
+  lda.w SCUMM.slotChrSrcLo,y
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+
+  ply                                 ; render slot (byte index)
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.slotChrSrcHi,y
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                            ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+  rep #$20
+  .ACCU 16
+  ply                                 ; restore original Y
+
+  ; --- Also queue CGRAM DMA for costume palette (32 bytes) ---
+  jsr _rpd.findSlot
+  bcc _rpd.chrPalDone
+  phy                                 ; save Y
+  phx                                 ; save DMA queue slot offset
+  ; Look up palette from CostumeDirTable using renderSlotCostume[slot]
+  ldx.w SCUMM.scratch2                ; render slot index
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a
+  asl a                               ; costume * 8
+  tax                                 ; X = CostumeDirTable offset
+  lda.l CostumeDirTable,x             ; palette source addr
+  sta.w SCUMM.actorScreenX            ; temp store palette addr
+  sep #$20
+  .ACCU 8
+  lda.l CostumeDirTable + 2,x         ; palette source bank
+  sta.w SCUMM.actorScreenY            ; temp store palette bank
+  rep #$20
+  .ACCU 16
+  plx                                 ; restore DMA queue slot offset
+  lda.w SCUMM.actorScreenX
   sta.w GLOBAL.dmaQueue.1.sourceAdress,x
   sep #$20
-  lda.w SCUMM.chrDmaSrcHi
+  .ACCU 8
+  lda.w SCUMM.actorScreenY
   sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
-  lda #$40                           ; VRAM | ACTIVE
+  rep #$20
+  .ACCU 16
+  lda #32                             ; 16 colors x 2 bytes
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  ; CGRAM target: OBJ palette area + palSlot*32
+  ; OBJ palettes start at CGRAM byte $100
+  ldy.w SCUMM.scratch2                ; render slot
+  lda.w SCUMM.renderSlotPalSlot,y
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                               ; palSlot * 32
+  clc
+  adc #$0100                          ; OBJ palette base
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+  sep #$20
+  .ACCU 8
+  lda #$42                            ; CGRAM | ACTIVE
   sta.w GLOBAL.dmaQueue.1.transferType,x
+  rep #$20
+  .ACCU 16
+  ply                                 ; restore Y
+_rpd.chrPalDone:
+
+  ; Count DMAs, stop at 2 per frame
+  inc.w SCUMM.scratch
+  lda.w SCUMM.scratch
+  cmp #2
+  bcs _rpd.noChr
+
+_rpd.chrSlotNext:
+  rep #$20
+  .ACCU 16
+  inc.w SCUMM.scratch2
+  jmp _rpd.chrSlotLoop
 _rpd.noChr:
 
   ;--- Cursor tile DMA (one-time init) ---
@@ -8298,7 +9207,7 @@ _rpd.cursorTileReady:
   bcc _rpd.noCursor
   lda #4
   sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #$0122
+  lda #$01A2                         ; CGRAM byte addr: OBJ palette 5, color 1
   sta.w GLOBAL.dmaQueue.1.targetAdress,x
   lda.w #SCUMM.cursorPalBuf & $FFFF
   sta.w GLOBAL.dmaQueue.1.sourceAdress,x
@@ -9279,7 +10188,7 @@ _aao.walk:
   and #$000F
   tax
   .ACCU 16
-  lda #WALK_ANIM_SPEED
+  lda #COSTUME_WALK_ANIM_SPEED
   sep #$20
   sta.w SCUMM.actorAnimTimer,x
   lda #0
@@ -9433,6 +10342,28 @@ _icv.ownerLoop:
   inx
   cpx #SCUMM_MAX_OBJECTS
   bcc _icv.ownerLoop
+  ;--- Init objectClass: all zero ---
+  lda #0
+  ldx #0
+_icv.classLoop:
+  sta.l SCUMM.objectClass,x
+  inx
+  inx
+  cpx #SCUMM_MAX_OBJECTS * 2
+  bcc _icv.classLoop
+  ;--- Init render slots: all empty ---
+  sep #$20
+  ldx #0
+  lda #0
+_icv.slotLoop:
+  sta.w SCUMM.renderSlotActor,x
+  sta.w SCUMM.renderSlotCostume,x
+  sta.w SCUMM.renderSlotLastPic,x
+  sta.w SCUMM.renderSlotDirty,x
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _icv.slotLoop
+  rep #$20
   ;--- Camera state init ---
   stz.w SCUMM.cameraFollows
   stz.w SCUMM.cameraDest
@@ -10005,4 +10936,9 @@ _gic.next:
   rtl
 
 .ends
+
+;===================================================================
+; Multi-actor costume ROM data (auto-generated by gen_costume_rom.py)
+;===================================================================
+.include "src/data/costumes/costume_data.inc"
 

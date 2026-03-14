@@ -141,6 +141,7 @@ SCUMM.slots         INSTANCEOF scummSlot SCUMM_MAX_SLOTS
 ; VM state variables
 .ramsection "scumm vm state" bank 0 slot 1
 SCUMM.running             dw      ;nonzero = VM is active
+SCUMM.egoFixupPending     dw      ;nonzero = force ego costume 17 after next scheduler pass
 SCUMM.currentSlot         dw      ;current slot index (0-24)
 SCUMM.currentSlotPtr      dw      ;byte offset into SCUMM.slots for current slot
 SCUMM.currentOpcode       dw      ;last fetched opcode byte (zero-extended)
@@ -166,6 +167,8 @@ SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recur
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaCgramChannel    db      ;allocated HDMA channel id for CGRAM palette swap
 SCUMM.cgramHdmaTable      ds 88   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal + sentence)
+SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
+SCUMM.argCount            dw      ;byte count of args in argBuffer
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)
@@ -193,6 +196,13 @@ SCUMM.objectState    ds SCUMM_MAX_OBJECTS
 ; Owner 0 = unowned, owner 0x0F = room, 1-14 = actor/inventory
 .ramsection "scumm object owner" bank 0 slot 1
 SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
+.ends
+
+; Object class table (2 bytes per object, 1024 objects = 2048 bytes)
+; Bit N = class (N+17).  Supports classes 17-32 (MI1 uses 20-32).
+; Class 20=bit3, 22=bit5, 29=bit12, 30=bit13, 31=bit14, 32=bit15
+.ramsection "scumm object class" bank 0 slot 1
+SCUMM.objectClass    ds SCUMM_MAX_OBJECTS * 2
 .ends
 
 ;---------------------------------------------------------------------------
@@ -251,14 +261,33 @@ SCUMM.actorScreenX   dw      ; computed screen X for current actor
 SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
-SCUMM.chrDmaPending  db      ; 1 = costume CHR DMA needed this frame
+SCUMM.chrDmaPending  db      ; LEGACY: kept for single-slot compat (slot 0 only)
 SCUMM.chrDmaSrcLo   dw      ; CHR source ROM address (low 16)
 SCUMM.chrDmaSrcHi   db      ; CHR source ROM bank
 SCUMM.chrDmaLen      dw      ; CHR transfer length
-SCUMM.cursorPalBuf   db      ; cursor OBJ pal1 color1 low byte
-SCUMM.cursorPalC1Hi  db      ; cursor OBJ pal1 color1 high byte
-SCUMM.cursorPalC2Lo  db      ; cursor OBJ pal1 color2 low byte
-SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal1 color2 high byte
+SCUMM.cursorPalBuf   db      ; cursor OBJ pal5 color1 low byte
+SCUMM.cursorPalC1Hi  db      ; cursor OBJ pal5 color1 high byte
+SCUMM.cursorPalC2Lo  db      ; cursor OBJ pal5 color2 low byte
+SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal5 color2 high byte
+.ends
+
+; Multi-actor render slots (5 visible actors max)
+.define SCUMM_MAX_RENDER_SLOTS 5
+.ramsection "scumm render slots" bank 0 slot 1
+SCUMM.renderSlotActor    ds SCUMM_MAX_RENDER_SLOTS      ; actor number per slot (0=empty)
+SCUMM.renderSlotCostume  ds SCUMM_MAX_RENDER_SLOTS      ; costume number in slot
+SCUMM.renderSlotPalSlot  ds SCUMM_MAX_RENDER_SLOTS      ; OBJ palette index (0-4)
+SCUMM.renderSlotTileBase ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM tile ID base per slot (word)
+SCUMM.renderSlotLastPic  ds SCUMM_MAX_RENDER_SLOTS      ; last rendered pic ($FF=dirty)
+SCUMM.renderSlotDirty    ds SCUMM_MAX_RENDER_SLOTS      ; nonzero = needs CHR DMA
+.ends
+
+; Per-slot CHR DMA parameters (filled by renderActors, consumed by registerPendingDma)
+.ramsection "scumm slot chr dma" bank 0 slot 1
+SCUMM.slotChrSrcLo   ds SCUMM_MAX_RENDER_SLOTS * 2  ; CHR source ROM addr low (word per slot)
+SCUMM.slotChrSrcHi   ds SCUMM_MAX_RENDER_SLOTS      ; CHR source ROM bank (byte per slot)
+SCUMM.slotChrLen      ds SCUMM_MAX_RENDER_SLOTS * 2  ; CHR transfer length (word per slot)
+SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (word per slot)
 .ends
 
 ; Actor walk targets (parallel arrays — 16 actors max, avoids changing struct size)
@@ -334,6 +363,11 @@ SCUMM.actorZClip       ds SCUMM_WALK_ACTORS                       ; 16B — Z cl
 ; OAM scratch buffer (copy of current frame's OAM data, max ~80 bytes)
 .ramsection "scumm oam scratch" bank 0 slot 1
 SCUMM.oamScratch     ds 80
+.ends
+
+; updateActors scratch (survives across inner subroutine calls)
+.ramsection "scumm updateActors scratch" bank 0 slot 1
+SCUMM.uaActorStructOfs   dw    ; actor struct byte offset (actor * 16)
 .ends
 
 ; Cursor state
@@ -413,6 +447,8 @@ SCUMM.dialogPalColor     dw      ; dynamic palette color 1 (talk color BGR555)
   iterator INSTANCEOF iteratorStruct
   _oamSrcPtr ds 3
   _oamSrcLen ds 1
+  _costDirPtr ds 3         ; 24-bit pointer into CostumeDirTable
+  _costDirPtrPad ds 1      ; alignment
   zpLen ds 0
 .ende
 
@@ -463,11 +499,28 @@ SCUMM.invNameCount       dw                      ; number of cached names
 .define SCUMM_VAR_CAMERA_THRESHOLD 29
 .define SCUMM_VAR_CAMERA_FAST_X    36
 
-; Cursor sprite (shares OBJ base with actors at VRAM word $6000)
-; Actor costume tiles can be up to 544 bytes (17 tiles); cursor at tile 32 ($20)
-.define CURSOR_TILE_VRAM_WORD $6200   ; VRAM word addr = $6000 + 32*16
-.define CURSOR_TILE_ID        $20     ; OAM tile index
+; Cursor sprite — tile $F0 at end of OBJ VRAM (avoids actor VRAM regions)
+; OBJ VRAM layout (name base $6000):
+;   Slot 0: tiles $00-$2F (VRAM $6000-$62FF)  ego / Guybrush, 48 tiles max
+;   Slot 1: tiles $30-$5F (VRAM $6300-$65FF)  NPC 1, 48 tiles
+;   Slot 2: tiles $60-$8F (VRAM $6600-$68FF)  NPC 2, 48 tiles
+;   Slot 3: tiles $90-$BF (VRAM $6900-$6BFF)  NPC 3, 48 tiles
+;   Slot 4: tiles $C0-$EF (VRAM $6C00-$6EFF)  NPC 4, 48 tiles
+;   Cursor: tile  $F0     (VRAM $6F00)
+.define CURSOR_TILE_VRAM_WORD $6F00   ; VRAM word addr for cursor tile
+.define CURSOR_TILE_ID        $F0     ; OAM tile index
 .define CURSOR_SPEED          2       ; pixels per frame for d-pad movement
+; Cursor uses OBJ palette 5 (CGRAM color 160-175)
+.define CURSOR_OAM_FLAGS      $3A     ; priority 3 ($30) + OBJ palette 5 ($0A)
+
+; Per-slot VRAM base addresses (byte addresses for DMA)
+; Each slot = 48 tiles * 32 bytes = 1536 = $0600 bytes
+.define ACTOR_VRAM_SLOT0      $C000   ; byte addr = word $6000
+.define ACTOR_VRAM_SLOT1      $C600   ; byte addr = word $6300
+.define ACTOR_VRAM_SLOT2      $CC00   ; byte addr = word $6600
+.define ACTOR_VRAM_SLOT3      $D200   ; byte addr = word $6900
+.define ACTOR_VRAM_SLOT4      $D800   ; byte addr = word $6C00
+.define ACTOR_TILES_PER_SLOT  48      ; max tiles per render slot
 
 .base BSL
 .bank 0 slot 0

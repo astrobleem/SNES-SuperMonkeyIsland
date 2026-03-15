@@ -215,7 +215,9 @@ def parse_costume(data: bytes) -> Costume:
         seen_offsets.add(frame_off_bp)
 
         # Read picture offsets until we hit something unreasonable
+        # SCUMM allows NULL (0x0000) entries in the middle of the table — skip them
         pic_idx = 0
+        consecutive_bad = 0
         while True:
             entry_pos = frame_off_data + pic_idx * 2
             if entry_pos + 2 > len(data):
@@ -224,8 +226,20 @@ def parse_costume(data: bytes) -> Costume:
             pic_bp = struct.unpack_from('<H', data, entry_pos)[0]
             pic_data = _bp_to_data(pic_bp)
 
-            if pic_data < 0 or pic_data + COSTUME_INFO_SIZE > len(data):
-                break
+            if pic_bp == 0 or pic_data < 0 or pic_data + COSTUME_INFO_SIZE > len(data):
+                # NULL or invalid entry — skip but track consecutive failures
+                limb_pictures[limb].append(None)
+                pic_idx += 1
+                consecutive_bad += 1
+                if consecutive_bad > 4:
+                    # Too many consecutive bad entries — end of table
+                    # Remove trailing None entries
+                    while limb_pictures[limb] and limb_pictures[limb][-1] is None:
+                        limb_pictures[limb].pop()
+                    break
+                continue
+
+            consecutive_bad = 0
 
             # Read CostumeInfo header
             w = struct.unpack_from('<H', data, pic_data)[0]
@@ -410,7 +424,9 @@ def get_anim_frame_picture(costume: Costume, anim_id: int,
             continue
 
         if pic_num < len(costume.limb_pictures[limb]):
-            return costume.limb_pictures[limb][pic_num]
+            pic = costume.limb_pictures[limb][pic_num]
+            if pic is not None:
+                return pic
 
     return None
 
@@ -516,6 +532,9 @@ def list_costume(costume: Costume):
         if pics:
             print(f"Limb {limb}: {len(pics)} pictures")
             for i, pic in enumerate(pics):
+                if pic is None:
+                    print(f"  [{i:2d}] (NULL)")
+                    continue
                 nz = int(np.count_nonzero(pic.pixels))
                 print(f"  [{i:2d}] {pic.width:3d}x{pic.height:3d}  "
                       f"rel=({pic.rel_x:+4d},{pic.rel_y:+4d})  "
@@ -532,8 +551,9 @@ def list_costume(costume: Costume):
         dir_name = dir_names[direction] if direction < len(dir_names) else '?'
         limb_str = ', '.join(
             f"L{l}=[{s}-{e}{'L' if loop else ''}]"
-            for l, (s, e, loop) in sorted(anim.limb_cmds.items())
-            if anim.limb_cmds[l] is not None
+            for l, cmd in sorted(anim.limb_cmds.items())
+            if cmd is not None
+            for s, e, loop in [cmd]
         )
         print(f"  anim[{anim_id:3d}] frame={frame:2d} dir={dir_name}  "
               f"mask=0x{anim.limb_mask:04x}  {limb_str}")

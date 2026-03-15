@@ -471,6 +471,9 @@ def main():
         total_oam = 0
 
         for i, pic in enumerate(pictures):
+            if pic is None:
+                log.debug("Skipping NULL pic %d", i)
+                continue
             frame = convert_frame(pic.pixels, pic.width, pic.height,
                                   pic.rel_x, pic.rel_y, snes_pal)
             prefix = f'pic{i:02d}'

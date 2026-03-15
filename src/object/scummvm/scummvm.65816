@@ -4253,9 +4253,17 @@ _actorOps.dispatch:
   bne +
     jmp _actorOps.sub_p16
 +
-  ;--- Sub 0x08: init (0 params)
+  ;--- Sub 0x08: init (0 params) — set facing=180 (south), per ScummVM initActor
   cmp #$08
-  beq _actorOps.jmp_none
+  bne +
+    lda 1,s                          ; actor struct offset from stack
+    clc
+    adc #6                           ; +6 = facing field
+    tay
+    lda #180                         ; south
+    sta.w SCUMM.actors,y
+    jmp _actorOps.subLoop
++
   ;--- Sub 0x0A: animDefault (0 params)
   cmp #$0A
   beq _actorOps.jmp_none
@@ -7354,9 +7362,14 @@ _ri.slotLoop:
   tax
   ; Select walk cycle table based on facing direction
   lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
+  beq _ri.northCycle                  ; facing=0 → north
   cmp #180
   beq _ri.southCycle
-  lda.l CostumeWalkCycleSide,x       ; east/north/west: side view
+  lda.l CostumeWalkCycleSide,x       ; east/west: side view
+  bra _ri.gotPic
+_ri.northCycle:
+  .ACCU 16
+  lda.l CostumeWalkCycleNorth,x      ; north: rear view
   bra _ri.gotPic
 _ri.southCycle:
   .ACCU 16

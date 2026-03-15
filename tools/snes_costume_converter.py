@@ -454,7 +454,19 @@ def main():
     (output_dir / 'palette.pal').write_bytes(bytes(pal_bytes))
 
     if args.all:
+        # Use limb 0 if it has pictures; otherwise collect from all limbs
         pictures = costume.limb_pictures[0]
+        if not pictures:
+            log.info("Limb 0 empty, collecting pictures from all limbs")
+            pictures = []
+            for limb_idx, limb_pics in enumerate(costume.limb_pictures):
+                for pic in limb_pics:
+                    pictures.append(pic)
+            if pictures:
+                log.info("Found %d pictures across %d limbs",
+                         len(pictures),
+                         sum(1 for lp in costume.limb_pictures if lp))
+
         total_tiles = 0
         total_oam = 0
 

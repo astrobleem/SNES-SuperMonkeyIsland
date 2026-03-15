@@ -369,13 +369,17 @@ room.clearTilemap:
   lda.w #ROOM_TILEMAP_VRAM_WORD
   sta.l VMADDL
 
-  ;write 2048 zero words (4KB)
+  ;write $800 zero words (BG1 tilemap area only)
+  ;A must be 8-bit: 16-bit sta to VMDATAL spills into VMDATAH,
+  ;causing double auto-increment and overwriting verb font at $4000.
+  sep #$20
   lda #0
   ldy.w #ROOM_TILEMAP_CLEAR_SIZE / 2
 - sta.l VMDATAL
   sta.l VMDATAH
   dey
   bne -
+  rep #$20
 
   plp
   rts
@@ -1049,21 +1053,6 @@ room.loadOchrData:
   stz.w SCUMM.ochrObjCount
   stz.w SCUMM.objDirtyFlag
 
-  ;DEBUG: skip all OCHR data loading
-  lda.w GLOBAL.room.hdr.ochr_size
-  beq _ochr.none
-  ;drain bytes to keep MSU position correct
-  tay
-  sep #$20
-.ACCU 8
-_ochr_debug_drain:
-  lda.l MSU_DATA
-  dey
-  bne _ochr_debug_drain
-  rep #$20
-.ACCU 16
-  bra _ochr.none
-
   ;check if this room has OCHR data
   lda.w GLOBAL.room.hdr.ochr_size
   beq _ochr.none
@@ -1128,9 +1117,6 @@ _ochr.none:
 room.applyVisibleObjectPatches:
   php
   rep #$31
-
-  ;DEBUG: skip OCHR patches to test base background
-  bra _avop.done
 
   lda.w SCUMM.ochrObjCount
   beq _avop.done

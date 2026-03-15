@@ -290,6 +290,11 @@ SCUMM.slotChrLen      ds SCUMM_MAX_RENDER_SLOTS * 2  ; CHR transfer length (word
 SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (word per slot)
 .ends
 
+; Pseudo-room resource mapper (256 bytes — identity-init, pseudoRoom opcode fills)
+.ramsection "scumm resource mapper" bank 0 slot 1
+SCUMM.resourceMapper    ds 256
+.ends
+
 ; Actor walk targets (parallel arrays — 16 actors max, avoids changing struct size)
 .define SCUMM_WALK_ACTORS 16
 .ramsection "scumm actor walk" bank 0 slot 1
@@ -382,6 +387,8 @@ SCUMM.sentenceDirty   dw      ; nonzero = re-render sentence line
 SCUMM.highlightVerb   dw      ; verb slot offset currently highlighted ($FFFF=none)
 SCUMM.cursorTileDone  dw      ; nonzero = cursor CHR already DMA'd to VRAM
 SCUMM.mouseActive     dw      ; nonzero = mouse detected (set by updateCursor)
+SCUMM.pendingVerb     dw      ; verb to execute when ego arrives (0=none)
+SCUMM.pendingObject   dw      ; object for pending verb execution
 .ends
 
 ;---------------------------------------------------------------------------

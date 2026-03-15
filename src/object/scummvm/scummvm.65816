@@ -180,6 +180,17 @@ _init.zeroWalk2:
   bcc _init.zeroWalk2
   rep #$20
 
+  ;init resource mapper (identity: mapper[i] = i)
+  ldx #0
+  sep #$20
+_init.fillMapper:
+  txa
+  sta.w SCUMM.resourceMapper,x
+  inx
+  cpx #256
+  bcc _init.fillMapper
+  rep #$20
+
   ;zero script cache in $7F
   ldx #0
   lda #0
@@ -345,6 +356,8 @@ _init.zeroCache:
   lda #$FFFF
   sta.w SCUMM.highlightVerb
   stz.w SCUMM.cursorTileDone
+  stz.w SCUMM.pendingVerb
+  stz.w SCUMM.pendingObject
   lda #1
   ldx #48*2
   sta.w SCUMM.globalVars,x            ; VAR(48) = VAR_USERPUT = 1
@@ -381,8 +394,20 @@ _init.zeroDialogTilemap:
   jsl scummvm.initCameraVars
 
   ;--- Set starting room (triggers room load on first play frame) ---
-  ; MI1 starting room = 1; currentRoom already 0 from zero pass
+  ; MI1 room 1 is entered via pseudo-room 130 (pier/lookout direction).
+  ; ENCD checks VAR_ROOM against 130/131/132 to determine entry direction.
+  ; Without pseudo-room, class 10 stays on exits → transitions blocked.
+  ; Set up mapper: 130/131/132 all resolve to real room 1.
+  sep #$20
   lda #1
+  ldx #130
+  sta.w SCUMM.resourceMapper,x
+  inx
+  sta.w SCUMM.resourceMapper,x
+  inx
+  sta.w SCUMM.resourceMapper,x
+  rep #$20
+  lda #130
   sta.w SCUMM.newRoom
 
   ;--- Pre-seed ego for room 1 (skipping MI1 intro) ---
@@ -546,6 +571,30 @@ _play.noEgoFixup:
 
   ; Update actor movement + animation (after scripts have run)
   jsl scummvm.updateActors
+
+  ; Execute pending verb if ego (actor 1) has arrived at target
+  rep #$20
+  lda.w SCUMM.pendingVerb
+  beq _play.noPendingVerb
+  sep #$20
+  lda.w SCUMM.actors.2.moving         ; actor 1 still moving?
+  rep #$20
+  bne _play.noPendingVerb              ; yes — wait for arrival
+  ; Actor 1 stopped → execute pending verb on pending object
+  lda.w SCUMM.pendingVerb
+  sta.w SCUMM.scratch                  ; scratch = verb ID
+  lda.w SCUMM.pendingObject
+  sta.w SCUMM.scratch2                 ; scratch2 = obj_id
+  jsl scummvm.getVerbEntrypoint_impl   ; A = entry offset (0 = none)
+  cmp #0
+  beq _play.clearPending
+  sta.w SCUMM.scratch                  ; scratch = entry offset
+  lda.w SCUMM.pendingObject
+  jsl scummvm.startObjectScript
+_play.clearPending:
+  stz.w SCUMM.pendingVerb
+  stz.w SCUMM.pendingObject
+_play.noPendingVerb:
 
   ; Update camera position (follow actor / pan)
   jsl scummvm.moveCamera
@@ -731,15 +780,67 @@ _scummvm.processRoomChange:
   sta.w SCUMM.bgInitDone
 
 _prc.bgReady:
-  ; Load room via Phase 0 room loader
+  ; Resolve pseudo-room → real room via resourceMapper for loading
   lda.w SCUMM.newRoom
+  and #$00FF
+  tax
+  sep #$20
+  lda.w SCUMM.resourceMapper,x
+  rep #$20
+  and #$00FF
+
+  ; Save resolved room number
+  pha
+
+  ; Disable HDMA and zero ScreenBrightness before room.load.
+  ; HDMA runs during forced blanking and corrupts CGRAM entries that
+  ; buildCgramHdmaTable needs to read. Zeroing GLOBAL.HDMA.CHANNEL.ENABLE
+  ; prevents NMI from re-enabling HDMA. Zeroing ScreenBrightness keeps
+  ; force blank active after room.load exits.
+  sep #$20
+  lda.w ScreenBrightness
+  pha
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  stz.w ScreenBrightness
+  rep #$20
+
+  ; Restore room number and load via Phase 0 room loader
+  lda 3,s
   jsr room.load
   bcs +
+  ; Restore HDMA + ScreenBrightness on failure
+  ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
+  sep #$20
+  pla
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  pla
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+  pla
   jmp _prc.failed
 +
 
   ; Build CGRAM HDMA table with room's palette 7 colors
+  ; (HDMA disabled, force blank active — CGRAM reads are safe)
   jsl scummvm.buildCgramHdmaTable
+
+  ; Restore HDMA enable, ScreenBrightness, exit force blank
+  ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
+  sep #$20
+  pla
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  pla
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+  pla
 
   ; Kill old room/local script slots
   jsr _scummvm.killRoomScripts
@@ -747,8 +848,14 @@ _prc.bgReady:
   ; Flush cache (global scripts reload on demand)
   stz.w SCUMM.cacheWritePtr
 
-  ; Load room scripts (ENCD/EXCD/LSCR) from MSU-1
+  ; Load room scripts using real room number (resolve again)
   lda.w SCUMM.newRoom
+  and #$00FF
+  tax
+  sep #$20
+  lda.w SCUMM.resourceMapper,x
+  rep #$20
+  and #$00FF
   jsr _scummvm.loadRoomScripts
 
   ; Reload surviving global scripts into fresh cache positions
@@ -756,16 +863,24 @@ _prc.bgReady:
   jsr _scummvm.reloadGlobalScripts
 
   ; Update current room + SCUMM variables BEFORE starting ENCD
-  ; (ENCD uses currentRoom for putActor, getActorRoom, etc.)
+  ; Store REQUESTED room (could be pseudo) in both currentRoom and VAR_ROOM
+  ; ScummVM: _currentRoom = room, VAR(VAR_ROOM) = room (NOT resolved)
   lda.w SCUMM.newRoom
   sta.w SCUMM.currentRoom
   ldx #4*2                          ; VAR(4) = VAR_ROOM (SCUMM v5)
   sta.w SCUMM.globalVars,x
-  ldx #143*2                        ; VAR(143) = room state (MI1 ENCD guard check)
-  sta.w SCUMM.globalVars,x
+  ; var[143] NOT set here — ENCD needs previous room's value for first-visit check
 
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
+
+  ; Run VAR_ENTRY_SCRIPT2 (globalVar[29]) before ENCD — ScummVM: runEntryScript()
+  ldx #29*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  beq _prc.noEntryScript2
+  jsr _scummvm.startScriptSlot
+_prc.noEntryScript2:
 
   ; Auto-start ENCD if present
   lda.w SCUMM.roomEncdLen
@@ -3823,11 +3938,13 @@ _resRoutines.done:
 op_putActorInRoom:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor number
+  pha                                ; save actor number
   jsr _scummvm.getActorPtr           ; X = actor table offset
   stx.w SCUMM.scratch2              ; save actor offset
 
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; room number
+  sta.w SCUMM.scratch3              ; save room number
   ldx.w SCUMM.scratch2
   sep #$20
   sta.w SCUMM.actors.room,x
@@ -3842,6 +3959,15 @@ op_putActorInRoom:
 ++
   rep #$20
 
+  ; If ego actor (actor 1) → trigger room change (ScummVM: VAR_NEW_ROOM)
+  pla                                ; recover actor number
+  and #$00FF
+  cmp #1
+  bne +
+  lda.w SCUMM.scratch3              ; room number
+  and #$00FF
+  sta.w SCUMM.newRoom
++
   clc
   rts
 
@@ -4846,13 +4972,10 @@ _setClass.loop:
   sta.w SCUMM.scratch                ; save class value
   and #$00FF
   beq _setClass.clearAll             ; cls == 0 → clear all
-  ; Compute class bit: class_number = (cls & $7F), normalized = class_number - 17
-  and #$007F                         ; class number (1-127)
-  sec
-  sbc #17                            ; normalize: class 17 → 0, class 32 → 15
-  bmi _setClass.loop                 ; class < 17, unsupported
+  ; Compute class bit: class_number = (cls & $1F) — ScummVM uses cls &= 0x1F
+  and #$001F                         ; class number (0-31)
   cmp #16
-  bcs _setClass.loop                 ; class > 32, unsupported
+  bcs _setClass.loop                 ; class > 15, unsupported in 16-bit storage
   asl a                              ; x2 for word table lookup
   tax
   lda.l scummvm.classBitLut,x               ; bit mask for this class position
@@ -6309,12 +6432,9 @@ _icoi.loop:
   beq _icoi.clsZero                  ; cls == 0: check if ANY class set
   ; Extract class number and check/negate flag
   pha                                ; save full cls
-  and #$007F
-  sec
-  sbc #17
-  bmi _icoi.skipCls                  ; class < 17, unsupported → skip
+  and #$001F                         ; ScummVM: cls &= 0x1F
   cmp #16
-  bcs _icoi.skipCls                  ; class > 32, unsupported → skip
+  bcs _icoi.skipCls                  ; class > 15, unsupported in 16-bit → skip
   asl a
   tax
   lda.l scummvm.classBitLut,x               ; bit mask
@@ -6403,14 +6523,19 @@ _oldRoomEffect.done:
   rts
 
 ;-------------------------------------------------------------------
-; pseudoRoom ($CC) — byte pairs until byte == 0, no-op
+; pseudoRoom ($CC) — byte pairs: {res, room}* + 0x00 sentinel
+; Populates resourceMapper[res] = room (for pseudo-room → real room)
 ;-------------------------------------------------------------------
 op_pseudoRoom:
 _pseudoRoom.loop:
   jsr _scummvm.fetchByte
-  cmp #0
+  and #$00FF
   beq _pseudoRoom.done
-  jsr _scummvm.fetchByte             ; room number
+  tax                                 ; X = resource (pseudo-room) number
+  jsr _scummvm.fetchByte             ; A = real room number
+  sep #$20
+  sta.w SCUMM.resourceMapper,x
+  rep #$20
   bra _pseudoRoom.loop
 _pseudoRoom.done:
   clc
@@ -6765,7 +6890,7 @@ _ua.setFacing:
   inc a
   cmp #COSTUME_WALK_CYCLE_LEN
   bcc +
-  lda #0
+  lda #1                              ; wrap to walk start (skip stand at 0)
 +
   sta.w SCUMM.actorAnimFrame,x
 _ua.animDone:
@@ -7204,6 +7329,16 @@ _ri.slotLoop:
   jmp _ri.nextSlot
 +
 
+  ; Read facing from actor struct (offset +6) for direction-aware walk cycle
+  phy                                 ; save struct base
+  tya
+  clc
+  adc #6
+  tay
+  lda.w SCUMM.actors,y               ; facing (word: 0/90/180/270)
+  sta.w SCUMM.scratch2                ; save for walk cycle + flip
+  ply                                 ; restore Y = struct base
+
   ; --- Determine current pic index from walk cycle ---
   ; Get actor number for walk array indexing
   lda.w SCUMM.actorOamCount           ; actor number
@@ -7211,13 +7346,23 @@ _ri.slotLoop:
   tax
   sep #$20
   .ACCU 8
-  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-11)
+  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-6)
   rep #$20
   .ACCU 16
   and #$00FF
   phx                                 ; save actor number
   tax
-  lda.l CostumeWalkCycle,x
+  ; Select walk cycle table based on facing direction
+  lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
+  cmp #180
+  beq _ri.southCycle
+  lda.l CostumeWalkCycleSide,x       ; east/north/west: side view
+  bra _ri.gotPic
+_ri.southCycle:
+  .ACCU 16
+  lda.l CostumeWalkCycleFront,x      ; south: front view
+_ri.gotPic:
+  .ACCU 16
   and #$00FF
   sta.w SCUMM.scratch                 ; pic index
   plx                                 ; restore actor number
@@ -8408,8 +8553,15 @@ scummvm.buildCgramHdmaTable:
   lda.w #SCUMM.cgramHdmaTable & $FFFF
   tax
 
-  ; Enter force blank to read CGRAM
+  ; Enter force blank and disable HDMA to safely read CGRAM.
+  ; Zero GLOBAL.HDMA.CHANNEL.ENABLE so NMI cannot re-enable HDMA
+  ; (NMI is non-maskable — sei doesn't block it).
   sep #$20
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
   lda.b #INIDSP_FORCE_BLANK
   sta.l INIDSP
 
@@ -8493,7 +8645,10 @@ scummvm.buildCgramHdmaTable:
   lda.l $213B
   sta.w 32,x
 
-  ; Restore display brightness (exit force blank)
+  ; Restore HDMA enable, re-enable HDMA, restore display brightness
+  pla
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
   lda.w ScreenBrightness
   sta.l INIDSP
 
@@ -8864,6 +9019,21 @@ _uc.walkDone:
   lda #1
   sta.w SCUMM.actors.2.moving
   rep #$20
+
+  ; Store pending verb+object for execution on arrival
+  lda.w SCUMM.cursorObject
+  beq _uc.noPending
+  sta.w SCUMM.pendingObject
+  lda.w SCUMM.sentenceVerb
+  bne +
+  lda #$0B                            ; default "Walk to" verb = $0B (MI1)
++
+  sta.w SCUMM.pendingVerb
+  bra _uc.clickDone
+_uc.noPending:
+  stz.w SCUMM.pendingVerb             ; no object = just walking
+  stz.w SCUMM.pendingObject
+_uc.clickDone:
 
   jmp _uc.noClick
 
@@ -10482,7 +10652,9 @@ _gve.scanVerb:
 _gve.foundVerb:
   inx                                  ; skip verb_id byte
   lda.l SCUMM.roomObjVerbData,x       ; read offset (LE16)
-  rtl
+  sec
+  sbc #8                               ; offsets are relative to VERB chunk start
+  rtl                                   ; (includes 8-byte chunk header); adjust to data
 
 .ends
 
@@ -10586,7 +10758,7 @@ _sos.findSlot:
   rtl                                  ; no free slot
 
 _sos.gotSlot:
-  plx                                  ; discard saved X
+  pla                                  ; discard saved X (preserve X = slot offset)
   ;--- Initialize the slot ---
   ; X = slot byte offset
   sep #$20

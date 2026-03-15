@@ -30,6 +30,9 @@ Binary format per room:
   Verb data (variable):
     Concatenated per-object VERB chunk blobs.
     Each blob: {verb_id:u8, offset:u16}* + 0x00 terminator + bytecode.
+
+  State table (count bytes):
+    One byte per object: initial_state from CDHD (0=hidden, 1-15=visible states).
 """
 
 import json
@@ -100,9 +103,14 @@ def build_obj_binary(objects, room_dir):
         verb_index += struct.pack('<HH', len(verb_data_blobs), len(verb_blob))
         verb_data_blobs += verb_blob
 
+    # Build state table: one byte per object (initial_state from CDHD)
+    state_table = bytearray()
+    for obj in objects:
+        state_table.append(obj.get('initial_state', 1) & 0xFF)
+
     name_table = b''.join(names)
     header = struct.pack('<HHHH', count, len(name_table), len(verb_data_blobs), 0)
-    return header + entries + verb_index + name_table + verb_data_blobs
+    return header + entries + verb_index + name_table + verb_data_blobs + bytes(state_table)
 
 
 def main():

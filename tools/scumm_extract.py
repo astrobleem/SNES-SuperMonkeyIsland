@@ -163,15 +163,48 @@ def extract_room(room_resource, room_name: str, output_dir: Path,
 
 
 def extract_global_scripts(data_file, index_data, output_dir: Path) -> int:
-    """Extract global scripts (SCRP) to a dedicated directory."""
+    """Extract global scripts (SCRP) to a dedicated directory.
+
+    Uses the DSCR directory to assign correct SCUMM script numbers.
+    DSCR[i] = (room, offset) means script number i lives in that room
+    at that offset.  Within each room the SCRP chunks appear in offset
+    order, so sorting the DSCR entries by offset gives us the mapping
+    from sequential SCRP index → SCUMM script number.
+    """
     scripts_dir = output_dir / 'scripts'
     count = 0
 
-    for room_id, room in sorted(data_file.rooms.items()):
-        scrps = room.get_trailing('SCRP')
-        for scrp in scrps:
+    dscr = index_data.directories.get('DSCR')
+    if dscr is None:
+        log.warning("No DSCR directory — cannot extract global scripts")
+        return 0
+
+    # Build room → [(offset, script_number), ...] sorted by offset
+    from collections import defaultdict
+    room_scripts = defaultdict(list)
+    for script_num in range(dscr.count):
+        room = dscr.room_nums[script_num]
+        if room == 0:
+            continue
+        room_scripts[room].append((dscr.offsets[script_num], script_num))
+    for room in room_scripts:
+        room_scripts[room].sort()  # sort by offset
+
+    for room_id, room_res in sorted(data_file.rooms.items()):
+        scrps = room_res.get_trailing('SCRP')
+        if not scrps:
+            continue
+        mapping = room_scripts.get(room_id, [])
+        if len(scrps) != len(mapping):
+            log.warning("Room %d: %d SCRP blocks but %d DSCR entries — "
+                        "falling back to sequential numbering",
+                        room_id, len(scrps), len(mapping))
+            mapping = [(0, count + i) for i in range(len(scrps))]
+
+        for idx, scrp in enumerate(scrps):
             scripts_dir.mkdir(parents=True, exist_ok=True)
-            path = scripts_dir / f'scrp_{count:03d}_room{room_id:03d}.bin'
+            _, script_num = mapping[idx]
+            path = scripts_dir / f'scrp_{script_num:03d}_room{room_id:03d}.bin'
             path.write_bytes(scrp.data)
             count += 1
 

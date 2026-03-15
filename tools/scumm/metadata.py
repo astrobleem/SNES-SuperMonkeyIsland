@@ -180,6 +180,7 @@ def _parse_obcd(data: bytes) -> dict:
                 result['walk_x'] = walk_x
                 result['walk_y'] = walk_y
                 result['actor_dir'] = (h & 0x07)
+                result['initial_state'] = d[12] if len(d) > 12 else 1
 
         elif sub.tag == 'VERB':
             # VERB chunk: verb table entries {verb_id:u8, offset:u16} terminated

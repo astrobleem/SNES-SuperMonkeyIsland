@@ -1004,6 +1004,45 @@ _box.mulLoop:
   bne _box.mulLoop
 
   ;tmp+4 = matrixSize (boxCount * boxCount)
+  ;--- Copy 32-byte SCAL block BEFORE matrix copy (which may overwrite it) ---
+  ;SCAL data is at $7F:(boxMatrixPtr + matrixSize)
+  lda.w SCUMM.boxMatrixPtr
+  clc
+  adc.b tmp+4
+  tax                         ; X = offset to SCAL data in $7F bank
+  lda.l $7F0000,x
+  sta.w SCUMM.scalSlot0_s1
+  lda.l $7F0002,x
+  sta.w SCUMM.scalSlot0_y1
+  lda.l $7F0004,x
+  sta.w SCUMM.scalSlot0_s2
+  lda.l $7F0006,x
+  sta.w SCUMM.scalSlot0_y2
+  lda.l $7F0008,x
+  sta.w SCUMM.scalSlot1_s1
+  lda.l $7F000A,x
+  sta.w SCUMM.scalSlot1_y1
+  lda.l $7F000C,x
+  sta.w SCUMM.scalSlot1_s2
+  lda.l $7F000E,x
+  sta.w SCUMM.scalSlot1_y2
+  lda.l $7F0010,x
+  sta.w SCUMM.scalSlot2_s1
+  lda.l $7F0012,x
+  sta.w SCUMM.scalSlot2_y1
+  lda.l $7F0014,x
+  sta.w SCUMM.scalSlot2_s2
+  lda.l $7F0016,x
+  sta.w SCUMM.scalSlot2_y2
+  lda.l $7F0018,x
+  sta.w SCUMM.scalSlot3_s1
+  lda.l $7F001A,x
+  sta.w SCUMM.scalSlot3_y1
+  lda.l $7F001C,x
+  sta.w SCUMM.scalSlot3_s2
+  lda.l $7F001E,x
+  sta.w SCUMM.scalSlot3_y2
+
   ;origMatrixPtr = boxMatrixPtr + matrixSize
   lda.w SCUMM.boxMatrixPtr
   clc
@@ -1029,6 +1068,10 @@ _box.none:
   stz.w SCUMM.boxDataSize
   stz.w SCUMM.boxMatrixPtr
   stz.w SCUMM.boxOrigMatrixPtr
+  stz.w SCUMM.scalSlot0_s1
+  stz.w SCUMM.scalSlot0_y1
+  stz.w SCUMM.scalSlot0_s2
+  stz.w SCUMM.scalSlot0_y2
   plp
   rtl
 

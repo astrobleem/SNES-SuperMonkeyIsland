@@ -7432,6 +7432,96 @@ _lac.dmaNext:
   jmp _lac.dmaLoop
 
 _lac.dmaDone:
+  ; --- GSU-2 init test (SuperFX 2 coprocessor) ---
+  ; Copy tiny GSU program to Game Pak RAM, execute it, verify STOP
+  jsl scummvm.gsuInit
+  rtl
+
+.ends
+
+
+;===================================================================
+; GSU-2 (SuperFX 2) — Init + Hello World Test
+; Copies a minimal GSU program (STOP+NOP) to Game Pak RAM ($70:0000),
+; starts the GSU, polls until STOP clears GO flag.
+; If the GSU is not present (emulator/hardware doesn't support it),
+; the poll loop will timeout and skip gracefully.
+;===================================================================
+.section "scummvm gsu init" superfree
+.base BSL
+
+_gsu.testProgram:
+  .db $00                             ; GSU opcode: STOP
+  .db $01                             ; GSU opcode: NOP (prefetch padding)
+_gsu.testProgramEnd:
+
+scummvm.gsuInit:
+  php
+  rep #$31
+  phx
+  phy
+
+  ; --- Copy GSU program to Game Pak RAM ($70:0000) ---
+  sep #$20
+  .ACCU 8
+  lda.l _gsu.testProgram
+  sta.l GSU_RAM_BASE                  ; $70:0000 = STOP
+  lda.l _gsu.testProgram + 1
+  sta.l GSU_RAM_BASE + 1              ; $70:0001 = NOP
+
+  ; --- Configure GSU ---
+  ; Mask GSU IRQ (poll instead)
+  lda #$80
+  sta.l GSU_CFGR
+
+  ; Set clock to 21.4MHz
+  lda #$01
+  sta.l GSU_CLSR
+
+  ; Set PBR to $70 (execute from Game Pak RAM)
+  lda #$70
+  sta.l GSU_PBR
+
+  ; Set SCMR: 16-color OBJ mode, GSU owns RAM (RAN=1), SNES keeps ROM (RON=0)
+  lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ | GSU_SCMR_RAN
+  sta.l GSU_SCMR
+
+  ; --- Start GSU: write R15 = $0000, writing MSB triggers GO ---
+  lda #$00
+  sta.l GSU_R15_LO                    ; R15 low byte
+  sta.l GSU_R15_HI                    ; R15 high byte — THIS STARTS THE GSU
+
+  ; --- Poll SFR.GO until GSU stops (or timeout) ---
+  rep #$20
+  .ACCU 16
+  ldx #$FFFF                          ; timeout counter
+_gsu.pollLoop:
+  sep #$20
+  .ACCU 8
+  lda.l GSU_SFR                       ; read SFR low byte
+  rep #$20
+  .ACCU 16
+  and #GSU_SFR_GO
+  beq _gsu.stopped                    ; GO=0 means GSU executed STOP
+  dex
+  bne _gsu.pollLoop
+  ; Timeout — GSU not present or not responding
+  bra _gsu.done
+
+_gsu.stopped:
+  ; GSU successfully executed STOP!
+  ; Clear RAN — return RAM bus to SNES
+  sep #$20
+  .ACCU 8
+  lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ
+  sta.l GSU_SCMR                      ; RAN=0, RON=0
+  rep #$20
+  .ACCU 16
+
+_gsu.done:
+  ply
+  plx
+  plp
   rtl
 
 .ends
@@ -7777,6 +7867,225 @@ _ri.chrReady:
   jmp _ri.nextSlot
 _ri.posReady:
 
+  ; =================================================================
+  ; ACTOR SCALE COMPUTATION (from walkbox SCAL data)
+  ; =================================================================
+  ; Default scale = 255 (full size)
+  sep #$20
+  .ACCU 8
+  lda #$FF
+  sta.w SCUMM.actorCurScale
+  rep #$20
+  .ACCU 16
+
+  ; Get actor's walkbox index
+  lda.w SCUMM.actorOamCount           ; actor number (stored earlier)
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorWalkBox,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  bne +
+  jmp _ri.scaleDone                   ; box 0 = invalid, keep scale 255
++
+
+  ; Read box.scale from BOXD: $7F:5002 + box*20 + $12
+  ; box * 20 = box * 16 + box * 4
+  sta.w SCUMM.scratch                 ; save box number
+  asl a
+  asl a
+  sta.w SCUMM.actorOamCount           ; box * 4
+  asl a
+  asl a                               ; box * 16
+  clc
+  adc.w SCUMM.actorOamCount           ; box * 20
+  clc
+  adc #$5002 + $12                    ; + BOXD base + scale offset
+  tax
+  lda.l $7F0000,x                     ; box.scale (16-bit)
+
+  ; Check bit 15: if set, use SCAL interpolation
+  bmi _ri.scaleInterp
+
+  ; Direct scale value (0-255)
+  and #$00FF
+  bne +
+  jmp _ri.scaleDone                   ; 0 = no scale info, keep 255
++
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorCurScale
+  rep #$20
+  .ACCU 16
+  jmp _ri.scaleDone
+
+_ri.scaleInterp:
+  .ACCU 16
+  ; Box scale bit 15 set: use SCAL slot (bits 0-14 = slot index)
+  and #$7FFF                          ; slot index (usually 0)
+  asl a
+  asl a
+  asl a
+  tax                                 ; X = SCAL slot byte offset
+
+  ; Read SCAL params into tmp: s1, y1, s2, y2
+  lda.w SCUMM.scalSlot0_s1,x
+  sta.b tmp                           ; tmp+0 = s1
+  lda.w SCUMM.scalSlot0_y1,x
+  sta.b tmp+2                         ; tmp+2 = y1
+  lda.w SCUMM.scalSlot0_s2,x
+  sta.b tmp+4                         ; tmp+4 = s2
+  lda.w SCUMM.scalSlot0_y2,x
+  sta.b tmp+6                         ; tmp+6 = y2
+
+  ; Check if SCAL slot is empty
+  lda.b tmp
+  ora.b tmp+2
+  bne +
+  jmp _ri.scaleDone
++
+
+  ; Check y1 == y2 (avoid div by zero)
+  lda.b tmp+2
+  cmp.b tmp+6
+  bne +
+  jmp _ri.scaleDone
++
+
+  ; Compute: scale = s1 + (s2-s1) * (actorY - y1) / (y2 - y1)
+  ; All values fit in 8-bit unsigned after abs (MI1 ranges)
+
+  ; delta_s = s2 - s1 (signed)
+  lda.b tmp+4                         ; s2
+  sec
+  sbc.b tmp                           ; delta_s
+  pha                                 ; stack: [delta_s]
+
+  ; offset_y = actorY - y1 (signed)
+  lda.w SCUMM.actorScreenY
+  sec
+  sbc.b tmp+2                         ; offset_y
+  pha                                 ; stack: [offset_y, delta_s]
+
+  ; range_y = y2 - y1 (signed)
+  lda.b tmp+6
+  sec
+  sbc.b tmp+2                         ; range_y
+  pha                                 ; stack: [range_y, offset_y, delta_s]
+
+  ; Compute sign: XOR of signs of all 3 values
+  ; sign = (delta_s < 0) ^ (offset_y < 0) ^ (range_y < 0)
+  stz.b tmp+4                         ; sign accumulator (0=positive)
+
+  ; abs(range_y) — currently in A and on top of stack
+  bpl +
+  eor #$FFFF
+  inc a
+  inc.b tmp+4
++
+  sta.b tmp+6                         ; tmp+6 = |range_y|
+
+  ; abs(offset_y)
+  lda 3,s                             ; offset_y from stack
+  bpl +
+  eor #$FFFF
+  inc a
+  inc.b tmp+4
++
+  sta.b tmp+2                         ; tmp+2 = |offset_y| (clobbers y1, no longer needed)
+
+  ; abs(delta_s)
+  lda 5,s                             ; delta_s from stack
+  bpl +
+  eor #$FFFF
+  inc a
+  inc.b tmp+4
++
+  ; A = |delta_s|
+
+  ; Hardware multiply: |delta_s| * |offset_y| → 16-bit product
+  sep #$20
+  .ACCU 8
+  sta.l $4202                         ; WRMPYA = |delta_s| (low byte)
+  lda.b tmp+2                         ; |offset_y| (low byte)
+  sta.l $4203                         ; WRMPYB = |offset_y|
+  ; 8 machine cycle wait
+  nop
+  nop
+  nop
+  nop
+  rep #$20
+  .ACCU 16
+  lda.l $4216                         ; product = |delta_s * offset_y|
+
+  ; Hardware divide: product / |range_y|
+  sta.l $4204                         ; WRDIVL/H = dividend (16-bit)
+  sep #$20
+  .ACCU 8
+  lda.b tmp+6                         ; |range_y| (low byte)
+  sta.l $4206                         ; WRDIVB = divisor (8-bit)
+  rep #$20
+  .ACCU 16
+  ; 16 machine cycle wait for division
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+
+  ; Read quotient
+  lda.l $4214                         ; RDDIVL/H = quotient
+
+  ; Apply sign
+  lda.b tmp+4                         ; sign accumulator
+  and #$0001                          ; odd = negative
+  beq _ri.scalePos
+  lda.l $4214
+  eor #$FFFF
+  inc a                               ; negate quotient
+  bra _ri.scaleApply
+_ri.scalePos:
+  lda.l $4214
+_ri.scaleApply:
+  ; scale = s1 + signed_quotient
+  clc
+  adc.b tmp                           ; + s1
+
+  ; Clean up stack (remove 3 pushed words)
+  ply
+  ply
+  ply
+
+  ; Clamp to 1..255
+  bmi _ri.scaleClampLo                ; negative → clamp to 1
+  beq _ri.scaleClampLo                ; zero → clamp to 1
+  cmp #256
+  bcc +
+  lda #255                            ; > 255 → clamp to 255
++
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorCurScale
+  rep #$20
+  .ACCU 16
+  bra _ri.scaleDone
+
+_ri.scaleClampLo:
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.w SCUMM.actorCurScale
+  rep #$20
+  .ACCU 16
+
+_ri.scaleDone:
+
   ; Compute flip mask: priority 3 + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   sep #$20
@@ -7842,9 +8151,61 @@ _ri.entryLoop:
 _ri.noFlipDx:
   pla
 _ri.applyDx:
+  ; --- Scale dx by actorCurScale/256 if needed ---
+  pha                                 ; save dx
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  rep #$20
+  .ACCU 16
+  beq _ri.dxNoScale
+  pla                                 ; signed dx
+  bpl _ri.dxAbsPos
+  eor #$FFFF
+  inc a                               ; |dx|
+  sep #$20
+  .ACCU 8
+  sta.l $4202                         ; WRMPYA = |dx|
+  lda.w SCUMM.actorCurScale
+  sta.l $4203                         ; WRMPYB = scale
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217                         ; high byte = (|dx|*scale)>>8
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a                               ; restore negative sign
+  bra _ri.dxScaled
+_ri.dxAbsPos:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+_ri.dxScaled:
   clc
   adc.w SCUMM.actorScreenX
   sta.w SCUMM.scratch
+  bra _ri.dxDone
+_ri.dxNoScale:
+  pla
+  clc
+  adc.w SCUMM.actorScreenX
+  sta.w SCUMM.scratch
+_ri.dxDone:
 
   lda [_oamSrcPtr],y                  ; dy byte
   iny
@@ -7853,8 +8214,59 @@ _ri.applyDx:
   bcc +
   ora #$FF00
 +
+  ; --- Scale dy by actorCurScale/256 if needed ---
+  pha                                 ; save dy
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  rep #$20
+  .ACCU 16
+  beq _ri.dyNoScale
+  pla                                 ; signed dy
+  bpl _ri.dyAbsPos
+  eor #$FFFF
+  inc a                               ; |dy|
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a
+  bra _ri.dyScaled
+_ri.dyAbsPos:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+_ri.dyScaled:
   clc
   adc.w SCUMM.actorScreenY
+  bra _ri.dyDone
+_ri.dyNoScale:
+  pla
+  clc
+  adc.w SCUMM.actorScreenY
+_ri.dyDone:
   pha                                 ; save computed Y on stack
 
   ; Bounds check X

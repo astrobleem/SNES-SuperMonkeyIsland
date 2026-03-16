@@ -4,6 +4,37 @@
 ; SCUMM v5 Interpreter — Constants, Structs, WRAM layout
 ;---------------------------------------------------------------------------
 
+; GSU-2 (SuperFX 2) I/O registers
+.define GSU_R0        $3000   ; R0 — default source/dest register (16-bit)
+.define GSU_R15       $301E   ; R15 — Program Counter (write MSB to start GSU)
+.define GSU_R15_LO    $301E
+.define GSU_R15_HI    $301F   ; writing here sets GO=1
+.define GSU_SFR       $3030   ; Status/Flag Register (bit 5 = GO)
+.define GSU_SFR_HI    $3031
+.define GSU_BRAMR     $3033   ; Backup RAM Register
+.define GSU_PBR       $3034   ; Program Bank Register (GSU code bank)
+.define GSU_ROMBR     $3036   ; ROM Bank Register (read-only)
+.define GSU_CFGR      $3037   ; Config (bit 7 = IRQ mask, bit 5 = fast multiply)
+.define GSU_SCBR      $3038   ; Screen Base Register (1KB units)
+.define GSU_CLSR      $3039   ; Clock Select (bit 0: 0=10.7MHz, 1=21.4MHz)
+.define GSU_SCMR      $303A   ; Screen Mode (color depth, height, RAN, RON)
+.define GSU_VCR       $303B   ; Version Code Register (read-only, 4=GSU2)
+.define GSU_RAMBR     $303C   ; RAM Bank Register (0=$70, 1=$71)
+.define GSU_CACHE     $3100   ; 512-byte Code Cache RAM ($3100-$32FF)
+
+; GSU SFR bit masks
+.define GSU_SFR_GO    $20     ; bit 5: GSU is running
+.define GSU_SFR_IRQ   $80     ; bit 7 of high byte: IRQ flag (in $3031)
+
+; GSU SCMR configuration bits
+.define GSU_SCMR_MD_16COLOR $01  ; 4bpp (16-color) mode
+.define GSU_SCMR_HT_OBJ    $24  ; OBJ mode (HT1=1, HT0=1 → bits 5,2)
+.define GSU_SCMR_RAN        $08  ; GSU owns RAM bus
+.define GSU_SCMR_RON        $10  ; GSU owns ROM bus
+
+; Game Pak RAM base (GSU code + pixel output)
+.define GSU_RAM_BASE  $700000
+
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0
 .define TadCommand_UNPAUSE               4
@@ -262,6 +293,7 @@ SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
 SCUMM.actorHeadPicCur db     ; current frame's head pic ($FF=none, computed per render)
+SCUMM.actorCurScale  db      ; current actor's computed scale (255=full, 1=tiny)
 SCUMM.chrDmaPending  db      ; LEGACY: kept for single-slot compat (slot 0 only)
 SCUMM.chrDmaSrcLo   dw      ; CHR source ROM address (low 16)
 SCUMM.chrDmaSrcHi   db      ; CHR source ROM bank
@@ -294,6 +326,7 @@ SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (wo
 SCUMM.slotHeadChrSrcLo ds SCUMM_MAX_RENDER_SLOTS * 2 ; head CHR source addr low (word)
 SCUMM.slotHeadChrSrcHi ds SCUMM_MAX_RENDER_SLOTS      ; head CHR source bank (byte)
 SCUMM.slotHeadChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; head CHR transfer length (word)
+SCUMM.renderSlotLastScale ds SCUMM_MAX_RENDER_SLOTS   ; last rendered scale (byte, 255=full)
 .ends
 
 ; Pseudo-room resource mapper (256 bytes — identity-init, pseudoRoom opcode fills)
@@ -340,6 +373,23 @@ SCUMM.boxCount        dw      ; number of walkboxes in current room
 SCUMM.boxMatrixPtr    dw      ; offset within $7F bank to routing matrix start
 SCUMM.boxOrigMatrixPtr dw     ; offset within $7F to saved original routing matrix
 SCUMM.boxDataSize     dw      ; total size of walkbox data loaded (for validation)
+; SCAL interpolation slots (loaded from .box file, 32 bytes)
+SCUMM.scalSlot0_s1   dw      ; scale at y1 position
+SCUMM.scalSlot0_y1   dw      ; y position 1
+SCUMM.scalSlot0_s2   dw      ; scale at y2 position
+SCUMM.scalSlot0_y2   dw      ; y position 2
+SCUMM.scalSlot1_s1   dw
+SCUMM.scalSlot1_y1   dw
+SCUMM.scalSlot1_s2   dw
+SCUMM.scalSlot1_y2   dw
+SCUMM.scalSlot2_s1   dw
+SCUMM.scalSlot2_y1   dw
+SCUMM.scalSlot2_s2   dw
+SCUMM.scalSlot2_y2   dw
+SCUMM.scalSlot3_s1   dw
+SCUMM.scalSlot3_y1   dw
+SCUMM.scalSlot3_s2   dw
+SCUMM.scalSlot3_y2   dw
 .ends
 
 ; buildWalkPath scratch (WRAM, survives subroutine calls that trash DP tmp)

@@ -101,12 +101,18 @@ def export_walkbox_binary(room_resource, output_dir: Path) -> int:
     else:
         matrix = bytes([0xFF] * (num_boxes * num_boxes))
 
-    # Build .box file
-    box_data = struct.pack('<H', num_boxes) + boxd_binary + matrix
+    # Parse SCAL data (4 slots x 8 bytes = 32 bytes, zero-padded if absent)
+    scal_binary = bytes(32)  # default: all zeros (no scaling)
+    scal_chunk = room_resource.get_room_sub('SCAL')
+    if scal_chunk and len(scal_chunk.data) >= 8:
+        scal_binary = scal_chunk.data[:32].ljust(32, b'\x00')
+
+    # Build .box file: count + BOXD + matrix + SCAL(32)
+    box_data = struct.pack('<H', num_boxes) + boxd_binary + matrix + scal_binary
 
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / 'walkbox.box').write_bytes(box_data)
-    log.info("Room %d: exported %d walkboxes (%d bytes)",
+    log.info("Room %d: exported %d walkboxes (%d bytes, +32B SCAL)",
              room_resource.room_id, num_boxes, len(box_data))
 
     return num_boxes

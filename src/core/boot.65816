@@ -151,8 +151,8 @@ IrqHookUp:
 .org $ffc0
 .section "header hack" force
   .db "SUPER MONKEY ISLAND  "
-  .db $31	;mapping
-  .db $2	;cartridgetype
+  .db $31	;mapping (HiROM+FastROM)
+  .db $15	;cartridgetype (ROM+GSU+RAM+Battery — enables SuperFX 2 coprocessor)
   .db 10	;romsize
   .db 1	;sramsize
   .db 2	;country

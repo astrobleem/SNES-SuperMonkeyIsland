@@ -411,7 +411,7 @@ _init.zeroDialogTilemap:
   sta.w SCUMM.newRoom
 
   ;--- Pre-seed ego for room 1 (skipping MI1 intro) ---
-  ; Set costume 17 (Guybrush standard) so loadActorCostumes DMAs correct data.
+  ; Set costume 1 (Guybrush standard) so loadActorCostumes DMAs correct data.
   ; ENCD may override this, triggering dirty-slot CHR+palette DMA.
   ldx #1*16                         ; actor 1 struct offset
   lda #160
@@ -419,7 +419,7 @@ _init.zeroDialogTilemap:
   lda #100
   sta.w SCUMM.actors.y,x
   sep #$20
-  lda #17
+  lda #1
   sta.w SCUMM.actors.costume,x
   lda #90                           ; facing east
   sta.w SCUMM.actors.facing,x
@@ -471,9 +471,8 @@ _init.lastFrame:
   sta.w SCUMM.running
 
   ;--- Request ego costume fixup after first scheduler pass ---
-  ; Boot script + ENCD both set costume 1 (large intro sprite, 81 tiles).
-  ; Our renderer supports max 48 tiles per actor slot.  Force costume 17
-  ; (standard Guybrush, 17 tiles) after the ENCD has executed.
+  ; Boot script + ENCD set costume 1 (standard Guybrush walk).
+  ; Force costume 1 after the ENCD has executed to ensure correct data.
   sta.w SCUMM.egoFixupPending
 
   ;--- Init default verb bar (room 10 scripts don't run yet) ---
@@ -548,13 +547,13 @@ _play.nextSlot:
   cmp #SCUMM_MAX_SLOTS
   bcc _play.slotLoop
 
-  ; Post-ENCD ego costume fixup: force costume 17 if pending
+  ; Post-ENCD ego costume fixup: force costume 1 if pending
   lda.w SCUMM.egoFixupPending
   beq _play.noEgoFixup
   stz.w SCUMM.egoFixupPending
   ldx #1*16                         ; actor 1 struct offset
   sep #$20
-  lda #17
+  lda #1
   sta.w SCUMM.actors.costume,x
   ; Update render slot 0 to match
   ldx #0
@@ -2294,11 +2293,19 @@ scummvm.buildWalkPath:
   ;pathLen = 0
   stz.w SCUMM.bwpPathLen
 
-  ;if curBox == destBox or curBox == $FF or destBox == $FF, skip routing
-  lda.w SCUMM.bwpCurBox
-  cmp #$00FF
-  beq _bwp.directPath
+  ;if destBox == $FF, target is outside walkboxes — clamp to nearest box
+  ;(must come BEFORE curBox check so target is always clamped)
   lda.w SCUMM.bwpDestBox
+  cmp #$00FF
+  bne +
+  jsr _bwp.adjustToBox
+  lda.w SCUMM.bwpDestBox
+  cmp #$00FF
+  bne +
+  jmp _bwp.noPath          ;no walkboxes at all — give up
++
+  ;if curBox == $FF, actor is outside walkboxes — go direct (target already clamped)
+  lda.w SCUMM.bwpCurBox
   cmp #$00FF
   beq _bwp.directPath
   lda.w SCUMM.bwpCurBox
@@ -2380,6 +2387,168 @@ _bwp.directPath:
   sta.w SCUMM.actorWalkBox,x
   rep #$20
 
+  rts
+
+;-------------------------------------------------------------------
+; _bwp.adjustToBox — clamp target to nearest walkbox AABB
+; Called when findBox returns $FF for the target position.
+; Scans all walkboxes, finds the one whose bounding rectangle is
+; closest to (bwpTargetX, bwpTargetY), clamps target to that AABB,
+; and updates bwpDestBox. Uses tmp+0..tmp+26 as scratch.
+;-------------------------------------------------------------------
+_bwp.adjustToBox:
+  .ACCU 16
+  .INDEX 16
+  lda #$7FFF
+  sta.b tmp+24                 ; bestDist = $7FFF
+  lda #$00FF
+  sta.b tmp+26                 ; bestBox = $FF
+  lda #1                       ; start from box 1 (skip sentinel box 0)
+_atb.loop:
+  cmp.w SCUMM.boxCount
+  bcc +
+  jmp _atb.done
++
+  pha                          ; save box index
+
+  ; Compute BOXD entry offset: $7F5002 + box * 20
+  asl a
+  asl a
+  sta.b tmp+6
+  asl a
+  asl a
+  clc
+  adc.b tmp+6                  ; box * 20
+  clc
+  adc #$5002
+  tax                          ; X = BOXD offset in $7F bank
+
+  ; Skip invisible boxes (flags byte at +17)
+  sep #$20
+  lda.l $7F0011,x              ; flags byte
+  rep #$20
+  .ACCU 16
+  and #SCUMM_BOX_INVISIBLE
+  beq +
+  jmp _atb.next
++
+
+  ; Compute AABB: minY = min(uly, ury), maxY = max(lly, lry)
+  lda.l $7F0002,x              ; uly
+  sta.b tmp+8
+  lda.l $7F0006,x              ; ury
+  cmp.b tmp+8
+  bcs +
+  sta.b tmp+8                  ; minY = min(uly, ury)
++
+  lda.l $7F000A,x              ; lry
+  sta.b tmp+10
+  lda.l $7F000E,x              ; lly
+  cmp.b tmp+10
+  bcc +
+  sta.b tmp+10                 ; maxY = max(lly, lry)
++
+
+  ; Compute AABB: minX = min(ulx, llx), maxX = max(urx, lrx)
+  lda.l $7F0000,x              ; ulx
+  sta.b tmp+12
+  lda.l $7F000C,x              ; llx
+  cmp.b tmp+12
+  bcs +
+  sta.b tmp+12                 ; minX = min(ulx, llx)
++
+  lda.l $7F0004,x              ; urx
+  sta.b tmp+14
+  lda.l $7F0008,x              ; lrx
+  cmp.b tmp+14
+  bcc +
+  sta.b tmp+14                 ; maxX = max(urx, lrx)
++
+
+  ; clampX = clamp(targetX, minX, maxX)
+  lda.w SCUMM.bwpTargetX
+  cmp.b tmp+12
+  bcs +
+  lda.b tmp+12                 ; clamp to minX
++
+  cmp.b tmp+14
+  bcc +
+  lda.b tmp+14                 ; clamp to maxX
++
+  sta.b tmp+16                 ; clampX
+
+  ; clampY = clamp(targetY, minY, maxY)
+  lda.w SCUMM.bwpTargetY
+  cmp.b tmp+8
+  bcs +
+  lda.b tmp+8                  ; clamp to minY
++
+  cmp.b tmp+10
+  bcc +
+  lda.b tmp+10                 ; clamp to maxY
++
+  sta.b tmp+18                 ; clampY
+
+  ; dist = |targetX - clampX| + |targetY - clampY|
+  lda.w SCUMM.bwpTargetX
+  sec
+  sbc.b tmp+16
+  bpl +
+  eor #$FFFF
+  inc a
++
+  sta.b tmp+20                 ; |dx|
+  lda.w SCUMM.bwpTargetY
+  sec
+  sbc.b tmp+18
+  bpl +
+  eor #$FFFF
+  inc a
++
+  clc
+  adc.b tmp+20                 ; dist = |dx| + |dy|
+
+  ; if dist < bestDist → update best
+  cmp.b tmp+24
+  bcc +                        ; dist < bestDist, update
+  jmp _atb.next                ; dist >= bestDist, skip
++
+  sta.b tmp+24                 ; bestDist = dist
+  pla                          ; box index
+  pha
+  sta.b tmp+26                 ; bestBox = box
+  lda.b tmp+16
+  sta.b tmp+28                 ; bestX = clampX (NOT tmp+20 — that's used for |dx|)
+  lda.b tmp+18
+  sta.b tmp+30                 ; bestY = clampY
+
+_atb.next:
+  pla                          ; box index
+  inc a
+  jmp _atb.loop
+
+_atb.done:
+  ; Apply best result
+  lda.b tmp+26
+  cmp #$00FF
+  beq _atb.rts                 ; no valid box found
+  sta.w SCUMM.bwpDestBox
+  lda.b tmp+28
+  sta.w SCUMM.bwpTargetX
+  lda.b tmp+30
+  sta.w SCUMM.bwpTargetY
+_atb.rts:
+  rts
+
+_bwp.noPath:
+  ;target outside all walkboxes — refuse walk (pathLen=0)
+  pla                   ;actor index (pushed at entry)
+  and #$000F
+  tax
+  sep #$20
+  stz.w SCUMM.walkPathLen,x
+  stz.w SCUMM.walkPathIdx,x
+  rep #$20
   rts
 
 
@@ -6777,7 +6946,33 @@ _ua.skipSlot:
 +
   sta.w SCUMM.actorOamCount           ; |dx| temp
 
-  ; |dy|
+  ; Update facing ALWAYS (before arrival check so standing frame is correct)
+  lda.w SCUMM.scratch2
+  bpl +
+  eor #$FFFF
+  inc a
++
+  cmp.w SCUMM.actorOamCount           ; |dy| vs |dx|
+  bcs _ua.faceVertical
+  lda.w SCUMM.scratch
+  bmi _ua.faceWest
+  lda #90
+  bra _ua.setFacing
+_ua.faceWest:
+  lda #270
+  bra _ua.setFacing
+_ua.faceVertical:
+  lda.w SCUMM.scratch2
+  bmi _ua.faceNorth
+  lda #180
+  bra _ua.setFacing
+_ua.faceNorth:
+  lda #0
+_ua.setFacing:
+  ldx.w SCUMM.uaActorStructOfs
+  sta.w SCUMM.actors.facing,x
+
+  ; |dy| for distance check
   lda.w SCUMM.scratch2
   bpl +
   eor #$FFFF
@@ -6859,32 +7054,6 @@ _ua.dyPos:
   adc.w SCUMM.actors.y,x
   sta.w SCUMM.actors.y,x
 
-  ; Update facing: recompute |dy|
-  lda.w SCUMM.scratch2
-  bpl +
-  eor #$FFFF
-  inc a
-+
-  cmp.w SCUMM.actorOamCount           ; |dy| vs |dx|
-  bcs _ua.faceVertical
-  lda.w SCUMM.scratch
-  bmi _ua.faceWest
-  lda #90
-  bra _ua.setFacing
-_ua.faceWest:
-  lda #270
-  bra _ua.setFacing
-_ua.faceVertical:
-  lda.w SCUMM.scratch2
-  bmi _ua.faceNorth
-  lda #180
-  bra _ua.setFacing
-_ua.faceNorth:
-  lda #0
-_ua.setFacing:
-  ldx.w SCUMM.uaActorStructOfs
-  sta.w SCUMM.actors.facing,x
-
   ; Advance walk animation
   sep #$20
   ldx.w SCUMM.scratch3
@@ -6959,8 +7128,10 @@ _lac.clearLoop:
   sta.w SCUMM.renderSlotActor,x
   sta.w SCUMM.renderSlotCostume,x
   sta.w SCUMM.renderSlotDirty,x
+  sta.w SCUMM.renderSlotHeadDirty,x
   lda #$FF
   sta.w SCUMM.renderSlotLastPic,x
+  sta.w SCUMM.renderSlotLastHead,x
   lda #0
   dex
   bpl _lac.clearLoop
@@ -7377,7 +7548,31 @@ _ri.southCycle:
 _ri.gotPic:
   .ACCU 16
   and #$00FF
-  sta.w SCUMM.scratch                 ; pic index
+  sta.w SCUMM.scratch                 ; body pic index
+
+  ; --- Head pic lookup (X = animFrame, scratch2 = facing) ---
+  lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
+  beq _ri.headNorth
+  cmp #180
+  beq _ri.headSouth
+  lda.l CostumeHeadCycleSide,x       ; east/west: side head
+  bra _ri.headGot
+_ri.headNorth:
+  .ACCU 16
+  lda.l CostumeHeadCycleNorth,x      ; north: rear head
+  bra _ri.headGot
+_ri.headSouth:
+  .ACCU 16
+  lda.l CostumeHeadCycleFront,x      ; south: front head
+_ri.headGot:
+  .ACCU 16
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorHeadPicCur        ; store head pic ($FF=none)
+  rep #$20
+  .ACCU 16
+
   plx                                 ; restore actor number
 
   ; --- Check if frame changed -> stage CHR DMA for this slot ---
@@ -7726,6 +7921,339 @@ _ri.nextEntry:
   jmp _ri.entryLoop
 +
   stx.w GLOBAL.currentOamSlot
+
+  ; =================================================================
+  ; HEAD OAM RENDERING (limb 1, composited on top of body)
+  ; =================================================================
+  rep #$20
+  .ACCU 16
+
+  ; Check if head pic is $FF (no head needed for this frame)
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorHeadPicCur
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$00FF
+  bne +
+  jmp _ri.noHead
++
+
+  ; --- Check if this costume has head data (CostumeHeadDirTable) ---
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a                               ; costume * 4 (HeadDirTable = 4 bytes/entry)
+  tax
+  lda.l CostumeHeadDirTable,x         ; headBasePtr
+  bne +
+  jmp _ri.noHead                      ; 0 = no head data for this costume
++
+  sta.b _costDirPtr                   ; head table base pointer
+  sep #$20
+  .ACCU 8
+  lda.l CostumeHeadDirTable + 2,x     ; headBaseBank
+  sta.b _costDirPtr + 2
+  lda.l CostumeHeadDirTable + 3,x     ; numHeadPics
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.actorOamCount           ; temp: numHeadPics
+
+  ; --- Check if head pic changed -> stage head CHR DMA ---
+  ldx.w SCUMM.scratch3                ; render slot
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorHeadPicCur
+  cmp.w SCUMM.renderSlotLastHead,x
+  beq _ri.headChrReady
+  sta.w SCUMM.renderSlotLastHead,x    ; update last head
+
+  ; --- Stage head CHR DMA params ---
+  rep #$20
+  .ACCU 16
+  ; _costDirPtr = HeadChrLo table base
+  ; actorOamCount = numHeadPics
+  ; Look up ChrLo[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  asl a                               ; x2 for word table
+  tay
+  lda [_costDirPtr],y                 ; ChrLo[headPic] = CHR source addr
+  pha                                 ; save CHR addr
+
+  ; Compute ChrHi = base + numHeadPics * 2
+  lda.w SCUMM.actorOamCount           ; numHeadPics
+  asl a
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrHi table
+
+  ; Read ChrHi[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  tay
+  lda [_costDirPtr],y
+  and #$00FF
+  pha                                 ; save CHR bank
+
+  ; Compute ChrLen = ChrHi + numHeadPics
+  lda.w SCUMM.actorOamCount
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> ChrLen table
+
+  ; Read ChrLen[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  asl a
+  tay
+  lda [_costDirPtr],y                 ; CHR length
+  sta.w SCUMM.scratch2                ; save CHR length
+
+  ; Store per-slot head DMA params
+  ldx.w SCUMM.scratch3                ; render slot
+  pla                                 ; CHR bank
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.slotHeadChrSrcHi,x
+  rep #$20
+  .ACCU 16
+  txa
+  asl a                               ; slot * 2
+  tax
+  pla                                 ; CHR addr
+  sta.w SCUMM.slotHeadChrSrcLo,x
+  lda.w SCUMM.scratch2                ; CHR length
+  sta.w SCUMM.slotHeadChrLen,x
+  ldx.w SCUMM.scratch3                ; render slot (byte index)
+
+  ; Mark head dirty
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.w SCUMM.renderSlotHeadDirty,x
+  rep #$20
+  .ACCU 16
+
+_ri.headChrReady:
+  .ACCU 16
+
+  ; Skip head OAM if CHR DMA is still pending (avoids rendering un-DMA'd VRAM)
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotHeadDirty,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  beq +
+  jmp _ri.noHead
++
+
+  ; --- Reload head table base for OAM lookup ---
+  ; Need to re-read CostumeHeadDirTable since _costDirPtr was modified
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a                               ; costume * 4
+  tax
+  lda.l CostumeHeadDirTable,x
+  sta.b _costDirPtr
+  sep #$20
+  .ACCU 8
+  lda.l CostumeHeadDirTable + 2,x
+  sta.b _costDirPtr + 2
+  lda.l CostumeHeadDirTable + 3,x     ; numHeadPics
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.actorOamCount           ; numHeadPics
+
+  ; Compute OamLo = base + nHP*5
+  ; Layout: ChrLo(nHP*2) + ChrHi(nHP) + ChrLen(nHP*2) = nHP*5 bytes
+  lda.w SCUMM.actorOamCount           ; nHP
+  asl a                               ; nHP * 2
+  asl a                               ; nHP * 4
+  clc
+  adc.w SCUMM.actorOamCount           ; nHP * 5
+  clc
+  adc.b _costDirPtr
+  sta.b _oamSrcPtr                    ; -> OamLo table
+
+  ; Read OamLo[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  asl a
+  tay
+  ; Need bank for OamLo table
+  sep #$20
+  .ACCU 8
+  lda.b _costDirPtr + 2               ; same bank as head table base
+  sta.b _oamSrcPtr + 2
+  rep #$20
+  .ACCU 16
+  lda [_oamSrcPtr],y                  ; OamLo[headPic] = OAM data addr
+  pha                                 ; save OAM addr
+
+  ; Compute OamHi = OamLo + nHP * 2
+  lda.w SCUMM.actorOamCount           ; nHP
+  asl a                               ; nHP * 2
+  clc
+  adc.b _oamSrcPtr
+  sta.b _oamSrcPtr                    ; -> OamHi table
+
+  ; Read OamHi[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  tay
+  lda [_oamSrcPtr],y
+  sep #$20
+  .ACCU 8
+  sta.b _oamSrcPtr + 2               ; OAM bank
+  rep #$20
+  .ACCU 16
+
+  pla                                 ; OAM addr
+  sta.b _oamSrcPtr                    ; set up _oamSrcPtr for head OAM data
+
+  ; --- Read head OAM entry count from header ---
+  ldy #0
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sta.w SCUMM.actorOamCount           ; head OAM entry count
+  bne +
+  jmp _ri.noHead
++
+
+  ; --- Compute head tile base = body tile base + $18 ---
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.l _ri.tileBaseLut,x
+  clc
+  adc #COSTUME_HEAD_TILE_OFFSET       ; + $18
+  sta.w SCUMM.scratch2                ; head tile base (low byte of scratch2)
+  rep #$20
+  .ACCU 16
+
+  ; --- Head OAM entry loop ---
+  ldx.w GLOBAL.currentOamSlot
+  ldy #6                              ; skip 6-byte OAM header
+
+_ri.headEntryLoop:
+  rep #$20
+  .ACCU 16
+  lda [_oamSrcPtr],y                  ; dx byte
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  ; If facing west, mirror dx: new_dx = -(dx + 8)
+  pha
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorFlipMask
+  rep #$20
+  .ACCU 16
+  and #$0040
+  beq _ri.headNoFlipDx
+  pla
+  clc
+  adc #8
+  eor #$FFFF
+  inc a
+  bra _ri.headApplyDx
+_ri.headNoFlipDx:
+  pla
+_ri.headApplyDx:
+  clc
+  adc.w SCUMM.actorScreenX
+  sta.w SCUMM.scratch
+
+  lda [_oamSrcPtr],y                  ; dy byte
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  clc
+  adc.w SCUMM.actorScreenY
+  pha                                 ; save computed Y
+
+  ; Bounds check X
+  lda.w SCUMM.scratch
+  bmi _ri.headHide
+  cmp #$0100
+  bcs _ri.headHide
+  ; Bounds check Y
+  pla
+  pha
+  bmi _ri.headHide
+  cmp #$00E0
+  bcs _ri.headHide
+
+  ; Write visible head OAM entry
+  pla                                 ; computed Y
+  sep #$20
+  .ACCU 8
+  pha                                 ; re-push Y low byte
+  lda.w SCUMM.scratch                 ; screen X
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  pla                                 ; Y low byte
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda [_oamSrcPtr],y                  ; tile_id
+  clc
+  adc.w SCUMM.scratch2               ; + head tile base
+  sta.w GLOBAL.oamBuffer,x
+  iny
+  inx
+  lda [_oamSrcPtr],y                  ; flags
+  ora.w SCUMM.actorFlipMask           ; priority + palette + flip
+  sta.w GLOBAL.oamBuffer,x
+  iny
+  inx
+  rep #$20
+  .ACCU 16
+  bra _ri.headNext
+
+_ri.headHide:
+  pla                                 ; discard saved Y
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #$F0                            ; off-screen Y
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  iny                                 ; skip tile_id
+  inx
+  sta.w GLOBAL.oamBuffer,x
+  iny                                 ; skip flags
+  inx
+  rep #$20
+  .ACCU 16
+
+_ri.headNext:
+  dec.w SCUMM.actorOamCount
+  beq +
+  jmp _ri.headEntryLoop
++
+  stx.w GLOBAL.currentOamSlot
+  bra _ri.noHead
+
+_ri.noHead:
 
 _ri.nextSlot:
   rep #$20
@@ -8271,16 +8799,16 @@ _idv.done:
 ; Table: id, x_pixel, y_pixel, nameLen, nameOffset (1 byte into _idv.names)
 _idv.table:
   ;     id   x    y   len  nameOff
-  ; "Walk to" removed from grid — it's the default sentence line on BG2 row 0
-  .db  $04,   0, 152,   4, _idv.n1 - _idv.names, 0
-  .db  $02,   0, 160,   4, _idv.n2 - _idv.names, 0
-  .db  $03,   0, 168,   5, _idv.n3 - _idv.names, 0
+  .db  $0B,   0, 152,   7, _idv.n0 - _idv.names, 0
   .db  $09,  80, 152,   7, _idv.n4 - _idv.names, 0
-  .db  $08,  80, 160,   7, _idv.n5 - _idv.names, 0
-  .db  $0A,  80, 168,   7, _idv.n6 - _idv.names, 0
   .db  $07, 168, 152,   3, _idv.n7 - _idv.names, 0
+  .db  $04,   0, 160,   4, _idv.n1 - _idv.names, 0
+  .db  $08,  80, 160,   7, _idv.n5 - _idv.names, 0
   .db  $05, 168, 160,   4, _idv.n8 - _idv.names, 0
+  .db  $02,   0, 168,   4, _idv.n2 - _idv.names, 0
+  .db  $0A,  80, 168,   7, _idv.n6 - _idv.names, 0
   .db  $06, 168, 168,   4, _idv.n9 - _idv.names, 0
+  .db  $03,   0, 176,   5, _idv.n3 - _idv.names, 0
 _idv.tableEnd:
 
 _idv.names:
@@ -9012,7 +9540,15 @@ _uc.posOk:
   sta.b tmp+6
   lda #1                              ; actor index = 1 (Guybrush)
   jsl scummvm.buildWalkPath_long
-  bra _uc.walkDone
+
+  ; Check if path was built (pathLen > 0) — if not, target was outside walkboxes
+  ldx #1                              ; actor 1 byte index
+  sep #$20
+  lda.w SCUMM.walkPathLen,x
+  rep #$20
+  and #$00FF
+  bne _uc.walkDone
+  jmp _uc.noClick                     ; refuse walk — target not in any walkbox
 
 _uc.directWalk:
   pla                                 ; consume saved targetX
@@ -9046,6 +9582,9 @@ _uc.walkDone:
 _uc.noPending:
   stz.w SCUMM.pendingVerb             ; no object = just walking
   stz.w SCUMM.pendingObject
+  stz.w SCUMM.sentenceVerb            ; reset to default "Walk to"
+  lda #1
+  sta.w SCUMM.sentenceDirty           ; redraw sentence line
 _uc.clickDone:
 
   jmp _uc.noClick
@@ -9250,17 +9789,20 @@ _rpd.chrSlotLoop:
   jmp _rpd.chrSlotNext
 +
 
-  ; This slot is dirty — clear flag and register DMA
+  ; This slot is dirty — try to register DMA (keep flag until success)
+  jsr _rpd.findSlot                   ; X = free DMA queue slot offset
+  bcs +
+  jmp _rpd.chrSlotNext                ; queue full, keep dirty for retry
++
+  ; DMA slot found — NOW clear the dirty flag
+  phx                                 ; save DMA queue slot
+  ldx.w SCUMM.scratch2                ; render slot index
   sep #$20
   .ACCU 8
   stz.w SCUMM.renderSlotDirty,x
   rep #$20
   .ACCU 16
-
-  jsr _rpd.findSlot                   ; X = free DMA queue slot offset
-  bcs +
-  jmp _rpd.chrSlotNext                ; queue full, skip
-+
+  plx                                 ; restore DMA queue slot
 
   ; Read per-slot DMA params using scratch2 as render slot index
   ; Word arrays: slotChrSrcLo, slotChrLen, slotChrVram indexed by slot*2
@@ -9356,6 +9898,74 @@ _rpd.chrSlotNext:
   inc.w SCUMM.scratch2
   jmp _rpd.chrSlotLoop
 _rpd.noChr:
+
+  ;--- Per-slot HEAD CHR DMA (head pic changes) ---
+  rep #$20
+  .ACCU 16
+  stz.w SCUMM.scratch2                ; render slot scan index
+
+_rpd.headSlotLoop:
+  ldx.w SCUMM.scratch2
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcs _rpd.noHead
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotHeadDirty,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  beq _rpd.headSlotNext
+
+  ; This slot has dirty head — queue DMA
+  jsr _rpd.findSlot                   ; X = free DMA queue slot offset
+  bcc _rpd.headSlotNext               ; queue full, keep dirty for retry
+
+  ; DMA slot found — clear dirty
+  phx                                 ; save DMA queue slot
+  ldx.w SCUMM.scratch2                ; render slot index
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.renderSlotHeadDirty,x
+  rep #$20
+  .ACCU 16
+  plx                                 ; restore DMA queue slot
+
+  ; Read head DMA params from slot arrays
+  phy
+  ldy.w SCUMM.scratch2                ; render slot
+  phy                                 ; save render slot on stack
+  tya
+  asl a                               ; slot * 2
+  tay                                 ; Y = word index
+
+  lda.w SCUMM.slotHeadChrLen,y
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
+  lda.w SCUMM.slotHeadChrSrcLo,y
+  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
+
+  ; VRAM target = renderSlotTileBase[slot] + $300
+  lda.w SCUMM.renderSlotTileBase,y
+  clc
+  adc #COSTUME_HEAD_VRAM_OFFSET
+  sta.w GLOBAL.dmaQueue.1.targetAdress,x
+
+  ply                                 ; render slot (byte index)
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.slotHeadChrSrcHi,y
+  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
+  lda #$40                            ; VRAM | ACTIVE
+  sta.w GLOBAL.dmaQueue.1.transferType,x
+  rep #$20
+  .ACCU 16
+  ply                                 ; restore original Y
+
+_rpd.headSlotNext:
+  rep #$20
+  .ACCU 16
+  inc.w SCUMM.scratch2
+  jmp _rpd.headSlotLoop
+_rpd.noHead:
 
   ;--- Cursor tile DMA (one-time init) ---
   rep #$20
@@ -10657,6 +11267,8 @@ _gve.scanVerb:
   beq _gve.notfound                   ; 0x00 = end of table
   cmp.w SCUMM.scratch3
   beq _gve.foundVerb
+  cmp #$00FF
+  beq _gve.foundVerb                   ; 0xFF = catch-all matches any verb
   inx
   inx
   inx                                  ; skip verb_id(1) + offset(2)

@@ -141,7 +141,7 @@ SCUMM.slots         INSTANCEOF scummSlot SCUMM_MAX_SLOTS
 ; VM state variables
 .ramsection "scumm vm state" bank 0 slot 1
 SCUMM.running             dw      ;nonzero = VM is active
-SCUMM.egoFixupPending     dw      ;nonzero = force ego costume 17 after next scheduler pass
+SCUMM.egoFixupPending     dw      ;nonzero = force ego costume 1 after next scheduler pass
 SCUMM.currentSlot         dw      ;current slot index (0-24)
 SCUMM.currentSlotPtr      dw      ;byte offset into SCUMM.slots for current slot
 SCUMM.currentOpcode       dw      ;last fetched opcode byte (zero-extended)
@@ -261,6 +261,7 @@ SCUMM.actorScreenX   dw      ; computed screen X for current actor
 SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
+SCUMM.actorHeadPicCur db     ; current frame's head pic ($FF=none, computed per render)
 SCUMM.chrDmaPending  db      ; LEGACY: kept for single-slot compat (slot 0 only)
 SCUMM.chrDmaSrcLo   dw      ; CHR source ROM address (low 16)
 SCUMM.chrDmaSrcHi   db      ; CHR source ROM bank
@@ -280,6 +281,8 @@ SCUMM.renderSlotPalSlot  ds SCUMM_MAX_RENDER_SLOTS      ; OBJ palette index (0-4
 SCUMM.renderSlotTileBase ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM tile ID base per slot (word)
 SCUMM.renderSlotLastPic  ds SCUMM_MAX_RENDER_SLOTS      ; last rendered pic ($FF=dirty)
 SCUMM.renderSlotDirty    ds SCUMM_MAX_RENDER_SLOTS      ; nonzero = needs CHR DMA
+SCUMM.renderSlotLastHead ds SCUMM_MAX_RENDER_SLOTS      ; last rendered head pic ($FF=dirty)
+SCUMM.renderSlotHeadDirty ds SCUMM_MAX_RENDER_SLOTS     ; nonzero = needs head CHR DMA
 .ends
 
 ; Per-slot CHR DMA parameters (filled by renderActors, consumed by registerPendingDma)
@@ -288,6 +291,9 @@ SCUMM.slotChrSrcLo   ds SCUMM_MAX_RENDER_SLOTS * 2  ; CHR source ROM addr low (w
 SCUMM.slotChrSrcHi   ds SCUMM_MAX_RENDER_SLOTS      ; CHR source ROM bank (byte per slot)
 SCUMM.slotChrLen      ds SCUMM_MAX_RENDER_SLOTS * 2  ; CHR transfer length (word per slot)
 SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (word per slot)
+SCUMM.slotHeadChrSrcLo ds SCUMM_MAX_RENDER_SLOTS * 2 ; head CHR source addr low (word)
+SCUMM.slotHeadChrSrcHi ds SCUMM_MAX_RENDER_SLOTS      ; head CHR source bank (byte)
+SCUMM.slotHeadChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; head CHR transfer length (word)
 .ends
 
 ; Pseudo-room resource mapper (256 bytes — identity-init, pseudoRoom opcode fills)

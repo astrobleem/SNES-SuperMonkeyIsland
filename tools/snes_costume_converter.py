@@ -493,11 +493,49 @@ def main():
                   f"oam={len(frame.oam_entries):3d}  "
                   f"dedup={frame.tiles_wide * frame.tiles_tall - frame.num_tiles}")
 
-        print(f"\nConverted {len(pictures)} pictures:")
+        print(f"\nConverted {len(pictures)} limb-0 pictures:")
         print(f"  Total unique tiles: {total_tiles}")
         print(f"  Total CHR size: {total_tiles * BYTES_PER_4BPP_TILE} bytes")
         print(f"  Total OAM entries: {total_oam}")
         print(f"  Output: {output_dir}")
+
+        # --- Convert Limb 1 head pics (if available) ---
+        head_pictures = (costume.limb_pictures[1]
+                         if len(costume.limb_pictures) > 1 else [])
+        if head_pictures:
+            head_tiles = 0
+            head_oam = 0
+            head_count = 0
+            for i, pic in enumerate(head_pictures):
+                if pic is None:
+                    log.debug("Skipping NULL head pic %d", i)
+                    continue
+                frame = convert_frame(pic.pixels, pic.width, pic.height,
+                                      pic.rel_x, pic.rel_y, snes_pal)
+                prefix = f'head_pic{i:02d}'
+                save_frame(frame, output_dir, prefix)
+                head_tiles += frame.num_tiles
+                head_oam += len(frame.oam_entries)
+                head_count += 1
+
+                if args.verify:
+                    from PIL import Image
+                    img = render_verification_png(frame, args.scale)
+                    bg = Image.new('RGBA', img.size, (100, 180, 255, 255))
+                    bg.paste(img, (0, 0), img)
+                    bg.save(str(output_dir / f'{prefix}_verify.png'))
+
+                print(f"  head[{i:2d}] {pic.width:3d}x{pic.height:3d}  "
+                      f"tiles={frame.num_tiles:3d} ({len(frame.chr_data):5d}B)  "
+                      f"oam={len(frame.oam_entries):3d}")
+
+            if head_count:
+                print(f"\nConverted {head_count} limb-1 head pictures:")
+                print(f"  Total head tiles: {head_tiles}")
+                print(f"  Total head CHR size: "
+                      f"{head_tiles * BYTES_PER_4BPP_TILE} bytes")
+                print(f"  Total head OAM entries: {head_oam}")
+
         return
 
     if args.pic is not None:

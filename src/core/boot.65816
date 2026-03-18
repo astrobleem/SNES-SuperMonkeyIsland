@@ -154,7 +154,7 @@ IrqHookUp:
   .db $31	;mapping (HiROM+FastROM)
   .db $15	;cartridgetype (ROM+GSU+RAM+Battery — enables SuperFX 2 coprocessor)
   .db 10	;romsize
-  .db 1	;sramsize
+  .db 3	;sramsize (8KB — max that works with FXPak MSU-1)
   .db 2	;country
   .db $33	;licenseecode
   .db 2	;version

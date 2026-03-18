@@ -890,6 +890,9 @@ _prc.noEncd:
   ; Load actor costume tiles + palette to VRAM/CGRAM
   jsr _scummvm.loadActorCostumes
 
+  ; Assign walkboxes for all visible actors in this room
+  jsr _scummvm.assignActorWalkboxes
+
   ; Fade up brightness
   sep #$20
   lda.b #$0F
@@ -897,6 +900,60 @@ _prc.noEncd:
   rep #$20
 
 _prc.failed:
+  rts
+
+;-------------------------------------------------------------------
+; _scummvm.assignActorWalkboxes — scan visible actors, assign walkbox
+; Called after room load when BOXD data is fresh in $7F:5002.
+; For each actor 1..SCUMM_WALK_ACTORS-1 in the current room with
+; visible=1, calls findBox to determine which walkbox they're in.
+;-------------------------------------------------------------------
+_scummvm.assignActorWalkboxes:
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+  lda #1                             ; start at actor 1 (skip actor 0 sentinel)
+_aaw.loop:
+  pha                                ; save actor index
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16 = struct offset
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.visible,x
+  beq _aaw.skip
+  lda.w SCUMM.actors.room,x
+  cmp.w SCUMM.currentRoom
+  bne _aaw.skip
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  jsr scummvm.findBox                ; A = boxIdx or $FF
+  cmp #$00FF
+  beq _aaw.skip16
+  pha                                ; save boxIdx
+  lda 3,s                            ; actor index from outer push
+  and #$00FF
+  tax
+  pla
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorWalkBox,x
+_aaw.skip:
+  .ACCU 8
+  rep #$20
+  .ACCU 16
+_aaw.skip16:
+  .ACCU 16
+  pla                                ; recover actor index
+  inc a
+  cmp #SCUMM_WALK_ACTORS
+  bcc _aaw.loop
   rts
 
 
@@ -4238,6 +4295,29 @@ op_putActor:
   stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
   rep #$20
 
+  ; Assign walkbox from position (ScummVM: adjustActorPos)
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  jsr scummvm.findBox                ; A = boxIdx or $FF
+  cmp #$00FF
+  beq +
+  pha                                ; save boxIdx
+  ldx.w SCUMM.scratch2              ; actor struct offset
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; / 16 = actor number
+  tax
+  pla                                ; recover boxIdx
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorWalkBox,x
+  rep #$20
+  .ACCU 16
++
   clc
   rts
 
@@ -7441,19 +7521,22 @@ _lac.dmaDone:
 
 
 ;===================================================================
-; GSU-2 (SuperFX 2) — Init + Hello World Test
-; Copies a minimal GSU program (STOP+NOP) to Game Pak RAM ($70:0000),
-; starts the GSU, polls until STOP clears GO flag.
-; If the GSU is not present (emulator/hardware doesn't support it),
-; the poll loop will timeout and skip gracefully.
+; GSU-2 (SuperFX 2) — Init + Pixel Plot Test
+; Copies a GSU program to Game Pak RAM ($70:0100) that plots an 8x8
+; colored square in 4bpp OBJ format. Proves the full pipeline:
+; GSU execution -> PLOT pixel cache -> Game Pak RAM output.
+; If the GSU is not present, the poll loop times out gracefully.
 ;===================================================================
 .section "scummvm gsu init" superfree
 .base BSL
 
-_gsu.testProgram:
-  .db $00                             ; GSU opcode: STOP
-  .db $01                             ; GSU opcode: NOP (prefetch padding)
-_gsu.testProgramEnd:
+_gsu.pixelTestProgram:
+  .incbin "build/gsu/pixel_test.bin"
+_gsu.pixelTestProgramEnd:
+
+_gsu.scalerProgram:
+  .incbin "build/gsu/sprite_scaler.bin"
+_gsu.scalerProgramEnd:
 
 scummvm.gsuInit:
   php
@@ -7461,15 +7544,37 @@ scummvm.gsuInit:
   phx
   phy
 
-  ; --- Copy GSU program to Game Pak RAM ($70:0000) ---
+  ; Ensure gsuPresent starts at 0 (WRAM may have random values)
   sep #$20
   .ACCU 8
-  lda.l _gsu.testProgram
-  sta.l GSU_RAM_BASE                  ; $70:0000 = STOP
-  lda.l _gsu.testProgram + 1
-  sta.l GSU_RAM_BASE + 1              ; $70:0001 = NOP
+  stz.w SCUMM.gsuPresent
+
+  ; --- Zero out screen buffer area ($70:2000, 32 bytes) ---
+  lda #0
+  ldx #GSU_TILE_4BPP_SIZE - 1
+_gsu.clearScreen:
+  sta.l GSU_SCREEN_BASE,x
+  dex
+  bpl _gsu.clearScreen
+
+  ; --- Copy pixel test program to Game Pak RAM ($70:0100) ---
+  rep #$20
+  .ACCU 16
+  ldx #_gsu.pixelTestProgramEnd - _gsu.pixelTestProgram - 1
+_gsu.copyLoop:
+  sep #$20
+  .ACCU 8
+  lda.l _gsu.pixelTestProgram,x
+  sta.l GSU_CODE_BASE,x
+  rep #$20
+  .ACCU 16
+  dex
+  bpl _gsu.copyLoop
 
   ; --- Configure GSU ---
+  sep #$20
+  .ACCU 8
+
   ; Mask GSU IRQ (poll instead)
   lda #$80
   sta.l GSU_CFGR
@@ -7482,14 +7587,19 @@ scummvm.gsuInit:
   lda #$70
   sta.l GSU_PBR
 
-  ; Set SCMR: 16-color OBJ mode, GSU owns RAM (RAN=1), SNES keeps ROM (RON=0)
+  ; Set SCBR (screen base = $08 -> output at $70:2000)
+  lda #GSU_SCBR_VALUE
+  sta.l GSU_SCBR
+
+  ; Set SCMR: 16-color OBJ mode, GSU owns RAM+ROM
   lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ | GSU_SCMR_RAN
   sta.l GSU_SCMR
 
-  ; --- Start GSU: write R15 = $0000, writing MSB triggers GO ---
+  ; --- Start GSU: write R15 = $0100, writing MSB triggers GO ---
   lda #$00
-  sta.l GSU_R15_LO                    ; R15 low byte
-  sta.l GSU_R15_HI                    ; R15 high byte — THIS STARTS THE GSU
+  sta.l GSU_R15_LO                    ; R15 low byte = $00
+  lda #$01
+  sta.l GSU_R15_HI                    ; R15 high byte = $01 -> R15=$0100, GO=1
 
   ; --- Poll SFR.GO until GSU stops (or timeout) ---
   rep #$20
@@ -7510,11 +7620,16 @@ _gsu.pollLoop:
 
 _gsu.stopped:
   ; GSU successfully executed STOP!
-  ; Clear RAN — return RAM bus to SNES
+  ; Clear RAN/RON — return buses to SNES
   sep #$20
   .ACCU 8
   lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ
   sta.l GSU_SCMR                      ; RAN=0, RON=0
+
+  ; Mark GSU as present (pixel test STOP executed)
+  lda #$01
+  sta.w SCUMM.gsuPresent
+
   rep #$20
   .ACCU 16
 
@@ -7522,6 +7637,728 @@ _gsu.done:
   ply
   plx
   plp
+  rtl
+
+;-------------------------------------------------------------------
+; scummvm.gsuLaunchScaler — Start the GSU sprite scaler
+; Called from renderActors when actorCurScale < 255.
+; Parameters in WRAM:
+;   SCUMM.gsuSrcWidth, gsuSrcHeight, gsuDstWidth, gsuDstHeight
+;   SCUMM.gsuSrcDataAddr (word: RAM offset of pre-copied source tiles)
+;   SCUMM.gsuTilesW, gsuTilesH
+; On return: scaled tile data is at GSU_SCREEN_BASE, ready for DMA.
+;-------------------------------------------------------------------
+scummvm.gsuLaunchScaler:
+  php
+  rep #$31
+  phx
+  phy
+
+  ; --- Copy scaler program to $70:0100 ---
+  ldx #_gsu.scalerProgramEnd - _gsu.scalerProgram - 1
+_gsuScl.copyLoop:
+  sep #$20
+  .ACCU 8
+  lda.l _gsu.scalerProgram,x
+  sta.l GSU_CODE_BASE,x
+  rep #$20
+  .ACCU 16
+  dex
+  bpl _gsuScl.copyLoop
+
+  ; --- Write parameter block to $70:0000 ---
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuSrcWidth
+  sta.l GSU_PARAM_SRC_WIDTH
+  lda.w SCUMM.gsuSrcHeight
+  sta.l GSU_PARAM_SRC_HEIGHT
+  lda.w SCUMM.gsuDstWidth
+  sta.l GSU_PARAM_DST_WIDTH
+  lda.w SCUMM.gsuDstHeight
+  sta.l GSU_PARAM_DST_HEIGHT
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.gsuSrcDataAddr
+  sta.l GSU_PARAM_SRC_DATA
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuTilesW
+  sta.l GSU_PARAM_TILES_W
+  lda.w SCUMM.gsuTilesH
+  sta.l GSU_PARAM_TILES_H
+
+  ; --- Compute x_step = (srcWidth << 8) / dstWidth ---
+  ; Use SNES hardware divide: WRDIVL/H ($4204) / WRDIVB ($4206)
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.gsuSrcWidth
+  and #$00FF
+  xba                                 ; A = srcWidth << 8
+  sta.l $4204                         ; dividend
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstWidth
+  sta.l $4206                         ; divisor
+  rep #$20
+  .ACCU 16
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  lda.l $4214                         ; quotient = x_step
+  sta.l GSU_PARAM_X_STEP
+
+  ; --- Compute y_step = (srcHeight << 8) / dstHeight ---
+  lda.w SCUMM.gsuSrcHeight
+  and #$00FF
+  xba                                 ; A = srcHeight << 8
+  sta.l $4204
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstHeight
+  sta.l $4206
+  rep #$20
+  .ACCU 16
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  lda.l $4214                         ; quotient = y_step
+  sta.l GSU_PARAM_Y_STEP
+
+  ; --- Configure and start GSU ---
+  sep #$20
+  .ACCU 8
+  lda #$80
+  sta.l GSU_CFGR                      ; mask IRQ
+  lda #$01
+  sta.l GSU_CLSR                      ; 21.4MHz
+  lda #$70
+  sta.l GSU_PBR                       ; execute from RAM bank $70
+  lda #GSU_SCBR_VALUE
+  sta.l GSU_SCBR                      ; screen output base
+  lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ | GSU_SCMR_RAN
+  sta.l GSU_SCMR                      ; 4bpp OBJ mode, GSU owns RAM
+
+  ; Start at $0100
+  lda #$00
+  sta.l GSU_R15_LO
+  lda #$01
+  sta.l GSU_R15_HI                    ; GO!
+
+  ; --- Poll until done ---
+  rep #$20
+  .ACCU 16
+  ldx #$FFFF
+_gsuScl.poll:
+  sep #$20
+  .ACCU 8
+  lda.l GSU_SFR
+  rep #$20
+  .ACCU 16
+  and #GSU_SFR_GO
+  beq _gsuScl.done
+  dex
+  bne _gsuScl.poll
+
+_gsuScl.done:
+  ; Return buses to SNES
+  sep #$20
+  .ACCU 8
+  lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ
+  sta.l GSU_SCMR
+  rep #$20
+  .ACCU 16
+
+  ply
+  plx
+  plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; GSU-2 Sprite Scaler — 65816 Integration
+; Copies source CHR to Game Pak RAM ($70:5000), builds spatial tile
+; grid at $70:4000, launches GSU nearest-neighbor scaler, rearranges
+; output from OBJ stride to contiguous at $70:3000, overrides DMA.
+; Called via JSL from renderActors when actorCurScale < 240.
+;
+; Prerequisites:
+;   _oamSrcPtr (DP) = current frame OAM data
+;   SCUMM.scratch3 = render slot, slotChrSrcLo/Hi/Len set up
+;   SCUMM.actorCurScale = current scale (1-239)
+; Returns: carry set = success, carry clear = failure
+;===================================================================
+.section "scummvm gsu scaler impl" superfree
+.base BSL
+
+scummvm.gsuScaleActor_impl:
+  php
+  rep #$31
+  phx
+  phy
+
+  ; ---- Read OAM header ----
+  ; Format: [0]=count, [1]=width, [2]=height, [3]=rel_x(s8), [4]=rel_y(s8), [5]=pad
+
+  ldy #0
+  lda [_oamSrcPtr],y
+  and #$00FF
+  bne +
+  jmp _gsuScale.fail
++
+  sta.w SCUMM.actorOamCount
+
+  ldy #1
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuSrcWidth
+  rep #$20
+  .ACCU 16
+
+  ldy #2
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuSrcHeight
+  rep #$20
+  .ACCU 16
+
+  ldy #3
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuOamRelX
+  rep #$20
+  .ACCU 16
+
+  ldy #4
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuOamRelY
+  rep #$20
+  .ACCU 16
+
+  ; ---- Compute source tile dimensions ----
+  lda.w SCUMM.gsuSrcWidth
+  and #$00FF
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuTilesW
+  rep #$20
+  .ACCU 16
+
+  lda.w SCUMM.gsuSrcHeight
+  and #$00FF
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuTilesH
+  rep #$20
+  .ACCU 16
+
+  ; ---- Compute scaled dimensions ----
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuSrcWidth
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  bne +
+  lda #1
++
+  sta.w SCUMM.gsuDstWidth
+
+  lda.w SCUMM.gsuSrcHeight
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  bne +
+  lda #1
++
+  sta.w SCUMM.gsuDstHeight
+  rep #$20
+  .ACCU 16
+
+  ; Compute scaled tile dimensions
+  lda.w SCUMM.gsuDstWidth
+  and #$00FF
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuDstTilesW
+  rep #$20
+  .ACCU 16
+
+  lda.w SCUMM.gsuDstHeight
+  and #$00FF
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.gsuDstTilesH
+  rep #$20
+  .ACCU 16
+
+  ; ---- Compute scaled anchor offsets (signed multiply) ----
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuOamRelX
+  bpl _gsuScale.relXPos
+  eor #$FF
+  inc a
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a
+  sta.w SCUMM.gsuScaledRelX
+  bra _gsuScale.relXDone
+_gsuScale.relXPos:
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.gsuScaledRelX
+_gsuScale.relXDone:
+  .ACCU 16
+
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuOamRelY
+  bpl _gsuScale.relYPos
+  eor #$FF
+  inc a
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a
+  sta.w SCUMM.gsuScaledRelY
+  bra _gsuScale.relYDone
+_gsuScale.relYPos:
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.gsuScaledRelY
+_gsuScale.relYDone:
+  .ACCU 16
+
+  ; ---- Write bitmask LUT to $70:0060 ----
+  sep #$20
+  .ACCU 8
+  lda #$80
+  ldx #0
+_gsuScale.bitmaskLoop:
+  sta.l $700060,x
+  lsr a
+  inx
+  cpx #8
+  bne _gsuScale.bitmaskLoop
+  rep #$20
+  .ACCU 16
+
+  ; ---- Zero-fill Game Pak RAM ($70:0800-$70:1BFF) ----
+  ; Covers source grid ($0800), CHR copy ($0A00), screen output ($0C00),
+  ; and rearranged tiles ($1600)
+  phb
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l $700800
+  rep #$20
+  .ACCU 16
+  ldx #$0800
+  ldy #$0801
+  lda #$13FE                             ; $1BFF - $0801 = $13FE bytes
+  mvn $70, $70
+  plb
+
+  ; ---- Copy CHR data from ROM to $70:GSU_SRC_CHR ----
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.slotChrSrcHi,x
+  sta.b tmp + 2
+  rep #$20
+  .ACCU 16
+  txa
+  asl a
+  tax
+  lda.w SCUMM.slotChrSrcLo,x
+  sta.b tmp
+  lda.w SCUMM.slotChrLen,x
+  tax
+
+  lda #GSU_SRC_CHR
+  sta.b _costDirPtr
+  sep #$20
+  .ACCU 8
+  lda #$70
+  sta.b _costDirPtr + 2
+  rep #$20
+  .ACCU 16
+
+  ldy #0
+  sep #$20
+  .ACCU 8
+_gsuScale.chrCopy:
+  lda [tmp],y
+  sta [_costDirPtr],y
+  rep #$20
+  .ACCU 16
+  iny
+  dex
+  beq _gsuScale.chrCopyDone
+  sep #$20
+  .ACCU 8
+  bra _gsuScale.chrCopy
+_gsuScale.chrCopyDone:
+  rep #$20
+  .ACCU 16
+
+  ; ---- Build tile grid from OAM entries ----
+  ; Sign-extend rel_x to 16-bit
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuOamRelX
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  sta.w SCUMM.scratch
+
+  ; Sign-extend rel_y and push
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuOamRelY
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  pha
+
+  ldy #6
+_gsuScale.gridLoop:
+  rep #$20
+  .ACCU 16
+  ; Read dx (signed byte)
+  lda [_oamSrcPtr],y
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  sec
+  sbc.w SCUMM.scratch
+  lsr a
+  lsr a
+  lsr a
+  and #$001F
+  sta.b tmp + 4
+
+  ; Read dy (signed byte)
+  lda [_oamSrcPtr],y
+  iny
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  sec
+  sbc 1,s
+  lsr a
+  lsr a
+  lsr a
+  and #$001F
+
+  ; grid_index = grid_row * tiles_wide + grid_col
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.gsuTilesW
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  rep #$20
+  .ACCU 16
+  lda.l $4216
+  clc
+  adc.b tmp + 4
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  clc
+  adc #GSU_SRC_GRID
+  sta.b tmp + 6
+
+  ; Read tile_id
+  lda [_oamSrcPtr],y
+  iny
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  clc
+  adc #GSU_SRC_CHR
+  tax
+
+  iny
+
+  ; Copy 32 bytes from $70:X to $70:tmp+6 via MVN
+  phy
+  ldy.b tmp + 6
+  phb
+  lda #31
+  mvn $70, $70
+  plb
+  ply
+
+  rep #$20
+  .ACCU 16
+  dec.w SCUMM.actorOamCount
+  bne _gsuScale.gridLoop
+
+  pla
+
+  ; ---- Set GSU source data addr and launch ----
+  lda #GSU_SRC_GRID
+  sta.w SCUMM.gsuSrcDataAddr
+
+  jsl scummvm.gsuLaunchScaler
+
+  ; ---- DEBUG: write solid color 5 test tiles to rearranged output ----
+  ; Bypasses GSU scaler AND grid build. Writes a known test pattern
+  ; to verify the DMA→VRAM→OAM pipeline is correct.
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstTilesW
+  sta.l $4202
+  lda.w SCUMM.gsuDstTilesH
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  rep #$20
+  .ACCU 16
+  lda.l $4216                            ; numTiles
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                                  ; numTiles * 32
+  tax                                    ; X = total bytes
+  ; Fill $70:GSU_REARRANGED with color 5 tiles (bp0=$FF bp1=$00 bp2=$FF bp3=$00)
+  ; Each 4bpp tile row: bp0, bp1, bp2_at+16, bp3_at+17
+  ; (normal rearrange path follows)
+  rep #$20
+  .ACCU 16
+  jmp _gsuScale.rearrangeDone
+
+  ; ---- Rearrange output tiles (SKIPPED by debug jump above) ----
+  ; GSU output at GSU_SCREEN_BASE in OBJ mode (16-tile-wide stride)
+  ; Copy to GSU_REARRANGED contiguously
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstTilesH
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  beq _gsuScale.rearrangeDone
+  sta.w SCUMM.scratch
+
+  lda #GSU_REARRANGED
+  sta.w SCUMM.scratch2
+  stz.b tmp + 4
+
+_gsuScale.rearrangeRow:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstTilesW
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.actorOamCount
+  stz.b tmp + 6
+
+_gsuScale.rearrangeCol:
+  .ACCU 16
+  lda #(GSU_SCREEN_BASE & $FFFF)
+  clc
+  adc.b tmp + 4
+  clc
+  adc.b tmp + 6
+  tax
+  ldy.w SCUMM.scratch2
+  phb
+  lda #31
+  mvn $70, $70
+  plb
+
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch2
+  clc
+  adc #32
+  sta.w SCUMM.scratch2
+
+  lda.b tmp + 6
+  clc
+  adc #32
+  sta.b tmp + 6
+
+  dec.w SCUMM.actorOamCount
+  bne _gsuScale.rearrangeCol
+
+  ; Next row: row_base += 16 * 32 = 512
+  lda.b tmp + 4
+  clc
+  adc #512
+  sta.b tmp + 4
+
+  dec.w SCUMM.scratch
+  bne _gsuScale.rearrangeRow
+
+_gsuScale.rearrangeDone:
+  ; ---- Override DMA params ----
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda #$70
+  sta.w SCUMM.slotChrSrcHi,x
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x
+  rep #$20
+  .ACCU 16
+  txa
+  asl a
+  tax
+  lda #GSU_REARRANGED
+  sta.w SCUMM.slotChrSrcLo,x
+
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuDstTilesW
+  sta.l $4202
+  lda.w SCUMM.gsuDstTilesH
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  rep #$20
+  .ACCU 16
+  lda.l $4216
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  sta.w SCUMM.slotChrLen,x
+
+  ; ---- Success ----
+  ply
+  plx
+  plp
+  sec
+  rtl
+
+_gsuScale.fail:
+  ply
+  plx
+  plp
+  clc
   rtl
 
 .ends
@@ -7878,12 +8715,12 @@ _ri.posReady:
   rep #$20
   .ACCU 16
 
-  ; Get actor's walkbox index
-  lda.w SCUMM.actorOamCount           ; actor number (stored earlier)
-  and #$00FF
-  tax
+  ; Get actor's walkbox index (re-read from renderSlotActor, actorOamCount was overwritten)
+  ldx.w SCUMM.scratch3                ; current render slot
   sep #$20
   .ACCU 8
+  lda.w SCUMM.renderSlotActor,x
+  tax
   lda.w SCUMM.actorWalkBox,x
   rep #$20
   .ACCU 16
@@ -8058,9 +8895,13 @@ _ri.scaleApply:
   adc.b tmp                           ; + s1
 
   ; Clean up stack (remove 3 pushed words)
+  ; NOTE: ply clobbers N/Z flags, so re-test A afterwards
   ply
   ply
   ply
+
+  ; Re-establish flags from A (ply clobbered N/Z)
+  cmp #0
 
   ; Clamp to 1..255
   bmi _ri.scaleClampLo                ; negative → clamp to 1
@@ -8086,6 +8927,198 @@ _ri.scaleClampLo:
 
 _ri.scaleDone:
 
+  ; --- GSU sprite scaling check ---
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #0                                 ; GSU scaler disabled pending tile mapping debug
+  bcc +
+  jmp _ri.noGsuScale
++
+  lda.w SCUMM.gsuPresent
+  bne +
+  jmp _ri.noGsuScale
++
+
+  ; Check if GSU pipeline needs re-run (scale or pic changed)
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.actorCurScale
+  cmp.w SCUMM.renderSlotLastScale,x
+  bne _ri.gsuRun
+  lda.w SCUMM.renderSlotDirty,x
+  beq _ri.scaledOamGrid
+
+_ri.gsuRun:
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.actorCurScale
+  sta.w SCUMM.renderSlotLastScale,x
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch2
+  pha
+  jsl scummvm.gsuScaleActor_impl
+  pla
+  sta.w SCUMM.scratch2
+  bcs +
+  jmp _ri.noGsuScale
++
+
+_ri.scaledOamGrid:
+  rep #$20
+  .ACCU 16
+
+  ; Compute flip mask and tile base for scaled OAM grid
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda.l _ri.palBitsLut,x
+  ora #$30
+  sta.w SCUMM.actorFlipMask
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch2
+  cmp #270
+  bne _ri.gridNoFlip
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorFlipMask
+  ora #$40
+  sta.w SCUMM.actorFlipMask
+  rep #$20
+  .ACCU 16
+_ri.gridNoFlip:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda.l _ri.tileBaseLut,x
+  sta.w SCUMM.actorHeadPicCur
+  rep #$20
+  .ACCU 16
+
+  ; Compute base screen positions (anchor-adjusted)
+  ; Save gsuScaledRelX/Y before grid loop clobbers them
+  lda.w SCUMM.gsuScaledRelX
+  pha
+  lda.w SCUMM.gsuScaledRelY
+  pha
+  lda.w SCUMM.actorScreenX
+  clc
+  adc.w SCUMM.gsuScaledRelX
+  sta.w SCUMM.actorScreenX
+  lda.w SCUMM.actorScreenY
+  clc
+  adc.w SCUMM.gsuScaledRelY
+  sta.w SCUMM.actorScreenY
+
+  ; --- Scaled OAM grid ---
+  ldx.w GLOBAL.currentOamSlot
+  stz.w SCUMM.actorOamCount
+
+  lda.w SCUMM.gsuDstTilesH
+  and #$00FF
+  bne +
+  jmp _ri.gridDone
++
+  sta.w SCUMM.scratch2
+
+  lda.w SCUMM.actorScreenY
+  sta.w SCUMM.scratch
+
+_ri.gridRowLoop:
+  .ACCU 16
+  lda.w SCUMM.gsuDstTilesW
+  and #$00FF
+  beq _ri.gridRowNext
+  sta.w SCUMM.gsuScaledRelY
+
+  lda.w SCUMM.actorScreenX
+  sta.w SCUMM.gsuScaledRelX
+
+_ri.gridColLoop:
+  .ACCU 16
+  lda.w SCUMM.gsuScaledRelX
+  bmi _ri.gridSkipEntry
+  cmp #$0100
+  bcs _ri.gridSkipEntry
+  lda.w SCUMM.scratch
+  bmi _ri.gridSkipEntry
+  cmp #$00E0
+  bcs _ri.gridSkipEntry
+
+  ; Write visible OAM entry
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.gsuScaledRelX
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.scratch
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.actorOamCount
+  clc
+  adc.w SCUMM.actorHeadPicCur
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.actorFlipMask
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  .ACCU 16
+  bra _ri.gridAdvance
+
+_ri.gridSkipEntry:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #$F0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  .ACCU 16
+
+_ri.gridAdvance:
+  .ACCU 16
+  lda.w SCUMM.gsuScaledRelX
+  clc
+  adc #8
+  sta.w SCUMM.gsuScaledRelX
+  inc.w SCUMM.actorOamCount
+  dec.w SCUMM.gsuScaledRelY
+  bne _ri.gridColLoop
+
+_ri.gridRowNext:
+  .ACCU 16
+  lda.w SCUMM.scratch
+  clc
+  adc #8
+  sta.w SCUMM.scratch
+  dec.w SCUMM.scratch2
+  beq +
+  jmp _ri.gridRowLoop
++
+
+_ri.gridDone:
+  stx.w GLOBAL.currentOamSlot
+  ; Restore gsuScaledRelX/Y (preserved across grid loop for next frame)
+  rep #$20
+  .ACCU 16
+  pla
+  sta.w SCUMM.gsuScaledRelY
+  pla
+  sta.w SCUMM.gsuScaledRelX
+  jmp _ri.noHead
+
+_ri.noGsuScale:
+  .ACCU 16
   ; Compute flip mask: priority 3 + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   sep #$20
@@ -8584,6 +9617,54 @@ _ri.headEntryLoop:
 _ri.headNoFlipDx:
   pla
 _ri.headApplyDx:
+  ; Scale head dx by actorCurScale/256 (same as body)
+  pha
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  rep #$20
+  .ACCU 16
+  beq _ri.headDxNoScale
+  pla
+  bpl _ri.headDxPos
+  eor #$FFFF
+  inc a
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a
+  bra _ri.headDxAdd
+_ri.headDxPos:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  bra _ri.headDxAdd
+_ri.headDxNoScale:
+  pla
+_ri.headDxAdd:
   clc
   adc.w SCUMM.actorScreenX
   sta.w SCUMM.scratch
@@ -8595,6 +9676,54 @@ _ri.headApplyDx:
   bcc +
   ora #$FF00
 +
+  ; Scale head dy by actorCurScale/256
+  pha
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  rep #$20
+  .ACCU 16
+  beq _ri.headDyNoScale
+  pla
+  bpl _ri.headDyPos
+  eor #$FFFF
+  inc a
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  eor #$FFFF
+  inc a
+  bra _ri.headDyAdd
+_ri.headDyPos:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  sta.l $4202
+  lda.w SCUMM.actorCurScale
+  sta.l $4203
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  bra _ri.headDyAdd
+_ri.headDyNoScale:
+  pla
+_ri.headDyAdd:
   clc
   adc.w SCUMM.actorScreenY
   pha                                 ; save computed Y

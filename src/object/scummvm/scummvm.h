@@ -35,6 +35,41 @@
 ; Game Pak RAM base (GSU code + pixel output)
 .define GSU_RAM_BASE  $700000
 
+; GSU code execution base (programs copied here before launch)
+.define GSU_CODE_BASE $700100
+
+; GSU screen output base (SCBR=$03 -> 3 * $400 = $0C00)
+; Fits within 8KB SRAM ($70:0000-$1FFF) for FXPak Pro MSU-1 compatibility
+.define GSU_SCREEN_BASE $700C00
+.define GSU_SCBR_VALUE  $03
+
+; GSU buffer layout within 8KB ($70:0000-$1FFF):
+;   $0000-$000B: param block
+;   $0060-$0067: bitmask LUT
+;   $0070-$007F: scratch
+;   $0100-$01C7: GSU program (~200 bytes)
+;   $0800-$09FF: source tile grid (was $4000)
+;   $0A00-$0BFF: source CHR copy (was $5000)
+;   $0C00-$15FF: GSU screen output (OBJ mode, up to 2.5KB)
+;   $1600-$1BFF: rearranged contiguous tiles (was $3000)
+.define GSU_SRC_GRID     $0800
+.define GSU_SRC_CHR      $0A00
+.define GSU_REARRANGED   $1600
+
+; GSU sprite scaler parameter block (at $70:0000-$70:000B)
+.define GSU_PARAM_SRC_WIDTH    $700000
+.define GSU_PARAM_SRC_HEIGHT   $700001
+.define GSU_PARAM_DST_WIDTH    $700002
+.define GSU_PARAM_DST_HEIGHT   $700003
+.define GSU_PARAM_SRC_DATA     $700004
+.define GSU_PARAM_TILES_W      $700006
+.define GSU_PARAM_TILES_H      $700007
+.define GSU_PARAM_X_STEP       $700008
+.define GSU_PARAM_Y_STEP       $70000A
+
+; GSU pixel test output size (one 4bpp 8x8 tile = 32 bytes)
+.define GSU_TILE_4BPP_SIZE     32
+
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0
 .define TadCommand_UNPAUSE               4
@@ -302,6 +337,21 @@ SCUMM.cursorPalBuf   db      ; cursor OBJ pal5 color1 low byte
 SCUMM.cursorPalC1Hi  db      ; cursor OBJ pal5 color1 high byte
 SCUMM.cursorPalC2Lo  db      ; cursor OBJ pal5 color2 low byte
 SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal5 color2 high byte
+; GSU sprite scaler parameters (set by renderActors, read by gsuLaunchScaler)
+SCUMM.gsuSrcWidth     db      ; source costume frame width in pixels
+SCUMM.gsuSrcHeight    db      ; source costume frame height in pixels
+SCUMM.gsuDstWidth     db      ; scaled output width
+SCUMM.gsuDstHeight    db      ; scaled output height
+SCUMM.gsuSrcDataAddr  dw      ; RAM address of source tile data (offset in $70 bank)
+SCUMM.gsuTilesW       db      ; source tiles per row
+SCUMM.gsuTilesH       db      ; source tiles per column
+SCUMM.gsuPresent      db      ; nonzero = GSU-2 confirmed working (pixel test passed)
+SCUMM.gsuDstTilesW    db      ; scaled output tiles wide
+SCUMM.gsuDstTilesH    db      ; scaled output tiles tall
+SCUMM.gsuScaledRelX   dw      ; scaled anchor X offset (signed)
+SCUMM.gsuScaledRelY   dw      ; scaled anchor Y offset (signed)
+SCUMM.gsuOamRelX      db      ; source OAM header rel_x (signed)
+SCUMM.gsuOamRelY      db      ; source OAM header rel_y (signed)
 .ends
 
 ; Multi-actor render slots (5 visible actors max)

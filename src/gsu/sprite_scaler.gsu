@@ -2,6 +2,9 @@
 // Scales 4bpp source tiles to destination dimensions via fixed-point stepping.
 // Uses LDB/STB for output bitplane writes (no PLOT/pixel cache).
 //
+// NOTE: Every branch instruction (beq/bne/jmp rN) has a NOP delay slot.
+// The SuperFX pipeline executes the prefetched byte after a branch.
+//
 // Param block $0000-$000B:
 //   $00: src_w  $01: src_h  $02: dst_w  $03: dst_h
 //   $04: src_data (word)  $06: tiles_w  $07: tiles_h
@@ -195,7 +198,7 @@ x_loop:
     from r0
     add #0                   // R12 = src_bitmask
 
-    // Extract 4 bitplanes → R11
+    // Extract 4 bitplanes -> R11
     ibt r11, #0
 
     // BP0 (+0)
@@ -205,6 +208,7 @@ x_loop:
     ldb (r9)
     and r12
     beq bp0z
+    nop                      // delay slot
     ibt r0, #1
 bp0z:
     with r11
@@ -219,6 +223,7 @@ bp0z:
     ldb (r9)
     and r12
     beq bp1z
+    nop                      // delay slot
     ibt r0, #2
 bp1z:
     with r11
@@ -234,6 +239,7 @@ bp1z:
     ldb (r9)
     and r12
     beq bp2z
+    nop                      // delay slot
     ibt r0, #4
 bp2z:
     with r11
@@ -248,6 +254,7 @@ bp2z:
     ldb (r9)
     and r12
     beq bp3z
+    nop                      // delay slot
     ibt r0, #8
 bp3z:
     with r11
@@ -257,6 +264,7 @@ bp3z:
     from r11
     add #0
     beq skip_pixel
+    nop                      // delay slot
 
     // ---- Write pixel to output ----
     // out_bitmask = LUT[out_x & 7]
@@ -299,6 +307,7 @@ bp3z:
     from r11
     and #1
     beq sk0
+    nop                      // delay slot
     to r9
     from r12
     add #0
@@ -310,6 +319,7 @@ sk0:
     from r11
     and #2
     beq sk1
+    nop                      // delay slot
     from r12
     add #1
     to r9
@@ -323,6 +333,7 @@ sk1:
     from r11
     and #4
     beq sk2
+    nop                      // delay slot
     from r12
     add #15
     add #1
@@ -337,6 +348,7 @@ sk2:
     from r11
     and #8
     beq sk3
+    nop                      // delay slot
     from r12
     add #15
     add #1
@@ -361,10 +373,12 @@ skip_pixel:
     from r1
     cmp r3
     beq x_done
+    nop                      // delay slot
     iwt r9, #$0078
     to r13
     ldw (r9)                 // R13 = x_loop addr
     jmp r13
+    nop                      // delay slot
 x_done:
 
     // y_accum += y_step
@@ -376,10 +390,12 @@ x_done:
     from r2
     cmp r4
     beq y_done
+    nop                      // delay slot
     iwt r9, #$007A
     to r13
     ldw (r9)                 // R13 = y_loop addr
     jmp r13
+    nop                      // delay slot
 y_done:
 
     stop

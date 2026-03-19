@@ -352,6 +352,7 @@ SCUMM.gsuScaledRelX   dw      ; scaled anchor X offset (signed)
 SCUMM.gsuScaledRelY   dw      ; scaled anchor Y offset (signed)
 SCUMM.gsuOamRelX      db      ; source OAM header rel_x (signed)
 SCUMM.gsuOamRelY      db      ; source OAM header rel_y (signed)
+SCUMM.debugActorScale db      ; debug: L/R override scale (0=use walkbox)
 .ends
 
 ; Multi-actor render slots (5 visible actors max)

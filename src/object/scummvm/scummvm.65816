@@ -7557,7 +7557,9 @@ _gsu.clearScreen:
   dex
   bpl _gsu.clearScreen
 
-  ; --- Copy pixel test program to Game Pak RAM ($70:0100) ---
+  ; --- Copy pixel test program to Game Pak RAM ($70:0200) ---
+  ; Uses different address than scaler ($70:0100) so CACHE instruction
+  ; naturally invalidates when switching between programs.
   rep #$20
   .ACCU 16
   ldx #_gsu.pixelTestProgramEnd - _gsu.pixelTestProgram - 1
@@ -7565,7 +7567,7 @@ _gsu.copyLoop:
   sep #$20
   .ACCU 8
   lda.l _gsu.pixelTestProgram,x
-  sta.l GSU_CODE_BASE,x
+  sta.l $700200,x
   rep #$20
   .ACCU 16
   dex
@@ -7595,11 +7597,11 @@ _gsu.copyLoop:
   lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ | GSU_SCMR_RAN
   sta.l GSU_SCMR
 
-  ; --- Start GSU: write R15 = $0100, writing MSB triggers GO ---
+  ; --- Start GSU: write R15 = $0200, writing MSB triggers GO ---
   lda #$00
   sta.l GSU_R15_LO                    ; R15 low byte = $00
-  lda #$01
-  sta.l GSU_R15_HI                    ; R15 high byte = $01 -> R15=$0100, GO=1
+  lda #$02
+  sta.l GSU_R15_HI                    ; R15 high byte = $02 -> R15=$0200, GO=1
 
   ; --- Poll SFR.GO until GSU stops (or timeout) ---
   rep #$20
@@ -8937,26 +8939,102 @@ _ri.scaleClampLo:
 
 _ri.scaleDone:
 
+  ; --- Debug: L/R buttons adjust scale (slot 0 only) ---
+  ldx.w SCUMM.scratch3
+  bne _ri.debugDone
+  rep #$20
+  .ACCU 16
+  lda.w inputDevice.trigger
+  bit #$0010                                ; R = scale up (bigger)
+  beq _ri.debugNoR
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.debugActorScale
+  bne +
+  lda.w SCUMM.actorCurScale                 ; init from current if first press
++
+  clc
+  adc #16
+  bcc +
+  lda #255
++
+  sta.w SCUMM.debugActorScale
+  rep #$20
+  .ACCU 16
+_ri.debugNoR:
+  .ACCU 16
+  lda.w inputDevice.trigger
+  bit #$0020                                ; L = scale down (smaller)
+  beq _ri.debugNoL
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.debugActorScale
+  bne +
+  lda.w SCUMM.actorCurScale
++
+  sec
+  sbc #16
+  cmp #16
+  bcs +
+  lda #16
++
+  sta.w SCUMM.debugActorScale
+  rep #$20
+  .ACCU 16
+_ri.debugNoL:
+  .ACCU 16
+  ; Apply debug override if active
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.debugActorScale
+  beq _ri.debugDone
+  sta.w SCUMM.actorCurScale
+_ri.debugDone:
+  .ACCU 8
+
   ; --- GSU sprite scaling check ---
   sep #$20
   .ACCU 8
   lda.w SCUMM.actorCurScale
   cmp #255                                ; Skip GSU scaler when full-size (no scaling needed)
-  bcc +
-  jmp _ri.noGsuScale
+  bcc _ri.gsuMaybeScale
+  ; Full size — if transitioning from GSU, force CHR reload from ROM
+  ldx.w SCUMM.scratch3
+  bne +
+  lda.w SCUMM.slotChrSrcHi,x
+  cmp #$70
+  bne +
+  ; Stale GSU source: invalidate actorLastFrame to force ROM CHR reload
+  lda.w SCUMM.renderSlotActor,x
+  tax
+  lda #$FF
+  sta.w SCUMM.actorLastFrame,x
+  ldx.w SCUMM.scratch3
+  stz.w SCUMM.renderSlotLastScale,x
 +
+  jmp _ri.noGsuScale
+
+_ri.gsuMaybeScale:
+  .ACCU 8
   lda.w SCUMM.gsuPresent
   bne +
   jmp _ri.noGsuScale
 +
 
-  ; Check if GSU pipeline needs re-run (only when scale changes)
-  ; Note: renderSlotDirty controls DMA upload only, not scaler re-execution.
-  ; Checking dirty here would cause infinite re-run since the scaler sets dirty=1.
+  ; Only slot 0 uses GSU scaling (shared output buffers)
   ldx.w SCUMM.scratch3
+  beq +
+  jmp _ri.noGsuScale
++
+
+  ; Re-run GSU when scale changed OR new CHR loaded (costume frame change)
   lda.w SCUMM.actorCurScale
   cmp.w SCUMM.renderSlotLastScale,x
-  beq _ri.scaledOamGrid
+  bne _ri.gsuRun                        ; scale changed -> re-run
+  lda.w SCUMM.slotChrSrcHi,x
+  cmp #$70
+  beq _ri.scaledOamGrid                 ; same scale + GSU CHR -> use cached
+  ; Fall through: loadActorCostumes loaded new ROM CHR -> re-run GSU
 
 _ri.gsuRun:
   ldx.w SCUMM.scratch3
@@ -9154,7 +9232,8 @@ _ri.gridDone:
   sec
   sbc.w SCUMM.gsuScaledRelY
   sta.w SCUMM.actorScreenY
-  ; Fall through to head rendering
+  ; Skip body OAM loop — GSU grid already rendered the body tiles
+  jmp _ri.headRender
 
 _ri.noGsuScale:
   .ACCU 16
@@ -9414,6 +9493,7 @@ _ri.nextEntry:
   ; =================================================================
   ; HEAD OAM RENDERING (limb 1, composited on top of body)
   ; =================================================================
+_ri.headRender:
   rep #$20
   .ACCU 16
 

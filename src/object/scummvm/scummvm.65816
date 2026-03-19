@@ -7755,9 +7755,13 @@ _gsuScl.copyLoop:
   lda #$01
   sta.l GSU_R15_HI                    ; GO!
 
-  ; --- Poll until done ---
+  ; --- Poll until done (extended timeout for emulator testing) ---
+  ; On real HW the GSU finishes in <1ms. In Mesen the GSU needs more
+  ; poll iterations due to timing model differences.
   rep #$20
   .ACCU 16
+  ldy #$0020                                   ; 32 outer iterations
+_gsuScl.outerPoll:
   ldx #$FFFF
 _gsuScl.poll:
   sep #$20
@@ -7769,9 +7773,24 @@ _gsuScl.poll:
   beq _gsuScl.done
   dex
   bne _gsuScl.poll
+  dey
+  bne _gsuScl.outerPoll
+
+  ; Poll expired — timeout: return buses and signal failure
+  sep #$20
+  .ACCU 8
+  lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ
+  sta.l GSU_SCMR
+  rep #$20
+  .ACCU 16
+  ply
+  plx
+  plp
+  clc                                        ; carry clear = failure
+  rtl
 
 _gsuScl.done:
-  ; Return buses to SNES
+  ; GSU finished — return buses to SNES
   sep #$20
   .ACCU 8
   lda #GSU_SCMR_MD_16COLOR | GSU_SCMR_HT_OBJ
@@ -7782,6 +7801,7 @@ _gsuScl.done:
   ply
   plx
   plp
+  sec                                        ; carry set = success
   rtl
 
 .ends
@@ -7789,9 +7809,9 @@ _gsuScl.done:
 
 ;===================================================================
 ; GSU-2 Sprite Scaler — 65816 Integration
-; Copies source CHR to Game Pak RAM ($70:5000), builds spatial tile
-; grid at $70:4000, launches GSU nearest-neighbor scaler, rearranges
-; output from OBJ stride to contiguous at $70:3000, overrides DMA.
+; Copies source CHR to Game Pak RAM ($70:0A00), builds spatial tile
+; grid at $70:0800, launches GSU nearest-neighbor scaler, rearranges
+; output from OBJ stride to contiguous at $70:1C00, overrides DMA.
 ; Called via JSL from renderActors when actorCurScale < 240.
 ;
 ; Prerequisites:
@@ -8034,9 +8054,9 @@ _gsuScale.bitmaskLoop:
   rep #$20
   .ACCU 16
 
-  ; ---- Zero-fill Game Pak RAM ($70:0800-$70:1BFF) ----
-  ; Covers source grid ($0800), CHR copy ($0A00), screen output ($0C00),
-  ; and rearranged tiles ($1600)
+  ; ---- Zero-fill Game Pak RAM (preserve CHR at $0A00-$0BFF) ----
+  ; Range 1: $0800-$09FF (source grid)
+  ; Range 2: $0C00-$1FFF (screen output + rearranged tiles)
   phb
   sep #$20
   .ACCU 8
@@ -8046,15 +8066,30 @@ _gsuScale.bitmaskLoop:
   .ACCU 16
   ldx #$0800
   ldy #$0801
-  lda #$13FE                             ; $1BFF - $0801 = $13FE bytes
+  lda #$01FE                             ; $09FF - $0801 = $01FE bytes
+  mvn $70, $70
+  plb
+  phb
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l $700C00
+  rep #$20
+  .ACCU 16
+  ldx #$0C00
+  ldy #$0C01
+  lda #$13FE                             ; $1FFF - $0C01 = $13FE bytes
   mvn $70, $70
   plb
 
   ; ---- Copy CHR data from ROM to $70:GSU_SRC_CHR ----
+  ; Skip if CHR already in GSU RAM (slotChrSrcHi == $70)
   ldx.w SCUMM.scratch3
   sep #$20
   .ACCU 8
   lda.w SCUMM.slotChrSrcHi,x
+  cmp #$70
+  beq _gsuScale.chrCopyDone
   sta.b tmp + 2
   rep #$20
   .ACCU 16
@@ -8215,37 +8250,11 @@ _gsuScale.gridLoop:
   sta.w SCUMM.gsuSrcDataAddr
 
   jsl scummvm.gsuLaunchScaler
+  bcs _gsuScale.launchOk                     ; carry set = success
+  jmp _gsuScale.fail                         ; timeout → fallback to normal rendering
+_gsuScale.launchOk:
 
-  ; ---- DEBUG: write solid color 5 test tiles to rearranged output ----
-  ; Bypasses GSU scaler AND grid build. Writes a known test pattern
-  ; to verify the DMA→VRAM→OAM pipeline is correct.
-  sep #$20
-  .ACCU 8
-  lda.w SCUMM.gsuDstTilesW
-  sta.l $4202
-  lda.w SCUMM.gsuDstTilesH
-  sta.l $4203
-  nop
-  nop
-  nop
-  nop
-  rep #$20
-  .ACCU 16
-  lda.l $4216                            ; numTiles
-  asl a
-  asl a
-  asl a
-  asl a
-  asl a                                  ; numTiles * 32
-  tax                                    ; X = total bytes
-  ; Fill $70:GSU_REARRANGED with color 5 tiles (bp0=$FF bp1=$00 bp2=$FF bp3=$00)
-  ; Each 4bpp tile row: bp0, bp1, bp2_at+16, bp3_at+17
-  ; (normal rearrange path follows)
-  rep #$20
-  .ACCU 16
-  jmp _gsuScale.rearrangeDone
-
-  ; ---- Rearrange output tiles (SKIPPED by debug jump above) ----
+  ; ---- Rearrange output tiles ----
   ; GSU output at GSU_SCREEN_BASE in OBJ mode (16-tile-wide stride)
   ; Copy to GSU_REARRANGED contiguously
   sep #$20
@@ -8340,6 +8349,7 @@ _gsuScale.rearrangeDone:
   rep #$20
   .ACCU 16
   lda.l $4216
+  beq _gsuScale.fail                     ; zero tiles = bail (prevents 64KB DMA)
   asl a
   asl a
   asl a
@@ -8931,7 +8941,7 @@ _ri.scaleDone:
   sep #$20
   .ACCU 8
   lda.w SCUMM.actorCurScale
-  cmp #0                                 ; GSU scaler disabled pending tile mapping debug
+  cmp #255                                ; Skip GSU scaler when full-size (no scaling needed)
   bcc +
   jmp _ri.noGsuScale
 +
@@ -8940,12 +8950,12 @@ _ri.scaleDone:
   jmp _ri.noGsuScale
 +
 
-  ; Check if GSU pipeline needs re-run (scale or pic changed)
+  ; Check if GSU pipeline needs re-run (only when scale changes)
+  ; Note: renderSlotDirty controls DMA upload only, not scaler re-execution.
+  ; Checking dirty here would cause infinite re-run since the scaler sets dirty=1.
   ldx.w SCUMM.scratch3
   lda.w SCUMM.actorCurScale
   cmp.w SCUMM.renderSlotLastScale,x
-  bne _ri.gsuRun
-  lda.w SCUMM.renderSlotDirty,x
   beq _ri.scaledOamGrid
 
 _ri.gsuRun:
@@ -8960,6 +8970,16 @@ _ri.gsuRun:
   pla
   sta.w SCUMM.scratch2
   bcs +
+  ; Scaler failed (timeout) — clear lastScale so we don't enter
+  ; scaledOamGrid with invalid data. Also clear gsuPresent to avoid
+  ; retrying every frame (the GSU is too slow in this emulator).
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  stz.w SCUMM.renderSlotLastScale,x
+  stz.w SCUMM.gsuPresent
+  rep #$20
+  .ACCU 16
   jmp _ri.noGsuScale
 +
 
@@ -8968,8 +8988,11 @@ _ri.scaledOamGrid:
   .ACCU 16
 
   ; Compute flip mask and tile base for scaled OAM grid
+  ; Save actorHeadPicCur (head pic index) — grid section reuses this field
   sep #$20
   .ACCU 8
+  lda.w SCUMM.actorHeadPicCur
+  pha
   ldx.w SCUMM.scratch3
   lda.l _ri.palBitsLut,x
   ora #$30
@@ -9115,7 +9138,23 @@ _ri.gridDone:
   sta.w SCUMM.gsuScaledRelY
   pla
   sta.w SCUMM.gsuScaledRelX
-  jmp _ri.noHead
+  ; Restore actorHeadPicCur for head rendering
+  sep #$20
+  .ACCU 8
+  pla
+  sta.w SCUMM.actorHeadPicCur
+  rep #$20
+  .ACCU 16
+  ; Undo anchor adjustment so head rendering uses original screen position
+  lda.w SCUMM.actorScreenX
+  sec
+  sbc.w SCUMM.gsuScaledRelX
+  sta.w SCUMM.actorScreenX
+  lda.w SCUMM.actorScreenY
+  sec
+  sbc.w SCUMM.gsuScaledRelY
+  sta.w SCUMM.actorScreenY
+  ; Fall through to head rendering
 
 _ri.noGsuScale:
   .ACCU 16
@@ -9154,6 +9193,11 @@ _ri.noGsuScale:
 
   ; --- OAM render loop ---
   ldx.w GLOBAL.currentOamSlot
+  ; Re-read OAM entry count (gsuScaleActor_impl may have zeroed it)
+  ldy #0
+  lda [_oamSrcPtr],y
+  and #$00FF
+  sta.w SCUMM.actorOamCount
   ldy #6                              ; skip 6-byte OAM header
 
 _ri.entryLoop:

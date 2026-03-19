@@ -50,11 +50,11 @@
 ;   $0100-$01C7: GSU program (~200 bytes)
 ;   $0800-$09FF: source tile grid (was $4000)
 ;   $0A00-$0BFF: source CHR copy (was $5000)
-;   $0C00-$15FF: GSU screen output (OBJ mode, up to 2.5KB)
-;   $1600-$1BFF: rearranged contiguous tiles (was $3000)
+;   $0C00-$1BFF: GSU screen output (OBJ mode, up to 4KB)
+;   $1C00-$1FFF: rearranged contiguous tiles
 .define GSU_SRC_GRID     $0800
 .define GSU_SRC_CHR      $0A00
-.define GSU_REARRANGED   $1600
+.define GSU_REARRANGED   $1C00
 
 ; GSU sprite scaler parameter block (at $70:0000-$70:000B)
 .define GSU_PARAM_SRC_WIDTH    $700000

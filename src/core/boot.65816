@@ -148,6 +148,66 @@ IrqHookUp:
 .ends
 
 ;wla dx is too fucking stupid to properly allocate the memory it later needs for its own header creation feature, so we have to create it manually:
+
+;--- LoROM header mirror at $7FB0-$7FDF ---
+;SuperFX maps banks 00-3F/80-BF as LoROM. sd2snes/FXPak firmware reads the
+;header at file offset $7FB0 for cart detection.
+.bank 0 slot 0
+.org $7fb0
+.section "lorom header mirror" force
+  .db "CD"		;maker code
+  .db "AMIE"		;game code
+  .dsb 7 0		;reserved
+  .db 0		;expansion RAM size
+  .db 0		;special version
+  .db 0		;sub-cartridge type
+  .db "SUPER MONKEY ISLAND  "
+  .db $31	;mapping (HiROM+FastROM)
+  .db $15	;cartridgetype (ROM+GSU+RAM+Battery)
+  .db 10	;romsize
+  .db 3	;sramsize
+  .db 1	;country
+  .db $33	;licenseecode
+  .db 2	;version
+  .dw $F9D8
+  .dw $0627
+.ends
+
+;--- LoROM interrupt vectors at $7FE4-$7FFF ---
+;SuperFX LoROM mapping reads vectors from file offset $7FE4/$7FF4.
+;Must mirror the HiROM vectors so the CPU boots correctly on sd2snes/FXPak.
+.org $7fe4
+.section "lorom native vector mirror" force
+	.dw StopCop
+	.dw Stop
+	.dw EmptyHandler
+	.dw NmiHandler
+	.dw EmptyHandler
+	.dw IrqHookUp
+.ends
+
+.org $7ff4
+.section "lorom emu vector mirror" force
+	.dw StopCop
+	.dw EmptyHandler
+	.dw EmptyHandler
+	.dw EmptyHandler
+	.dw Boot
+	.dw EmptyHandler
+.ends
+
+;--- HiROM header at $FFB0 (primary, used by SNES CPU) ---
+;extended header ($FFB0-$FFBF) — active when licensee code = $33
+.org $ffb0
+.section "extended header hack" force
+  .db "CD"		;maker code ($FFB0-$FFB1)
+  .db "AMIE"		;game code ($FFB2-$FFB5) — serial SHVC-AMIE
+  .dsb 7 0		;reserved ($FFB6-$FFBC)
+  .db 0		;expansion RAM size ($FFBD)
+  .db 0		;special version ($FFBE)
+  .db 0		;sub-cartridge type ($FFBF)
+.ends
+
 .org $ffc0
 .section "header hack" force
   .db "SUPER MONKEY ISLAND  "
@@ -155,8 +215,8 @@ IrqHookUp:
   .db $15	;cartridgetype (ROM+GSU+RAM+Battery — enables SuperFX 2 coprocessor)
   .db 10	;romsize
   .db 3	;sramsize (8KB — max that works with FXPak MSU-1)
-  .db 2	;country
-  .db $33	;licenseecode
+  .db 1	;country (1=USA/NTSC)
+  .db $33	;licenseecode ($33=extended header active)
   .db 2	;version
   .dw $F9D8
   .dw $0627

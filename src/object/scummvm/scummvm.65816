@@ -9016,6 +9016,9 @@ _ri.debugDone:
 
 _ri.gsuMaybeScale:
   .ACCU 8
+  ;GSU scaler disabled — works in Mesen but garbled on FXPak hardware.
+  ;Needs investigation: GSU program output or $70 bus handoff issue.
+  jmp _ri.noGsuScale
   lda.w SCUMM.gsuPresent
   bne +
   jmp _ri.noGsuScale

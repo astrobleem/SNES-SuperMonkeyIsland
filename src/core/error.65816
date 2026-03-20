@@ -138,7 +138,10 @@ ExceptionNoErrMsg:
 	lda #INIDSP_BRIGHTNESS
 	sta INIDSP
 	
-	stp
+	;infinite loop instead of stp — stp kills WRAM refresh (DRAM decays)
+	;keeping CPU running preserves WRAM for post-crash debugging via FXPak
+-	wai
+	bra -
 
 
 _printStringToScreen:

@@ -41,12 +41,6 @@ tadcompiler := ./tools/tad/tad-compiler.exe
 tadproject := audio/smi.terrificaudio
 tadaudiobin := $(builddir)/audio/tad-audio-data.bin
 
-# Bass assembler (GSU/SuperFX programs)
-bassasm := ./tools/bass/bass.exe
-bassflags := -strict
-gsusources := $(shell find $(sourcedir)/gsu/ -type f -name '*.gsu' 2>/dev/null)
-gsubinaries := $(patsubst $(sourcedir)/gsu/%.gsu,$(builddir)/gsu/%.bin,$(gsusources))
-
 RD := $(RM) -r
 MD := mkdir -p
 
@@ -81,8 +75,8 @@ converted_bg_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(sprite
 sprite_animations := $(shell find $(datadir)/ -type d -name '*.gfx_sprite')
 converted_sprite_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(sprite_animations))))
 
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(gsubinaries)
-builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir) $(builddir)/gsu)
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin)
+builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects
 all: $(linkobjectfile)
@@ -104,9 +98,6 @@ $(linkobjectfile): $(objects)
 $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles) $(scriptfiles) $(interfacefiles) $(inheritancefiles) $(datafiles) | $(builddirs)
 	$(assembler) $(assemblerflags) $< $@
 
-#compile GSU programs (bass assembler -> raw binary, .incbin'd by WLA-DX)
-$(builddir)/gsu/%.bin: $(sourcedir)/gsu/%.gsu | $(builddirs)
-	$(bassasm) $(bassflags) -o $@ $<
 
 #compile TAD audio data (run tad-compiler to produce binary blob)
 $(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx/*.txt) $(wildcard audio/samples/*.wav) | $(builddirs)

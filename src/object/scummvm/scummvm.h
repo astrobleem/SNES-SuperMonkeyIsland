@@ -4,72 +4,6 @@
 ; SCUMM v5 Interpreter — Constants, Structs, WRAM layout
 ;---------------------------------------------------------------------------
 
-; GSU-2 (SuperFX 2) I/O registers
-.define GSU_R0        $3000   ; R0 — default source/dest register (16-bit)
-.define GSU_R15       $301E   ; R15 — Program Counter (write MSB to start GSU)
-.define GSU_R15_LO    $301E
-.define GSU_R15_HI    $301F   ; writing here sets GO=1
-.define GSU_SFR       $3030   ; Status/Flag Register (bit 5 = GO)
-.define GSU_SFR_HI    $3031
-.define GSU_BRAMR     $3033   ; Backup RAM Register
-.define GSU_PBR       $3034   ; Program Bank Register (GSU code bank)
-.define GSU_ROMBR     $3036   ; ROM Bank Register (read-only)
-.define GSU_CFGR      $3037   ; Config (bit 7 = IRQ mask, bit 5 = fast multiply)
-.define GSU_SCBR      $3038   ; Screen Base Register (1KB units)
-.define GSU_CLSR      $3039   ; Clock Select (bit 0: 0=10.7MHz, 1=21.4MHz)
-.define GSU_SCMR      $303A   ; Screen Mode (color depth, height, RAN, RON)
-.define GSU_VCR       $303B   ; Version Code Register (read-only, 4=GSU2)
-.define GSU_RAMBR     $303C   ; RAM Bank Register (0=$70, 1=$71)
-.define GSU_CACHE     $3100   ; 512-byte Code Cache RAM ($3100-$32FF)
-
-; GSU SFR bit masks
-.define GSU_SFR_GO    $20     ; bit 5: GSU is running
-.define GSU_SFR_IRQ   $80     ; bit 7 of high byte: IRQ flag (in $3031)
-
-; GSU SCMR configuration bits
-.define GSU_SCMR_MD_16COLOR $01  ; 4bpp (16-color) mode
-.define GSU_SCMR_HT_OBJ    $24  ; OBJ mode (HT1=1, HT0=1 → bits 5,2)
-.define GSU_SCMR_RAN        $08  ; GSU owns RAM bus
-.define GSU_SCMR_RON        $10  ; GSU owns ROM bus
-
-; Game Pak RAM base (GSU code + pixel output)
-.define GSU_RAM_BASE  $700000
-
-; GSU code execution base (programs copied here before launch)
-.define GSU_CODE_BASE $700100
-
-; GSU screen output base (SCBR=$03 -> 3 * $400 = $0C00)
-; Fits within 8KB SRAM ($70:0000-$1FFF) for FXPak Pro MSU-1 compatibility
-.define GSU_SCREEN_BASE $700C00
-.define GSU_SCBR_VALUE  $03
-
-; GSU buffer layout within 8KB ($70:0000-$1FFF):
-;   $0000-$000B: param block
-;   $0060-$0067: bitmask LUT
-;   $0070-$007F: scratch
-;   $0100-$01C7: GSU program (~200 bytes)
-;   $0800-$09FF: source tile grid (was $4000)
-;   $0A00-$0BFF: source CHR copy (was $5000)
-;   $0C00-$1BFF: GSU screen output (OBJ mode, up to 4KB)
-;   $1C00-$1FFF: rearranged contiguous tiles
-.define GSU_SRC_GRID     $0800
-.define GSU_SRC_CHR      $0A00
-.define GSU_REARRANGED   $1C00
-
-; GSU sprite scaler parameter block (at $70:0000-$70:000B)
-.define GSU_PARAM_SRC_WIDTH    $700000
-.define GSU_PARAM_SRC_HEIGHT   $700001
-.define GSU_PARAM_DST_WIDTH    $700002
-.define GSU_PARAM_DST_HEIGHT   $700003
-.define GSU_PARAM_SRC_DATA     $700004
-.define GSU_PARAM_TILES_W      $700006
-.define GSU_PARAM_TILES_H      $700007
-.define GSU_PARAM_X_STEP       $700008
-.define GSU_PARAM_Y_STEP       $70000A
-
-; GSU pixel test output size (one 4bpp 8x8 tile = 32 bytes)
-.define GSU_TILE_4BPP_SIZE     32
-
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0
 .define TadCommand_UNPAUSE               4
@@ -337,21 +271,6 @@ SCUMM.cursorPalBuf   db      ; cursor OBJ pal5 color1 low byte
 SCUMM.cursorPalC1Hi  db      ; cursor OBJ pal5 color1 high byte
 SCUMM.cursorPalC2Lo  db      ; cursor OBJ pal5 color2 low byte
 SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal5 color2 high byte
-; GSU sprite scaler parameters (set by renderActors, read by gsuLaunchScaler)
-SCUMM.gsuSrcWidth     db      ; source costume frame width in pixels
-SCUMM.gsuSrcHeight    db      ; source costume frame height in pixels
-SCUMM.gsuDstWidth     db      ; scaled output width
-SCUMM.gsuDstHeight    db      ; scaled output height
-SCUMM.gsuSrcDataAddr  dw      ; RAM address of source tile data (offset in $70 bank)
-SCUMM.gsuTilesW       db      ; source tiles per row
-SCUMM.gsuTilesH       db      ; source tiles per column
-SCUMM.gsuPresent      db      ; nonzero = GSU-2 confirmed working (pixel test passed)
-SCUMM.gsuDstTilesW    db      ; scaled output tiles wide
-SCUMM.gsuDstTilesH    db      ; scaled output tiles tall
-SCUMM.gsuScaledRelX   dw      ; scaled anchor X offset (signed)
-SCUMM.gsuScaledRelY   dw      ; scaled anchor Y offset (signed)
-SCUMM.gsuOamRelX      db      ; source OAM header rel_x (signed)
-SCUMM.gsuOamRelY      db      ; source OAM header rel_y (signed)
 SCUMM.debugActorScale db      ; debug: L/R override scale (0=use walkbox)
 .ends
 
@@ -377,7 +296,6 @@ SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (wo
 SCUMM.slotHeadChrSrcLo ds SCUMM_MAX_RENDER_SLOTS * 2 ; head CHR source addr low (word)
 SCUMM.slotHeadChrSrcHi ds SCUMM_MAX_RENDER_SLOTS      ; head CHR source bank (byte)
 SCUMM.slotHeadChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; head CHR transfer length (word)
-SCUMM.renderSlotLastScale ds SCUMM_MAX_RENDER_SLOTS   ; last rendered scale (byte, 255=full)
 .ends
 
 ; Pseudo-room resource mapper (256 bytes — identity-init, pseudoRoom opcode fills)

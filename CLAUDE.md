@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -8,7 +8,7 @@ SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Mon
 
 ## Assembly Delegation
 
-**Never write 65816 assembly directly — always delegate to the snes-65816-dev agent.** Use the Agent tool with the `.claude/agents/snes-65816-dev.md` agent for all 65816 and SuperFX/GSU assembly work including writing, reviewing, debugging, and optimizing assembly code.
+**Never write 65816 assembly directly — always delegate to the snes-65816-dev agent.** Use the Agent tool with the `.claude/agents/snes-65816-dev.md` agent for all 65816 assembly work including writing, reviewing, debugging, and optimizing assembly code.
 
 ## Build Commands
 
@@ -16,32 +16,55 @@ Build runs under WSL. The project uses WLA-DX v9.3 assembler (v9.4+ breaks the b
 
 ```bash
 # Standard build (clean + build)
-wsl -e bash -lc "cd <wsl-project-root> && make clean && make"
+wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make clean && make"
 
 # Fast rebuild (skip clean if only .65816/.script files changed)
-wsl -e bash -lc "cd <wsl-project-root> && make"
+wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make"
 
-# Build output
-# ROM: build/SuperMonkeyIsland.sfc
-# Also copied to: distribution/SuperMonkeyIsland.sfc
+# Build output: build/SuperMonkeyIsland.sfc (also copied to distribution/SuperMonkeyIsland.sfc)
 ```
 
 **Build warnings that are normal:**
 - `DIRECTIVE_ERROR` about redefined `__init`/`__play`/`__kill` — from CLASS macro in event files
 - `DISCARD` messages — unused event sections stripped by `-d` linker flag
 
-**Emulator testing with Mesen 2:**
+**TAD audio**: `tools/tad/tad-compiler.exe` compiles `audio/smi.terrificaudio` → `build/audio/tad-audio-data.bin`. Triggered automatically by make.
+
+## Testing & Validation
+
+The Mesen 2 MCP server (`.mcp.json` → `tools/mesen_mcp_server.py`) provides automated testing:
+
+- **`build_rom`** — Incremental build (~1s). Uses `stdin=subprocess.DEVNULL` to avoid hanging.
+- **`validate_rom`** — Bank 0 usage check + BRK scan + 500-frame boot test with crash detection. Run after every build.
+- **`take_screenshot`** — Renders N frames, captures screenshot. Auto-detects magenta error screen → `[CRASH DETECTED]`.
+- **`run_test`** — Run a Lua test script in Mesen testrunner mode.
+- **`run_with_input`** — Input injection tests. Takes `input_schedule` (list of `{"frames": [start, end], "buttons": "right+a"}`). Auto-resolves controller hook from sym file.
+- **`lookup_symbol`/`lookup_symbols`** — Look up addresses from the sym file.
+
+**Emulator testing (manual):**
 ```bat
-:: Mesen.exe is at mesen\Mesen.exe (inside the project)
 :: ROM MUST load from distribution/ where .msu/.pcm files live
-cmd.exe /c "cd /d <project>\distribution && <project>\mesen\Mesen.exe --testrunner SuperMonkeyIsland.sfc script.lua > out.txt 2>&1"
+cmd.exe /c "cd /d E:\gh\SNES-SuperMonkeyIsland\distribution && E:\gh\SNES-SuperMonkeyIsland\mesen\Mesen.exe --testrunner SuperMonkeyIsland.sfc script.lua > out.txt 2>&1"
 ```
+
+## Bank 0 Management
+
+Bank 0 is stabilized at ~82-88% (~27-28KB/32KB). **Check BEFORE and AFTER every code change:**
+
+```bash
+wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && python3 tools/rom_usage.py build/SuperMonkeyIsland.sym build/SuperMonkeyIsland.sfc"
+```
+
+- Bank 0 overflow is **silent and catastrophic** — WLA-DX reshuffles superfree sections without error, breaking section co-location (TAD, local labels) → mysterious crashes
+- OOP methods must stay in bank 0 but keep them thin — move heavy logic to `superfree` sections, call via `jsl`/`rtl`
+- ~30 superfree sections are pinned to banks 2-5 (see `bank_stabilization.md` in memory)
 
 ## Architecture
 
 ### Memory Map
 - HiROM+FastROM, 16 banks x 64KB = 1MB ROM
 - Slot 0: $0000-$FFFF (ROM), Slot 1: $7E2000 (Work RAM), Slot 2: zero page
+- PBR=$C0 at runtime (bank $C0 mirrors $00 with full $0000-$FFFF ROM access)
 - Checksum values hardcoded in header — "Invalid Checksum" in emulators is expected
 
 ### OOP System (`src/core/oop.65816`)
@@ -71,48 +94,59 @@ Scripts are 65816 code that runs synchronously during init (via `bra _play`) unt
 
 **Hash pointer access**: `hashPtr.N` is 1-indexed. `hashPtr.1` = offset 60, `hashPtr.N` = offset 60 + (N-1)*4.
 
+### SCUMM v5 Interpreter (`src/object/scummvm/`)
+- 105 dispatch entries, 25 concurrent script slots, 800 global vars, 2048 bit vars
+- 44KB script cache in bank $7F ($7F:5000-$7F:FFFF) with MSU-1 on-demand loading
+- Room script loading: ENCD/EXCD/LSCR on room change, global script reload on cache flush
+- Actor system: 16B struct x 256, 19 opcodes, walking animation, walkbox pathfinding
+
+**SCUMM v5 parameter encoding** (critical for opcode implementation):
+- `getVarOrDirectByte(mask)`: flag SET in opcode → getVar (2-byte var ref), flag CLEAR → fetchByte (1-byte literal)
+- `getVarOrDirectWord(mask)`: flag SET → getVar (2 bytes), flag CLEAR → fetchWord (2 bytes)
+- Our 65816 uses `beq` (branch when zero = flag CLEAR → literal path). **`beq` is CORRECT.**
+- `ifClassOfIs`/`setClass`: `{aux_byte, word_value}* + $FF` terminator
+- Vararg ops (print sub-ops, verbOps): byte+word pairs terminated by $FF byte
+
 ### Game Flow
 ```
 boot.65816 → main.script → msu1 splash → losers/credits → title_screen → level1 stub
 ```
 
 ### MSU-1 Video/Audio
-The MSU-1 streaming engine from SuperDragonsLairArcade is preserved. Chapter/event system for video playback is intact (Event.chapter, Event.direction_generic, Event.checkpoint). MSU-1 data files (.msu, .pcm) are generated by offline pipeline tools.
+The MSU-1 streaming engine from SuperDragonsLairArcade is preserved. Chapter/event system for video playback is intact. MSU-1 data files (.msu, .pcm) live in `distribution/` and are generated by offline pipeline tools (`tools/msu1_pack_rooms.py`, `tools/msu1_pack_scripts.py`).
+
+### Audio Engine — TAD v0.2.0
+Terrific Audio Driver for SPC700. Source: `src/object/audio/tad_interface.{h,65816}`, project: `audio/smi.terrificaudio`. SCUMM sound opcodes wired to TAD (startSound, startMusic, stopMusic, stopSound). TAD code + audio data pinned to bank 2.
 
 ## Critical Pitfalls
 
-### wla-dx `.def` Cannot Redefine
-**`.def X Y` followed by `.def X Z` → the second definition is SILENTLY IGNORED.** Use `.redefine` or `.undefine`+`.define` if redefinition is truly needed.
+### WLA-DX Assembler
+- **`.def` cannot redefine** — `.def X Y` then `.def X Z` → second SILENTLY IGNORED. Use `.redefine`.
+- **`_` prefix = local labels** — invisible across compilation units (.o files) AND across `.section` boundaries within the same file.
+- **`.ACCU`/`.INDEX` at branch targets** — WLA-DX tracks M/X flags linearly, NOT by control flow. Every branch-target label in mixed-width code MUST have `.ACCU N`/`.INDEX N` directives. Missing → phantom `$00` (BRK) bytes from wrong-width immediates. Use `validate_rom` MCP tool after each build.
+- **`.base BSL` required** for HiROM superfree sections (without it, addresses < $8000 read WRAM).
+- **Anonymous labels** — `+`, `++`, `+++` are DISTINCT tiers; must be at column 0.
+- **Parentheses** = indirect addressing, not grouping. `sta.b (EXPR & $ff)` → STA indirect.
+- **`^`** = bank byte, NOT XOR. Use `~` for XOR.
+- **Macro calls** need leading whitespace (column 0 → treated as label).
+- **Section limit** — max ~512 sections per compilation unit.
+- **WRAM address arithmetic** — `SCUMM.foo + 2` evaluates to 24-bit ($7Exxxx+2), out of 16-bit range. Use separate labels.
+- **`.bank` bleed-through from headers** — if a `.h` file ends with `.bank N` (N!=0), it bleeds into the including file. Add explicit `.bank 0 slot 0 / .base BSL` before class sections.
 
-### `oopCreateNoPtr` = $FFFF
-Used as null pointer for the hash system. Never use hash pntr=0 — it matches OopStack slot 0.
+### 65816 CPU
+- **PHA/PLA width must match processor mode** — `pha` pushes 2 bytes when M=0, 1 byte when M=1. Mismatched `pla` → 1-byte stack misalignment → corrupted return address.
+- **16-bit `lda` on `db` fields** — reads 2 bytes. Mask with `and #$00FF` or use `sep #$20`.
+- **No `long,Y`** — only X can index long addresses.
+- **Stack-relative in subroutines** — reading `OBJECT.CALL.ARG.N,s` from `jsr`-called subroutine: add +2 for extra return address.
+- **`oopCreateNoPtr` = $FFFF** — null pointer for hash system. Never use hash pntr=0 (matches OopStack slot 0).
 
-### wla-dx `_` Prefix = Local Labels
-Labels starting with `_` are LOCAL to the compilation unit (.o file). Cannot be referenced from other .o files.
-
-### wla-dx Section Limit Per File
-wla-dx has a maximum of ~512 sections per compilation unit.
-
-### wla-dx Anonymous Label Pitfalls
-`+`, `++`, `+++` are DISTINCT label tiers — `+` only matches `+`, `++` only matches `++`.
-
-### Event kill Methods Must Use `jmp`, Not `jsr`
-Event kill methods delegating to `Event.template.kill` MUST use `jmp`, not `jsr`.
-
-### Stack-Relative Addressing in Subroutines
-When reading `OBJECT.CALL.ARG.N,s` from a subroutine called via `jsr`, add +2 for the extra return address.
-
-### 16-bit `lda` on `db` (byte) Fields
-In 16-bit mode, `lda` reads 2 bytes even from `db` fields. Mask with `and #$00FF` or use `sep #$20`.
-
-### `.base BSL` Required for HiROM Superfree Sections
-Without `.base BSL`, wla-dx uses raw bank numbers → addresses below $8000 read WRAM not ROM.
-
-### PHA/PLA Width Must Match Processor Mode
-`pha` pushes 2 bytes when M=0 (16-bit A) but only 1 byte when M=1 (8-bit A). If a function does `rep #$31; pha` at entry then `sep #$20` in the body, the exit MUST do `rep #$20; pla` to pop the correct number of bytes. A mismatched `pla` with M=1 causes a 1-byte stack misalignment that corrupts the return address. Same applies to `phx`/`plx` and `phy`/`ply` with the X flag.
-
-### WLA-DX `.ACCU`/`.INDEX` at Branch Targets
-WLA-DX tracks M/X flags linearly through source text, NOT through branch control flow. Every label that is a conditional branch target in mixed-width code MUST have `.ACCU N` / `.INDEX N` directives matching the runtime register width. Without this, immediate operands get assembled with wrong width, inserting phantom `$00` (BRK) bytes that crash the game. Use `tools/brk_scanner.py` or the `validate_rom` MCP tool after each build to check for regressions.
+### SNES Hardware
+- **Event kill methods** delegating to `Event.template.kill` MUST use `jmp`, not `jsr`.
+- **`core.nmi.stop` zeros ScreenBrightness** — save/restore around force-blank DMA.
+- **VRAM DMA safety** — disable BOTH NMI (`core.nmi.stop`) AND IRQ (`sei`).
+- **HDMA runs during forced blanking** — only `HDMAEN` ($420C) = 0 stops it. NMI re-enables HDMA every VBlank.
+- **NMI/IRQ PBR guards must use `bcs`**, not `beq` — interrupts can fire in any ROM bank ($C0-$C5).
+- **`_scummvm.readVariable` clobbers `SCUMM.scratch2`** — push operands to stack before calling.
 
 ## Key Files
 
@@ -126,19 +160,15 @@ WLA-DX tracks M/X flags linearly through source text, NOT through branch control
 | `src/core/error.h` | Error code enum |
 | `src/core/boot.65816` | Entry point, main loop, interrupt vectors |
 | `src/object/script/script.h` | Script class definition, hash pointer defaults |
-| `src/object/brightness/brightness.65816` | Screen fade control (singleton) |
-| `src/object/iterator/abstract.Iterator.65816` | killOthers, each.byProperties, setProperties |
-| `src/object/event/abstract.Event.65816` | Base event class, EventResult handlers |
-| `src/object/room/room.65816` | Room loader: MSU-1 seek, index lookup, tileset/tilemap/palette DMA |
-| `src/object/room/room.h` | Room structs, MSU-1 constants, WRAM buffers |
 | `src/object/scummvm/scummvm.65816` | SCUMM v5 interpreter: scheduler, opcodes, script cache, room transitions |
 | `src/object/scummvm/scummvm.h` | SCUMM constants, slot struct, WRAM layout, cache config |
-| `src/object/audio/tad_interface.65816` | Terrific Audio Driver (TAD) — SPC700 init, transfer, per-frame processing |
-| `src/object/audio/tad_interface.h` | TAD API exports (QueueCommand, QueueSoundEffect, LoadSong, etc.) |
-| `tools/create_event.py` | Generate boilerplate for new Event classes |
-| `tools/paths.py` | Shared path resolution for Python tools |
+| `src/object/room/room.65816` | Room loader: MSU-1 seek, index lookup, tileset/tilemap/palette DMA |
+| `src/object/actor/actor.65816` | Actor rendering, costumes, walking, multi-actor OAM |
+| `src/object/audio/tad_interface.65816` | Terrific Audio Driver — SPC700 init, transfer, per-frame processing |
+| `tools/rom_usage.py` | Bank 0 usage verification — run after every build |
+| `tools/brk_scanner.py` | Post-build BRK opcode scanner (baseline ~19-46, varies with packing) |
+| `tools/mesen_mcp_server.py` | MCP server: build, validate, screenshot, test, symbol lookup |
 | `tools/fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `tools/fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `tools/fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
-| `tools/brk_scanner.py` | Post-build BRK opcode scanner — detects phantom $00 from WLA-DX width bugs |
-| `build/SuperMonkeyIsland.sym` | Symbol table — look up addresses here after each build |
+| `build/SuperMonkeyIsland.sym` | Symbol table — addresses shift every rebuild |

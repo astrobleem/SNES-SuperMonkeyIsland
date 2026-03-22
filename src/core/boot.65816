@@ -150,8 +150,9 @@ IrqHookUp:
 ;wla dx is too fucking stupid to properly allocate the memory it later needs for its own header creation feature, so we have to create it manually:
 
 ;--- LoROM header + vectors at $7FB0-$7FFF (one contiguous forced section) ---
-;SuperFX maps banks 00-3F/80-BF as LoROM. sd2snes/FXPak firmware reads the
-;header at file offset $7FB0 and vectors at $7FE4/$7FF4 for cart detection.
+;This area must be a single forced section to prevent WLA-DX from filling
+;$7FB0-$7FFF with free/superfree sections (which corrupts data tables).
+;Some flashcarts read the header at file offset $7FB0 for cart detection.
 ;
 ;IMPORTANT: This MUST be a single contiguous forced section covering the
 ;entire $7FB0-$7FFF range. Three separate forced sections left gaps that
@@ -170,7 +171,7 @@ IrqHookUp:
   .db 0		;sub-cartridge type
   .db "SUPER MONKEY ISLAND  "
   .db $31	;mapping (HiROM+FastROM)
-  .db $15	;cartridgetype (ROM+GSU+RAM+Battery)
+  .db $02	;cartridgetype (ROM+RAM+Battery)
   .db 10	;romsize
   .db 3	;sramsize
   .db 1	;country
@@ -214,7 +215,7 @@ IrqHookUp:
 .section "header hack" force
   .db "SUPER MONKEY ISLAND  "
   .db $31	;mapping (HiROM+FastROM)
-  .db $15	;cartridgetype (ROM+GSU+RAM+Battery — enables SuperFX 2 coprocessor)
+  .db $02	;cartridgetype (ROM+RAM+Battery)
   .db 10	;romsize
   .db 3	;sramsize (8KB — max that works with FXPak MSU-1)
   .db 1	;country (1=USA/NTSC)

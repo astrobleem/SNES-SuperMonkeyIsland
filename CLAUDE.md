@@ -6,6 +6,10 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Monkey Island on the Super Nintendo, targeting real NTSC SNES hardware with MSU-1 on SD2SNES/FXPAK Pro. Written in 65816 assembly with a custom OOP framework. Engine forked from SuperDragonsLairArcade.
 
+## Assembly Delegation
+
+**Never write 65816 assembly directly — always delegate to the snes-65816-dev agent.** Use the Agent tool with the `.claude/agents/snes-65816-dev.md` agent for all 65816 and SuperFX/GSU assembly work including writing, reviewing, debugging, and optimizing assembly code.
+
 ## Build Commands
 
 Build runs under WSL. The project uses WLA-DX v9.3 assembler (v9.4+ breaks the build).

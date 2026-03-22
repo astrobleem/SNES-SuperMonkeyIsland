@@ -391,6 +391,30 @@ def take_screenshot(
                 for hex_val in line.strip().split():
                     pixels.append(int(hex_val, 16))
 
+            # Strip SNES overscan padding rows from PPU buffer.
+            # SnesPpu::SendFrame() zeroes top 7 / bottom 8 rows of the
+            # 239-line buffer for 224-line mode games.  The Lua API
+            # returns the raw buffer, so we crop to visible content.
+            if height == 239:
+                top, bot = 7, 8
+                pixels = pixels[top * width : len(pixels) - bot * width]
+                height = 224
+            elif height == 478:          # hi-res interlace (doubled)
+                top, bot = 14, 16
+                pixels = pixels[top * width : len(pixels) - bot * width]
+                height = 448
+
+            # Regenerate argb_text from (possibly cropped) pixels
+            argb_text = []
+            line_vals = []
+            for p in pixels:
+                line_vals.append(f"{p:08X}")
+                if len(line_vals) >= 16:
+                    argb_text.append(" ".join(line_vals))
+                    line_vals = []
+            if line_vals:
+                argb_text.append(" ".join(line_vals))
+
             png_bytes = _argb_to_png(width, height, argb_text)
             png_path.write_bytes(png_bytes)
             msg = f"Screenshot saved: {png_path} ({len(png_bytes)} bytes, from ARGB buffer)"

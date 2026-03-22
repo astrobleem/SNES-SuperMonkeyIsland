@@ -829,12 +829,16 @@ _prc.bgReady:
   ; (HDMA disabled, force blank active — CGRAM reads are safe)
   jsl scummvm.buildCgramHdmaTable
 
-  ; Restore HDMA enable, ScreenBrightness, exit force blank
+  ; Restore HDMA enable + ScreenBrightness, exit force blank
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
+  ; NOTE: Only write GLOBAL.HDMA.CHANNEL.ENABLE — do NOT write HDMAEN ($420C)
+  ; directly. Mid-frame HDMA enable causes the hardware to process the table
+  ; at the wrong scanline position, corrupting CGRAM entries. The NMI handler
+  ; copies GLOBAL.HDMA.CHANNEL.ENABLE → HDMAEN at the start of each VBlank,
+  ; which is the only safe time to (re-)enable HDMA channels.
   sep #$20
-  pla
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  sta.l HDMAEN
+  pla                                   ; pop saved hdmaEnable
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE      ; NMI will enable at next VBlank
   pla
   sta.w ScreenBrightness
   sta.l INIDSP
@@ -10854,12 +10858,10 @@ scummvm.buildCgramHdmaTable:
   lda.l $213B
   sta.w 32,x
 
-  ; Restore HDMA enable, re-enable HDMA, restore display brightness
-  pla
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  sta.l HDMAEN
-  lda.w ScreenBrightness
-  sta.l INIDSP
+  ; NOTE: HDMA stays disabled until entire table is built.
+  ; Re-enabling HDMA here would process a partially-written table,
+  ; causing the HDMA to read stale WRAM as bogus count bytes/data
+  ; and corrupt CGRAM entries (pal0[1], [5], [7] zeroed).
 
   ; -- Scanlines 8-127: 120 lines, harmless CGRAM[$70] = $0000 --
   lda #120
@@ -10962,6 +10964,14 @@ scummvm.buildCgramHdmaTable:
 
   ; Terminator
   stz.w 86,x
+
+  ; Restore HDMA enable flag + display AFTER entire table is built.
+  ; Only set GLOBAL.HDMA.CHANNEL.ENABLE — do NOT write HDMAEN directly.
+  ; Mid-frame HDMA enable corrupts CGRAM. NMI enables HDMA at next VBlank.
+  pla
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  lda.w ScreenBrightness
+  sta.l INIDSP
 
   plp
   rtl

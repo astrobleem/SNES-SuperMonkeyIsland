@@ -149,12 +149,19 @@ IrqHookUp:
 
 ;wla dx is too fucking stupid to properly allocate the memory it later needs for its own header creation feature, so we have to create it manually:
 
-;--- LoROM header mirror at $7FB0-$7FDF ---
+;--- LoROM header + vectors at $7FB0-$7FFF (one contiguous forced section) ---
 ;SuperFX maps banks 00-3F/80-BF as LoROM. sd2snes/FXPak firmware reads the
-;header at file offset $7FB0 for cart detection.
+;header at file offset $7FB0 and vectors at $7FE4/$7FF4 for cart detection.
+;
+;IMPORTANT: This MUST be a single contiguous forced section covering the
+;entire $7FB0-$7FFF range. Three separate forced sections left gaps that
+;WLA-DX's linker would fill with free/superfree sections, silently
+;overwriting data tables (OopClassLut, ClearWramBytePatterns, etc.) and
+;causing palette corruption + black bars on screen.
 .bank 0 slot 0
 .org $7fb0
-.section "lorom header mirror" force
+.section "lorom header and vectors" force
+  ;--- header at $7FB0-$7FDF (48 bytes) ---
   .db "CD"		;maker code
   .db "AMIE"		;game code
   .dsb 7 0		;reserved
@@ -171,29 +178,24 @@ IrqHookUp:
   .db 2	;version
   .dw $F9D8
   .dw $0627
-.ends
-
-;--- LoROM interrupt vectors at $7FE4-$7FFF ---
-;SuperFX LoROM mapping reads vectors from file offset $7FE4/$7FF4.
-;Must mirror the HiROM vectors so the CPU boots correctly on sd2snes/FXPak.
-.org $7fe4
-.section "lorom native vector mirror" force
-	.dw StopCop
-	.dw Stop
-	.dw EmptyHandler
-	.dw NmiHandler
-	.dw EmptyHandler
-	.dw IrqHookUp
-.ends
-
-.org $7ff4
-.section "lorom emu vector mirror" force
-	.dw StopCop
-	.dw EmptyHandler
-	.dw EmptyHandler
-	.dw EmptyHandler
-	.dw Boot
-	.dw EmptyHandler
+  ;--- padding $7FE0-$7FE3 (4 bytes) ---
+  .dsb 4 0
+  ;--- native vectors at $7FE4-$7FEF (12 bytes) ---
+  .dw StopCop
+  .dw Stop
+  .dw EmptyHandler
+  .dw NmiHandler
+  .dw EmptyHandler
+  .dw IrqHookUp
+  ;--- padding $7FF0-$7FF3 (4 bytes) ---
+  .dsb 4 0
+  ;--- emu vectors at $7FF4-$7FFF (12 bytes) ---
+  .dw StopCop
+  .dw EmptyHandler
+  .dw EmptyHandler
+  .dw EmptyHandler
+  .dw Boot
+  .dw EmptyHandler
 .ends
 
 ;--- HiROM header at $FFB0 (primary, used by SNES CPU) ---

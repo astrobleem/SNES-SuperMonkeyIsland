@@ -4864,6 +4864,16 @@ _soo.rebuild:
   .ACCU 16
   .INDEX 16
     phy
+    ; Cache inventory name if new owner is ego
+    lda.w SCUMM.scratch
+    and #$00FF
+    cmp #1
+    bne _soo.skipCache
+      txa                            ; A = obj_id
+      jsl scummvm.cacheInventoryName
+_soo.skipCache:
+  .ACCU 16
+  .INDEX 16
     jsl scummvm.rebuildInventory
     ply
 _soo.skip:
@@ -7309,17 +7319,18 @@ op_pickupObject:
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object id
-  sta.w SCUMM.scratch                ; save obj_id
+  pha                                ; save obj_id (scratch gets clobbered)
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; room (consumed, not used in MVP)
-  ldx.w SCUMM.scratch
+  pla                                ; restore obj_id
+  tax
   cpx #SCUMM_MAX_OBJECTS
   bcs _pickupObj.done
   sep #$20
   lda #1
   sta.w SCUMM.objectOwner,x          ; owner = ego (actor 1)
-  lda #0
-  sta.w SCUMM.objectState,x          ; hide from room
+  lda #1
+  sta.w SCUMM.objectState,x          ; state=1 (picked up, per ScummVM putState)
   rep #$20
   ; Remove OCHR tiles if object had a visual patch
   ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
@@ -7327,13 +7338,15 @@ op_pickupObject:
   pha
   lda.b tmp
   pha
-  lda.w SCUMM.scratch                ; A = obj_id
+  phx                                ; save obj_id on stack
+  txa                                ; A = obj_id
   jsl room.removeObjectPatch
+  plx                                ; restore obj_id
   pla
   sta.b tmp                          ; restore bytecode pointer low word
   pla
   sta.b tmp+2                        ; restore bytecode pointer bank byte
-  lda.w SCUMM.scratch                ; A = obj_id
+  txa                                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName
   jsl scummvm.rebuildInventory
@@ -7360,21 +7373,23 @@ op_pickupObjectOld:
   sep #$20
   lda #1
   sta.w SCUMM.objectOwner,x
-  lda #0
-  sta.w SCUMM.objectState,x          ; hide from room
+  lda #1
+  sta.w SCUMM.objectState,x          ; state=1 (picked up, per ScummVM putState)
   rep #$20
   ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
   lda.b tmp+2
   pha
   lda.b tmp
   pha
-  lda.w SCUMM.scratch                ; A = obj_id
+  phx                                ; save obj_id on stack
+  txa                                ; A = obj_id
   jsl room.removeObjectPatch
+  plx                                ; restore obj_id
   pla
   sta.b tmp                          ; restore bytecode pointer low word
   pla
   sta.b tmp+2                        ; restore bytecode pointer bank byte
-  lda.w SCUMM.scratch                ; A = obj_id
+  txa                                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName
   jsl scummvm.rebuildInventory

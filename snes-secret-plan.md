@@ -1012,6 +1012,89 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 | iMUSE transitions jarring | Low | Medium | Pre-render key transitions. MI1 is less demanding than MI2 here. |
 | Walkbox pathfinding edge cases | Medium | Low | ScummVM's implementation is well-tested reference. Port logic faithfully. |
 | Copy protection triggers | Low | Low | Patch out Dial-a-Pirate check in script data (well-documented). |
+| Actor scaling missing | High | High | MI1 v5 uses walkbox-based scaling (see 8.1 item 2). Actors render wrong size, walk speed broken without it. |
+| 320→256 coordinate transform incomplete | High | Medium | findObject, actorFromPos, drawBox, print positions all use 320-wide coords. Must specify EXACTLY where transform is applied (see 8.1 item 1). |
+| soundKludge/iMUSE stub risks | Medium | Medium | `isSoundRunning` stub returning 1 may cause infinite loops in scripts expecting 0 when no sound plays. Need at minimum correct return semantics. |
+| `pseudoRoom` not implemented | Medium | Low | Maps virtual→physical room numbers for resource loading. 7 MI1 occurrences. Silent resource lookup failures if missing. |
+| `saveRestoreVerbs` stubbed | Medium | Medium | Changes verb set in cutscenes/special scenes. Wrong verb state after cutscenes without real implementation. |
+| `freezeScripts` stubbed | Medium | Medium | Pauses all scripts except current. 8 MI1 occurrences. Background scripts interfere with cutscene timing without it. |
+
+---
+
+## 8.1. ScummVM Source Audit Findings (2026-03-23)
+
+Cross-referenced the plan against the ScummVM v5 C++ source (`E:/gh/scummvm/engines/scumm/`). Items below need investigation and/or correction.
+
+### Corrections to Verify in SNES Code
+
+1. **VAR_CURRENT_LIGHTS is 9, NOT 72** — The plan and possibly the SNES code use variable index 72 for lights. ScummVM `vars.cpp:168` sets `VAR_CURRENT_LIGHTS = 9` for v5. Variable 72 is actually `VAR_NEW_ROOM`. If the SNES code writes lights to index 72, it corrupts the new-room variable. **CHECK IMMEDIATELY.**
+
+2. **Actor scaling EXISTS in v5 and MI1 uses it** — The plan claims "MI1 has no scaling (that's v6+)." This is wrong. ScummVM v5 has:
+   - `o5_getActorScale` reads `a->_scalex` (`script_v5.cpp:1324`)
+   - `actorOps` sub-op 17 (`SO_ACTOR_SCALE`) sets `_boxscale`/`_scalex`/`_scaley` (`script_v5.cpp:606`)
+   - `Actor::setupActorScale()` reads scale from walkbox data (`actor.cpp:451`)
+   - `matrixOps` sub-ops 2/3 call `setBoxScale()` (`script_v5.cpp:1917`)
+   - `roomOps` sub-op 7 (`SO_ROOM_SCALE`) calls `setScaleSlot()` (`script_v5.cpp:2443`)
+   - MI1's own opcode audit found `getActorScale` (1 occurrence) and `matrixOps` setBoxScale
+   - Multiple rooms (SCUMM Bar, town, etc.) have walkbox scale data for depth-based actor sizing
+   - Walk speed is also multiplied by scale factors in `actorWalkStep` (`actor.cpp:662`)
+   - **Must implement**: `setupActorScale()`, `getBoxScale()`, scale slot system, scaled walk speed, scaled rendering
+
+3. **Actor struct is ~400+ bytes in ScummVM, not 16B** — The plan says "16B struct per actor, 256 actors." The real ScummVM `Actor` class (`actor.h:100-200`) includes: position (4B), width (4B), costume (2B), room (1B), talkColor (1B), boxscale/scalex/scaley (6B), moving (1B), ignoreBoxes (1B), facing/targetFacing (4B), speedx/speedy (8B), elevation (4B), palette[256] (512B!), sound[32] (128B), animVariable[27] (108B), CostumeData, ActorWalkData (~40B), plus many more fields. The SNES can use a more compact representation but 16B is wildly insufficient. **Revise WRAM budget for actor data.**
+
+4. **Local variables: 25 allocated, 0-20 addressable in v5** — Plan says "20 local vars" in one place and "25" in another. ScummVM allocates `NUM_SCRIPT_LOCAL = 25` slots per script, but `readVar()` bounds-checks `assertRange(0, var, 20, "local variable")` for non-HE games. So indices 0-20 (21 locals) are accessible. `getWordVararg` iterates up to 25 (for passing args). **Plan should be consistent: allocate 25+1, addressable range 0-20.**
+
+5. **actorOps has 24 sub-opcodes (0-23), not 19** — `script_v5.cpp:454-638` has cases 0 through 23: 0=dummy, 1=costume, 2=step_dist, 3=sound, 4=walk_animation, 5=talk_animation, 6=stand_animation, 7=animation(3 params), 8=default, 9=elevation, 10=animation_default, 11=palette, 12=talk_color, 13=actor_name, 14=init_animation, 16=width, 17=scale, 18=never_zclip, 19=always_zclip, 20=ignore_boxes, 21=follow_boxes, 22=animation_speed, 23=shadow. (Case 15 is missing/unused.)
+
+6. **ScummVM uses 80 script slots, plan chose 25** — `NUM_SCRIPT_SLOT = 80` (`script.h:75`). Plan's 25 is a deliberate SNES constraint. MI1 reportedly uses up to ~15 simultaneously, so 25 should be safe, but should be stress-tested on complex scenes (e.g., SCUMM Bar with many concurrent NPCs, scripts, and interaction scripts running).
+
+### Missing Subsystems / Features
+
+7. **String resource system** — `o5_stringOps` (`script_v5.cpp:3041-3124`) implements 5 sub-opcodes: loadString, copyString, setStringChar, getStringChar, createEmptyString. Requires a dynamic string resource table (`rtString`) with allocate/free semantics. MI1 uses strings for dialog choices, object names, and verb text. **WRAM layout does not account for a string resource table.** Need to plan allocation.
+
+8. **`resourceRoutines` complexity** — 8th most frequent MI1 opcode (763 occurrences). Has ~17 sub-opcodes for loading/locking/unlocking/nuking scripts, sounds, costumes, rooms, and charsets. Need to decide how resource lock/unlock/nuke maps to MSU-1 streaming model (where resources aren't heap-allocated). At minimum, lock/unlock could be no-ops, but nuke and load-if-not-loaded need real semantics for the script cache.
+
+9. **`roomOps` complexity** — Extensive sub-opcodes: roomScroll (set min/max scroll limits), roomColor, setScreen, setPalette, shakeOn/shakeOff, roomScale (set scale slots), roomIntensity, savegame/loadgame, roomFade, roomShadow, rgbRoomIntensity, roomTransform. Several directly affect rendering: roomScale, roomIntensity, roomFade, roomColor. Need real implementations for MI1. roomScroll sets camera bounds. roomFade controls screen transitions.
+
+10. **`cursorCommand` sub-opcodes** — ~14 sub-opcodes: cursor on/off, userput on/off, soft cursor on/off, set cursor image, set cursor hotspot, set charset, etc. Some control whether the user can interact at all (userput on/off). Critical for cutscenes where interaction should be disabled.
+
+11. **Save/load state completeness** — Plan's save layout (section 5.7) omits critical state that must be serialized:
+    - Bit variables (256 bytes)
+    - ALL active script states: slot offsets, delay, freezeCount, cutsceneOverride, cycle, localVars for every slot
+    - Cutscene stack state (cutScenePtr, cutSceneScript, cutSceneData, cutSceneStackPointer)
+    - Object class data (objectClass[1024] bitmasks)
+    - Verb state (all verb properties set by verbOps — text, position, color, enabled, etc.)
+    - Actor palette overrides
+    - Walk paths in progress
+    - Camera state (following actor, pan target, dest, mode)
+    - Room scroll limits (set by roomOps roomScroll)
+    - Scale slots (set by roomOps roomScale)
+
+12. **`decodeParseString` / print sub-opcodes** — The print opcodes call `decodeParseString()` which has ~14 sub-opcodes: position (XY), color, clipping, center, left, overhead, mumble, text string, wrap, charset ID. These control text positioning, multi-line dialog, centering. Plan mentions basic dialog rendering but these sub-opcodes are critical for correct text layout.
+
+13. **`getClosestObjActor` opcode** — At 0x66/0xE6, finds the closest object or actor to a given point. Requires iterating all room objects and actors, computing distances. Not mentioned in plan.
+
+14. **`getStringWidth` opcode** — At 0x67/0xE7, measures string pixel width. Used for text centering. Needs font metrics implementation.
+
+15. **Entry/exit script dual-layer system** — The plan says "ENCD auto-starts on room entry" but ScummVM actually runs TWO scripts on entry (`script.cpp:981-1048`):
+    1. `VAR_ENTRY_SCRIPT` (global var 28) runs FIRST
+    2. Then ENCD runs
+    3. Then `VAR_ENTRY_SCRIPT2` (global var 29) runs
+    Similarly for exit: `VAR_EXIT_SCRIPT` (var 30) → EXCD → `VAR_EXIT_SCRIPT2` (var 31).
+    MI1 scripts set these variables to configure persistent room entry/exit behavior. If SNES only runs ENCD/EXCD and ignores the VAR-based scripts, global entry/exit logic will be skipped.
+
+16. **`expression` opcode stack machine** — `o5_expression` (`script_v5.cpp:1152-1194`) implements a full RPN stack-based expression evaluator with sub-opcodes for add, subtract, multiply, divide, variable read, and end-of-expression. This is a mini-VM within the VM. Needs a separate evaluation stack in WRAM. (Plan mentions it exists but doesn't detail the stack requirement.)
+
+### Coordinate Transform Deep Dive (Risk)
+
+17. **320→256 transform touch points** — The plan says "keep 320-wide coordinates, transform at render only." This is generally sound but the transform must be explicitly handled at EVERY coordinate boundary:
+    - `findObject`: cursor is in 256-wide screen space, object bounding boxes are in 320-wide room space. Transform must be applied at input layer.
+    - `actorFromPos`: maps screen coords to actors — same issue.
+    - `drawBox`: draws at pixel coordinates in room space.
+    - `print` position sub-opcodes: specify X/Y in 320-wide space. Text positioning must be remapped.
+    - `roomOps` SO_ROOM_SCROLL: sets scroll limits in 320-wide coordinates.
+    - Any script hardcoded pixel comparisons (e.g., "if cursor_x > 160") will behave differently with a 256-wide viewport.
+    - **Action needed**: Audit all coordinate-touching opcodes and document where transform is applied.
 
 ---
 

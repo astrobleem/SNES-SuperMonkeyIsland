@@ -1017,7 +1017,7 @@ _aaw.loop:
   sta.b tmp
   lda.w SCUMM.actors.y,x
   sta.b tmp+2
-  jsr scummvm.findBox                ; A = boxIdx or $FF
+  jsl scummvm.findBox_long            ; A = boxIdx or $FF (cross-bank)
   cmp #$00FF
   beq _aaw.skip16
   pha                                ; save boxIdx
@@ -6878,14 +6878,46 @@ op_saveRestoreVerbs:
   .INDEX 16
   jsr _scummvm.fetchByte             ; sub-opcode byte
   sta.w SCUMM.scratch                ; save for flag testing
-  ; All sub-ops (save=$01, restore=$02, delete=$03) take:
-  ; p8[7] + p8[6] + p8[5]
+  ; Read 3 params: begin_verb p8[7], end_verb p8[6], mode p8[5]
   lda #$0080
-  jsr _scummvm.skipP8fromScratch     ; param1 (begin verb)
+  and.w SCUMM.scratch
+  beq +
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  bra ++
++
+  jsr _scummvm.fetchByte
+++
+  .ACCU 16
+  pha                                 ; push begin_verb
   lda #$0040
-  jsr _scummvm.skipP8fromScratch     ; param2 (end verb)
+  and.w SCUMM.scratch
+  beq +
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  bra ++
++
+  jsr _scummvm.fetchByte
+++
+  .ACCU 16
+  pha                                 ; push end_verb
   lda #$0020
-  jsr _scummvm.skipP8fromScratch     ; param3 (mode)
+  and.w SCUMM.scratch
+  beq +
+  jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
+  bra ++
++
+  jsr _scummvm.fetchByte
+++
+  .ACCU 16
+  pha                                 ; push mode (unused, but consume param)
+  ; Stack: mode (top), end_verb, begin_verb
+  ; Pass sub-opcode in scratch, params on stack
+  jsl saveRestoreVerbs_impl
+  pla                                 ; clean mode
+  pla                                 ; clean end_verb
+  pla                                 ; clean begin_verb
   clc
   rts
 
@@ -10489,7 +10521,9 @@ _rvb.nextVerb:
 
   ;--- Render inventory items on row 4 (Y=176, tile row 4) ---
   lda.w SCUMM.inventoryCount
-  beq _rvb.noInventory
+  bne +
+  jmp _rvb.noInventory
++
 
   lda.w SCUMM.inventoryScroll
   asl a                                 ; scroll * 2 = byte offset into list
@@ -10500,9 +10534,17 @@ _rvb.invLoop:
   .ACCU 16
   .INDEX 16
   cpy #INV_VISIBLE_ITEMS
-  bcs _rvb.noInventory
+  bcc _rvb.invContinue
+  jmp _rvb.noInventory
+_rvb.invContinue:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.inventoryList,x
-  beq _rvb.noInventory                  ; 0 = end of list
+  bne _rvb.invHasItem
+  jmp _rvb.noInventory                  ; 0 = end of list
+_rvb.invHasItem:
+  .ACCU 16
+  .INDEX 16
 
   ; Look up name from cache for this obj_id
   sta.w SCUMM.scratch3                  ; scratch3 = obj_id to find
@@ -10561,6 +10603,21 @@ _rvb.invNameFound:
   asl a                                 ; * 16
   tax                                   ; X = name data offset
 
+  ; Compute palette: highlight if this item is the hovered cursor object
+  phx
+  lda.w SCUMM.scratch3                  ; current item obj_id
+  cmp.w SCUMM.cursorObject
+  bne _rvb.invNormalPal
+  lda #$3800                            ; palette 6 = highlight yellow
+  bra _rvb.invPalDone
+_rvb.invNormalPal:
+  .ACCU 16
+  lda #$3C00                            ; palette 7 = normal white
+_rvb.invPalDone:
+  .ACCU 16
+  sta.w SCUMM.scratch2                  ; store palette word
+  plx
+
   ldy.w SCUMM.actorOamCount             ; Y = tilemap byte offset
 
   ; Write name characters
@@ -10575,7 +10632,7 @@ _rvb.invCharLoop:
   and #$00FF
   sec
   sbc #$20                              ; ASCII to tile index
-  ora #$3C00                            ; priority + palette 7 (white)
+  ora.w SCUMM.scratch2                  ; priority + palette (highlight or normal)
   sta.w SCUMM.verbTilemap,y
   inx
   iny
@@ -10594,7 +10651,7 @@ _rvb.invNameDone:
   iny                                   ; next visible slot
   inx
   inx                                   ; next list entry
-  bra _rvb.invLoop
+  jmp _rvb.invLoop
 
 _rvb.noInventory:
   .ACCU 16
@@ -11138,6 +11195,24 @@ _uc.walkDone:
   ; Store pending verb+object for execution on arrival
   lda.w SCUMM.cursorObject
   beq _uc.noPending
+
+  ; Check if this is a two-noun action (sentenceObjectA already set)
+  lda.w SCUMM.sentenceObjectA
+  beq _uc.firstNoun
+
+  ; Second noun: execute verb with both objects
+  lda.w SCUMM.cursorObject
+  sta.w SCUMM.sentenceObjectB
+  lda.w SCUMM.sentenceObjectA
+  sta.w SCUMM.pendingObject           ; first noun is the main object
+  lda.w SCUMM.sentenceVerb
+  sta.w SCUMM.pendingVerb
+  bra _uc.clickDone
+
+_uc.firstNoun:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.cursorObject
   sta.w SCUMM.pendingObject
   lda.w SCUMM.sentenceVerb
   bne +
@@ -11151,6 +11226,8 @@ _uc.noPending:
   stz.w SCUMM.pendingVerb             ; no object = just walking
   stz.w SCUMM.pendingObject
   stz.w SCUMM.sentenceVerb            ; reset to default "Walk to"
+  stz.w SCUMM.sentenceObjectA         ; clear first noun
+  stz.w SCUMM.sentenceObjectB
   lda #1
   sta.w SCUMM.sentenceDirty           ; redraw sentence line
 _uc.clickDone:
@@ -11238,6 +11315,33 @@ _uc.verbHitNext:
   bcs +
   jmp _uc.verbHitLoop
 +
+  ;--- No verb hit: check for inventory item click ---
+  lda.w SCUMM.cursorObject
+  beq _uc.noClick                      ; no object under cursor
+  lda.w SCUMM.sentenceVerb
+  beq _uc.noClick                      ; no verb selected
+
+  ; Verb selected + object under cursor (inventory item)
+  lda.w SCUMM.sentenceObjectA
+  bne _uc.invSecondNoun
+
+  ; First noun from inventory
+  lda.w SCUMM.cursorObject
+  sta.w SCUMM.sentenceObjectA
+  lda #1
+  sta.w SCUMM.sentenceDirty
+  jmp _uc.noClick
+
+_uc.invSecondNoun:
+  .ACCU 16
+  .INDEX 16
+  ; Second noun from inventory: execute immediately (no walking)
+  lda.w SCUMM.cursorObject
+  sta.w SCUMM.sentenceObjectB
+  lda.w SCUMM.sentenceObjectA
+  sta.w SCUMM.pendingObject
+  lda.w SCUMM.sentenceVerb
+  sta.w SCUMM.pendingVerb
 
 _uc.noClick:
   .ACCU 16
@@ -11331,6 +11435,44 @@ _uc.clearHighlight:
 _uc.highlightDone:
   .ACCU 16
   .INDEX 16
+
+  ;--- L/R shoulder: inventory scroll ---
+  lda.w inputDevice.trigger
+  bit.w #JOY_BUTTON_L
+  beq _uc.noL
+  ; L pressed: scroll left (decrement)
+  lda.w SCUMM.inventoryScroll
+  beq _uc.noL                          ; already at 0
+  dec a
+  sta.w SCUMM.inventoryScroll
+  lda #1
+  sta.w SCUMM.inventoryDirty
+  sta.w SCUMM.verbDirty
+_uc.noL:
+  .ACCU 16
+  .INDEX 16
+  lda.w inputDevice.trigger
+  bit.w #JOY_BUTTON_R
+  beq _uc.noR
+  ; R pressed: scroll right (increment)
+  lda.w SCUMM.inventoryCount
+  sec
+  sbc #INV_VISIBLE_ITEMS               ; max scroll = count - visible
+  bmi _uc.noR                          ; fewer items than visible
+  beq _uc.noR                          ; exactly visible, no scroll
+  sta.w SCUMM.scratch                  ; max scroll value
+  lda.w SCUMM.inventoryScroll
+  cmp.w SCUMM.scratch
+  bcs _uc.noR                          ; already at max
+  inc a
+  sta.w SCUMM.inventoryScroll
+  lda #1
+  sta.w SCUMM.inventoryDirty
+  sta.w SCUMM.verbDirty
+_uc.noR:
+  .ACCU 16
+  .INDEX 16
+
   plb
   rtl
 
@@ -12107,7 +12249,11 @@ _rsl.findVerbLoop:
   .ACCU 16
   .INDEX 16
   cpy #SCUMM_MAX_VERBS
-  bcs _rsl.done                       ; not found
+  bcc _rsl.findVerbContinue
+  jmp _rsl.done                       ; not found
+_rsl.findVerbContinue:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.verbs.1.id,x
   and #$00FF
   cmp.w SCUMM.sentenceVerb
@@ -12159,9 +12305,61 @@ _rsl.appendDefault:
 _rsl.appendObj:
   .ACCU 16
   .INDEX 16
+  ; Check if we have a first noun already selected
+  lda.w SCUMM.sentenceObjectA
+  bne _rsl.twoNoun
+
+  ; Single noun: show cursorObject on hover (original behavior)
   lda.w SCUMM.cursorObject
   beq _rsl.done
   jsl scummvm.appendObjectName           ;X = tilemap byte offset
+  jmp _rsl.done
+
+_rsl.twoNoun:
+  .ACCU 16
+  .INDEX 16
+  ; Show: "verb sentenceObjectA with cursorObject"
+  ; Swap cursorObject with sentenceObjectA temporarily
+  lda.w SCUMM.cursorObject
+  pha                                    ; save real cursorObject
+  lda.w SCUMM.sentenceObjectA
+  sta.w SCUMM.cursorObject
+  jsl scummvm.appendObjectName           ; write sentenceObjectA name
+  pla
+  sta.w SCUMM.cursorObject               ; restore real cursorObject
+
+  ; Write " with " literal tiles
+  lda #$3C00                             ; space tile
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  lda #$3C00 | ($77 - $20)              ; 'w' tile (priority+pal7)
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  lda #$3C00 | ($69 - $20)              ; 'i'
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  lda #$3C00 | ($74 - $20)              ; 't'
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  lda #$3C00 | ($68 - $20)              ; 'h'
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  lda #$3C00                             ; space tile
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+
+  ; Append second noun (cursorObject) if different from sentenceObjectA
+  lda.w SCUMM.cursorObject
+  beq _rsl.done
+  cmp.w SCUMM.sentenceObjectA
+  beq _rsl.done                          ; same object, don't repeat
+  jsl scummvm.appendObjectName           ; write cursorObject name
 
 _rsl.done:
   .ACCU 16
@@ -13503,6 +13701,198 @@ _gic.next:
   rtl
 
 .ends
+
+;===================================================================
+; saveRestoreVerbs implementation — superfree (bank 5)
+; Stack on entry (after jsl):
+;   8,s = begin_verb, 6,s = end_verb, 4,s = mode (unused)
+; SCUMM.scratch = sub-opcode ($01=save, $02=restore, $03=delete)
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "ScummVM saveRestoreVerbs" free
+
+saveRestoreVerbs_impl:
+  .ACCU 16
+  .INDEX 16
+  php
+  rep #$31
+  phb
+  lda #$007E
+  pha
+  plb
+  plb                                    ; DBR=$7E for WRAM access
+
+  ; Load params from stack (adjusted +4 for php+phb)
+  lda 12,s                              ; begin_verb
+  and #$00FF
+  sta.w SCUMM.scratch2                  ; begin_verb
+  lda 10,s                              ; end_verb
+  and #$00FF
+  sta.w SCUMM.scratch3                  ; end_verb
+
+  ; Dispatch on sub-opcode low 3 bits
+  lda.w SCUMM.scratch
+  and #$00FF
+  cmp #$01
+  beq _srv.save
+  cmp #$02
+  bne +
+  jmp _srv.restore
++
+  cmp #$03
+  bne +
+  jmp _srv.delete
++
+  jmp _srv.done                         ; unknown sub-op
+
+_srv.save:
+  .ACCU 16
+  .INDEX 16
+  ldx #0                                ; X = verb slot offset
+_srv.saveLoop:
+  .ACCU 16
+  .INDEX 16
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcc _srv.saveCheck
+  jmp _srv.done
+_srv.saveCheck:
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  rep #$20
+  and #$00FF
+  beq _srv.saveNext                     ; empty slot, skip
+  cmp.w SCUMM.scratch2                  ; < begin_verb?
+  bcc _srv.saveNext
+  cmp.w SCUMM.scratch3                  ; > end_verb?
+  beq +
+  bcs _srv.saveNext
++
+  .ACCU 16
+  ; Copy 16 bytes: verbs[x] -> verbSaveSlots[x]
+  phx
+  ldy #0
+_srv.saveCopy:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.verbs.1,x
+  sta.w SCUMM.verbSaveSlots,x
+  inx
+  inx
+  iny
+  iny
+  cpy #_sizeof_scummVerb
+  bcc _srv.saveCopy
+  plx
+_srv.saveNext:
+  .ACCU 16
+  .INDEX 16
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  bra _srv.saveLoop
+
+_srv.restore:
+  .ACCU 16
+  .INDEX 16
+  ldx #0
+_srv.restoreLoop:
+  .ACCU 16
+  .INDEX 16
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcs _srv.restoreDone
+  sep #$20
+  lda.w SCUMM.verbSaveSlots,x           ; check saved slot id
+  rep #$20
+  and #$00FF
+  beq _srv.restoreNext                  ; empty saved slot, skip
+  cmp.w SCUMM.scratch2                  ; < begin_verb?
+  bcc _srv.restoreNext
+  cmp.w SCUMM.scratch3                  ; > end_verb?
+  beq +
+  bcs _srv.restoreNext
++
+  .ACCU 16
+  ; Copy 16 bytes: verbSaveSlots[x] -> verbs[x]
+  phx
+  ldy #0
+_srv.restoreCopy:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.verbSaveSlots,x
+  sta.w SCUMM.verbs.1,x
+  inx
+  inx
+  iny
+  iny
+  cpy #_sizeof_scummVerb
+  bcc _srv.restoreCopy
+  plx
+_srv.restoreNext:
+  .ACCU 16
+  .INDEX 16
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  bra _srv.restoreLoop
+_srv.restoreDone:
+  .ACCU 16
+  .INDEX 16
+  lda #1
+  sta.w SCUMM.verbDirty
+  jmp _srv.done
+
+_srv.delete:
+  .ACCU 16
+  .INDEX 16
+  ldx #0
+_srv.deleteLoop:
+  .ACCU 16
+  .INDEX 16
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcs _srv.deleteDone
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  rep #$20
+  and #$00FF
+  beq _srv.deleteNext                   ; already empty, skip
+  cmp.w SCUMM.scratch2                  ; < begin_verb?
+  bcc _srv.deleteNext
+  cmp.w SCUMM.scratch3                  ; > end_verb?
+  beq +
+  bcs _srv.deleteNext
++
+  .ACCU 16
+  sep #$20
+  stz.w SCUMM.verbs.1.id,x             ; zero the verb id
+  rep #$20
+_srv.deleteNext:
+  .ACCU 16
+  .INDEX 16
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  bra _srv.deleteLoop
+_srv.deleteDone:
+  .ACCU 16
+  .INDEX 16
+  lda #1
+  sta.w SCUMM.verbDirty
+
+_srv.done:
+  .ACCU 16
+  .INDEX 16
+  plb
+  plp
+  rtl
+
+.ends
+
 
 ;===================================================================
 ; Multi-actor costume ROM data (auto-generated by gen_costume_rom.py)

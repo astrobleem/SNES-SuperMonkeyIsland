@@ -447,6 +447,11 @@ SCUMM.verbDmaPending dw      ; nonzero = DMA tilemap to VRAM next frame
 SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .ends
 
+; Verb save buffer for saveRestoreVerbs opcode ($AB sub-op $01/$02)
+.ramsection "scumm verb save" bank 0 slot 1
+SCUMM.verbSaveSlots  ds _sizeof_scummVerb * SCUMM_MAX_VERBS  ; 16 * 20 = 320 bytes
+.ends
+
 ;---------------------------------------------------------------------------
 ; Dialog text state
 ;---------------------------------------------------------------------------

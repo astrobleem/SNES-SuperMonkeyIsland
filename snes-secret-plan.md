@@ -919,18 +919,18 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] matrixOps (setBoxFlags/setBoxScale/setBoxSlot + createBoxMatrix)
 - [x] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
 - [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync
-- [ ] Multi-actor walking (updateActors hardcoded to actor 1)
+- [x] Multi-actor walking — updateActors loops 16 walk slots (SCUMM_WALK_ACTORS=16), per-actor room/moving/pathLen checks
 - [x] Mouse input: SNES Mouse position tracking, click detection
 - [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
 - [x] Verb bar: render 10 verbs on BG2, HDMA per-scanline palette split, verb highlight (yellow on hover via palette 6/7 swap)
-- [ ] Object interaction: click detection, doSentence execution
+- [x] Object interaction: findObject AABB click detection + doSentence/startObject execution via OBCD VERB pipeline (Phase 2f+2g)
 - [x] Dialog system: text rendering on BG3, auto-timed display, auto-clear
 - [x] Sentence line on BG2 verb row 0: "Walk to" default, verb name on click (matches original MI layout)
 - [x] Palette corruption fixes: cursor VRAM overflow guard, sentence moved from BG3→BG2 to eliminate CGRAM overlap
 - [x] Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
 - [ ] Inventory: display, scrolling, object combination
-- [ ] drawObject opcode (object rendering on room background)
-- [ ] findObject opcode (click detection for room objects)
+- [x] drawObject opcode — OCHR pre-composited BG1 tile overlay, state machine (hidden↔visible), dirty column NMI refresh
+- [x] findObject opcode — real AABB hit testing, screen→room coord conversion, reverse-priority iteration, visibility check
 - [x] getRandomNr opcode — real RNG with internal state, modulo range
 - [x] wait opcodes — waitForActor (polls moving), waitForMessage (polls dialogActive), waitForCamera (polls cameraDest)
 - [x] Standalone multiply/divide opcodes — signed 16-bit shift-and-add mul, restoring division
@@ -946,8 +946,8 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] walkActorToActor — reads target actor position, delegates to walkActorTo pathfinding
 - [x] animateActor — stores frame to actor.initFrame
 - [x] faceActor — stores direction to actor.facing
-- [ ] Upgrade object/verb opcode stubs to real implementations
-- [ ] ifClassOfIs — currently always returns false (class system not implemented)
+- [x] Upgrade object/verb opcode stubs — getVerbEntrypoint, doSentence, startObject, putActorAtObject, walkActorToObject all wired (Phase 2g)
+- [x] ifClassOfIs — real objectClass[1024×2] WRAM table, vararg class condition loop, classBitLut masking (classes 17-32)
 
 **Success Criteria:** Player can walk Guybrush around the SCUMM Bar, talk to the three pirates, pick up objects, use objects. First ~15 minutes of gameplay functional.
 

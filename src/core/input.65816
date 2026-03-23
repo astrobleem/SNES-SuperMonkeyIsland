@@ -64,6 +64,8 @@ _getInputDevicePointer:
 	TRIGGER_ERROR E_BadInputDevice
 
 +
+  .ACCU 16
+  .INDEX 16
   asl a
   asl a
   asl a
@@ -120,6 +122,8 @@ CheckJoypadVoid:
 
 ;fast joy1 checker. check this late in nmi so we don't have to wait for auto joypad read to finish:
 CheckJoypadSinglePlayer:
+	.ACCU 8
+	.INDEX 16
 	  lda.l HVBJOY
 	  bit #HVBJOY_AUTO_JOY_STATUS
 	  bne CheckJoypadSinglePlayer
@@ -165,6 +169,8 @@ _checkMouse:
   rts
 
 _cm.isMouse:
+  .ACCU 16
+  .INDEX 16
   ;--- Read displacement (bits 17-32 via $4016) ---
   ; MUST happen before any $4016 writes (sensitivity strobe)
   rep #$20
@@ -178,6 +184,8 @@ _cm.isMouse:
   ldy #8
   lda #0
 _cm.readY:
+  .ACCU 8
+  .INDEX 16
   pha
   lda.l JOYSER0
   lsr a                         ; serial bit 0 -> carry
@@ -191,6 +199,8 @@ _cm.readY:
   ldy #8
   lda #0
 _cm.readX:
+  .ACCU 8
+  .INDEX 16
   pha
   lda.l JOYSER0
   lsr a
@@ -248,6 +258,8 @@ _cm.xDone:
   beq _cm.noLeft
   ldx #JOY_BUTTON_A
 _cm.noLeft:
+  .ACCU 16
+  .INDEX 16
   lda.w mouseButtons
   bit #$0080                    ; right button?
   beq _cm.noRight
@@ -255,6 +267,8 @@ _cm.noLeft:
   ora #JOY_BUTTON_B
   tax
 _cm.noRight:
+  .ACCU 16
+  .INDEX 16
   ; Store remapped buttons and compute trigger
   stx.w inputDevice.press
   txa

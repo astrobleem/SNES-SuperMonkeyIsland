@@ -141,6 +141,8 @@ core.nmi.play:
 	ldx #0                        ;data offset into SCROLL_TILE_STAGE_WRAM
 
 _nmi.tileOuterLoop:
+	.ACCU 16
+	.INDEX 16
 	;read VRAM address from NMI slots array (need X for long,x)
 	phx                           ;save tile data offset
 	lda 3,s                       ;addrOffset (shifted +2 by phx)
@@ -158,6 +160,8 @@ _nmi.tileOuterLoop:
 	;write 16 words (32 bytes) of tile data
 	ldy #16
 _nmi.tileInnerLoop:
+	.ACCU 16
+	.INDEX 16
 	sep #$20
 	lda.l SCROLL_TILE_STAGE_WRAM,x
 	sta.l VMDATAL
@@ -179,8 +183,12 @@ _nmi.tileInnerLoop:
 	pla                           ;clean tileCount
 
 _nmi.noTileWrite2:
+	.ACCU 16
+	.INDEX 16
 	sep #$20
 _nmi.noTileWrite:
+	.ACCU 8
+	.INDEX 16
 
 	;--- room scroll: write staged tilemap column to VRAM ---
 	lda.w GLOBAL.room.nmiColFlag
@@ -199,6 +207,8 @@ _nmi.noTileWrite:
 	ldx #0
 	ldy.w GLOBAL.room.nmiColRows
 _nmi.colWriteLoop:
+	.ACCU 16
+	.INDEX 16
 	lda.w GLOBAL.room.colStaging,x
 	sep #$20
 	sta.l VMDATAL
@@ -215,6 +225,8 @@ _nmi.colWriteLoop:
 	sta.l VMAIN
 
 _nmi.noColWrite:
+	.ACCU 8
+	.INDEX 16
 	sep #$20
 
 	lda.w ObjSel
@@ -245,6 +257,8 @@ _nmi.noColWrite:
 	  lda #ROM
 	  sta 5,s
 +
+	.ACCU 8
+	.INDEX 16
 	pla
 	;--- end PBR guard ---
 	rti				;return from nmi
@@ -340,7 +354,10 @@ core.nmi.waitFrame:
   php
   rep #$31
   lda.l FrameCounter
--   cmp.l FrameCounter
+-
+    .ACCU 16
+    .INDEX 16
+    cmp.l FrameCounter
     beq -
 
   plp

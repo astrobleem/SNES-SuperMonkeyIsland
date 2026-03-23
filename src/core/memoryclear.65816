@@ -8,12 +8,16 @@ ClearRegisters:
 	ldx #OBJSEL
 
 MemClearLoop1:		;regs OBJSEL-BG34NBA
+		.ACCU 8
+		.INDEX 16
 		stz.w $00,X		;set Sprite,Character,Tile sizes to lowest, and set addresses to $0000
 		inx
 		cpx #BG1HOFS
 		bne MemClearLoop1
 
 MemClearLoop2:		;regs BG1HOFS-BG4VOFS
+		.ACCU 8
+		.INDEX 16
 		stz.w $00,X		;Set all BG scroll values to $0000
 		stz.w $00,X
 		inx
@@ -28,6 +32,8 @@ MemClearLoop2:		;regs BG1HOFS-BG4VOFS
 	ldx #M7A
 
 MemClearLoop3:		;regs M7A-M7Y
+		.ACCU 8
+		.INDEX 16
 		stz.w $00,X		;clear out the Mode7 matrix values
 		stz.w $00,X
 		inx
@@ -36,6 +42,8 @@ MemClearLoop3:		;regs M7A-M7Y
 	ldx #W12SEL
 
 MemClearLoop4:			;regs W12SEL-SETINI
+		.ACCU 8
+		.INDEX 16
 		stz.w $00,X		;turn off windows, main screens, sub screens, color addition,
 		inx				;fixed color = $00, no super-impose (external synchronization),
 		cpx #MPYL		;no interlaced mode, normal resolution
@@ -73,6 +81,8 @@ ClearWRAM:
     plx
 
 ClearWRAMLoop:
+		.ACCU 8
+		.INDEX 16
 		sta.l RAM << 16,x
 		;inx
 		inx
@@ -141,6 +151,8 @@ DmaToWRAM:
 	sep #$20
 
 DMAtoWRAMLoop:
+		.ACCU 8
+		.INDEX 16
 		phy
 		ldy tmp
 		lda [tmp],y
@@ -188,6 +200,8 @@ ROMToWRAM:
 	jml ROMToWRAMJumper
 
 ROMToWRAMJumper:
+	.ACCU 8
+	.INDEX 16
 	plb
 	plp
 	rts

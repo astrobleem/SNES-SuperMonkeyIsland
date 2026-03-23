@@ -108,7 +108,10 @@ core.dma.registerTransfer:
   ldy.w #DMA_QUEUE_SLOTS
 
 ;seek free queue slot
--	lda.w GLOBAL.dmaQueue.1.transferType,x
+-
+	.ACCU 16
+	.INDEX 16
+	lda.w GLOBAL.dmaQueue.1.transferType,x
 	bit.w #DMA_TRANSFER.OPTION.ACTIVE
 	beq +
 
@@ -127,7 +130,10 @@ core.dma.registerTransfer:
 	  rts	
 
 ;got free slot, x is pointer to slot
-+ lda 13,s
++
+  .ACCU 16
+  .INDEX 16
+  lda 13,s
   and.w #(DMA_TRANSFER.OPTION.FIXED_SOURCE | DMA_TRANSFER.OPTION.ACTIVE | DMA_TRANSFER.OPTION.REVERSE) ~$ff
   cmp.w #DMA_TRANSFER.MAX
   bcc +
@@ -138,7 +144,9 @@ core.dma.registerTransfer:
     rts
 
 
-+ 
++
+  .ACCU 16
+  .INDEX 16
   lda 13,s
   ora.w #DMA_TRANSFER.OPTION.ACTIVE
   sta.w GLOBAL.dmaQueue.1.transferType,x
@@ -159,7 +167,10 @@ core.dma.registerTransfer:
 	rts
 
 
-+ sta.w GLOBAL.dmaQueue.1.transferLength,x  
++
+  .ACCU 16
+  .INDEX 16
+  sta.w GLOBAL.dmaQueue.1.transferLength,x
   ;jsr core.nmi.start
   plx
   plp
@@ -191,7 +202,10 @@ core.dma.isQueueEmpty:
 	rts
 
 ;queue is not empty
-+ plx
++
+  .ACCU 16
+  .INDEX 16
+  plx
   plp
   clc
   rts
@@ -209,6 +223,8 @@ core.dma.processQueue:
   and.w #(DMA_QUEUE_SLOTS - 1) * _sizeof_dmaQueue
   tax
 dmaQueueLoop:
+	.ACCU 16
+	.INDEX 16
 	lda.w GLOBAL.dmaQueue.1.transferType,x
 	bit.w #DMA_TRANSFER.OPTION.ACTIVE
 	beq doneProcessingQueue
@@ -222,6 +238,8 @@ dmaQueueLoop:
 
 
 +
+	.ACCU 16
+	.INDEX 16
 	asl a
 	phx
 	txy
@@ -230,6 +248,8 @@ dmaQueueLoop:
 	plx
 
   gotoNextQueueSlot:
+	.ACCU 16
+	.INDEX 16
 	stz.w GLOBAL.dmaQueue.1.transferType,x
 	stz.w GLOBAL.dmaQueue.1.transferLength,x
 	txa
@@ -240,6 +260,8 @@ dmaQueueLoop:
 	bra dmaQueueLoop
 
 doneProcessingQueue:
+  .ACCU 16
+  .INDEX 16
   stx.w GLOBAL.currentDmaQueueSlot
   plp
   rts
@@ -333,7 +355,9 @@ dmaQueueCgramTransfer:
     lda.b #CGDATAREAD & $ff
     sta.l DMADEST0,x
   
-+  
++
+  .ACCU 8
+  .INDEX 16
 
   lda.w GLOBAL.dmaQueueChannel.flag
   sta.l MDMAEN
@@ -353,6 +377,8 @@ dmaQueueSetDmap0:
     sta 1,s
 
 +
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.dmaQueue.1.transferType,y
   bit.b #DMA_TRANSFER.OPTION.REVERSE
   beq +
@@ -360,7 +386,10 @@ dmaQueueSetDmap0:
     ora.b #DMAP_TRANSFER_DIRECTION
     sta 1,s
 
-+ pla
++
+  .ACCU 8
+  .INDEX 16
+  pla
   sta.l DMAP0,x
   rts
 
@@ -413,7 +442,10 @@ core.dma.flushQueue:
   sei
   ldx #0
   ldy.w #DMA_QUEUE_SLOTS
-- stz.w GLOBAL.dmaQueue.1.transferType,x
+-
+  .ACCU 16
+  .INDEX 16
+  stz.w GLOBAL.dmaQueue.1.transferType,x
   txa
   clc
   adc.w #_sizeof_dmaQueue
@@ -444,7 +476,10 @@ core.dma.resetHardware:
   rep #$31
   ldx #0
   ldy.w #DMA_QUEUE_SLOTS
-- stz.w GLOBAL.dmaQueue.1.transferType,x
+-
+  .ACCU 16
+  .INDEX 16
+  stz.w GLOBAL.dmaQueue.1.transferType,x
   txa
   clc
   adc.w #_sizeof_dmaQueue

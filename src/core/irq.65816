@@ -63,6 +63,8 @@ core.irq.registerCallback:
     TRIGGER_ERROR E_BadIrq
 
 +
+  .ACCU 16
+  .INDEX 16
   ;set irq position
   inx
   inx
@@ -108,6 +110,8 @@ core.irq.isRegistered:
     rts
 
 +
+  .ACCU 16
+  .INDEX 16
   plp
   sec
   rts
@@ -200,6 +204,8 @@ core.irq.play:
         TRIGGER_ERROR E_BadIrqCallback
 
 +
+    .ACCU 16
+    .INDEX 16
     lda.w GLOBAL.irq.callback
     dec a
     pea _return-1   ;push return adress
@@ -207,7 +213,8 @@ core.irq.play:
     rts ;this is actually a jump to subroutine on stack, then return
 
 _return:
-
+    .ACCU 16
+    .INDEX 16
 
     jsr core.nmi.start
     sep #$20
@@ -232,6 +239,8 @@ _return:
       lda #ROM
       sta 5,s
 +
+    .ACCU 8
+    .INDEX 16
     pla
     ;--- end PBR guard ---
     rti

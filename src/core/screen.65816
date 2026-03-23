@@ -121,7 +121,10 @@ core.screen.convertAbsoluteToScreen:
   rts
 
 ;outsideScreen:
-+ pla
++
+  .ACCU 16
+  .INDEX 16
+  pla
   plp
   clc
   rts
@@ -160,6 +163,8 @@ core.screen.getPosition:
   rts
 
 +
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 

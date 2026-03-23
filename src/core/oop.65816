@@ -26,6 +26,8 @@ features:
 
 ;clear oop stack
 core.object.init:
+	.ACCU 16
+	.INDEX 16
 	php
 	phd
 	rep #$31
@@ -51,6 +53,8 @@ core.object.init:
 
 ;in:y=number of object to create, a:call parameter x:pointer
 core.object.create:
+	.ACCU 16
+	.INDEX 16
 	php
 	phd
 	rep #$31
@@ -70,7 +74,10 @@ core.object.create:
 		adc tmp
 		tax
 
-+	stx tmp+6
++
+	.ACCU 16
+	.INDEX 16
+	stx tmp+6
 	lda.w Hash.id,y
 	and.w #$ff
 	sta.l GLOBAL.currentObject
@@ -122,6 +129,8 @@ core.object.create:
 			rts
 
 createOopObjNoSingleton:
+	.ACCU 16
+	.INDEX 16
 
 	ldx #0
 	jsr OopSeekFreeSlot	;a: relative pointer to slot
@@ -176,6 +185,8 @@ createOopObjNoSingleton:
 
 
 createOopObjRamAllocNoOver:
+	.ACCU 16
+	.INDEX 16
 	;clear memory for this obj
 	ply			;clear length
 	lda #OopObjRam
@@ -202,7 +213,10 @@ createOopObjRamAllocNoOver:
 	bcc +
 		sta OopObjSlotPtr				;try to keep track of highest obj stack pointer to speed up obj loops
 	
-+	lda.l OopStack.flags,x	;set "init complete"-flag
++
+	.ACCU 16
+	.INDEX 16
+	lda.l OopStack.flags,x	;set "init complete"-flag
 	ora #OBJECT.FLAGS.InitOk
 	sta.l OopStack.flags,x
 
@@ -224,6 +238,8 @@ createOopObjRamAllocNoOver:
 */
 
 OopHandlerCopyDefaults:
+	.ACCU 16
+	.INDEX 16
   php
   rep #$31
 
@@ -256,6 +272,8 @@ OopHandlerCopyDefaults:
 ;2-3 relative obj pointer in obj array
 
 OopHandlerSaveObjPtr:
+	.ACCU 16
+	.INDEX 16
 	php
 	pha
 	phx
@@ -273,6 +291,8 @@ OopHandlerSaveObjPtr:
 		sta.w Hash.pntr,x
 	
 	OopHandlerSaveObjPtrCancel:
+	.ACCU 16
+	.INDEX 16
 	ply
 	plx
 	pla
@@ -281,6 +301,8 @@ OopHandlerSaveObjPtr:
 
 ;gets 8bit obj class number from a, puts 24bit pointer to obj into tmp1
 OopObjFetchPointer:
+	.ACCU 16
+	.INDEX 16
 	php
 	rep #$31
 	phx
@@ -305,11 +327,15 @@ OopObjFetchPointer:
 	  lda.l OopClassLut+1,x
 	  sta tmp+2
 _fetchPointerOk:
+	.ACCU 16
+	.INDEX 16
 	plx
 	plp
 	rts
 
 SetupCurrentObjectStringPointers:
+	.ACCU 16
+	.INDEX 16
   php
   rep #$31
   lda.l GLOBAL.currentObject
@@ -366,6 +392,8 @@ OopSeekFreeSlot:
 .INDEX 16
 .ACCU 16
 	OopSeekFreeSlotLoop:
+		.ACCU 16
+		.INDEX 16
 		;seek for slots that have no object present and that dont have garbage collection pending
 		lda.l OopStack.flags,x
 		bit #OBJECT.FLAGS.Present
@@ -374,7 +402,10 @@ OopSeekFreeSlot:
 		bit #OBJECT.FLAGS.DeleteScheduled
 		beq OopSeekFreeSlotFound
 	
-+		txa
++
+		.ACCU 16
+		.INDEX 16
+		txa
 		clc
 		adc #_sizeof_oopStackObj
 		tax
@@ -384,6 +415,8 @@ OopSeekFreeSlot:
     TRIGGER_ERROR E_ObjLstFull
 
 OopSeekFreeSlotFound:
+	.ACCU 16
+	.INDEX 16
 
 	txa
 	sec
@@ -397,6 +430,8 @@ OopSeekObjId:
 	sta tmp+4
 
 OopSeekObjIdLoop:
+		.ACCU 16
+		.INDEX 16
 		lda.l OopStack.flags-1,x
 		bpl OopSeekObjIdNoObj
 
@@ -405,7 +440,9 @@ OopSeekObjIdLoop:
 		cmp tmp+4
 		beq OopSeekObjIdFound
 	
-	OopSeekObjIdNoObj:	
+	OopSeekObjIdNoObj:
+		.ACCU 16
+		.INDEX 16
 		txa
 		clc
 		adc #_sizeof_oopStackObj
@@ -417,6 +454,8 @@ OopSeekObjIdLoop:
 	rts
 
 OopSeekObjIdFound:
+	.ACCU 16
+	.INDEX 16
 	txa
 	sec
 	rts
@@ -428,6 +467,8 @@ OopSeekObjCountId:
 	and #$ff
 	sta tmp+4
 OopSeekObjCountIdLoop:
+		.ACCU 16
+		.INDEX 16
 		lda.l OopStack.flags-1,x
 		bpl OopSeekObjCountIdNoObj
 
@@ -440,7 +481,9 @@ OopSeekObjCountIdLoop:
 		cmp tmp+4
 		beq OopSeekObjCountIdFound
 	
-		OopSeekObjCountIdNoObj:	
+		OopSeekObjCountIdNoObj:
+		.ACCU 16
+		.INDEX 16
 		txa
 		clc
 		adc #_sizeof_oopStackObj
@@ -452,12 +495,16 @@ OopSeekObjCountIdLoop:
 	rts
 
 OopSeekObjCountIdFound:
+	.ACCU 16
+	.INDEX 16
 	txa
 	sec
 	rts
 
 
 core.object.play:
+	.ACCU 16
+	.INDEX 16
 	php
 	phb
 	sep #$20
@@ -483,6 +530,8 @@ core.object.play:
 	stz tmp+32
 
 OopHandlerLoop:
+		.ACCU 16
+		.INDEX 16
 		lda.l OopStack.flags-1,x	;get flags
 		bpl _oopLoopContinue	;exit if all active objects have been processed
 
@@ -513,6 +562,8 @@ OopHandlerLoop:
               lda.l OopClassLut,x	;tiebreaker read
               sta tmp+8
 _playValidateReadOk:
+			.ACCU 16
+			.INDEX 16
             lda tmp+8		;expected class base
             plx	;restore OopStack index
             clc
@@ -525,14 +576,21 @@ _playValidateReadOk:
               lda tmp+6
               sta.l OopStack.play,x
 _validatePlayOk:
+			.ACCU 16
+			.INDEX 16
             ;--- end play pointer validation ---
 
-+			ldy #0	;clear parameter
++
+			.ACCU 16
+			.INDEX 16
+			ldy #0	;clear parameter
 			phx
 			jsr OopHandlerExecute
 			plx
 
 _oopLoopContinue:
+		.ACCU 16
+		.INDEX 16
 		txa	;update pntr
 		clc
 		adc #_sizeof_oopStackObj
@@ -554,6 +612,8 @@ _oopLoopContinue:
 
 ;executes oop routine. in: a,16bit=exec adress pointer in bank $c0. x,16bit=relative oopstack pointer. y,16bit:put into a at call time, parameter
 OopHandlerExecute:
+	.ACCU 16
+	.INDEX 16
 	sta tmp	;store exec adress
 	lda.w OopStack.num,x	;push fingerprint
 	pha
@@ -581,6 +641,8 @@ OopHandlerExecute:
 	  lda.l OopStack.dp,x	;tiebreaker read
 	  sta tmp+2
 _dpReadOk:
+	.ACCU 16
+	.INDEX 16
 	ldx tmp
 	;--- safe dispatch: explicit ROM read with double-read verification ---
 	;Reads method addr from ROM twice to detect transient bus errors
@@ -594,11 +656,15 @@ _dpReadOk:
 	  lda.l $C00000,x
 	  sta tmp+4
 _dispatchRomReadOk:
+	.ACCU 16
+	.INDEX 16
 	lda tmp+4
 	bne +
 	  phx	;push class table addr as diagnostic
 	  TRIGGER_ERROR E_ObjBadMethod
 +
+	.ACCU 16
+	.INDEX 16
 	;--- dispatch via RTS trick (reads from WRAM stack, not ROM) ---
 	;Original jsr(0,x) does an indirect ROM read that is vulnerable to
 	;bus contention. RTS trick dispatches from the stack instead.
@@ -614,6 +680,8 @@ _dispatchRomReadOk:
 	rts	;pops dispatch target, jumps to method
 
 _dispatchReturn:
+	.ACCU 16
+	.INDEX 16
 	rep #$30
 	pea ZP		;set dp reg to base
 	pld
@@ -662,6 +730,8 @@ _dispatchReturn:
 
 		
 	OopHandlerObjTerminate:
+	.ACCU 16
+	.INDEX 16
 	lda.w OopStack.flags,x
 	bit #OBJECT.FLAGS.Persistent
 	bne OopHandlerNoError	;obj is persistent
@@ -683,6 +753,8 @@ _dispatchReturn:
 	;objects killing themselves can either jsr to their kill routine directly if neccessary or else just return kill signal themselves
 
 OopHandlerNoError:
+	.ACCU 16
+	.INDEX 16
 	lda #oopStackTst
 	cmp.w STACK_strt
 	bne OopHandlerStackOverflow
@@ -699,6 +771,8 @@ OopHandlerNoError:
 
 ;object is no longer in it's place(moved or deleted)
 execObjGone:
+	.ACCU 16
+	.INDEX 16
     ;save fingerprint diagnostic data before error handler clobbers everything
     ;tmp = expected id (popped from CPU stack), tmp+2 = expected num (popped from CPU stack)
     ;OopStack.id[X] = actual id, OopStack.num[X] = actual num
@@ -734,23 +808,35 @@ execObjGone:
     jmp _oopLoopContinue
 
 _execObjGone_mild:
+	.ACCU 16
+	.INDEX 16
     bra OopHandlerNoError
 
 
 OopHandlerStackError:
+	.ACCU 16
+	.INDEX 16
 	pea E_StackTrash
 	bra OopHandlerErrPrint
 
 OopHandlerStackOverflow:
+	.ACCU 16
+	.INDEX 16
 	pea E_StackOver
 	bra OopHandlerErrPrint
 
 OopHandlerStackUnderflow:
+	.ACCU 16
+	.INDEX 16
 	pea E_StackUnder
 	bra OopHandlerErrPrint
 
 OopHandlerSubError:
+	.ACCU 16
+	.INDEX 16
 OopHandlerErrPrint:
+	.ACCU 16
+	.INDEX 16
 	jsr core.error.trigger
 
 /**
@@ -766,6 +852,8 @@ collectGarbage:
 	ldx.w #0
 
 	collectGarbageLoop:
+	  .ACCU 16
+	  .INDEX 16
 	  ;seek deletable objects
 	  lda.l OopStack.flags,x	;get flags
 	  and.w #OBJECT.FLAGS.DeleteScheduled
@@ -778,6 +866,8 @@ collectGarbage:
 		  jsr OopHandlerObjRamReorder
 
 	collectGarbageSkip:
+	  .ACCU 16
+	  .INDEX 16
 	  txa	;update pntr
 	  clc
 	  adc #_sizeof_oopStackObj
@@ -791,6 +881,8 @@ collectGarbage:
 	sta.l GLOBAL.garbagePresent
 
 noGarbage:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -829,6 +921,8 @@ OopHandlerObjRamReorder:
 		jsr RelocateRamUpdateDpPointers
 
 RamReorderSkip:
+	.ACCU 16
+	.INDEX 16
 	lda OopObjRamPtr		;update ram end pntr
 	sec
 	sbc tmp+8						;substract ramblock-length of deleted obj
@@ -841,7 +935,11 @@ RamReorderSkip:
 	rts
 
 RelocateRamUpdateDpPointers:
+	.ACCU 16
+	.INDEX 16
 	_UpdateDpPointersLoop:
+		.ACCU 16
+		.INDEX 16
 		lda.l OopStack.flags,x
 		bit #OBJECT.FLAGS.Present
 		bne +
@@ -850,15 +948,19 @@ RelocateRamUpdateDpPointers:
 		beq _UpdateDpPointersSkip
 	
 +
+		.ACCU 16
+		.INDEX 16
 			lda.l OopStack.dp,x
 			cmp tmp+4
 			bcc _UpdateDpPointersSkip	;skip if obj ram dp counter lower than that of deleted obj
-		
+
 				sec
 				sbc tmp+8	;adjust pointer by zp-ramblock-length of killed obj
 				sta.l OopStack.dp,x
-			
+
 	_UpdateDpPointersSkip:
+		.ACCU 16
+		.INDEX 16
 		txa
 		clc
 		adc #_sizeof_oopStackObj
@@ -885,9 +987,14 @@ AdjustObjSlotPntr:
 			stx OopObjSlotPtr
 			jsr AdjustObjSlotPntr
 
-+	rts
++
+	.ACCU 16
+	.INDEX 16
+	rts
 
 initUndefStrs:
+	.ACCU 16
+	.INDEX 16
 	phx
 	phy
 	php
@@ -907,6 +1014,8 @@ initUndefStrs:
 	rts
 
 saveCurrentCallIds:
+	.ACCU 16
+	.INDEX 16
   phy
   php
   sep #$20
@@ -931,6 +1040,8 @@ saveCurrentCallIds:
 ;x:obj id,y:method id
 ;used to call routines statically and relatively fast
 staticFastCall:
+	.ACCU 16
+	.INDEX 16
 	php
 	phb
 	phd
@@ -941,6 +1052,8 @@ staticFastCall:
 	rts
 
 dispatchObjBadHash:
+	.ACCU 16
+	.INDEX 16
 	;save diagnostic data before error handler clobbers state
 	;x = hash pointer (zp-adjusted), has Hash.id/count/pntr
 	txa
@@ -952,6 +1065,8 @@ dispatchObjBadHash:
     TRIGGER_ERROR E_ObjBadHash
 
 dispatchObjMethodHashVoid:
+	.ACCU 16
+	.INDEX 16
 	pld
 	plb
 	plp
@@ -959,6 +1074,8 @@ dispatchObjMethodHashVoid:
 
 ;a:args,x:obj hash pointer,y:method to dispatch
 core.object.call:
+	.ACCU 16
+	.INDEX 16
 	php
 	phb
 	pea RAM << 8 | RAM
@@ -983,6 +1100,8 @@ core.object.call:
 		tax
 
 dispatchMethNoZP:
+	.ACCU 16
+	.INDEX 16
 	lda.w Hash.id,x
 	and.w #$ff
 	sta.l GLOBAL.currentObject
@@ -1020,6 +1139,8 @@ dispatchMethNoZP:
 	bcc _hashPntrOk
 	jmp dispatchObjBadHash
 _hashPntrOk:
+	.ACCU 16
+	.INDEX 16
 
 	lda.w Hash.id,x
 	and #$ff
@@ -1027,6 +1148,8 @@ _hashPntrOk:
 	bcc _hashIdOk
 	jmp dispatchObjBadHash
 _hashIdOk:
+	.ACCU 16
+	.INDEX 16
 
 	lda.w Hash.pntr,x
 	phx
@@ -1046,6 +1169,8 @@ _hashIdOk:
 	beq dispatchObjValidHash
 
     _objNotPresent:
+	.ACCU 16
+	.INDEX 16
     rep #$31
 		;hash invalid, seek for moved obj in obj stack:
 		ldx #0
@@ -1055,10 +1180,14 @@ _hashIdOk:
             TRIGGER_ERROR E_ObjNotFound
 			
 		dispatchObjUpdateHash:
+		.ACCU 16
+		.INDEX 16
 		txa
 		sta.w Hash.pntr,y	;update hash pointer with found matching obj-instance in obj stack 
 		
 dispatchObjValidHash:
+	.ACCU 16
+	.INDEX 16
 	;hash is valid, object not deleted, ready to execute method:
 	ply
 	sty tmp+4
@@ -1075,6 +1204,8 @@ dispatchObjValidHash:
 
 
 dispatchObjValidMethod:
+	.ACCU 16
+	.INDEX 16
 	lda.w Hash.pntr,x
 	tax
 
@@ -1099,7 +1230,10 @@ dispatchObjValidMethod:
 	clc
 	rts
 
-+	pld
++
+	.ACCU 16
+	.INDEX 16
+	pld
 	plb
 	plp
 	sec
@@ -1113,6 +1247,8 @@ dispatchObjValidMethod:
  * @return c <bool> set if valid object present.
  */
 oop.object.exists:
+	.ACCU 16
+	.INDEX 16
 ;a:args,x:obj hash pointer,y:method to dispatch
 
     php
@@ -1138,7 +1274,9 @@ oop.object.exists:
         tax
 
 +
-    pla 
+	.ACCU 16
+	.INDEX 16
+    pla
     cpx #oopCreateNoPtr
     beq _isPresent.badHash
 
@@ -1170,6 +1308,8 @@ oop.object.exists:
       beq ++
 
     _isPresent.objNotPresent:
+	.ACCU 16
+	.INDEX 16
     rep #$31
         ;hash invalid, seek for moved obj in obj stack:
         ldx #0
@@ -1178,6 +1318,8 @@ oop.object.exists:
         bcs +
 
 _isPresent.badHash:
+	.ACCU 16
+	.INDEX 16
             pld
             plb
             plp
@@ -1185,10 +1327,15 @@ _isPresent.badHash:
             rts
             
 
-+       txa
-        sta.w Hash.pntr,y   ;update hash pointer with found matching obj-instance in obj stack 
-        
++
+	.ACCU 16
+	.INDEX 16
+        txa
+        sta.w Hash.pntr,y   ;update hash pointer with found matching obj-instance in obj stack
+
 ++
+	.ACCU 16
+	.INDEX 16
   pld
   plb
   plp
@@ -1197,6 +1344,8 @@ _isPresent.badHash:
 
 ;generic obj-kill routine
 kill:
+	.ACCU 16
+	.INDEX 16
 	rep #$31
 	lda #OBJR_kill
 	sta 3,s

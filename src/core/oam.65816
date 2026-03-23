@@ -79,7 +79,10 @@ core.oam.play:
 
 	txs
 
-+ stz.w GLOBAL.oamUploadFlag
++
+  .ACCU 8
+  .INDEX 16
+  stz.w GLOBAL.oamUploadFlag
   rep #$31
   stz.w GLOBAL.currentOamSlot
   plp
@@ -126,7 +129,10 @@ core.oam.getNametableBase:
       TRIGGER_ERROR E_OutOfVram
 
 
-+	stx.w GLOBAL.oam.vram.start
++
+	.ACCU 16
+	.INDEX 16
+	stx.w GLOBAL.oam.vram.start
 	sep #$20
 	sta.w GLOBAL.oam.vram.id
 	rep #$31
@@ -144,6 +150,8 @@ core.oam.getNametableBase:
 	sta.w ObjSel
 
 _allocatedOk:
+  .ACCU 8
+  .INDEX 16
   ldy.w GLOBAL.oam.vram.start
   plp
 

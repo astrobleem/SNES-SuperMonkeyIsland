@@ -12,7 +12,7 @@ core.boot.init:
 	lda.w #ZP
 	tcd
 
-	lda.w #STACK
+	lda.w #$1fff
 	tcs
 
 	jsr ClearRegisters
@@ -21,7 +21,7 @@ core.boot.init:
 
 	;clear OopObjRam + stack (SNES DRAM can power-on to $55, causing wild jumps)
 	lda.b #0
-	ldy.w #$1980
+	ldy.w #$1FC0
 	ldx.w #$0000
 	jsr ClearWRAM
 
@@ -34,6 +34,10 @@ core.boot.init:
 	ldy.w #VARS_end-VARS
 	ldx.w #VARS
 	jsr ClearWRAM
+
+	rep #$31
+	lda.w #STACK
+	tcs
 
 	jsr core.wram.init
 	jsr core.vram.init

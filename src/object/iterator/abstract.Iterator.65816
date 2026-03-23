@@ -35,6 +35,8 @@
 
 .include "src/object/iterator/abstract.Iterator.h"
 .section "iterator"
+  .ACCU 16
+  .INDEX 16
 
   METHOD init
   METHOD play
@@ -47,6 +49,8 @@
 * resets iterator-index and clears target reference. Must be called when initializing a new search
 */
 abstract.Iterator.reset:
+  .ACCU 16
+  .INDEX 16
   php
   rep #$31
   stz.b iterator.index
@@ -64,6 +68,8 @@ abstract.Iterator.reset:
 * @return c<bool>	true if object found
 */
 abstract.Iterator.each.byProperties:
+  .ACCU 16
+  .INDEX 16
   phx
   phy
   php
@@ -75,7 +81,10 @@ abstract.Iterator.each.byProperties:
   cpx #OopStackEnd-OopStack
   bcs _iterator.eachFail
 
--	lda.l OopStack.flags-1,x
+-
+  .ACCU 16
+  .INDEX 16
+	lda.l OopStack.flags-1,x
 	bpl +
 	  ;get target object properties
 	  lda.l OopStack.dp,x
@@ -112,7 +121,10 @@ abstract.Iterator.each.byProperties:
 
 
 ;no object present or object does not match, continue...
-+	txa
++
+  .ACCU 16
+  .INDEX 16
+	txa
 	clc
 	adc #oopStackObj.length
 	tax
@@ -120,6 +132,8 @@ abstract.Iterator.each.byProperties:
 	bcc -
 
 _iterator.eachFail:
+  .ACCU 16
+  .INDEX 16
 	;no matching object found, return
 	;lets make the last found object persistant. hope this doesnt cause problems
 	;stz.b iterator.target
@@ -140,6 +154,8 @@ _iterator.eachFail:
 * @return c<bool>	true if object found
 */
 abstract.Iterator.each.byId:
+  .ACCU 16
+  .INDEX 16
   phx
   phy
   php
@@ -152,7 +168,10 @@ abstract.Iterator.each.byId:
   cpx #OopStackEnd-OopStack
   bcs _iterator.eachFail
 
--	lda.l OopStack.flags-1,x
+-
+  .ACCU 16
+  .INDEX 16
+	lda.l OopStack.flags-1,x
 	bpl +
 	  ;get target object id
 	  lda.l OopStack.id,x
@@ -186,7 +205,10 @@ abstract.Iterator.each.byId:
 
 
 ;no object present or object does not match, continue...
-+	txa
++
+  .ACCU 16
+  .INDEX 16
+	txa
 	clc
 	adc #oopStackObj.length
 	tax
@@ -204,6 +226,8 @@ abstract.Iterator.each.byId:
 * @return c<bool>	true if object found
 */
 abstract.Iterator.others:
+  .ACCU 16
+  .INDEX 16
   pha
   jsr abstract.Iterator.each.byProperties
   bcc +
@@ -223,10 +247,15 @@ abstract.Iterator.others:
 	lda 1,s
 	jsr abstract.Iterator.each.byProperties
 
-+ pla
++
+  .ACCU 16
+  .INDEX 16
+  pla
   rts
 
 _others.found:
+  .ACCU 16
+  .INDEX 16
   sec
   pla
   rts
@@ -237,6 +266,8 @@ _others.found:
 * @param a<word>	properties to set
 */
 abstract.Iterator.setProperties:
+  .ACCU 16
+  .INDEX 16
   php
   rep #$31
   pha
@@ -253,6 +284,8 @@ abstract.Iterator.setProperties:
 * @param a<word>	properties to clear
 */
 abstract.Iterator.clearProperties:
+  .ACCU 16
+  .INDEX 16
   php
   rep #$31
   eor.w #$ffff
@@ -271,18 +304,26 @@ abstract.Iterator.clearProperties:
 *
 */
 abstract.Iterator.killOthers:
+  .ACCU 16
+  .INDEX 16
   php
   rep #$31
 
   jsr abstract.Iterator.reset
--	lda iterator.properties
+-
+  .ACCU 16
+  .INDEX 16
+	lda iterator.properties
 	jsr abstract.Iterator.others
 	bcc +
 
 	CALL abstract.Iterator.kill.MTD iterator.target
 	bra -
 
-+ lda.b iterator.count	;debug
++
+  .ACCU 16
+  .INDEX 16
+  lda.b iterator.count	;debug
   plp
   rts
 
@@ -294,18 +335,26 @@ abstract.Iterator.killOthers:
 * @return a<int, 16bit>	count of deleted objects
 */
 abstract.Iterator.kill.byProperties:
+  .ACCU 16
+  .INDEX 16
   php
   sei
   rep #$31
   pha
   jsr abstract.Iterator.reset
--	lda 1,s
+-
+  .ACCU 16
+  .INDEX 16
+	lda 1,s
 	jsr abstract.Iterator.each.byProperties
 	bcc +
 	  CALL abstract.Iterator.kill.MTD iterator.target
 	bra -
 
-+ pla
++
+  .ACCU 16
+  .INDEX 16
+  pla
   lda.b iterator.count
   plp
   rts
@@ -317,18 +366,26 @@ abstract.Iterator.kill.byProperties:
 * @return a<int, 16bit>	count of deleted objects
 */
 abstract.Iterator.kill.byId:
+  .ACCU 16
+  .INDEX 16
   php
   rep #$31
   and.w #$ff
   pha
   jsr abstract.Iterator.reset
--	lda 1,s
+-
+  .ACCU 16
+  .INDEX 16
+	lda 1,s
 	jsr abstract.Iterator.each.byId
 	bcc +
 	  CALL abstract.Iterator.kill.MTD iterator.target
 	bra -
 
-+ pla
++
+  .ACCU 16
+  .INDEX 16
+  pla
   lda.b iterator.count
   plp
   rts

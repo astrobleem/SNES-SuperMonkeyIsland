@@ -7322,8 +7322,17 @@ op_pickupObject:
   sta.w SCUMM.objectState,x          ; hide from room
   rep #$20
   ; Remove OCHR tiles if object had a visual patch
+  ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
+  lda.b tmp+2
+  pha
+  lda.b tmp
+  pha
   lda.w SCUMM.scratch                ; A = obj_id
   jsl room.removeObjectPatch
+  pla
+  sta.b tmp                          ; restore bytecode pointer low word
+  pla
+  sta.b tmp+2                        ; restore bytecode pointer bank byte
   lda.w SCUMM.scratch                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName
@@ -7354,8 +7363,17 @@ op_pickupObjectOld:
   lda #0
   sta.w SCUMM.objectState,x          ; hide from room
   rep #$20
+  ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
+  lda.b tmp+2
+  pha
+  lda.b tmp
+  pha
   lda.w SCUMM.scratch                ; A = obj_id
   jsl room.removeObjectPatch
+  pla
+  sta.b tmp                          ; restore bytecode pointer low word
+  pla
+  sta.b tmp+2                        ; restore bytecode pointer bank byte
   lda.w SCUMM.scratch                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName

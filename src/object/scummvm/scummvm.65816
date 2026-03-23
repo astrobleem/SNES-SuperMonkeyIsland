@@ -8008,44 +8008,9 @@ scummvm.zeroExtraWram:
   php
   rep #$31
 
-  ;zero render slot CHR DMA word arrays (5 slots)
-  lda #0
-  ldx #0
-_zew.renderSlots:
-  .ACCU 16
-  .INDEX 16
-  sta.w SCUMM.slotChrSrcLo,x
-  sta.w SCUMM.slotChrLen,x
-  sta.w SCUMM.slotChrVram,x
-  sta.w SCUMM.slotHeadChrSrcLo,x
-  sta.w SCUMM.slotHeadChrLen,x
-  inx
-  inx
-  cpx #SCUMM_MAX_RENDER_SLOTS * 2
-  bcc _zew.renderSlots
-
-  ;zero render slot byte arrays
-  sep #$20
-  .ACCU 8
-  lda #0
-  ldx #0
-_zew.renderSlots2:
-  .ACCU 8
-  .INDEX 16
-  sta.w SCUMM.renderSlotActor,x
-  sta.w SCUMM.renderSlotCostume,x
-  sta.w SCUMM.renderSlotPalSlot,x
-  sta.w SCUMM.renderSlotLastPic,x
-  sta.w SCUMM.renderSlotDirty,x
-  sta.w SCUMM.renderSlotLastHead,x
-  sta.w SCUMM.renderSlotHeadDirty,x
-  sta.w SCUMM.slotChrSrcHi,x
-  sta.w SCUMM.slotHeadChrSrcHi,x
-  inx
-  cpx #SCUMM_MAX_RENDER_SLOTS
-  bcc _zew.renderSlots2
-  rep #$20
-  .ACCU 16
+  ;render slot arrays: NOT zeroed here — partial zeroing causes stale
+  ;dirty flags to trigger DMA with length=0 (=64KB). Properly initialized
+  ;by loadActorCostumes on first room load.
 
   ;zero room object table header + all entries (96 x 16B + 4B)
   lda #0

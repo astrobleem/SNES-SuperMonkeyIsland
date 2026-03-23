@@ -58,12 +58,7 @@ core.boot.init:
 	jsl Tad_Init
 	rep #$31
 
-	;TODO: wire jsl scummvm.zeroExtraWram here once zeroing logic bug is fixed
-	;(the function zeros WRAM that a subsystem init depends on — needs bisect)
-	nop
-	nop
-	nop
-	nop
+	jsl scummvm.zeroExtraWram
 
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main

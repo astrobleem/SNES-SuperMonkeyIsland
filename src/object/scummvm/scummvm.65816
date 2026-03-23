@@ -13452,8 +13452,8 @@ scummvm.cacheInventoryName:
   phb
   phx
   phy
+  pha                                    ; save A (16-bit) — must match pla width
   sep #$20
-  pha
   lda #$7E
   pha
   plb

@@ -8111,6 +8111,30 @@ _zew.oamScratch:
   cpx #80
   bcc _zew.oamScratch
 
+  ;zero string buffer (896 bytes = 28 lines x 32 cols)
+  lda #0
+  ldx #0
+_zew.stringBuf:
+  .ACCU 16
+  .INDEX 16
+  sta.w GLOBAL.CORE.STRING.buffer,x
+  inx
+  inx
+  cpx #GLOBAL.CORE.STRING.buffer.length
+  bcc _zew.stringBuf
+
+  ;zero inventory names buffer (512 bytes)
+  lda #0
+  ldx #0
+_zew.invNames:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.invNames,x
+  inx
+  inx
+  cpx #512
+  bcc _zew.invNames
+
   plp
   rtl
 

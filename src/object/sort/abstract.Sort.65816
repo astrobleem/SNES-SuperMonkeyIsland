@@ -86,6 +86,8 @@ abstract.Sort.byId:
 	  bne --
 	  
 _exit:
+  .ACCU 16
+  .INDEX 16
   plx
   txs
 
@@ -115,7 +117,10 @@ _compareSwap:
     jsr _swapObjects
     
     
-+ pla
++
+  .ACCU 16
+  .INDEX 16
+  pla
   ply
   plx
   rts

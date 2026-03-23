@@ -40,6 +40,8 @@ _msu1FileRetry:
   TRIGGER_ERROR E_Msu1FileNotPresent
 
 _msu1FileOk:
+  .ACCU 8
+  .INDEX 16
   jsr _stopAudioTrack
   jsr _setupVideoConfig
 
@@ -148,14 +150,20 @@ _msu1FileOk:
     bcc _playBoundsOk
     bra _playBoundsReset
 _playBoundsNtsc:
+  .ACCU 8
+  .INDEX 16
     rep #$20
     cpx.w #10                        ; NTSC: 5 entries, max valid X = 8
     bcc _playBoundsOk
 _playBoundsReset:
+  .ACCU 16
+  .INDEX 16
     sep #$20
     stz.b this.frameCycle             ; reset cycle to recover
     bra _playCycleDone                ; skip this frame's dispatch
 _playBoundsOk:
+  .ACCU 16
+  .INDEX 16
 
   sep #$20
   inc.b this.frameCycle
@@ -168,6 +176,8 @@ _playBoundsOk:
 	jsr (_frameCycleLUT24fpsNTSC,x)
 ++
 _playCycleDone:
+  .ACCU 8
+  .INDEX 16
   jsr _checkTrackEnd
   jsr core.nmi.start
   plp
@@ -308,6 +318,8 @@ _uploadFirstChunk:
 	lda #8
 	sta this.tmp
 _msu1FrameRetry:
+  .ACCU 16
+  .INDEX 16
 	lda this.currentFrame
 	jsr _msu1SeekToFrame
 	sep #$20
@@ -438,6 +450,8 @@ _getVideoMode:
   rts
 
 _isNtsc:
+  .ACCU 8
+  .INDEX 16
   lda #MEMSEL_FASTROM_ENABLE
   sta.l MEMSEL
   
@@ -534,6 +548,8 @@ _uploadSecondChunk:
 ;DMA queue full recovery — advance frame counter but don't toggle layers
 ;(keeps current framebuffer displayed; next _uploadFirstChunk will re-seek)
 _uploadSecondChunk_skip:
+  .ACCU 16
+  .INDEX 16
   rep #$31
   jsr _incrementFrame
   lda #FALSE

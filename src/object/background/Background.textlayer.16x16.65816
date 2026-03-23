@@ -111,7 +111,9 @@ _stringToTilemap:
     beq +
       clc
       adc.w #32*2
-+    
++
+    .ACCU 16
+    .INDEX 16
     tay
 
     inx	

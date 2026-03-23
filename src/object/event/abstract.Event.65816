@@ -24,7 +24,10 @@ abstract.Event.checkResult:
   bcc +
   	jsr abstract.Event.triggerResult
 	sec
-+ rts
++
+  .ACCU 16
+  .INDEX 16
+  rts
 
 abstract.Event.triggerResult:
 	ldx.b event.result
@@ -35,7 +38,10 @@ abstract.Event.triggerResult:
       TRIGGER_ERROR E_BadEventResult
 
 
-+	pea _return-1	;push return adress
++
+	.ACCU 16
+	.INDEX 16
+	pea _return-1	;push return adress
 	inx
 	phx		;push target subroutine adress. next rts is abused to actually do a jump to subroutine
 
@@ -81,19 +87,27 @@ EventResult.lastcheckpoint:
     sta.w GLOBAL.lastCheckpoint
     bra _lastcheckpoint.goContinue
 _lastcheckpoint.noCheckpointSave:
+  .ACCU 16
+  .INDEX 16
   stz.w GLOBAL.lastCheckpoint
 _lastcheckpoint.goContinue:
+  .ACCU 16
+  .INDEX 16
   lda.b event.resultTarget
   cmp.w #none
   bne +
     lda.w #level1
 +
+  .ACCU 16
+  .INDEX 16
   pha
   NEW Script.CLS.PTR oopCreateNoPtr
   pla
   rts
 
 _lastcheckpoint.alive:
+  .ACCU 16
+  .INDEX 16
   ;--- Still alive: restart from checkpoint ---
   ;flush DMA queue to prevent stale entries from corrupting during restart
   jsr core.dma.flushQueue
@@ -103,6 +117,8 @@ _lastcheckpoint.alive:
   bcs _lastcheckpoint.foundCP
     TRIGGER_ERROR E_NoCheckpointFound
 _lastcheckpoint.foundCP:
+  .ACCU 16
+  .INDEX 16
   CALL Event.checkpoint.getCheckpointAdress.MTD iterator.target
   pha
   NEW Script.CLS.PTR oopCreateNoPtr

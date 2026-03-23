@@ -31,7 +31,10 @@ abstract.Palette.init:
 	  pei (palette.ramBuffer.length)
       TRIGGER_ERROR E_OutOfWram
 
-+ stx.b palette.ramBuffer.start
++
+  .ACCU 16
+  .INDEX 16
+  stx.b palette.ramBuffer.start
   sep #$20
   sta.b palette.ramBuffer.id
 
@@ -116,6 +119,8 @@ abstract.Palette.deallocate:
   beq +
     jsr core.wram.deallocate
 +
+  .ACCU 8
+  .INDEX 16
   plp
   rts
 

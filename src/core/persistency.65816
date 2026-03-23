@@ -16,6 +16,8 @@ core.persistency.init:
   rts
 
 _loadBad:
+  .ACCU 16
+  .INDEX 16
   ;if loading failed at any point, delete every serialized object created so far so that no stray objects lie around
   rep #$31
   lda this.target.properties
@@ -101,6 +103,8 @@ core.persistency.load:
 
   ldy #SRAM.SLOTS
 -
+    .ACCU 16
+    .INDEX 16
     rep #$31
     ;check for load end
     tya
@@ -108,32 +112,36 @@ core.persistency.load:
     inc a
     cmp this.sram.length
     bcs +
-    
+
     lda [this.sram.pointer],y
     cmp #SRAM.SLOT.SIGNATURE.VALUE
     bne _loadBad
-    
+
     iny
     iny
     sep #$20
     lda [this.sram.pointer],y
     cmp #MAXOBJID
-    bcc ++ 
+    bcc ++
       jmp _loadBad
-      
+
 ++
+    .ACCU 8
+    .INDEX 16
     sta this.object.id
     jsr _fetchObjectZpLength
     iny
     cmp [this.sram.pointer],y
     beq ++
       jmp _loadBad
-      
+
 ++
+    .ACCU 8
+    .INDEX 16
     stz this.object.length + 1
     sta this.object.length
 
-    iny    
+    iny
     ;create object
     rep #$31
     lda this.object.id
@@ -152,6 +160,8 @@ core.persistency.load:
 
     ;overwrite object zero page with data from sram
 --
+      .ACCU 8
+      .INDEX 16
 
       lda [this.sram.pointer],y
       sta.w $0,x
@@ -159,11 +169,13 @@ core.persistency.load:
       iny
       dec this.object.length
       bne --
-    
+
 
     bra -
 
-+  
++
+  .ACCU 16
+  .INDEX 16
 
 _loadOk:
   pld
@@ -224,6 +236,8 @@ _writeWord:
   rts
 
 _writeError:
+  .ACCU 16
+  .INDEX 16
   lda [this.sram.pointer],y
   pei (this.sram.pointer + 2)
   pei (this.sram.pointer)
@@ -311,17 +325,20 @@ core.persistency.save
   ;ldy #SRAM.SIGNATURE
 
   jsr abstract.Iterator.reset
--   rep #$31
+-
+    .ACCU 8
+    .INDEX 16
+    rep #$31
     lda this.target.properties
     jsr abstract.Iterator.each.byProperties
     sep #$20
     bcc ++
-    
+
     lda #SRAM.SLOT.SIGNATURE.VALUE & $ff
     jsr _writeChecksumByte
     lda #(SRAM.SLOT.SIGNATURE.VALUE >> 8) & $ff
-    jsr _writeChecksumByte    
-    
+    jsr _writeChecksumByte
+
     ;store object id
     ldx.b iterator.target + 2
     lda.l OopStack.id,x
@@ -329,7 +346,9 @@ core.persistency.save
     cmp #MAXOBJID
     bcc +
       TRIGGER_ERROR E_ObjBadHash
-+    
++
+    .ACCU 8
+    .INDEX 16
     jsr _writeChecksumByte
 
     ;store object zero page length
@@ -351,10 +370,12 @@ core.persistency.save
     ldx #0
       
 --
+      .ACCU 8
+      .INDEX 16
       ;write object zero page to sram
       lda.w 0,y
       jsr _writeChecksumByte
-      
+
       iny
       inx
       cpx this.object.length
@@ -362,6 +383,8 @@ core.persistency.save
 
     bra -
 ++
+  .ACCU 8
+  .INDEX 16
   ;write signature post
   lda #SRAM.SIGNATURE.POST.VALUE & $ff
   jsr _writeChecksumByte

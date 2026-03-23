@@ -29,6 +29,8 @@ room.initScroll:
   bcs +
     lda #0
 +
+  .ACCU 16
+  .INDEX 16
   sta.w GLOBAL.room.maxScrollX
 
   sep #$20
@@ -58,6 +60,8 @@ room.initTileCache:
   ldx #0
   ldy.w #ROOM_MAX_LOOKUP_TILES
 _initCache.tile2slot:
+  .ACCU 16
+  .INDEX 16
   sta.l SCROLL_TILE2SLOT_WRAM,x
   inx
   inx
@@ -68,6 +72,8 @@ _initCache.tile2slot:
   ldx #0
   ldy.w #ROOM_CACHE_SLOTS
 _initCache.slot2tile:
+  .ACCU 16
+  .INDEX 16
   sta.l SCROLL_SLOT2TILE_WRAM,x
   inx
   inx
@@ -110,6 +116,8 @@ room.allocCacheSlot:
   sta.l SCROLL_TILE2SLOT_WRAM,x
 
 _allocSlot.noEvict:
+  .ACCU 16
+  .INDEX 16
   ;write new mappings
   ;slotToTileId[slot] = newTileId
   lda.b tmp+22                  ;slot
@@ -132,6 +140,8 @@ _allocSlot.noEvict:
   bcc +
     lda #0
 +
+  .ACCU 16
+  .INDEX 16
   sta.w GLOBAL.room.cacheNextSlot
 
   ;return slot in A
@@ -178,10 +188,14 @@ room.loadInitialViewport:
   sta.b tmp+4                   ;VRAM tilemap column address
 
 _initVP.colLoop:
+  .ACCU 16
+  .INDEX 16
   lda.b tmp
   bne _initVP.colContinue
   jmp _initVP.done
 _initVP.colContinue:
+  .ACCU 16
+  .INDEX 16
 
   ;=== Pass 1: cache-check each row, tile-write misses, buffer remap ===
   stz.b tmp+6                   ;staging write offset = 0
@@ -190,6 +204,8 @@ _initVP.colContinue:
   ldx.b tmp+2                   ;X = WRAM read offset
 
 _initVP.p1Loop:
+  .ACCU 16
+  .INDEX 16
   ;read tilemap word from WRAM
   lda.l SCROLL_TILEMAP_WRAM,x
   sta.b tmp+10                  ;original tilemap word
@@ -245,6 +261,8 @@ _initVP.p1Loop:
   ;read 32 bytes (16 words) from MSU, write to VRAM
   ldy #16
 _initVP.tileRead:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA
   sta.l VMDATAL
@@ -258,9 +276,13 @@ _initVP.tileRead:
   bra _initVP.p1Remap
 
 _initVP.p1Hit:
+  .ACCU 16
+  .INDEX 16
   ;A = cached slot
 
 _initVP.p1Remap:
+  .ACCU 16
+  .INDEX 16
   ;A = VRAM slot index
   sta.b tmp+14
 
@@ -291,6 +313,8 @@ _initVP.p1Remap:
   beq _initVP.p1End
   jmp _initVP.p1Loop
 _initVP.p1End:
+  .ACCU 16
+  .INDEX 16
 
   ;save advanced WRAM offset for next column
   stx.b tmp+2
@@ -318,6 +342,8 @@ _initVP.p1End:
   ldx #0
   ldy.w GLOBAL.room.roomHeightTiles
 _initVP.p2Loop:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.room.colStaging,x
   sep #$20
   sta.l VMDATAL
@@ -341,6 +367,8 @@ _initVP.p2Loop:
   jmp _initVP.colLoop
 
 _initVP.done:
+  .ACCU 16
+  .INDEX 16
   ;restore VMAIN to increment-by-1
   sep #$20
   lda.b #VMAIN_INCREMENT_MODE
@@ -364,12 +392,16 @@ room.syncScroll:
   bne _syncScroll.canScroll
   jmp _syncScroll.done
 _syncScroll.canScroll:
+  .ACCU 16
+  .INDEX 16
 
   ;clamp cameraX to [0, maxScrollX]
   lda.w GLOBAL.room.cameraX
   bpl +
     stz.w GLOBAL.room.cameraX
 +
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.room.cameraX
   cmp.w GLOBAL.room.maxScrollX
   bcc +
@@ -377,6 +409,8 @@ _syncScroll.canScroll:
     lda.w GLOBAL.room.maxScrollX
     sta.w GLOBAL.room.cameraX
 +
+  .ACCU 16
+  .INDEX 16
 
   ;apply to PPU scroll register
   lda.w GLOBAL.room.cameraX
@@ -415,17 +449,23 @@ _syncScroll.canScroll:
     lda.w GLOBAL.room.roomWidthTiles
     dec a
 +
+  .ACCU 16
+  .INDEX 16
   jsr room.stageColumnForNmi
   stz.w GLOBAL.room.refreshIdx
   bra _syncScroll.updateOld
 
 _syncScroll.scrolledLeft:
+  .ACCU 16
+  .INDEX 16
   lda.b tmp+2
   jsr room.stageColumnForNmi
   stz.w GLOBAL.room.refreshIdx
   bra _syncScroll.updateOld
 
 _syncScroll.bgRefresh:
+  .ACCU 16
+  .INDEX 16
   ;no boundary crossing — refresh one viewport column in background
   lda.w GLOBAL.room.cameraX
   lsr a
@@ -437,19 +477,27 @@ _syncScroll.bgRefresh:
   bcs _syncScroll.bgRefreshSkip      ;out of bounds, skip
   jsr room.stageColumnForNmi
 _syncScroll.bgRefreshSkip:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.room.refreshIdx
   inc a
   cmp.w #ROOM_VIEWPORT_TILES         ;wrap at 32
   bcc +
     lda #0
 +
+  .ACCU 16
+  .INDEX 16
   sta.w GLOBAL.room.refreshIdx
 
 _syncScroll.updateOld:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
 
 _syncScroll.done:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -484,11 +532,15 @@ room.stageColumnForNmi:
   ldy.b tmp+12
   beq _stageCol.mulDone
 _stageCol.mulLoop:
+  .ACCU 16
+  .INDEX 16
   clc
   adc.w GLOBAL.room.roomHeightTiles
   dey
   bne _stageCol.mulLoop
 _stageCol.mulDone:
+  .ACCU 16
+  .INDEX 16
   asl a
   sta.b tmp+12                  ;WRAM byte offset
 
@@ -504,6 +556,8 @@ _stageCol.mulDone:
   sta.b tmp+14                  ;row counter
 
 _stageCol.p1Loop:
+  .ACCU 16
+  .INDEX 16
   lda.l SCROLL_TILEMAP_WRAM,x
   and.w #$07FF                  ;extract tileId (11-bit custom format)
   sta.b tmp+16                  ;save tileId
@@ -552,6 +606,8 @@ _stageCol.p1Loop:
   ldx.b tmp+6                   ;staging byte offset
   ldy #32
 _stageCol.tileRead:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA
   sta.l SCROLL_TILE_STAGE_WRAM,x
@@ -567,6 +623,8 @@ _stageCol.tileRead:
   sta.w GLOBAL.room.nmiTileCount
 
 _stageCol.p1Skip:
+  .ACCU 16
+  .INDEX 16
   plx                            ;restore WRAM offset
   inx
   inx
@@ -574,6 +632,8 @@ _stageCol.p1Skip:
   beq _stageCol.p1Done
   jmp _stageCol.p1Loop
 _stageCol.p1Done:
+  .ACCU 16
+  .INDEX 16
 
   ;save staging length
   lda.b tmp+6
@@ -586,6 +646,8 @@ _stageCol.p1Done:
   sta.b tmp+14                  ;row counter
 
 _stageCol.p2Loop:
+  .ACCU 16
+  .INDEX 16
   lda.l SCROLL_TILEMAP_WRAM,x
   sta.b tmp+16                  ;original word
   and.w #$07FF                  ;tileId (11-bit custom format)
@@ -627,6 +689,8 @@ _stageCol.p2Loop:
     adc.w #$0400
     sta.b tmp+14
 +
+  .ACCU 16
+  .INDEX 16
 
   lda.b tmp+14
   clc
@@ -645,6 +709,8 @@ _stageCol.p2Loop:
     lda #1
     sta.w GLOBAL.room.nmiTileFlag
 +
+  .ACCU 8
+  .INDEX 16
   rep #$20
 
   plp

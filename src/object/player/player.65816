@@ -26,7 +26,10 @@
   cmp #9999
   bcc +
 	lda #9999
-+ sta this.score
++
+  .ACCU 16
+  .INDEX 16
+  sta this.score
   rts
 
   /**
@@ -76,7 +79,10 @@
 	sec
 	rts
 
-+ dec this.lifes
++
+  .ACCU 8
+  .INDEX 16
+  dec this.lifes
   clc
   rts
 

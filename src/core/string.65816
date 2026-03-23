@@ -92,12 +92,16 @@ core.string.reset:
   plp
   rts
 
-;print string to vram port	
+;print string to vram port
 _PrintLoop:
 	php
 	rep #$31
-	ldy #0		
+	.ACCU 16
+	.INDEX 16
+	ldy #0
 -		lda [static.string.current.pointer],y
+		.ACCU 16
+		.INDEX 16
 		and #$ff
 		cmp #' '	;lower than whitespace??
 		bcs _TilemapPrint
@@ -106,6 +110,8 @@ _PrintLoop:
 		bra -
 
 		_TilemapPrint:
+			.ACCU 16
+			.INDEX 16
 			ldx static.string.screen.position
 			;don't exceed outside buffer, also we cant raise errors here!
 			cpx.w #GLOBAL.CORE.STRING.buffer.length
@@ -114,11 +120,15 @@ _PrintLoop:
 			  sta.w GLOBAL.CORE.STRING.buffer,x
 			  rep #$31
 
-++			inc static.string.screen.position
+++			.ACCU 16
+			.INDEX 16
+			inc static.string.screen.position
 			iny
 			bra -
 
-+	plp
++	.ACCU 16
+	.INDEX 16
+	plp
 	rts
 	
 ;puts 16bit a string pointer into tmp, 3 bytes
@@ -130,6 +140,8 @@ _StrPointer:
 	  _stringIdInvalid:
 	  lda.w #T_max	;error condition, but we can't raise it with current exception printer!
 +
+	.ACCU 16
+	.INDEX 16
 	sta static.string.current.pointer
 	asl a
 	clc
@@ -152,13 +164,16 @@ _setPosition:
 	rts
 	
 PrintCmd:
-	.accu 16
+	.ACCU 16
+	.INDEX 16
 	cmp.w #TC_max+1
 	bcs +	;this is an error, but we can hardly raise it because the error itself would be printed as a string
 	  asl a
 	  tax
 	  jsr (ExcStrCmdLut,x)	;get pointer to subroutine
 +
+	.ACCU 16
+	.INDEX 16
 	rts
 	
 SUB_TC_end:
@@ -372,13 +387,17 @@ _convertToDecimal:
   sed
 
 -	adc #1
+	.ACCU 16
+	.INDEX 16
 	bcc +
 	  pha
 	  lda.b static.string.substring.buffer+2
 	  adc #0
 	  sta.b static.string.substring.buffer+2
 	  pla
-+	dex
++	.ACCU 16
+	.INDEX 16
+	dex
 	cpx.w #$ffff
 	bne -
 
@@ -441,6 +460,8 @@ PrintHexToStack:
 	pea TC_end		;push string terminator
 	ldy #0
 	PrintHexToStackLoop:
+		.ACCU 16
+		.INDEX 16
 		phy
 		tya
 		lsr a
@@ -453,11 +474,15 @@ PrintHexToStack:
 			lsr a
 			lsr a
 			bra PrintNibbleToStack
-			
+
 		PrintHexToStackLo:
+			.ACCU 16
+			.INDEX 16
 			and #$0f				;get low nibble
 
 		PrintNibbleToStack:
+		.ACCU 16
+		.INDEX 16
 		ply
 		clc
 		adc #'0'	;shift to ASCII range
@@ -465,6 +490,8 @@ PrintHexToStack:
 		bcc PrintNibbleNoChar
 			adc #8-2	;shift into upper case letter range(-1 because of set carry, another -1 cause we're comparing '9'+1)
 		PrintNibbleNoChar:
+		.ACCU 16
+		.INDEX 16
 		sep #$20
 		pha		;print to stack
 		rep #$31

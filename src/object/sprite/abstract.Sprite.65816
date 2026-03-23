@@ -46,7 +46,10 @@ abstract.Sprite.startAnimation:
     TRIGGER_ERROR E_BadSpriteAnimation
 
   ;fetch animation config
-+ ldy.w #ANIMATION.MAX.TILES
++
+  .ACCU 16
+  .INDEX 16
+  ldy.w #ANIMATION.MAX.TILES
   lda.b [animation.pointer], y
   sta.b animation.tiles.length
 
@@ -97,7 +100,10 @@ abstract.Sprite.isAnimationPlaying:
     clc
     rts
 
-+ plp
++
+  .ACCU 8
+  .INDEX 16
+  plp
   sec
   rts
 
@@ -129,6 +135,8 @@ abstract.Sprite.playAnimation:
     TRIGGER_ERROR E_AllocatedVramExceeded
 
 +
+  .ACCU 16
+  .INDEX 16
   sta.b animation.frame.tiles.length
 
   ldy.w #ANIMATION.FRAME.TILEMAP.LENGTH
@@ -145,6 +153,8 @@ abstract.Sprite.playAnimation:
       TRIGGER_ERROR E_AllocatedCgramExceeded
 
 +
+  .ACCU 16
+  .INDEX 16
   sta.b animation.frame.palette.length
 
   lda.b animation.frame.current
@@ -156,13 +166,19 @@ abstract.Sprite.playAnimation:
 	  jsr _tileTransfer
 
 +
+  .ACCU 16
+  .INDEX 16
 _noTileUpload:
+  .ACCU 16
+  .INDEX 16
   ;always re-upload palette (CGRAM may have been cleared externally)
   lda.b animation.frame.palette.length
   beq +
     jsr _paletteTransfer
 
 +
+  .ACCU 16
+  .INDEX 16
   jsr _writeOamBuffer
 
   lda.b animation.frame.current
@@ -188,15 +204,23 @@ _noTileUpload:
 		lda.w #0
 		bra ++
 
-+			sep #$20
++
+			.ACCU 16
+			.INDEX 16
+			sep #$20
 			stz.b animation.isPlaying
 			rep #$31
 			lda.b animation.frame.max
 			sta.b animation.frame.last
 
-++	sta.b animation.frame.current	
-    
+++
+	.ACCU 16
+	.INDEX 16
+	sta.b animation.frame.current
+
 _notPlaying:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -247,7 +271,10 @@ _writeOamBuffer:
       iny
       bra _skipSprite
 
-+   sta.w GLOBAL.oamBuffer,x
++
+    .ACCU 16
+    .INDEX 16
+    sta.w GLOBAL.oamBuffer,x
     inx
     iny
 
@@ -263,7 +290,10 @@ _writeOamBuffer:
       iny
       bra _skipSprite
 
-+   sta.w GLOBAL.oamBuffer,x
++
+    .ACCU 16
+    .INDEX 16
+    sta.w GLOBAL.oamBuffer,x
     inx
     iny
 
@@ -296,6 +326,8 @@ _writeOamBuffer:
     rep #$31
 
 _skipSprite:
+	  .ACCU 16
+	  .INDEX 16
 	  cpx.w #GLOBAL.oamBuffer.end - GLOBAL.oamBuffer
 	  bcs _oamBufferFull
 
@@ -304,6 +336,8 @@ _skipSprite:
 	bcc -
 
 _oamBufferFull:
+  .ACCU 16
+  .INDEX 16
   stx.w GLOBAL.currentOamSlot
   pla
 
@@ -432,11 +466,17 @@ abstract.Sprite.deallocate:
   beq +
 	jsr core.vram.deallocate
 
-+ lda.b animation.palette.id
++
+  .ACCU 8
+  .INDEX 16
+  lda.b animation.palette.id
   beq +
 	jsr core.cgram.deallocate
 
-+ plp
++
+  .ACCU 8
+  .INDEX 16
+  plp
   rts
 
 abstract.Sprite.allocate:
@@ -457,12 +497,17 @@ _allocateMemory:
       pei (animation.tiles.length)
       TRIGGER_ERROR E_OutOfVram
 
-+   stx.b animation.tiles.start
++
+    .ACCU 16
+    .INDEX 16
+    stx.b animation.tiles.start
     sep #$20
     sta.b animation.tiles.id
     rep #$31
 
 ++
+  .ACCU 16
+  .INDEX 16
   ;calculate tile transpose id
   lda.b animation.tiles.id
   pha
@@ -493,7 +538,9 @@ _allocateMemory:
   beq +
 	ldy.w #PALETTE.START.SPRITE_COLORMATH
 
-+ 
++
+  .ACCU 16
+  .INDEX 16
   ;don't allocate again
   lda.b animation.palette.id
   and.w #$ff
@@ -506,14 +553,21 @@ _allocateMemory:
       ;cgram allocation failed, skip palette storage (non-fatal)
       bra ++
 
-+   stx.b animation.palette.start
++
+    .ACCU 16
+    .INDEX 16
+    stx.b animation.palette.start
     sep #$20
     sta.b animation.palette.id
     rep #$31
 
 ++
+  .ACCU 16
+  .INDEX 16
 
 ++
+  .ACCU 16
+  .INDEX 16
   lda animation.palette.start
   lsr a ;divide by $20
   lsr a

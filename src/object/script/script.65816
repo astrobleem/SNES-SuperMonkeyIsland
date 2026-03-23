@@ -24,6 +24,8 @@ the main difference between regular objects and scripts is that scripts halt/sav
       TRIGGER_ERROR E_BadScript
 
 _initScriptNotInvalid:
+  .ACCU 16
+  .INDEX 16
 	pla
 	sta script.initAdress
 	inc a	;skip signature magic and adjust for jump offset
@@ -162,7 +164,10 @@ GLOBAL.checkFrameReachedSavePc:
   rts
 
 ;do double return if target not reached
-+   pla
++
+    .ACCU 16
+    .INDEX 16
+    pla
     rts
 
 WaitReturn:
@@ -186,6 +191,8 @@ terminateScript:
         TRIGGER_ERROR E_ScriptStackTrash
 
 _terminateScriptStackOk:
+  .ACCU 16
+  .INDEX 16
 	lda #OBJR_kill	;lastly, kill script instance itself
 	sta 5,s	
 	rts

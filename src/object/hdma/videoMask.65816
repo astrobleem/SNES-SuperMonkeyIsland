@@ -19,7 +19,9 @@
   beq +
     ldx #VideoMaskTable.pal
     lda #:VideoMaskTable.pal
-+  
++
+  .ACCU 8
+  .INDEX 16
   jsr abstract.Hdma.setTableAdress
 
   lda hdma.flags

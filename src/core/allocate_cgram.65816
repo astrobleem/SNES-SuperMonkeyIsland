@@ -93,7 +93,10 @@ core.cgram.allocate:
     TRIGGER_ERROR E_CGallocInvalidLength
 
 
-+ stx.w GLOBAL.cgramAllocation.input.length
++
+  .ACCU 16
+  .INDEX 16
+  stx.w GLOBAL.cgramAllocation.input.length
   stx.w GLOBAL.cgramAllocation.temp.length
   tya
   sta.w GLOBAL.cgramAllocation.input.start
@@ -107,27 +110,39 @@ core.cgram.allocate:
     TRIGGER_ERROR E_CGallocInvalidStart
 
 
-+ jsr _allocateCgramSeekFreeBlocks
++
+  .ACCU 16
+  .INDEX 16
+  jsr _allocateCgramSeekFreeBlocks
   bcs +
 	;allocation failed, not enough cgram space left
 	plp
 	clc
 	rts
-+ sep #$20
++
+  .ACCU 16
+  .INDEX 16
+  sep #$20
   inc.w GLOBAL.currentCgramAllocationId
   bne +
     ;allocation id must be non-zero
     inc.w GLOBAL.currentCgramAllocationId
-    
-+ 
+
++
+  .ACCU 8
+  .INDEX 16
 -
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentCgramAllocationId
   jsr _isIdInUse
   bcc +
     inc.w GLOBAL.currentCgramAllocationId
     bra -
 
-+  
++
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentCgramAllocationId
   jsr _markAllocatedCgramBlocks
 
@@ -151,14 +166,20 @@ _isIdInUse:
   sep #$20
 
   ldx.w #CGRAM_ALLOCATION_BLOCKS - 1
--   cmp.w GLOBAL.cgramAllocationBlocks,x
+-
+    .ACCU 8
+    .INDEX 16
+    cmp.w GLOBAL.cgramAllocationBlocks,x
     bne +
 
       plx
       plp
       sec
       rts
-+   dex
++
+    .ACCU 8
+    .INDEX 16
+    dex
     bpl -
 
   rep #$31
@@ -188,6 +209,8 @@ _allocateCgramSeekFreeBlocks:
   tay
 
 _allocateCgramSeekLoop:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.cgramAllocationBlocks,y
   and.w #$ff
   beq _allocateCgramBlockFree
@@ -211,10 +234,15 @@ _allocateCgramSeekLoop:
 	  clc
 	  rts
 
-+	tay
++
+	.ACCU 16
+	.INDEX 16
+	tay
 	bra _allocateCgramSeekLoop
 
 _allocateCgramBlockFree:
+  .ACCU 16
+  .INDEX 16
   iny
   cpy.w #CGRAM_ALLOCATION_BLOCKS + 1
   bne +
@@ -223,14 +251,20 @@ _allocateCgramBlockFree:
 	clc
 	rts
 
-+ lda.w GLOBAL.cgramAllocation.temp.length
++
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.cgramAllocation.temp.length
   sec
   sbc.w #CGRAM_ALLOCATION_BLOCKSIZE
   sta.w GLOBAL.cgramAllocation.temp.length
   beq +
   bcs _allocateCgramSeekLoop
 
-+ lda.w GLOBAL.cgramAllocation.temp.start
++
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.cgramAllocation.temp.start
   clc
   adc.w GLOBAL.cgramAllocation.input.length
   sec
@@ -244,7 +278,10 @@ _allocateCgramBlockFree:
 	rts
 
 ;allocation successful
-+ plp
++
+  .ACCU 16
+  .INDEX 16
+  plp
   sec
   rts
 
@@ -271,14 +308,19 @@ _markAllocatedCgramBlocks:
   beq +
 	clc
 	adc.w #%1000
-+ 
++
+  .ACCU 16
+  .INDEX 16
   lsr a
   lsr a
   lsr a
   tax
   pla
   sep #$20
--	sta.w GLOBAL.cgramAllocationBlocks,y
+-
+	.ACCU 8
+	.INDEX 16
+	sta.w GLOBAL.cgramAllocationBlocks,y
 	iny
 	dex
 	bne -
@@ -300,14 +342,23 @@ core.cgram.deallocate:
   cmp.w GLOBAL.currentCgramAllocationId
   bne +
 	dec.w GLOBAL.currentCgramAllocationId
-+ pea 0
++
+  .ACCU 8
+  .INDEX 16
+  pea 0
 
   ldx.w #CGRAM_ALLOCATION_BLOCKS - 1
--	cmp.w GLOBAL.cgramAllocationBlocks,x
+-
+	.ACCU 8
+	.INDEX 16
+	cmp.w GLOBAL.cgramAllocationBlocks,x
 	bne +
 	  sta 1,s
 	  stz.w GLOBAL.cgramAllocationBlocks,x
-+	dex
++
+	.ACCU 8
+	.INDEX 16
+	dex
 	cpx.w #$ffff
 	bne -
 
@@ -325,8 +376,11 @@ core.cgram.deallocate:
     plp
     clc
     rts
-    
-+ plx
+
++
+  .ACCU 16
+  .INDEX 16
+  plx
   plp
   sec
   rts

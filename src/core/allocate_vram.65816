@@ -89,7 +89,10 @@ core.vram.allocate:
     TRIGGER_ERROR E_VallocInvalidLength
 
 
-+ stx.w GLOBAL.vramAllocation.input.length
++
+  .ACCU 16
+  .INDEX 16
+  stx.w GLOBAL.vramAllocation.input.length
   stx.w GLOBAL.vramAllocation.temp.length
 
   jsr allocateVramSeekFreeBlocks
@@ -98,21 +101,30 @@ core.vram.allocate:
 	plp
 	clc
 	rts
-+ sep #$20
++
+  .ACCU 16
+  .INDEX 16
+  sep #$20
   inc.w GLOBAL.currentVramAllocationId
   bne +
 	;allocation id must be non-zero
 	inc.w GLOBAL.currentVramAllocationId
-	
-+ 
+
++
+  .ACCU 8
+  .INDEX 16
 -
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentVramAllocationId
   jsr _isIdInUse
   bcc +
     inc.w GLOBAL.currentVramAllocationId
     bra -
 
-+  
++
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentVramAllocationId
   jsr markAllocatedVramBlocks
 
@@ -136,14 +148,20 @@ _isIdInUse:
   sep #$20
 
   ldx.w #VRAM_ALLOCATION_BLOCKS - 1
--   cmp.w GLOBAL.vramAllocationBlocks,x
+-
+    .ACCU 8
+    .INDEX 16
+    cmp.w GLOBAL.vramAllocationBlocks,x
     bne +
 
       plx
       plp
       sec
       rts
-+   dex
++
+    .ACCU 8
+    .INDEX 16
+    dex
     bpl -
 
   rep #$31
@@ -174,6 +192,8 @@ allocateVramSeekFreeBlocks:
   tay
 
 allocateVramSeekLoop:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.vramAllocationBlocks,y
   and.w #$ff
   beq allocateVramBlockFree
@@ -204,10 +224,15 @@ allocateVramSeekLoop:
 	  clc
 	  rts
 
-+	tay
++
+	.ACCU 16
+	.INDEX 16
+	tay
 	bra allocateVramSeekLoop
 
 allocateVramBlockFree:
+  .ACCU 16
+  .INDEX 16
   iny
   cpy.w #VRAM_ALLOCATION_BLOCKS + 1
   bne +
@@ -216,7 +241,10 @@ allocateVramBlockFree:
 	clc
 	rts
 
-+ lda.w GLOBAL.vramAllocation.temp.length
++
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.vramAllocation.temp.length
   sec
   sbc.w #VRAM_ALLOCATION_BLOCKSIZE
   sta.w GLOBAL.vramAllocation.temp.length
@@ -224,7 +252,10 @@ allocateVramBlockFree:
   bcs allocateVramSeekLoop
 
 ;allocation successful
-+ plp
++
+  .ACCU 16
+  .INDEX 16
+  plp
   sec
   rts
 
@@ -254,12 +285,17 @@ markAllocatedVramBlocks:
 	adc.w #VRAM_ALLOCATION_BLOCKSIZE
 
 +
+  .ACCU 16
+  .INDEX 16
   xba			;allocation blocksize: $100
   and.w #$ff
   tax
   pla
   sep #$20
--	sta.w GLOBAL.vramAllocationBlocks,y
+-
+	.ACCU 8
+	.INDEX 16
+	sta.w GLOBAL.vramAllocationBlocks,y
 	iny
 	dex
 	bne -
@@ -283,14 +319,23 @@ core.vram.deallocate:
 	;only chance to decrease allocation id is when topmost id gets deallocated
 	dec.w GLOBAL.currentVramAllocationId
 
-+ pea 0
++
+  .ACCU 8
+  .INDEX 16
+  pea 0
 
   ldx.w #VRAM_ALLOCATION_BLOCKS - 1
--	cmp.w GLOBAL.vramAllocationBlocks,x
+-
+	.ACCU 8
+	.INDEX 16
+	cmp.w GLOBAL.vramAllocationBlocks,x
 	bne +
 	  sta 1,s
 	  stz.w GLOBAL.vramAllocationBlocks,x
-+	dex
++
+	.ACCU 8
+	.INDEX 16
+	dex
 	bpl -
 
   rep #$31
@@ -307,8 +352,11 @@ core.vram.deallocate:
     plp
     clc
     rts
-    
-+ plx
+
++
+  .ACCU 16
+  .INDEX 16
+  plx
   plp
   sec
   rts

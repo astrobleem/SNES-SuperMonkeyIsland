@@ -23,6 +23,8 @@
   bne _not_action_mask
     lda #(JOY_BUTTON_A | JOY_BUTTON_B | JOY_BUTTON_X | JOY_BUTTON_Y)
 _not_action_mask:
+  .ACCU 16
+  .INDEX 16
   sta this.inputMask
 
   lda OBJECT.CALL.ARG.6,s
@@ -39,6 +41,8 @@ _not_action_mask:
   bcs _in_timeline
     rts
 _in_timeline:
+  .ACCU 16
+  .INDEX 16
 
   ;attract mode: direction=0 means check START button
   lda this.direction
@@ -56,6 +60,8 @@ _in_timeline:
       rts
 
 _direction_normalCheck:
+  .ACCU 16
+  .INDEX 16
   ;check if player pressed the expected direction
   ldx #INPUT.DEVICE.ID.0
   jsr core.input.get.trigger
@@ -75,6 +81,8 @@ _direction_normalCheck:
         rts
 
 _direction_done:
+  .ACCU 16
+  .INDEX 16
   rts
 
   METHOD kill

@@ -37,6 +37,8 @@ core.random.get:
 	rts									 ;Return R1
 	
 +:
+	.ACCU 8
+	.INDEX 16
 	clc
 	adc.w GLOBAL.random4
 	clc

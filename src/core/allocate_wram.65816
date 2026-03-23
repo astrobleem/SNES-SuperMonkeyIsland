@@ -51,7 +51,10 @@ core.wram.allocate:
   bne +
     TRIGGER_ERROR E_VallocInvalidLength
 
-+ stx.w GLOBAL.wramAllocation.input.length
++
+  .ACCU 16
+  .INDEX 16
+  stx.w GLOBAL.wramAllocation.input.length
   stx.w GLOBAL.wramAllocation.temp.length
 
   jsr _allocateWramSeekFreeBlocks
@@ -60,21 +63,30 @@ core.wram.allocate:
 	plp
 	clc
 	rts
-+ sep #$20
++
+  .ACCU 16
+  .INDEX 16
+  sep #$20
   inc.w GLOBAL.currentWramAllocationId
   bne +
     ;allocation id must be non-zero
     inc.w GLOBAL.currentWramAllocationId
-    
-+ 
+
++
+  .ACCU 8
+  .INDEX 16
 -
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentWramAllocationId
   jsr _isIdInUse
   bcc +
     inc.w GLOBAL.currentWramAllocationId
     bra -
 
-+  
++
+  .ACCU 8
+  .INDEX 16
   lda.w GLOBAL.currentWramAllocationId
   jsr _markAllocatedWramBlocks
 
@@ -98,14 +110,20 @@ _isIdInUse:
   sep #$20
 
   ldx.w #WRAM_ALLOCATION_BLOCKS - 1
--   cmp.w GLOBAL.wramAllocationBlocks,x
+-
+    .ACCU 8
+    .INDEX 16
+    cmp.w GLOBAL.wramAllocationBlocks,x
     bne +
 
       plx
       plp
       sec
       rts
-+   dex
++
+    .ACCU 8
+    .INDEX 16
+    dex
     bpl -
 
   rep #$31
@@ -131,6 +149,8 @@ _allocateWramSeekFreeBlocks:
   sty.w GLOBAL.wramAllocation.temp.start
 
 _allocateWramSeekLoop:
+  .ACCU 16
+  .INDEX 16
   lda.w GLOBAL.wramAllocationBlocks,y
   and.w #$ff
   beq _allocateWramBlockFree
@@ -151,6 +171,8 @@ _allocateWramSeekLoop:
 	  rts
 
 +
+	.ACCU 16
+	.INDEX 16
 	sta.w GLOBAL.wramAllocation.temp.start
 
 	xba			;allocation blocksize : $100
@@ -162,10 +184,15 @@ _allocateWramSeekLoop:
 	  clc
 	  rts
 
-+	tay
++
+	.ACCU 16
+	.INDEX 16
+	tay
 	bra _allocateWramSeekLoop
 
 _allocateWramBlockFree:
+  .ACCU 16
+  .INDEX 16
   iny
   cpy.w #WRAM_ALLOCATION_BLOCKS + 1
   bne +
@@ -174,7 +201,10 @@ _allocateWramBlockFree:
 	clc
 	rts
 
-+ lda.w GLOBAL.wramAllocation.temp.length
++
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.wramAllocation.temp.length
   sec
   sbc.w #WRAM_ALLOCATION_BLOCKSIZE
   sta.w GLOBAL.wramAllocation.temp.length
@@ -182,7 +212,10 @@ _allocateWramBlockFree:
   bcs _allocateWramSeekLoop
 
 ;allocation successful
-+ plp
++
+  .ACCU 16
+  .INDEX 16
+  plp
   sec
   rts
 
@@ -212,12 +245,17 @@ _markAllocatedWramBlocks:
 	adc.w #WRAM_ALLOCATION_BLOCKSIZE
 
 +
+  .ACCU 16
+  .INDEX 16
   xba			;allocatio blocksize: $100
   and.w #$ff
   tax
   pla
   sep #$20
--	sta.w GLOBAL.wramAllocationBlocks,y
+-
+	.ACCU 8
+	.INDEX 16
+	sta.w GLOBAL.wramAllocationBlocks,y
 	iny
 	dex
 	bne -
@@ -241,14 +279,23 @@ core.wram.deallocate:
 	;only chance to decrease allocation id is when topmost id gets deallocated
 	dec.w GLOBAL.currentWramAllocationId
 
-+ pea 0
++
+  .ACCU 8
+  .INDEX 16
+  pea 0
 
   ldx.w #WRAM_ALLOCATION_BLOCKS - 1
--	cmp.w GLOBAL.wramAllocationBlocks,x
+-
+	.ACCU 8
+	.INDEX 16
+	cmp.w GLOBAL.wramAllocationBlocks,x
 	bne +
 	  sta 1,s
 	  stz.w GLOBAL.wramAllocationBlocks,x
-+	dex
++
+	.ACCU 8
+	.INDEX 16
+	dex
 	bpl -
 ;	cpx.w #$ffff
 ;	bne -
@@ -267,8 +314,11 @@ core.wram.deallocate:
     plp
     clc
     rts
-    
-+ plx
+
++
+  .ACCU 16
+  .INDEX 16
+  plx
   plp
   sec
   rts

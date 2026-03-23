@@ -21,6 +21,8 @@
   */
   METHOD play
   sep #$20
+  .ACCU 8
+  .INDEX 16
   jsr _isDone
   bcs ++
 	lda this.current
@@ -29,9 +31,14 @@
 	  dec this.current
 	  bra ++
 
-+	inc this.current
-  
++
+	.ACCU 8
+	.INDEX 16
+	inc this.current
+
 ++
+  .ACCU 8
+  .INDEX 16
   lda this.current
   sta.w ScreenBrightness
   rts
@@ -45,7 +52,10 @@
 	bcc +
       TRIGGER_ERROR E_Todo
 
-+	sta this.target
++
+	.ACCU 8
+	.INDEX 16
+	sta this.target
 	sec
 	rts
 
@@ -65,7 +75,10 @@
 	sec	
 	rts
 
-+ plp
++
+  .ACCU 8
+  .INDEX 16
+  plp
   pla
   clc
   rts

@@ -38,7 +38,10 @@ core.dma_channel.allocate:
   rep #$31
   sep #$20
   ldx #0
--	lda.w GLOBAL.DMA_CHANNELS.START,x
+-
+	.ACCU 8
+	.INDEX 16
+	lda.w GLOBAL.DMA_CHANNELS.START,x
 	beq +
 
 	inx
@@ -50,7 +53,10 @@ core.dma_channel.allocate:
   rts
 
 ;channel found
-+ lda #TRUE
++
+  .ACCU 8
+  .INDEX 16
+  lda #TRUE
   sta.w GLOBAL.DMA_CHANNELS.START,x
   txa
   plp
@@ -75,13 +81,19 @@ core.dma_channel.deallocate:
 
 	stp
 
-+ lda.w GLOBAL.DMA_CHANNELS.START,x
++
+  .ACCU 8
+  .INDEX 16
+  lda.w GLOBAL.DMA_CHANNELS.START,x
   bne +
 	pha
     TRIGGER_ERROR E_DmaChannelEmpty
 	stp
 
-+ stz.w GLOBAL.DMA_CHANNELS.START,x
++
+  .ACCU 8
+  .INDEX 16
+  stz.w GLOBAL.DMA_CHANNELS.START,x
   plp
   rts
 

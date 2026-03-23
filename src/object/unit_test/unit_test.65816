@@ -29,6 +29,8 @@
     TRIGGER_ERROR E_UnitTestFail
 
 +
+  .ACCU 16
+  .INDEX 16
   ;must throw error
   ;NEW abstract.Event.CLS.PTR oopCreateNoPtr
 ;  TRIGGER_ERROR E_UnitTestComplete
@@ -61,7 +63,10 @@ _testSelf:
 	sec
 	rts
 
-+ clc
++
+  .ACCU 16
+  .INDEX 16
+  clc
   rts
 
 /**
@@ -129,6 +134,8 @@ _testIterator:
   rts
 
 _testIteratorFail:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 
@@ -166,6 +173,8 @@ _testObject:
   rts
 
 _testObjectFail:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 
@@ -231,6 +240,8 @@ _allocateVram:
   rts
 
 _allocateVramFail:
+  .ACCU 16
+  .INDEX 16
   plp
   clc
   rts
@@ -301,6 +312,8 @@ _allocateCgram:
   rts
 
 _allocateCgramFail:
+  .ACCU 16
+  .INDEX 16
   plp
   clc
   rts
@@ -339,6 +352,8 @@ _testScreen:
   
 
 _testScreenFail:
+  .ACCU 16
+  .INDEX 16
   plp
   clc
   rts

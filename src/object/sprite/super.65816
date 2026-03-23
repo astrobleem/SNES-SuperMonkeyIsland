@@ -37,6 +37,8 @@
   beq +
     inc dimension.position.y + 1
 +
+  .ACCU 16
+  .INDEX 16
   
   jsr abstract.Sprite.playAnimation
   rts

@@ -40,7 +40,10 @@
   sec
   rts
 
-+ brk
++
+  .ACCU 16
+  .INDEX 16
+  brk
   stp
 
 
@@ -76,7 +79,10 @@
   sec
   rts
 
-+ clc
++
+  .ACCU 16
+  .INDEX 16
+  clc
   rts
 
   CLASS Test_object testParameterReturn

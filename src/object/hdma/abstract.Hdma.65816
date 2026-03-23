@@ -30,9 +30,14 @@ abstract.Hdma.start:
 	  clc
 	  rts
 
-+	ora #HDMA.CHANNEL.ALLOCATED
++
+	.ACCU 8
+	.INDEX 16
+	ora #HDMA.CHANNEL.ALLOCATED
 	sta hdma.channel
 ++
+  .ACCU 8
+  .INDEX 16
   lda #TRUE
   sta hdma.isActive
   jsr abstract.Hdma.makePhysical
@@ -57,6 +62,8 @@ abstract.Hdma.stop:
     jsr core.dma_channel.deallocate
     stz hdma.channel
 +
+  .ACCU 8
+  .INDEX 16
   plp
   rts
 
@@ -97,6 +104,8 @@ abstract.Hdma.makePhysical:
 	rts
 
 +
+  .ACCU 16
+  .INDEX 16
   jsr _getChannelRegisterBase
 
   lda hdma.table.adress
@@ -162,7 +171,10 @@ abstract.Hdma.allocateBuffer:
     TRIGGER_ERROR E_OutOfWram
 
 
-+ stx.b hdma.ramBuffer.start
++
+  .ACCU 16
+  .INDEX 16
+  stx.b hdma.ramBuffer.start
   sep #$20
   sta.b hdma.ramBuffer.id
   rep #$31
@@ -176,6 +188,8 @@ abstract.Hdma.deallocateBuffer:
   beq +
 	jsr core.wram.deallocate
 +
+  .ACCU 8
+  .INDEX 16
   plp
   rts
 

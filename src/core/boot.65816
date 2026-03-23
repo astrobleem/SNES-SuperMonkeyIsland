@@ -56,7 +56,14 @@ core.boot.init:
 	;initialize Terrific Audio Driver (requires interrupts disabled, S-SMP at IPL)
 	sep #$20
 	jsl Tad_Init
-	rep #$20
+	rep #$31
+
+	;TODO: wire jsl scummvm.zeroExtraWram here once zeroing logic bug is fixed
+	;(the function zeros WRAM that a subsystem init depends on — needs bisect)
+	nop
+	nop
+	nop
+	nop
 
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main

@@ -23,6 +23,8 @@
   rts
 
 _useCurrentChapter:
+  .ACCU 16
+  .INDEX 16
   ;seek current chapter, get init adress
   jsr abstract.Iterator.reset
   lda.w #(OBJECT.PROPERTIES.isScript | OBJECT.PROPERTIES.isChapter)
@@ -32,7 +34,10 @@ _useCurrentChapter:
     TRIGGER_ERROR E_NoChapterFound
 
 
-+ CALL Script.getScriptAdress.MTD iterator.target
++
+  .ACCU 16
+  .INDEX 16
+  CALL Script.getScriptAdress.MTD iterator.target
   sta.b this.checkPointAdress
   rts
 

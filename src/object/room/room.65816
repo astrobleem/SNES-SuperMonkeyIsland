@@ -63,6 +63,8 @@ room.msu1Seek:
   rts
 
 _room.seekTimeout:
+  .ACCU 8
+  .INDEX 16
   TRIGGER_ERROR E_Msu1SeekTimeout
 
 
@@ -108,6 +110,8 @@ room.loadIndex:
   rts
 
 _room.loadIndex.missing:
+  .ACCU 16
+  .INDEX 16
   plp
   clc
   rts
@@ -254,6 +258,8 @@ room.loadTilemapDual:
   sta.b tmp+8
 
 _room.dualTilemap.columnLoop:
+  .ACCU 16
+  .INDEX 16
   lda.b tmp                     ;total columns remaining
   beq _room.dualTilemap.done
 
@@ -285,6 +291,8 @@ _room.dualTilemap.columnLoop:
   ldy.b tmp+2                  ;row count
   ldx.b tmp+6                  ;WRAM offset
 _room.dualTilemap.bothLoop:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA                ;low byte
   sta.l VMDATAL
@@ -314,10 +322,14 @@ _room.dualTilemap.bothLoop:
   bra _room.dualTilemap.nextCol
 
 _room.dualTilemap.wramOnly:
+  .ACCU 16
+  .INDEX 16
   ;--- columns beyond 64: write to WRAM only ---
   ldy.b tmp+2                  ;row count
   ldx.b tmp+6                  ;WRAM offset
 _room.dualTilemap.wramLoop:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA                ;low byte
   sta.l SCROLL_TILEMAP_WRAM,x
@@ -333,6 +345,8 @@ _room.dualTilemap.wramLoop:
   stx.b tmp+6
 
 _room.dualTilemap.nextCol:
+  .ACCU 16
+  .INDEX 16
   ;decrement total columns
   lda.b tmp
   dec a
@@ -340,6 +354,8 @@ _room.dualTilemap.nextCol:
   bra _room.dualTilemap.columnLoop
 
 _room.dualTilemap.done:
+  .ACCU 16
+  .INDEX 16
   ;restore VMAIN to normal increment-by-1 mode
   sep #$20
   lda.b #VMAIN_INCREMENT_MODE
@@ -410,6 +426,8 @@ room.drainExcessTileset:
   rep #$20
 
 _room.drainExcess.done:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -435,12 +453,16 @@ room.drainFullTileset:
   rep #$20
 
 _room.drainFull.checkHigh:
+  .ACCU 16
+  .INDEX 16
   ;check if chr_size_hi > 0 (tileset > 64KB, unlikely but handle it)
   lda.w GLOBAL.room.hdr.chr_size_hi
   beq _room.drainFull.done
   ;drain another 64KB block (extremely rare)
   tax
 _room.drainFull.hiLoop:
+  .ACCU 16
+  .INDEX 16
   phx
   ldx #0
   sep #$20
@@ -453,6 +475,8 @@ _room.drainFull.hiLoop:
   bne _room.drainFull.hiLoop
 
 _room.drainFull.done:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -475,11 +499,15 @@ room.loadTilemapToWram:
   ldx #0                        ;WRAM byte offset
 
 _room.wramTilemap.colLoop:
+  .ACCU 16
+  .INDEX 16
   lda.b tmp
   beq _room.wramTilemap.done
 
   ldy.b tmp+2                  ;rows this column
 _room.wramTilemap.rowLoop:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA
   sta.l SCROLL_TILEMAP_WRAM,x
@@ -497,6 +525,8 @@ _room.wramTilemap.rowLoop:
   bra _room.wramTilemap.colLoop
 
 _room.wramTilemap.done:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 
@@ -659,6 +689,8 @@ room.load:
   rep #$20
 .ACCU 16
 _rl.noObjEntries:
+  .ACCU 16
+  .INDEX 16
   ;read verb index: count * 4 bytes
   lda.w SCUMM.roomObjCount
   beq _rl.noVerbIdx
@@ -676,6 +708,8 @@ _rl.noObjEntries:
   rep #$20
 .ACCU 16
 _rl.noVerbIdx:
+  .ACCU 16
+  .INDEX 16
   ;read name table
   lda.w SCUMM.roomObjNameSize
   beq _rl.noNames
@@ -691,6 +725,8 @@ _rl.noVerbIdx:
   rep #$20
 .ACCU 16
 _rl.noNames:
+  .ACCU 16
+  .INDEX 16
   ;read verb data blobs
   lda.w SCUMM.roomObjVerbSize
   beq _rl.objDone
@@ -707,10 +743,14 @@ _rl.noNames:
 .ACCU 16
   bra _rl.objDone
 _rl.noObjData:
+  .ACCU 16
+  .INDEX 16
   stz.w SCUMM.roomObjCount
   stz.w SCUMM.roomObjNameSize
   stz.w SCUMM.roomObjVerbSize
 _rl.objDone:
+  .ACCU 16
+  .INDEX 16
   jsl room.initObjectStates             ;set objectState=1 for loaded room objs
 
   ;--- Load object patch (OCHR) data from MSU ---

@@ -43,8 +43,11 @@
   beq +
     sec
 
-+ rts
-  
++
+  .ACCU 16
+  .INDEX 16
+  rts
+
   CLASS Background.generic getAllocatedPalette
 .ends	
 	

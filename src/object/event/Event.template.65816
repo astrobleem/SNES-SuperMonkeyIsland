@@ -36,6 +36,8 @@ Event.template.waitTimeline:
     clc
     rts
 _wt_started:
+  .ACCU 16
+  .INDEX 16
   lda.b event.endFrame
   jsr GLOBAL.checkFrameReached
   bcs _wt_expired
@@ -43,6 +45,8 @@ _wt_started:
   sec
   rts
 _wt_expired:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 
@@ -61,6 +65,8 @@ Event.template.triggerOnWrongInput:
     sec
     rts
 +
+  .ACCU 16
+  .INDEX 16
   pla
   clc
   rts

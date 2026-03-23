@@ -10542,7 +10542,7 @@ _rvb.nextVerb:
   jmp _rvb.verbLoop
 +
 
-  ;--- Render inventory items on row 4 (Y=176, tile row 4) ---
+  ;--- Render inventory items on row 5 (Y=184, tile row 5) ---
   lda.w SCUMM.inventoryCount
   bne +
   jmp _rvb.noInventory
@@ -10574,14 +10574,14 @@ _rvb.invHasItem:
   phx                                   ; save inventory list offset
   phy                                   ; save visible counter
 
-  ; Compute tilemap start for this item: row 4, column = visibleIndex * 8
-  ; tilemap offset = (4 * 32 + visibleIndex * 8) * 2
+  ; Compute tilemap start for this item: row 5, column = visibleIndex * 8
+  ; tilemap offset = (5 * 32 + visibleIndex * 8) * 2
   tya
   asl a
   asl a
   asl a                                 ; visibleIndex * 8
   clc
-  adc #128                              ; + 4*32 = 128
+  adc #160                              ; + 5*32 = 160
   asl a                                 ; * 2 = byte offset
   sta.w SCUMM.actorOamCount             ; reuse as tilemap write ptr
 
@@ -12430,10 +12430,10 @@ scummvm.updateObjectHover:
 _oh.verbArea:
   .ACCU 16
   .INDEX 16
-  ;check if in inventory row: Y in [176, 184)
-  cmp #176
-  bcc _oh.verbOnly
+  ;check if in inventory row: Y in [184, 192)
   cmp #184
+  bcc _oh.verbOnly
+  cmp #192
   bcs _oh.verbOnly
   ;inventory row — compute which item slot
   lda.w SCUMM.cursorX

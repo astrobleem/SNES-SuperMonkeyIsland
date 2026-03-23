@@ -38,6 +38,8 @@
   ldx #0
   lda #0
 _init.zeroSlots:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.slots,x
   inx
   inx
@@ -47,6 +49,8 @@ _init.zeroSlots:
   ;zero global variables (800 * 2 = 1600 bytes)
   ldx #0
 _init.zeroGlobals:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.globalVars,x
   inx
   inx
@@ -56,6 +60,8 @@ _init.zeroGlobals:
   ;zero bit variables (256 bytes)
   ldx #0
 _init.zeroBits:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.bitVars,x
   inx
   inx
@@ -99,6 +105,8 @@ _init.zeroBits:
   ldx #0
   lda #0
 _init.zeroLscr:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.roomLscrTable,x
   inx
   inx
@@ -109,6 +117,8 @@ _init.zeroLscr:
   ldx #0
   lda #0
 _init.zeroActors:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.actors,x
   inx
   inx
@@ -119,6 +129,8 @@ _init.zeroActors:
   ldx #0
   lda #0
 _init.zeroObjState:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.objectState,x
   inx
   inx
@@ -129,6 +141,8 @@ _init.zeroObjState:
   ldx #0
   lda #0
 _init.zeroVerbs:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.verbs,x
   inx
   inx
@@ -138,6 +152,8 @@ _init.zeroVerbs:
   ;zero verb names buffer (256 bytes)
   ldx #0
 _init.zeroVerbNames:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.verbNames,x
   inx
   inx
@@ -150,6 +166,8 @@ _init.zeroVerbNames:
   ;zero verb tilemap (2048 bytes)
   ldx #0
 _init.zeroVerbTilemap:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.verbTilemap,x
   inx
   inx
@@ -160,6 +178,8 @@ _init.zeroVerbTilemap:
   ldx #0
   lda #0
 _init.zeroWalk:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.actorTargetX,x
   sta.w SCUMM.actorTargetY,x
   inx
@@ -170,6 +190,8 @@ _init.zeroWalk:
   sep #$20
   lda #0
 _init.zeroWalk2:
+  .ACCU 8
+  .INDEX 16
   sta.w SCUMM.actorAnimFrame,x
   sta.w SCUMM.actorAnimTimer,x
   lda #$FF
@@ -184,6 +206,8 @@ _init.zeroWalk2:
   ldx #0
   sep #$20
 _init.fillMapper:
+  .ACCU 8
+  .INDEX 16
   txa
   sta.w SCUMM.resourceMapper,x
   inx
@@ -195,6 +219,8 @@ _init.fillMapper:
   ldx #0
   lda #0
 _init.zeroCache:
+  .ACCU 16
+  .INDEX 16
   sta.l SCUMM_CACHE_WRAM,x
   inx
   inx
@@ -229,6 +255,8 @@ _init.zeroCache:
   bne +
     TRIGGER_ERROR E_ScummVmBadOpcode
 +
+  .ACCU 16
+  .INDEX 16
 
   ;--- Seek to script section and read 32-byte header ---
   lda.w SCUMM.scriptSectionLo
@@ -376,6 +404,8 @@ _init.zeroCache:
   ldx #0
   lda #0
 _init.zeroDialogTilemap:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.dialogTilemap,x
   inx
   inx
@@ -431,6 +461,8 @@ _init.zeroDialogTilemap:
   ldx #0
   lda #0
 _init.zeroWalkPaths:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.walkPathLen,x
   sta.w SCUMM.walkPathIdx,x
   sta.w SCUMM.actorWalkBox,x
@@ -444,6 +476,8 @@ _init.zeroWalkPaths:
   ldx #0
   lda #$FF
 _init.lastFrame:
+  .ACCU 8
+  .INDEX 16
   sta.w SCUMM.actorLastFrame,x
   inx
   cpx #SCUMM_WALK_ACTORS
@@ -493,6 +527,8 @@ _init.lastFrame:
   bne +
   jmp _play.done
 +
+  .ACCU 16
+  .INDEX 16
 
   ; Check for pending room change
   lda.w SCUMM.newRoom
@@ -500,6 +536,8 @@ _init.lastFrame:
   beq _play.noRoomChange
   jsr _scummvm.processRoomChange
 _play.noRoomChange:
+  .ACCU 16
+  .INDEX 16
 
   ; Update cursor (joypad input, position, SCUMM vars, OAM)
   jsl scummvm.updateCursor
@@ -509,6 +547,8 @@ _play.noRoomChange:
   stz.w SCUMM.currentSlotPtr
 
 _play.slotLoop:
+  .ACCU 16
+  .INDEX 16
   ldx.w SCUMM.currentSlotPtr
 
   ; Check status == RUNNING
@@ -532,9 +572,13 @@ _play.slotLoop:
   bra _play.nextSlot
 
 _play.runSlot:
+  .ACCU 16
+  .INDEX 16
   jsl scummvm.executeSlot
 
 _play.nextSlot:
+  .ACCU 16
+  .INDEX 16
   ; Advance to next slot
   lda.w SCUMM.currentSlotPtr
   clc
@@ -567,6 +611,8 @@ _play.nextSlot:
   lda #1
   sta.w SCUMM.cursorEnabled
 _play.noEgoFixup:
+  .ACCU 16
+  .INDEX 16
 
   ; Update actor movement + animation (after scripts have run)
   jsl scummvm.updateActors
@@ -591,9 +637,13 @@ _play.noEgoFixup:
   lda.w SCUMM.pendingObject
   jsl scummvm.startObjectScript
 _play.clearPending:
+  .ACCU 16
+  .INDEX 16
   stz.w SCUMM.pendingVerb
   stz.w SCUMM.pendingObject
 _play.noPendingVerb:
+  .ACCU 16
+  .INDEX 16
 
   ; Update camera position (follow actor / pan)
   jsl scummvm.moveCamera
@@ -612,6 +662,8 @@ _play.noPendingVerb:
   sta.w SCUMM.sentenceDirty      ; verb bar clear wipes row 0; re-render sentence
   jsl scummvm.renderVerbBar
 _play.verbClean:
+  .ACCU 16
+  .INDEX 16
   ; Tick dialog timer
   rep #$20
   lda.w SCUMM.dialogActive
@@ -622,19 +674,27 @@ _play.verbClean:
   sta.w SCUMM.dialogTimer
   bra _play.noDialog
 _play.clearDialog:
+  .ACCU 16
+  .INDEX 16
   stz.w SCUMM.dialogActive
   jsl scummvm.clearDialogTilemap
 _play.noDialog:
+  .ACCU 16
+  .INDEX 16
   ; Re-render sentence line if dirty
   lda.w SCUMM.sentenceDirty
   beq _play.noSentence
   jsl scummvm.renderSentenceLine
 _play.noSentence:
+  .ACCU 16
+  .INDEX 16
 
   ; Register pending DMA transfers (CHR, cursor, verb, dialog) via superfree helper
   jsl scummvm.registerPendingDma
 
 _play.done:
+  .ACCU 16
+  .INDEX 16
   rts
 
 
@@ -653,6 +713,8 @@ _scummvm.processRoomChange:
   beq +
   jmp _prc.bgReady
 +
+  .ACCU 16
+  .INDEX 16
 
   sep #$20
   ; Mode 1, BG1 tilemap at $7000 (word $3800), 64 tiles wide
@@ -737,6 +799,8 @@ _scummvm.processRoomChange:
     ora.w GLOBAL.HDMA.CHANNEL.ENABLE
     sta.w GLOBAL.HDMA.CHANNEL.ENABLE
 +
+  .ACCU 8
+  .INDEX 16
 
   ; Set up HDMA to write verb palette colors to CGRAM at scanline 144
   sep #$20
@@ -773,12 +837,16 @@ _scummvm.processRoomChange:
     ora.w GLOBAL.HDMA.CHANNEL.ENABLE
     sta.w GLOBAL.HDMA.CHANNEL.ENABLE
 +
+  .ACCU 8
+  .INDEX 16
 
   rep #$31
   lda #1
   sta.w SCUMM.bgInitDone
 
 _prc.bgReady:
+  .ACCU 16
+  .INDEX 16
   ; Resolve pseudo-room → real room via resourceMapper for loading
   lda.w SCUMM.newRoom
   and #$00FF
@@ -824,6 +892,8 @@ _prc.bgReady:
   pla
   jmp _prc.failed
 +
+  .ACCU 16
+  .INDEX 16
 
   ; Build CGRAM HDMA table with room's palette 7 colors
   ; (HDMA disabled, force blank active — CGRAM reads are safe)
@@ -884,12 +954,16 @@ _prc.bgReady:
   beq _prc.noEntryScript2
   jsr _scummvm.startScriptSlot
 _prc.noEntryScript2:
+  .ACCU 16
+  .INDEX 16
 
   ; Auto-start ENCD if present
   lda.w SCUMM.roomEncdLen
   beq _prc.noEncd
   jsr _scummvm.startEncdSlot
 _prc.noEncd:
+  .ACCU 16
+  .INDEX 16
 
   ; Load actor costume tiles + palette to VRAM/CGRAM
   jsr _scummvm.loadActorCostumes
@@ -904,6 +978,8 @@ _prc.noEncd:
   rep #$20
 
 _prc.failed:
+  .ACCU 16
+  .INDEX 16
   rts
 
 ;-------------------------------------------------------------------
@@ -918,6 +994,8 @@ _scummvm.assignActorWalkboxes:
   .INDEX 16
   lda #1                             ; start at actor 1 (skip actor 0 sentinel)
 _aaw.loop:
+  .ACCU 16
+  .INDEX 16
   pha                                ; save actor index
   asl a
   asl a
@@ -997,6 +1075,8 @@ _scummvm.copyMsuToCache:
   ldy.w SCUMM.scratch           ; Y = remaining count
   beq _copyMsu.done
 _copyMsu.loop:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   lda.l MSU_DATA
   sta.l SCUMM_CACHE_WRAM,x
@@ -1005,6 +1085,8 @@ _copyMsu.loop:
   dey
   bne _copyMsu.loop
 _copyMsu.done:
+  .ACCU 16
+  .INDEX 16
   ply
 
   ; Update cacheWritePtr
@@ -1082,6 +1164,8 @@ _scummvm.loadGlobalScript:
   rts
 
 _loadGlobal.exists:
+  .ACCU 16
+  .INDEX 16
   lda 1,s
   sta.w SCUMM.scratch
 
@@ -1106,6 +1190,8 @@ _loadGlobal.exists:
   TRIGGER_ERROR E_ScummVmCacheFull
 
 _loadGlobal.cacheOk:
+  .ACCU 16
+  .INDEX 16
   ; Seek to script data
   lda 3,s
   tax                 ;X = offset_hi (high 16 bits)
@@ -1141,6 +1227,8 @@ _scummvm.startScriptSlot:
   ldx #0
   ldy #0
 _startScript.stopLoop:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.slots.status,x
   and #$00FF
   cmp #SCUMM_SLOT_DEAD
@@ -1155,6 +1243,8 @@ _startScript.stopLoop:
   rep #$20
   bra _startScript.stopDone     ; only one instance possible
 _startScript.stopNext:
+  .ACCU 16
+  .INDEX 16
   txa
   clc
   adc #_sizeof_scummSlot
@@ -1163,6 +1253,8 @@ _startScript.stopNext:
   cpy #SCUMM_MAX_SLOTS
   bcc _startScript.stopLoop
 _startScript.stopDone:
+  .ACCU 16
+  .INDEX 16
   pla                           ; restore script number
   sta.w SCUMM.scratch
 
@@ -1170,6 +1262,8 @@ _startScript.stopDone:
   ldx #0
   ldy #0
 _startScript.findSlot:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.slots.status,x
   and #$00FF
   cmp #SCUMM_SLOT_DEAD
@@ -1187,6 +1281,8 @@ _startScript.findSlot:
   rts
 
 _startScript.foundSlot:
+  .ACCU 16
+  .INDEX 16
   phx                             ; save slot offset
 
   ; Check if LSCR (script number >= 200)
@@ -1213,6 +1309,8 @@ _startScript.foundSlot:
   rts
 
 _startScript.globalInit:
+  .ACCU 16
+  .INDEX 16
   ; A = cachePtr, X = size (from loadGlobalScript)
   sta.w SCUMM.scratch2          ; scratch2 = cachePtr
   stx.w SCUMM.scratch           ; scratch = cacheLen
@@ -1223,6 +1321,8 @@ _startScript.globalInit:
 
   ;--- Local (LSCR) script path ---
 _startScript.local:
+  .ACCU 16
+  .INDEX 16
   ; SCUMM.scratch = script number (>= 200)
   lda.w SCUMM.scratch
   pha                           ;push script number (for initSlot)
@@ -1243,6 +1343,8 @@ _startScript.local:
   bra _startScript.initSlot
 
 _startScript.localNone:
+  .ACCU 16
+  .INDEX 16
   pla                            ; discard script number
   plx                            ; discard slot offset
   clc
@@ -1252,6 +1354,8 @@ _startScript.localNone:
   ; A = script number, X = slot byte offset, Y = WHERE value
   ; SCUMM.scratch2 = cachePtr, SCUMM.scratch = cacheLen
 _startScript.initSlot:
+  .ACCU 16
+  .INDEX 16
   sep #$20
   sta.w SCUMM.slots.number,x
   lda #SCUMM_SLOT_RUNNING
@@ -1276,6 +1380,8 @@ _startScript.initSlot:
   phx
   ldy #0
 _startScript.zeroLocals:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.slots.localVars,x
   inx
   inx
@@ -1298,6 +1404,8 @@ _scummvm.killRoomScripts:
   ldx #0
   ldy #0
 _killRoom.loop:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.slots.status,x
   and #$00FF
   cmp #SCUMM_SLOT_DEAD
@@ -1310,6 +1418,8 @@ _killRoom.loop:
   sta.w SCUMM.slots.status,x
   rep #$20
 _killRoom.next:
+  .ACCU 16
+  .INDEX 16
   txa
   clc
   adc #_sizeof_scummSlot
@@ -1334,6 +1444,8 @@ _scummvm.reloadGlobalScripts:
   ldx #0
   ldy #0
 _reloadGlobal.loop:
+  .ACCU 16
+  .INDEX 16
   ; Skip dead slots
   lda.w SCUMM.slots.status,x
   and #$00FF
@@ -1365,6 +1477,8 @@ _reloadGlobal.loop:
   ; slot.pc is NOT reset — bytecode is identical, just at new offset
 
 _reloadGlobal.next:
+  .ACCU 16
+  .INDEX 16
   txa
   clc
   adc #_sizeof_scummSlot
@@ -1407,6 +1521,8 @@ _scummvm.cacheGC:
   plx
   stz.w SCUMM.gcInProgress
 _cacheGC.done:
+  .ACCU 16
+  .INDEX 16
   rts
 
 
@@ -1422,6 +1538,8 @@ _scummvm.updateRoomSlotPtrs:
   ldx #0
   ldy #0
 _updateRoomPtrs.loop:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.slots.status,x
   and #$00FF
   beq _updateRoomPtrs.next        ; skip dead slots
@@ -1435,6 +1553,8 @@ _updateRoomPtrs.loop:
   bra _updateRoomPtrs.next        ; GLOBAL already handled
 
 _updateRoomPtrs.room:
+  .ACCU 16
+  .INDEX 16
   ; ROOM slot = ENCD script
   lda.w SCUMM.roomEncdPtr
   sta.w SCUMM.slots.cachePtr,x
@@ -1443,6 +1563,8 @@ _updateRoomPtrs.room:
   bra _updateRoomPtrs.next
 
 _updateRoomPtrs.local:
+  .ACCU 16
+  .INDEX 16
   ; LOCAL slot = LSCR (number 200-255)
   lda.w SCUMM.slots.number,x
   and #$00FF
@@ -1463,6 +1585,8 @@ _updateRoomPtrs.local:
   sta.w SCUMM.slots.cacheLen,x
 
 _updateRoomPtrs.next:
+  .ACCU 16
+  .INDEX 16
   txa
   clc
   adc #_sizeof_scummSlot
@@ -1495,6 +1619,8 @@ _scummvm.loadRoomScripts:
   ldx #0
   lda #0
 _loadRoom.zeroTable:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.roomLscrTable,x
   inx
   inx
@@ -1554,6 +1680,8 @@ _loadRoom.zeroTable:
   rts
 
 _loadRoom.exists:
+  .ACCU 16
+  .INDEX 16
   ;--- Seek to room script block ---
   lda 1,s                        ;offset_hi
   tax
@@ -1599,6 +1727,8 @@ _loadRoom.exists:
   beq _loadRoom.copyEncd
   pha                            ;push remaining count
 _loadRoom.lscrHdr:
+  .ACCU 16
+  .INDEX 16
   ; Read lscr_number (u8)
   sep #$20
   lda.l MSU_DATA
@@ -1626,6 +1756,8 @@ _loadRoom.lscrHdr:
   pla                            ;discard count
 
 _loadRoom.copyEncd:
+  .ACCU 16
+  .INDEX 16
   ;--- Copy ENCD from MSU → cache ---
   lda.w SCUMM.roomEncdLen
   beq _loadRoom.copyExcd
@@ -1635,6 +1767,8 @@ _loadRoom.copyEncd:
   jsr _scummvm.copyMsuToCache
 
 _loadRoom.copyExcd:
+  .ACCU 16
+  .INDEX 16
   ;--- Copy EXCD from MSU → cache ---
   lda.w SCUMM.roomExcdLen
   beq _loadRoom.copyLscr
@@ -1644,11 +1778,15 @@ _loadRoom.copyExcd:
   jsr _scummvm.copyMsuToCache
 
 _loadRoom.copyLscr:
+  .ACCU 16
+  .INDEX 16
   ;--- Copy LSCR bytecodes from MSU → cache ---
   ; LSCRs are stored in number-ascending order in MSU, matching table iteration
   phx
   ldx #0
 _loadRoom.lscrLoop:
+  .ACCU 16
+  .INDEX 16
   cpx #_sizeof_lscrEntry * SCUMM_LSCR_MAX
   bcs _loadRoom.lscrDone
   lda.w SCUMM.roomLscrTable.cacheLen,x
@@ -1664,12 +1802,16 @@ _loadRoom.lscrLoop:
   lda.w SCUMM.scratch2
   sta.w SCUMM.roomLscrTable.cachePtr,x
 _loadRoom.lscrNext:
+  .ACCU 16
+  .INDEX 16
   inx
   inx
   inx
   inx                              ; next lscrEntry (4 bytes)
   bra _loadRoom.lscrLoop
 _loadRoom.lscrDone:
+  .ACCU 16
+  .INDEX 16
   plx
 
   sec                              ; success
@@ -1687,6 +1829,8 @@ _scummvm.startEncdSlot:
   ldx #0
   ldy #0
 _startEncd.findSlot:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.slots.status,x
   and #$00FF
   cmp #SCUMM_SLOT_DEAD
@@ -1701,6 +1845,8 @@ _startEncd.findSlot:
   rts                              ; no free slot
 
 _startEncd.found:
+  .ACCU 16
+  .INDEX 16
   ; X = slot byte offset
   ; Set up SCUMM.scratch2 = cachePtr, SCUMM.scratch = cacheLen
   lda.w SCUMM.roomEncdPtr
@@ -7183,6 +7329,130 @@ _ua.nextSlot:
 scummvm.classBitLut:
   .dw $0001, $0002, $0004, $0008, $0010, $0020, $0040, $0080
   .dw $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
+.ends
+
+
+;===================================================================
+; scummvm.zeroExtraWram — Zero WRAM not covered by existing init loops.
+; Eliminates Mesen testrunner uninit-read warnings for render slots,
+; room objects, actor arrays, scroll staging, and OAM scratch.
+; Called via jsl from ScummVM.init. DBR=$7E. A/XY=16-bit on entry.
+;===================================================================
+.section "scummvm zero extra wram" superfree
+.base BSL
+
+scummvm.zeroExtraWram:
+  .ACCU 16
+  .INDEX 16
+  php
+  rep #$31
+
+  ;zero render slot CHR DMA word arrays (5 slots)
+  lda #0
+  ldx #0
+_zew.renderSlots:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.slotChrSrcLo,x
+  sta.w SCUMM.slotChrLen,x
+  sta.w SCUMM.slotChrVram,x
+  sta.w SCUMM.slotHeadChrSrcLo,x
+  sta.w SCUMM.slotHeadChrLen,x
+  inx
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS * 2
+  bcc _zew.renderSlots
+
+  ;zero render slot byte arrays
+  sep #$20
+  .ACCU 8
+  lda #0
+  ldx #0
+_zew.renderSlots2:
+  .ACCU 8
+  .INDEX 16
+  sta.w SCUMM.renderSlotActor,x
+  sta.w SCUMM.renderSlotCostume,x
+  sta.w SCUMM.renderSlotPalSlot,x
+  sta.w SCUMM.renderSlotLastPic,x
+  sta.w SCUMM.renderSlotDirty,x
+  sta.w SCUMM.renderSlotLastHead,x
+  sta.w SCUMM.renderSlotHeadDirty,x
+  sta.w SCUMM.slotChrSrcHi,x
+  sta.w SCUMM.slotHeadChrSrcHi,x
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _zew.renderSlots2
+  rep #$20
+  .ACCU 16
+
+  ;zero room object table header + all entries (96 x 16B + 4B)
+  lda #0
+  ldx #0
+_zew.roomObj:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.roomObjCount,x
+  inx
+  inx
+  cpx #16 * SCUMM_MAX_ROOM_OBJECTS + 4
+  bcc _zew.roomObj
+
+  ;zero inventory count
+  stz.w SCUMM.invNameCount
+
+  ;zero actor parallel arrays (16 actors)
+  sep #$20
+  .ACCU 8
+  lda #0
+  ldx #0
+_zew.actorArrays:
+  .ACCU 8
+  .INDEX 16
+  sta.w SCUMM.actorWidth,x
+  sta.w SCUMM.actorWalkSpeedX,x
+  sta.w SCUMM.actorWalkSpeedY,x
+  sta.w SCUMM.actorAnimSpeed,x
+  sta.w SCUMM.actorWalkAnimNr,x
+  sta.w SCUMM.actorStandFrame,x
+  sta.w SCUMM.actorTalkAnimStart,x
+  sta.w SCUMM.actorTalkAnimEnd,x
+  sta.w SCUMM.actorZClip,x
+  sta.w SCUMM.actorWalkBox,x
+  sta.w SCUMM.actorIgnoreBoxes,x
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _zew.actorArrays
+  rep #$20
+  .ACCU 16
+
+  ;zero room scroll staging buffer
+  lda #0
+  ldx #0
+_zew.colStaging:
+  .ACCU 16
+  .INDEX 16
+  sta.w GLOBAL.room.colStaging,x
+  inx
+  inx
+  cpx #GLOBAL.room.cacheNextSlot - GLOBAL.room.colStaging
+  bcc _zew.colStaging
+
+  ;zero OAM scratch buffer (80 bytes)
+  lda #0
+  ldx #0
+_zew.oamScratch:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.oamScratch,x
+  inx
+  inx
+  cpx #80
+  bcc _zew.oamScratch
+
+  plp
+  rtl
+
 .ends
 
 

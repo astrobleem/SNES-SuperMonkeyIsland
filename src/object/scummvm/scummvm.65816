@@ -7321,6 +7321,9 @@ op_pickupObject:
   lda #0
   sta.w SCUMM.objectState,x          ; hide from room
   rep #$20
+  ; Remove OCHR tiles if object had a visual patch
+  lda.w SCUMM.scratch                ; A = obj_id
+  jsl room.removeObjectPatch
   lda.w SCUMM.scratch                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName
@@ -7349,8 +7352,10 @@ op_pickupObjectOld:
   lda #1
   sta.w SCUMM.objectOwner,x
   lda #0
-  sta.w SCUMM.objectState,x
+  sta.w SCUMM.objectState,x          ; hide from room
   rep #$20
+  lda.w SCUMM.scratch                ; A = obj_id
+  jsl room.removeObjectPatch
   lda.w SCUMM.scratch                ; A = obj_id
   phy
   jsl scummvm.cacheInventoryName
@@ -13458,8 +13463,7 @@ scummvm.cacheInventoryName:
   pha
   plb
   rep #$31
-  pla
-  and #$00FF                           ; A = obj_id (clean 16-bit)
+  pla                                    ; A = obj_id (full 16-bit)
   sta.w SCUMM.scratch                  ; scratch = obj_id
 
   ; Check if already cached

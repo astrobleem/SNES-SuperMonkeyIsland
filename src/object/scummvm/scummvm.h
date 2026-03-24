@@ -533,7 +533,6 @@ SCUMM.invNameCount       dw                      ; number of cached names
 .define SCUMM_VAR_CAMERA_POS_X     2
 .define SCUMM_VAR_CAMERA_MIN_X     17
 .define SCUMM_VAR_CAMERA_MAX_X     18
-.define SCUMM_VAR_CAMERA_THRESHOLD 29
 .define SCUMM_VAR_CAMERA_FAST_X    36
 
 ; Cursor sprite — tile $F0 at end of OBJ VRAM (avoids actor VRAM regions)

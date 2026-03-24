@@ -917,6 +917,37 @@ _prc.bgReady:
   rep #$20
   pla
 
+  ; --- Run exit scripts BEFORE tearing down old room ---
+  ; ScummVM order: VAR_EXIT_SCRIPT (var[30]), EXCD, VAR_EXIT_SCRIPT2 (var[31])
+
+  ; Run VAR_EXIT_SCRIPT (globalVar[30]) — script 7 in MI1
+  ldx #30*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  beq _prc.noExitScript
+  jsr _scummvm.startScriptSlot
+_prc.noExitScript:
+  .ACCU 16
+  .INDEX 16
+
+  ; Run EXCD (room exit script) if present
+  lda.w SCUMM.roomExcdLen
+  beq _prc.noExcd
+  jsr _scummvm.startExcdSlot
+_prc.noExcd:
+  .ACCU 16
+  .INDEX 16
+
+  ; Run VAR_EXIT_SCRIPT2 (globalVar[31]) — MI1 doesn't use, but guard anyway
+  ldx #31*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  beq _prc.noExitScript2
+  jsr _scummvm.startScriptSlot
+_prc.noExitScript2:
+  .ACCU 16
+  .INDEX 16
+
   ; Kill old room/local script slots
   jsr _scummvm.killRoomScripts
 
@@ -949,21 +980,32 @@ _prc.bgReady:
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
 
-  ; Run VAR_ENTRY_SCRIPT2 (globalVar[29]) before ENCD — ScummVM: runEntryScript()
+  ; --- Run entry scripts in ScummVM order ---
+  ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1
+  ldx #28*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  beq _prc.noEntryScript
+  jsr _scummvm.startScriptSlot
+_prc.noEntryScript:
+  .ACCU 16
+  .INDEX 16
+
+  ; 2. ENCD (room entry script)
+  lda.w SCUMM.roomEncdLen
+  beq _prc.noEncd
+  jsr _scummvm.startEncdSlot
+_prc.noEncd:
+  .ACCU 16
+  .INDEX 16
+
+  ; 3. VAR_ENTRY_SCRIPT2 (globalVar[29]) — script 6 in MI1 (palette cycling)
   ldx #29*2
   lda.w SCUMM.globalVars,x
   and #$00FF
   beq _prc.noEntryScript2
   jsr _scummvm.startScriptSlot
 _prc.noEntryScript2:
-  .ACCU 16
-  .INDEX 16
-
-  ; Auto-start ENCD if present
-  lda.w SCUMM.roomEncdLen
-  beq _prc.noEncd
-  jsr _scummvm.startEncdSlot
-_prc.noEncd:
   .ACCU 16
   .INDEX 16
 
@@ -1860,6 +1902,46 @@ _startEncd.found:
   ldy #SCUMM_WHERE_ROOM
   jmp _startScript.initSlot
 
+
+;-------------------------------------------------------------------
+; _scummvm.startExcdSlot -- start EXCD (exit) script in a new slot
+; Uses roomExcdPtr/roomExcdLen. Finds dead slot, inits as ROOM.
+;-------------------------------------------------------------------
+_scummvm.startExcdSlot:
+  rep #$31
+
+  ; Find a dead slot
+  ldx #0
+  ldy #0
+_startExcd.findSlot:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _startExcd.found
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _startExcd.findSlot
+  rts                              ; no free slot
+
+_startExcd.found:
+  .ACCU 16
+  .INDEX 16
+  ; X = slot byte offset
+  ; Set up SCUMM.scratch2 = cachePtr, SCUMM.scratch = cacheLen
+  lda.w SCUMM.roomExcdPtr
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.roomExcdLen
+  sta.w SCUMM.scratch
+  ; A = 0 (EXCD script number), Y = WHERE_ROOM
+  lda #0
+  ldy #SCUMM_WHERE_ROOM
+  jmp _startScript.initSlot
 
 
 ;===================================================================
@@ -4805,7 +4887,7 @@ op_setCameraAt:
   clc
   rts
 
-; lights ($70, $F0) -- p8[7]=value + byte + byte → store to VAR_CURRENT_LIGHTS (var 72)
+; lights ($70, $F0) -- p8[7]=value + byte + byte → store to VAR_CURRENT_LIGHTS (var 9)
 op_lights:
   .ACCU 16
   .INDEX 16
@@ -12974,18 +13056,35 @@ scummvm.moveCamera:
   lda.w SCUMM.actors,x              ; actor X
   sta.w SCUMM.scratch3
 
-  ; Check threshold: if |actorX - cameraPosX| > threshold, update dest
+  ; Strip-based trigger zones (ScummVM model)
+  ; screenStartStrip = (cameraPosX - 128) / 8
+  ; actorStrip = actorX / 8 - screenStartStrip
+  ; If actorStrip < leftTrigger(8) or actorStrip > rightTrigger(24), follow
   ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x          ; cameraPosX (center)
   sec
-  sbc.w SCUMM.globalVars,x          ; actorX - cameraPosX
-  bpl +
-    eor #$FFFF
-    inc a                            ; abs(diff)
+  sbc #128                           ; left edge
+  bcs +
+    lda #0
 +
-  ldx #SCUMM_VAR_CAMERA_THRESHOLD*2
-  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_THRESHOLD
-  bcc _mc.checkPan                   ; within threshold, don't update dest
+  lsr a
+  lsr a
+  lsr a                              ; screenStartStrip = leftEdge / 8
+  sta.w SCUMM.scratch                ; scratch = screenStartStrip
+  lda.w SCUMM.scratch3               ; actorX
+  lsr a
+  lsr a
+  lsr a                              ; actorX / 8
+  sec
+  sbc.w SCUMM.scratch                ; actorStrip = actorX/8 - screenStartStrip
+  cmp #8                             ; leftTrigger = 8 strips (64px from left)
+  bcc _mc.follow                     ; actor too far left → follow
+  cmp #25                            ; rightTrigger = 24, so > 24 means >= 25
+  bcc _mc.checkPan                   ; within safe zone, don't update dest
 
+_mc.follow:
+  .ACCU 16
+  .INDEX 16
   ; Set cameraDest = actorX
   lda.w SCUMM.scratch3
   sta.w SCUMM.cameraDest
@@ -13118,9 +13217,6 @@ _icv.slotLoop:
   ldx #SCUMM_VAR_CAMERA_MIN_X*2
   sta.w SCUMM.globalVars,x
   ldx #SCUMM_VAR_CAMERA_MAX_X*2
-  sta.w SCUMM.globalVars,x
-  lda #10
-  ldx #SCUMM_VAR_CAMERA_THRESHOLD*2
   sta.w SCUMM.globalVars,x
   lda #4
   ldx #SCUMM_VAR_CAMERA_FAST_X*2

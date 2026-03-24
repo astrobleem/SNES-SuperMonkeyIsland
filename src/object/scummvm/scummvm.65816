@@ -379,6 +379,7 @@ _init.zeroCache:
   sta.w SCUMM.cursorY
   lda #1
   sta.w SCUMM.cursorEnabled
+  sta.w SCUMM.userPut
   stz.w SCUMM.sentenceVerb
   stz.w SCUMM.sentenceObjectA
   stz.w SCUMM.sentenceObjectB
@@ -609,9 +610,10 @@ _play.nextSlot:
   lda #1
   sta.w SCUMM.renderSlotDirty,x
   rep #$20
-  ; Re-enable cursor (boot script disables via cursorCommand sub-op $02)
+  ; Re-enable cursor + userput (boot script disables via cursorCommand sub-ops)
   lda #1
   sta.w SCUMM.cursorEnabled
+  sta.w SCUMM.userPut
 _play.noEgoFixup:
   .ACCU 16
   .INDEX 16
@@ -4543,81 +4545,137 @@ _chainScript.noArgs:
   rts
 
 ; cursorCommand ($2C) -- subop-based, consume parameters + apply cursor state
+; Fixes: fetchByte (not fetchWord), currentOpcode for flag bits, 3 params for
+;   hotspot, getWordVararg for charsetColor, userput sub-ops 3/4/8, soft on/off
+;   counters, VAR_CURSORSTATE=52/VAR_USERPUT=53, epilogue sync
 op_cursorCommand:
   .ACCU 16
   .INDEX 16
-  jsr _scummvm.fetchWord
-  and #$001F
-  cmp #$0A
-  beq _cursor.twoArgs
-  cmp #$0B
-  beq _cursor.twoArgs
-  cmp #$0C
-  beq _cursor.oneArg
-  cmp #$0D
-  beq _cursor.oneArg
-  cmp #$0E
-  beq _cursor.argList
-  ; Subops 1-7: cursor/userput state (no extra bytecode params)
-  cmp #$01
-  beq _cursor.cursorOn
-  cmp #$02
-  beq _cursor.cursorOff
-  cmp #$05
-  bne +
-_cursor.cursorOn:
+  jsr _scummvm.fetchByte            ; BUG1: was fetchWord
+  sta.w SCUMM.scratch               ; save full sub-opcode byte
+  sta.w SCUMM.currentOpcode         ; BUG2: needed for getVarOrDirectByte flag bits
+  and #$001F                        ; mask to sub-op number
+  ; Dispatch on sub-op
+  cmp #1
+  beq _cc.cursorOn
+  cmp #2
+  beq _cc.cursorOff
+  cmp #3
+  beq _cc.userputOn
+  cmp #4
+  beq _cc.userputOff
+  cmp #5
+  beq _cc.cursorSoftOn
+  cmp #6
+  beq _cc.cursorSoftOff
+  cmp #7
+  beq _cc.userputSoftOn
+  cmp #8
+  beq _cc.userputSoftOff
+  cmp #10
+  beq _cc.cursorImage
+  cmp #11
+  beq _cc.cursorHotspot
+  cmp #12
+  beq _cc.oneParam
+  cmp #13
+  beq _cc.oneParam
+  cmp #14
+  beq _cc.charsetColor
+  bra _cc.epilogue                  ; unknown sub-op, skip
+; --- No-param sub-ops ---
+_cc.cursorOn:
   .ACCU 16
-  .INDEX 16
   lda #1
   sta.w SCUMM.cursorEnabled
-  clc
-  rts
-+
-  cmp #$06
-  bne +
+  bra _cc.epilogue
+_cc.cursorOff:
+  .ACCU 16
+  stz.w SCUMM.cursorEnabled
+  bra _cc.epilogue
+_cc.userputOn:
+  .ACCU 16
   lda #1
-  ldx #48*2
-  sta.w SCUMM.globalVars,x
-  clc
-  rts
-+
-  cmp #$07
-  bne +
-  stz.w SCUMM.cursorEnabled
-  lda #0
-  ldx #48*2
-  sta.w SCUMM.globalVars,x
-  clc
-  rts
-+
-_cursor.cursorOff:
+  sta.w SCUMM.userPut
+  bra _cc.epilogue
+_cc.userputOff:
+  .ACCU 16
+  stz.w SCUMM.userPut
+  bra _cc.epilogue
+_cc.cursorSoftOn:
+  .ACCU 16
+  lda.w SCUMM.cursorEnabled
+  inc a
+  sta.w SCUMM.cursorEnabled
+  bra _cc.epilogue
+_cc.cursorSoftOff:
+  .ACCU 16
+  lda.w SCUMM.cursorEnabled
+  dec a
+  sta.w SCUMM.cursorEnabled
+  bra _cc.epilogue
+_cc.userputSoftOn:
+  .ACCU 16
+  lda.w SCUMM.userPut
+  inc a
+  sta.w SCUMM.userPut
+  bra _cc.epilogue
+_cc.userputSoftOff:
+  .ACCU 16
+  lda.w SCUMM.userPut
+  dec a
+  sta.w SCUMM.userPut
+  bra _cc.epilogue
+; --- Param-consuming stubs ---
+_cc.cursorImage:
   .ACCU 16
   .INDEX 16
-  stz.w SCUMM.cursorEnabled
-  clc
-  rts
-_cursor.twoArgs:
-  .ACCU 16
-  .INDEX 16
+  ; getVarOrDirectByte(0x80), getVarOrDirectByte(0x40) — 2 params
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte
-  clc
-  rts
-_cursor.oneArg:
+  bra _cc.epilogue
+_cc.cursorHotspot:
+  .ACCU 16
+  .INDEX 16
+  ; BUG3: 3 params not 2
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectByte
+  lda #SCUMM_FLAG_BIT5
+  jsr _scummvm.getVarOrDirectByte
+  bra _cc.epilogue
+_cc.oneParam:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
-  clc
-  rts
-_cursor.argList:
+  bra _cc.epilogue
+_cc.charsetColor:
   .ACCU 16
   .INDEX 16
+  ; BUG4: getWordVararg — {byte, getVarOrDirectWord(0x80)}* terminated by byte==0xFF
+_cc.charsetColorLoop:
   jsr _scummvm.fetchByte
   cmp #$00FF
-  bne _cursor.argList
+  beq _cc.epilogue
+  ; byte has flag bits for the following word param
+  sta.w SCUMM.currentOpcode         ; store for getVarOrDirectWord flag check
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord
+  bra _cc.charsetColorLoop
+; --- Epilogue: sync cursorState + userPut to SCUMM global vars ---
+_cc.epilogue:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.cursorEnabled
+  ldx #52*2                         ; VAR_CURSORSTATE (BUG7: was 48)
+  sta.w SCUMM.globalVars,x
+  lda.w SCUMM.userPut
+  ldx #53*2                         ; VAR_USERPUT
+  sta.w SCUMM.globalVars,x
   clc
   rts
 

@@ -404,7 +404,8 @@ SCUMM.uaActorStructOfs   dw    ; actor struct byte offset (actor * 16)
 .ramsection "scumm cursor state" bank 0 slot 1
 SCUMM.cursorX         dw      ; screen X (0-255)
 SCUMM.cursorY         dw      ; screen Y (0-223)
-SCUMM.cursorEnabled   dw      ; nonzero = cursor active + visible
+SCUMM.cursorEnabled   dw      ; cursor state counter (>0 = active + visible)
+SCUMM.userPut         dw      ; user input state counter (>0 = input enabled)
 SCUMM.sentenceVerb    dw      ; currently selected verb ID (0=none)
 SCUMM.sentenceObjectA dw      ; first object in sentence (0=none)
 SCUMM.sentenceObjectB dw      ; second object in sentence (0=none)

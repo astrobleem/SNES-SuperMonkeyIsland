@@ -8,6 +8,7 @@ import re
 import struct
 import subprocess
 import zlib
+from collections import Counter
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -285,6 +286,219 @@ def _argb_to_png(width: int, height: int, argb_lines: list[str]) -> bytes:
 
 
 
+def _pixels_to_png(width: int, height: int, pixels: list[int]) -> bytes:
+    """Convert a list of ARGB pixel ints to PNG bytes (RGB, no alpha)."""
+    argb_lines = []
+    line_vals = []
+    for p in pixels:
+        line_vals.append(f"{p:08X}")
+        if len(line_vals) >= 16:
+            argb_lines.append(" ".join(line_vals))
+            line_vals = []
+    if line_vals:
+        argb_lines.append(" ".join(line_vals))
+    return _argb_to_png(width, height, argb_lines)
+
+
+def _capture_frame(
+    wait_frames: int,
+    lua_preamble: str = "",
+    timeout: int = 60,
+) -> tuple[list[int], int, int]:
+    """Run Mesen, capture a frame, and return (pixels, width, height).
+
+    Raises RuntimeError on failure.
+    """
+    lua_code = _SCREENSHOT_LUA.replace("{target_frame}", str(wait_frames))
+    lua_code = lua_code.replace("{lua_preamble}", lua_preamble)
+
+    script_path = SFC_DIR / "_mcp_screenshot.lua"
+    script_path.write_text(lua_code)
+
+    out_file = SFC_DIR / "out.txt"
+    cmd = (
+        f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
+        f'SuperMonkeyIsland.sfc _mcp_screenshot.lua > out.txt 2>&1'
+    )
+
+    try:
+        subprocess.run(f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
+                       stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"MESEN TIMEOUT (>{timeout}s). Partial output:\n{_read_out_file(out_file)}")
+    except Exception as e:
+        raise RuntimeError(f"MESEN ERROR: {e}")
+
+    output = out_file.read_text()
+
+    if "SCREENSHOT_ARGB_START" not in output or "SCREENSHOT_ARGB_END" not in output:
+        if "SCREENSHOT_ERROR" in output:
+            raise RuntimeError(output)
+        raise RuntimeError(f"No screenshot data in output.\n\n{output[-1000:]}")
+
+    header_line = output[output.index("SCREENSHOT_ARGB_START"):].split("\n")[0]
+    parts = header_line.split()
+    width = int(parts[1]) if len(parts) > 1 else 256
+    height = int(parts[2]) if len(parts) > 2 else 224
+
+    start = output.index("SCREENSHOT_ARGB_START")
+    start = output.index("\n", start) + 1
+    end = output.index("SCREENSHOT_ARGB_END")
+    argb_text = output[start:end].strip().split("\n")
+
+    pixels = []
+    for line in argb_text:
+        for hex_val in line.strip().split():
+            pixels.append(int(hex_val, 16))
+
+    # Strip SNES overscan padding
+    if height == 239:
+        top, bot = 7, 8
+        pixels = pixels[top * width : len(pixels) - bot * width]
+        height = 224
+    elif height == 478:
+        top, bot = 14, 16
+        pixels = pixels[top * width : len(pixels) - bot * width]
+        height = 448
+
+    return pixels, width, height
+
+
+def _check_uniform_frame(pixels: list[int], threshold: float = 0.95) -> bool:
+    """Return True if >threshold fraction of pixels are the same RGB color."""
+    if not pixels:
+        return True
+    # Convert to RGB (strip alpha)
+    rgb_pixels = [(p >> 16) & 0xFF | ((p >> 8) & 0xFF) << 8 | (p & 0xFF) << 16
+                  for p in pixels]
+    most_common_count = Counter(rgb_pixels).most_common(1)[0][1]
+    return most_common_count / len(rgb_pixels) > threshold
+
+
+def _crop_pixels(
+    pixels: list[int], src_w: int, src_h: int,
+    x: int, y: int, w: int, h: int,
+) -> list[int]:
+    """Crop a pixel array to a sub-region. Clamps to bounds."""
+    x = max(0, min(x, src_w))
+    y = max(0, min(y, src_h))
+    w = min(w, src_w - x)
+    h = min(h, src_h - y)
+    cropped = []
+    for row in range(y, y + h):
+        start = row * src_w + x
+        cropped.extend(pixels[start : start + w])
+    return cropped
+
+
+def _upscale_pixels(
+    pixels: list[int], w: int, h: int, scale: int,
+) -> tuple[list[int], int, int]:
+    """Nearest-neighbor upscale by integer factor."""
+    if scale <= 1:
+        return pixels, w, h
+    new_w = w * scale
+    new_h = h * scale
+    out = []
+    for row in range(h):
+        row_pixels = pixels[row * w : (row + 1) * w]
+        scaled_row = []
+        for p in row_pixels:
+            scaled_row.extend([p] * scale)
+        for _ in range(scale):
+            out.extend(scaled_row)
+    return out, new_w, new_h
+
+
+def _png_to_rgb(png_path: Path) -> tuple[list[tuple[int, int, int]], int, int]:
+    """Read a PNG file and return ([(r,g,b), ...], width, height).
+
+    Supports 8-bit RGB and RGBA PNGs with filter type 0 (None) or basic
+    filters. Uses zlib to decompress IDAT chunks.
+    """
+    data = png_path.read_bytes()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError(f"Not a valid PNG file: {png_path}")
+
+    # Parse chunks
+    pos = 8
+    ihdr = None
+    idat_chunks = []
+    while pos < len(data):
+        length = struct.unpack(">I", data[pos:pos+4])[0]
+        chunk_type = data[pos+4:pos+8]
+        chunk_data = data[pos+8:pos+8+length]
+        pos += 12 + length  # 4 len + 4 type + data + 4 crc
+
+        if chunk_type == b"IHDR":
+            ihdr = chunk_data
+        elif chunk_type == b"IDAT":
+            idat_chunks.append(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+
+    if ihdr is None:
+        raise ValueError("No IHDR chunk found")
+
+    width, height, bit_depth, color_type = struct.unpack(">IIBB", ihdr[:10])
+    if bit_depth != 8:
+        raise ValueError(f"Unsupported bit depth: {bit_depth}")
+
+    if color_type == 2:    # RGB
+        bpp = 3
+    elif color_type == 6:  # RGBA
+        bpp = 4
+    else:
+        raise ValueError(f"Unsupported color type: {color_type}")
+
+    raw = zlib.decompress(b"".join(idat_chunks))
+
+    # Reconstruct scanlines (with PNG filtering)
+    stride = width * bpp
+    pixels = []
+    prev_row = bytes(stride)
+
+    for y in range(height):
+        offset = y * (stride + 1)
+        filter_type = raw[offset]
+        scanline = bytearray(raw[offset + 1 : offset + 1 + stride])
+
+        if filter_type == 1:  # Sub
+            for i in range(bpp, stride):
+                scanline[i] = (scanline[i] + scanline[i - bpp]) & 0xFF
+        elif filter_type == 2:  # Up
+            for i in range(stride):
+                scanline[i] = (scanline[i] + prev_row[i]) & 0xFF
+        elif filter_type == 3:  # Average
+            for i in range(stride):
+                left = scanline[i - bpp] if i >= bpp else 0
+                scanline[i] = (scanline[i] + (left + prev_row[i]) // 2) & 0xFF
+        elif filter_type == 4:  # Paeth
+            for i in range(stride):
+                left = scanline[i - bpp] if i >= bpp else 0
+                up = prev_row[i]
+                up_left = prev_row[i - bpp] if i >= bpp else 0
+                p = left + up - up_left
+                pa, pb, pc = abs(p - left), abs(p - up), abs(p - up_left)
+                if pa <= pb and pa <= pc:
+                    pred = left
+                elif pb <= pc:
+                    pred = up
+                else:
+                    pred = up_left
+                scanline[i] = (scanline[i] + pred) & 0xFF
+
+        prev_row = bytes(scanline)
+
+        for x in range(width):
+            r = scanline[x * bpp]
+            g = scanline[x * bpp + 1]
+            b = scanline[x * bpp + 2]
+            pixels.append((r, g, b))
+
+    return pixels, width, height
+
+
 # Lua screenshot script template.
 # Uses getScreenBuffer() ARGB array (reliable across Mesen versions).
 _SCREENSHOT_LUA = r"""
@@ -331,6 +545,7 @@ end, emu.eventType.endFrame)
 def take_screenshot(
     wait_frames: int = 800,
     lua_preamble: str = "",
+    output_name: str = "screenshot.png",
     timeout: int = 60,
 ) -> str:
     """Take a screenshot of the emulator at a specific PPU frame.
@@ -342,80 +557,27 @@ def take_screenshot(
         wait_frames: PPU frame number at which to capture (default 800 = after boot + SCUMM init).
         lua_preamble: Optional Lua code inserted before the screenshot logic
                       (e.g., input injection for room cycling).
+        output_name: Output filename (default: screenshot.png). Saved in distribution/.
         timeout: Max seconds to wait for Mesen.
 
     Returns:
         Path to the saved PNG file, or an error message.
     """
-    effective_preamble = lua_preamble
+    png_path = SFC_DIR / output_name
 
-    lua_code = _SCREENSHOT_LUA.replace("{target_frame}", str(wait_frames))
-    lua_code = lua_code.replace("{lua_preamble}", effective_preamble)
-
-    script_path = SFC_DIR / "_mcp_screenshot.lua"
-    script_path.write_text(lua_code)
-
-    out_file = SFC_DIR / "out.txt"
-    cmd = (
-        f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc _mcp_screenshot.lua > out.txt 2>&1'
-    )
-
-    try:
-        subprocess.run(f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
-                       stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        return f"MESEN TIMEOUT (>{timeout}s). Partial output:\n{_read_out_file(out_file)}"
-    except Exception as e:
-        return f"MESEN ERROR: {e}"
-
-    output = out_file.read_text()
-    png_path = SFC_DIR / "screenshot.png"
-
-    # Parse ARGB pixel buffer from Lua output
-    if "SCREENSHOT_ARGB_START" in output and "SCREENSHOT_ARGB_END" in output:
-        header_line = output[output.index("SCREENSHOT_ARGB_START"):].split("\n")[0]
-        parts = header_line.split()
-        width = int(parts[1]) if len(parts) > 1 else 256
-        height = int(parts[2]) if len(parts) > 2 else 224
-
-        start = output.index("SCREENSHOT_ARGB_START")
-        start = output.index("\n", start) + 1  # skip header line
-        end = output.index("SCREENSHOT_ARGB_END")
-        argb_text = output[start:end].strip().split("\n")
+    for attempt in range(2):
+        try:
+            pixels, width, height = _capture_frame(wait_frames, lua_preamble, timeout)
+        except RuntimeError as e:
+            return str(e)
 
         try:
-            # Parse ARGB pixels for crash detection before PNG conversion
-            pixels = []
-            for line in argb_text:
-                for hex_val in line.strip().split():
-                    pixels.append(int(hex_val, 16))
+            png_bytes = _pixels_to_png(width, height, pixels)
 
-            # Strip SNES overscan padding rows from PPU buffer.
-            # SnesPpu::SendFrame() zeroes top 7 / bottom 8 rows of the
-            # 239-line buffer for 224-line mode games.  The Lua API
-            # returns the raw buffer, so we crop to visible content.
-            if height == 239:
-                top, bot = 7, 8
-                pixels = pixels[top * width : len(pixels) - bot * width]
-                height = 224
-            elif height == 478:          # hi-res interlace (doubled)
-                top, bot = 14, 16
-                pixels = pixels[top * width : len(pixels) - bot * width]
-                height = 448
+            # Retry once if file is suspiciously small (black frame bug)
+            if len(png_bytes) < 500 and attempt == 0:
+                continue
 
-            # Regenerate argb_text from (possibly cropped) pixels
-            argb_text = []
-            line_vals = []
-            for p in pixels:
-                line_vals.append(f"{p:08X}")
-                if len(line_vals) >= 16:
-                    argb_text.append(" ".join(line_vals))
-                    line_vals = []
-            if line_vals:
-                argb_text.append(" ".join(line_vals))
-
-            png_bytes = _argb_to_png(width, height, argb_text)
             png_path.write_bytes(png_bytes)
             msg = f"Screenshot saved: {png_path} ({len(png_bytes)} bytes, from ARGB buffer)"
 
@@ -423,14 +585,195 @@ def take_screenshot(
             if _check_magenta_crash(pixels, width):
                 msg += "\n[CRASH DETECTED -- magenta error screen]"
 
+            # Check for uniform/blank frame
+            if _check_uniform_frame(pixels):
+                msg += "\n[WARNING: frame appears blank or uniform -- possible timing issue]"
+
             return msg
         except Exception as e:
             return f"ERROR converting ARGB to PNG: {e}"
 
-    # Neither strategy produced output
-    if "SCREENSHOT_ERROR" in output:
-        return output
-    return f"INCONCLUSIVE — no screenshot data in output.\n\n{output[-1000:]}"
+    # Both attempts produced tiny files
+    png_path.write_bytes(png_bytes)
+    return f"Screenshot saved: {png_path} ({len(png_bytes)} bytes) [WARNING: file unusually small, possible black frame]"
+
+
+@mcp.tool()
+def crop_screenshot(
+    wait_frames: int = 800,
+    x: int = 0,
+    y: int = 0,
+    width: int = 256,
+    height: int = 224,
+    scale: int = 1,
+    output_name: str = "crop.png",
+    lua_preamble: str = "",
+    timeout: int = 60,
+) -> str:
+    """Take a screenshot, crop to a pixel region, optionally upscale, and save.
+
+    Useful for zooming in on specific screen areas (e.g., verb bar boundary,
+    palette bleed, tile seams).
+
+    Args:
+        wait_frames: PPU frame to capture at (default 800).
+        x: Left edge of crop region in pixels.
+        y: Top edge of crop region in pixels.
+        width: Width of crop region in pixels.
+        height: Height of crop region in pixels.
+        scale: Nearest-neighbor upscale factor (1 = no upscale).
+        output_name: Output filename (saved in distribution/).
+        lua_preamble: Optional Lua code inserted before screenshot logic.
+        timeout: Max seconds to wait for Mesen.
+
+    Returns:
+        Path to saved PNG and dimensions, or error message.
+    """
+    try:
+        pixels, src_w, src_h = _capture_frame(wait_frames, lua_preamble, timeout)
+    except RuntimeError as e:
+        return str(e)
+
+    try:
+        # Crop
+        cropped = _crop_pixels(pixels, src_w, src_h, x, y, width, height)
+        crop_w = min(width, src_w - max(0, x))
+        crop_h = min(height, src_h - max(0, y))
+
+        # Upscale
+        final_pixels, final_w, final_h = _upscale_pixels(cropped, crop_w, crop_h, scale)
+
+        png_bytes = _pixels_to_png(final_w, final_h, final_pixels)
+        png_path = SFC_DIR / output_name
+        png_path.write_bytes(png_bytes)
+        return (
+            f"Cropped screenshot saved: {png_path}\n"
+            f"  Source: {src_w}x{src_h}, Region: ({x},{y}) {crop_w}x{crop_h}, "
+            f"Scale: {scale}x, Final: {final_w}x{final_h}, Size: {len(png_bytes)} bytes"
+        )
+    except Exception as e:
+        return f"ERROR in crop_screenshot: {e}"
+
+
+@mcp.tool()
+def visual_regression_check(
+    reference_path: str,
+    wait_frames: int = 800,
+    region: list[int] | None = None,
+    tolerance: int = 0,
+    output_name: str = "diff.png",
+    lua_preamble: str = "",
+    timeout: int = 60,
+) -> str:
+    """Compare a new screenshot against a reference image. Report pixel differences.
+
+    Takes a fresh screenshot and compares it pixel-by-pixel against a reference
+    PNG. Generates a diff image highlighting differences in red.
+
+    Args:
+        reference_path: Path to the reference PNG image.
+        wait_frames: PPU frame to capture at (default 800).
+        region: Optional [x, y, w, h] crop region to compare. None = full frame.
+        tolerance: Per-channel tolerance for color matching (0 = exact match).
+        output_name: Filename for the diff image (saved in distribution/).
+        lua_preamble: Optional Lua code inserted before screenshot logic.
+        timeout: Max seconds to wait for Mesen.
+
+    Returns:
+        PASS/FAIL verdict, diff stats, and path to diff image.
+    """
+    ref_path = Path(reference_path)
+    if not ref_path.exists():
+        return f"ERROR: Reference image not found: {ref_path}"
+
+    # Load reference image
+    try:
+        ref_pixels, ref_w, ref_h = _png_to_rgb(ref_path)
+    except Exception as e:
+        return f"ERROR reading reference PNG: {e}"
+
+    # Capture new frame
+    try:
+        new_argb, new_w, new_h = _capture_frame(wait_frames, lua_preamble, timeout)
+    except RuntimeError as e:
+        return str(e)
+
+    # Convert ARGB ints to (r,g,b) tuples
+    new_pixels = [
+        ((p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF)
+        for p in new_argb
+    ]
+
+    # Apply region crop if specified
+    if region is not None and len(region) == 4:
+        rx, ry, rw, rh = region
+
+        # Crop reference
+        ref_cropped = []
+        for row in range(ry, min(ry + rh, ref_h)):
+            for col in range(rx, min(rx + rw, ref_w)):
+                ref_cropped.append(ref_pixels[row * ref_w + col])
+        ref_pixels = ref_cropped
+        ref_cw = min(rw, ref_w - rx)
+        ref_ch = min(rh, ref_h - ry)
+
+        # Crop new
+        new_cropped = []
+        for row in range(ry, min(ry + rh, new_h)):
+            for col in range(rx, min(rx + rw, new_w)):
+                new_cropped.append(new_pixels[row * new_w + col])
+        new_pixels = new_cropped
+        new_cw = min(rw, new_w - rx)
+        new_ch = min(rh, new_h - ry)
+
+        cmp_w, cmp_h = min(ref_cw, new_cw), min(ref_ch, new_ch)
+    else:
+        cmp_w, cmp_h = min(ref_w, new_w), min(ref_h, new_h)
+
+    if len(ref_pixels) == 0 or len(new_pixels) == 0:
+        return "ERROR: One or both images have zero pixels after cropping."
+
+    # Compare pixel-by-pixel and build diff image
+    total_pixels = min(len(ref_pixels), len(new_pixels))
+    diff_count = 0
+    diff_argb = []
+
+    for i in range(total_pixels):
+        rr, rg, rb = ref_pixels[i]
+        nr, ng, nb = new_pixels[i]
+
+        if (abs(rr - nr) <= tolerance and
+            abs(rg - ng) <= tolerance and
+            abs(rb - nb) <= tolerance):
+            # Match — dim the pixel (25% brightness)
+            dr = rr // 4
+            dg = rg // 4
+            db = rb // 4
+            diff_argb.append(0xFF000000 | (dr << 16) | (dg << 8) | db)
+        else:
+            # Difference — highlight in red
+            diff_count += 1
+            diff_argb.append(0xFFFF0000)
+
+    pct = (diff_count / total_pixels * 100) if total_pixels > 0 else 0
+    verdict = "PASS" if diff_count == 0 else "FAIL"
+
+    # Save diff image
+    try:
+        png_bytes = _pixels_to_png(cmp_w, cmp_h, diff_argb)
+        diff_path = SFC_DIR / output_name
+        diff_path.write_bytes(png_bytes)
+    except Exception as e:
+        return f"ERROR generating diff image: {e}"
+
+    return (
+        f"{verdict}: {diff_count}/{total_pixels} pixels differ ({pct:.2f}%)\n"
+        f"  Reference: {ref_path} ({ref_w}x{ref_h})\n"
+        f"  Captured: {new_w}x{new_h}\n"
+        f"  Compared region: {cmp_w}x{cmp_h}\n"
+        f"  Tolerance: {tolerance}\n"
+        f"  Diff image: {diff_path}"
+    )
 
 
 def _read_out_file(path: Path) -> str:

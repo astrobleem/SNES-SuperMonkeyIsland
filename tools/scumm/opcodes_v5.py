@@ -708,9 +708,8 @@ def _dec_wait(op: int, s: BytesIO) -> int:
     key = sub & 0x1F
 
     if key == 0x01:
-        # waitForActor: actor(p8) + jump offset(2)
-        total += _read_p8(s, sub, 0x80) + 2
-        s.read(2)
+        # waitForActor: actor(p8) only — ScummVM rewinds PC, no jump offset
+        total += _read_p8(s, sub, 0x80)
     elif key == 0x02:
         # waitForMessage: no params
         pass
@@ -861,7 +860,7 @@ def _dec_oldRoomEffect(op: int, s: BytesIO) -> int:
 
 # pseudoRoom
 def _dec_pseudoRoom(op: int, s: BytesIO) -> int:
-    """pseudoRoom: reads byte pairs until byte == 0."""
+    """pseudoRoom: reads single bytes until byte == 0 (per ScummVM v5)."""
     total = 0
     while True:
         b = s.read(1)
@@ -870,9 +869,6 @@ def _dec_pseudoRoom(op: int, s: BytesIO) -> int:
         total += 1
         if b[0] == 0x00:
             break
-        # Each iteration: res byte + room byte
-        s.read(1)
-        total += 1
     return total
 
 
@@ -882,8 +878,10 @@ def _dec_pickupObjectOld(op: int, s: BytesIO) -> int:
     return _read_p16(s)
 
 
-# systemOps ($98) — dummy in v5
-_dec_systemOps = _dec_none
+# systemOps ($98) — reads 1-byte sub-opcode (per ScummVM v5)
+def _dec_systemOps(op: int, s: BytesIO) -> int:
+    s.read(1)
+    return 1
 
 # dummy ($A7)
 _dec_dummy = _dec_none

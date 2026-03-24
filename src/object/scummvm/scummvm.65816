@@ -4137,7 +4137,7 @@ op_setVarRange:
   sta.w SCUMM.scratch
 
   lda.w SCUMM.currentOpcode
-  and #SCUMM_FLAG_BIT5
+  and #SCUMM_FLAG_BIT7
   bne _setVarRange.wordMode
 
 _setVarRange.byteMode:
@@ -4258,7 +4258,13 @@ op_endCutscene:
 op_override:
   .ACCU 16
   .INDEX 16
-  jsr _scummvm.fetchWord
+  jsr _scummvm.fetchByte             ; flag byte (0=endOverride, nonzero=beginOverride)
+  and #$00FF
+  beq _override.done
+  ; beginOverride: skip jump opcode byte + 2-byte offset
+  jsr _scummvm.fetchByte             ; jump opcode byte (0x18)
+  jsr _scummvm.fetchWord             ; jump offset (2 bytes)
+_override.done:
   clc
   rts
 
@@ -4716,7 +4722,9 @@ op_resourceRoutines:
   cmp #$14
   beq _resRoutines.flObject  ; loadFlObject: p8 + p16
 
-  ; Default: one p8 parameter (flag = bit 7 of MAIN opcode, per ScummVM)
+  ; Default: one p8 parameter (flag = bit 7 of SUB-OPCODE byte)
+  lda.w SCUMM.scratch                ; sub-opcode byte
+  sta.w SCUMM.currentOpcode          ; set as current for flag check
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
   bra _resRoutines.done
@@ -4725,6 +4733,8 @@ _resRoutines.flObject:
   .ACCU 16
   .INDEX 16
   ; loadFlObject: p8[7] room + p16 object (per ScummVM)
+  lda.w SCUMM.scratch                ; sub-opcode byte
+  sta.w SCUMM.currentOpcode          ; set as current for flag check
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte   ; room
   jsr _scummvm.fetchWord            ; object ID (always p16)
@@ -6454,16 +6464,20 @@ op_ifState:
   sta.w SCUMM.scratch                ; save obj ID
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; expected state
-  sta.w SCUMM.scratch2               ; save expected
+  pha                                ; save expected state on stack
+  jsr _scummvm.fetchWord             ; jump offset
+  sta.w SCUMM.scratch2               ; save jump offset
+  pla                                ; restore expected state
+  sta.w SCUMM.scratch3               ; save for comparison
   ; Look up actual state
   ldx.w SCUMM.scratch
   cpx #SCUMM_MAX_OBJECTS
-  bcs +                              ; out of bounds → treat as 0, no match → skip
+  bcs +                              ; out of bounds -> skip
   lda.w SCUMM.objectState,x
   and #$00FF
-  cmp.w SCUMM.scratch2
-  bne +                              ; no match → skip jump
-    jsr _scummvm.takeRelJump         ; match → take jump
+  cmp.w SCUMM.scratch3
+  bne +                              ; no match -> skip jump
+    jsr _scummvm.takeRelJump         ; match -> take jump
 +
   clc
   rts
@@ -6477,18 +6491,22 @@ op_ifNotState:
   sta.w SCUMM.scratch
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; expected state
-  sta.w SCUMM.scratch2
+  pha                                ; save expected state
+  jsr _scummvm.fetchWord             ; jump offset
+  sta.w SCUMM.scratch2               ; save jump offset
+  pla                                ; restore expected state
+  sta.w SCUMM.scratch3               ; for comparison
   ldx.w SCUMM.scratch
   cpx #SCUMM_MAX_OBJECTS
-  bcs _ifNotState.doJump             ; out of bounds → state=0, != anything → jump
+  bcs _ifNotState.doJump             ; out of bounds -> jump
   lda.w SCUMM.objectState,x
   and #$00FF
-  cmp.w SCUMM.scratch2
-  beq +                              ; equal → skip jump
+  cmp.w SCUMM.scratch3
+  beq +                              ; equal -> skip jump
 _ifNotState.doJump:
   .ACCU 16
   .INDEX 16
-    jsr _scummvm.takeRelJump         ; not equal → take jump
+    jsr _scummvm.takeRelJump         ; not equal -> take jump
 +
   clc
   rts
@@ -7816,8 +7834,6 @@ op_drawBox:
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectWord    ; y (main opcode bit 6)
   jsr _scummvm.fetchByte             ; aux opcode byte
-  cmp #0
-  beq _drawBox.done                  ; aux==0: no more params
   sta.w SCUMM.currentOpcode          ; aux byte becomes new opcode for flag checks
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; x2 (aux bit 7)

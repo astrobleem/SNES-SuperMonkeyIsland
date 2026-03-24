@@ -851,6 +851,11 @@ _scummvm.processRoomChange:
 _prc.bgReady:
   .ACCU 16
   .INDEX 16
+
+  ; Clear BG3 dialog tilemap on every room change so stale text
+  ; (e.g. "CD tracks detected." from global script 176) doesn't persist.
+  jsl scummvm.clearDialogTilemap
+
   ; Resolve pseudo-room → real room via resourceMapper for loading
   lda.w SCUMM.newRoom
   and #$00FF

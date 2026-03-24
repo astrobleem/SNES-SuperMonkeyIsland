@@ -10861,29 +10861,31 @@ scummvm.buildCgramHdmaTable:
   stz.w 54,x
   stz.w 55,x
   stz.w 56,x
-  ; Entry 1: CGRAM[$71] = $6318 (light grey fill — normal)
-  lda #$71
+  ; Entry 1: CGRAM[$73] = $7FFF (white body — normal verb text)
+  ; Placed first so it's written earliest (scanline 138), maximizing
+  ; margin before sentence text at scanline 146.
+  lda #$73
   sta.w 57,x
   sta.w 58,x
-  lda #$18
+  lda #$FF
   sta.w 59,x
-  lda #$63
+  lda #$7F
   sta.w 60,x
-  ; Entry 2: CGRAM[$72] = $294A (dark shadow — normal)
-  lda #$72
+  ; Entry 2: CGRAM[$71] = $6318 (light grey fill — normal)
+  lda #$71
   sta.w 61,x
   sta.w 62,x
-  lda #$4A
+  lda #$18
   sta.w 63,x
-  lda #$29
+  lda #$63
   sta.w 64,x
-  ; Entry 3: CGRAM[$73] = $7FFF (white body — normal verb text)
-  lda #$73
+  ; Entry 3: CGRAM[$72] = $294A (dark shadow — normal)
+  lda #$72
   sta.w 65,x
   sta.w 66,x
-  lda #$FF
+  lda #$4A
   sta.w 67,x
-  lda #$7F
+  lda #$29
   sta.w 68,x
   ; Entry 4: CGRAM[$61] = $6318 (light grey fill — highlight)
   lda #$61

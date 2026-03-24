@@ -1022,6 +1022,9 @@ _prc.noEntryScript2:
   ; Assign walkboxes for all visible actors in this room
   jsr _scummvm.assignActorWalkboxes
 
+  ; Clear any stale BG3 text from boot scripts before making screen visible
+  jsl scummvm.clearDialogTilemap
+
   ; Fade up brightness
   sep #$20
   lda.b #$0F

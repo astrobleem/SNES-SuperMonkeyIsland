@@ -7822,23 +7822,33 @@ _oldRoomEffect.done:
   rts
 
 ;-------------------------------------------------------------------
-; pseudoRoom ($CC) — byte pairs: {res, room}* + 0x00 sentinel
-; Populates resourceMapper[res] = room (for pseudo-room → real room)
+; pseudoRoom ($CC) — ScummVM v5 format:
+;   fetchByte → real_room (i), then loop fetchByte → j:
+;     j == 0 → done
+;     j >= 0x80 → resourceMapper[j & 0x7F] = real_room
 ;-------------------------------------------------------------------
 op_pseudoRoom:
   .ACCU 16
   .INDEX 16
+  jsr _scummvm.fetchByte             ; i = real room number
+  and #$00FF
+  sta.w SCUMM.scratch                ; save real_room in scratch
 _pseudoRoom.loop:
   .ACCU 16
   .INDEX 16
-  jsr _scummvm.fetchByte
+  jsr _scummvm.fetchByte             ; j = pseudo-room byte
   and #$00FF
-  beq _pseudoRoom.done
-  tax                                 ; X = resource (pseudo-room) number
-  jsr _scummvm.fetchByte             ; A = real room number
+  beq _pseudoRoom.done               ; j == 0 → terminator
+  cmp #$0080
+  bcc _pseudoRoom.loop               ; j < 0x80 → skip (shouldn't happen)
+  and #$007F                         ; j & 0x7F → index
+  tax
+  lda.w SCUMM.scratch                ; A = real_room
   sep #$20
+  .ACCU 8
   sta.w SCUMM.resourceMapper,x
   rep #$20
+  .ACCU 16
   bra _pseudoRoom.loop
 _pseudoRoom.done:
   .ACCU 16
@@ -10148,17 +10158,15 @@ _voi.subLoop:
   jmp _voi.doDimColor
 +
   cmp #$11
-  beq _voi.doP8
+  beq _voi.subLoop                     ; dim: no params
   cmp #$13
-  bne +
-  jmp _voi.doKey
-+
+  beq _voi.subLoop                     ; center: no params
   cmp #$14
   beq _voi.p16
   cmp #$16
   beq _voi.p16_p8
   cmp #$17
-  beq _voi.p16
+  beq _voi.doP8                        ; bkcolor: p8 (not p16)
   bra _voi.doP8
 
 ; --- Skip helpers ---

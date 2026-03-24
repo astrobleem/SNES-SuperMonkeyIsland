@@ -6037,9 +6037,17 @@ op_roomOps:
   cmp #$04
   beq _roomOps.palColor              ; setPalColor: 3x p16 + p8[7]
   cmp #$05
-  beq _roomOps.shake                 ; shake: 1x p8[7]
+  bne +
+  jmp _roomOps.shakeOn               ; shakeOn: no params
++
+  cmp #$06
+  bne +
+  jmp _roomOps.shakeOff              ; shakeOff: no params
++
   cmp #$07
-  beq _roomOps.scale                 ; roomScale v5: complex
+  bne +
+  jmp _roomOps.scale                 ; roomScale v5: complex
++
   cmp #$08
   bne +
   jmp _roomOps.scaleSimple           ; roomScale simple: 3x p8
@@ -6056,6 +6064,14 @@ op_roomOps:
   bne +
   jmp _roomOps.intensity             ; roomShadow (same format)
 +
+  cmp #$0D
+  bne +
+  jmp _roomOps.saveString            ; saveString: p8[7] + null-terminated string
++
+  cmp #$0F
+  bne +
+  jmp _roomOps.palManipulate         ; palManipulate: complex params
++
   ; Default: no params
   clc
   rts
@@ -6063,9 +6079,25 @@ op_roomOps:
 _roomOps.scroll:
   .ACCU 16
   .INDEX 16
-  ; minX/maxX or b/h: 2x p16
-  jsr _scummvm.fetchWord
-  jsr _scummvm.fetchWord
+  ; roomScroll: minX, maxX (2x fetchWord)
+  jsr _scummvm.fetchWord             ; minX
+  pha
+  jsr _scummvm.fetchWord             ; maxX
+  ; Clamp maxX: if < 128, set to 128
+  cmp #128
+  bcs +
+    lda #128
++
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  sta.w SCUMM.globalVars,x
+  ; Clamp minX: if < 128, set to 128
+  pla
+  cmp #128
+  bcs +
+    lda #128
++
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  sta.w SCUMM.globalVars,x
   clc
   rts
 
@@ -6095,17 +6127,28 @@ _roomOps.palColor:
   clc
   rts
 
-_roomOps.shake:
+_roomOps.shakeOn:
   .ACCU 16
   .INDEX 16
-  lda.w SCUMM.scratch
-  and #$0080
-  beq +
-  jsr _scummvm.fetchWord
+  ; sub-op 5: no parameters — just set shake flag
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.w SCUMM.shakeEnabled
+  rep #$20
+  .ACCU 16
   clc
   rts
-+
-  jsr _scummvm.fetchByte
+
+_roomOps.shakeOff:
+  .ACCU 16
+  .INDEX 16
+  ; sub-op 6: no parameters — just clear shake flag
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.shakeEnabled
+  rep #$20
+  .ACCU 16
   clc
   rts
 
@@ -6228,6 +6271,35 @@ _roomOps.fade:
   ; roomFade/screenEffect: 1x p16[7]
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord
+  clc
+  rts
+
+_roomOps.saveString:
+  .ACCU 16
+  .INDEX 16
+  ; sub-op 13: getVarOrDirectByte(0x80) + null-terminated string
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; string resource ID
+  jsr _scummvm.skipNullString        ; filename
+  clc
+  rts
+
+_roomOps.palManipulate:
+  .ACCU 16
+  .INDEX 16
+  ; sub-op 15: resID p8[7] + aux + start p8[7] + end p8[6] + aux + time p8[7]
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; resID
+  jsr _scummvm.fetchByte             ; aux opcode 1
+  sta.w SCUMM.scratch
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; start
+  lda #$0040
+  jsr _scummvm.skipP8fromScratch     ; end
+  jsr _scummvm.fetchByte             ; aux opcode 2
+  sta.w SCUMM.scratch
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; time
   clc
   rts
 

@@ -501,6 +501,11 @@ SCUMM.cameraFollows   dw      ; actor number to follow (0 = none)
 SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 .ends
 
+; Room effect state
+.ramsection "scumm room effects" bank 0 slot 1
+SCUMM.shakeEnabled    db      ; nonzero = screen shake active (roomOps sub-op 5/6)
+.ends
+
 ; BG2 VRAM layout constants
 .define VERB_FONT_VRAM_ADDR   $8000   ; byte addr for font tiles (word $4000)
 .define VERB_TILEMAP_VRAM_ADDR $9000  ; byte addr for BG2 tilemap (word $4800)

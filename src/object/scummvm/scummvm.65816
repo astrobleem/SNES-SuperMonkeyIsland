@@ -416,6 +416,8 @@ _init.zeroDialogTilemap:
   bcc _init.zeroDialogTilemap
   lda #1
   sta.w SCUMM.dialogDmaPending
+  lda #400
+  sta.w SCUMM.dialogBootSuppress   ; suppress CD text for ~6.7 sec
 
   ;--- Init inventory state ---
   stz.w SCUMM.inventoryCount
@@ -6097,11 +6099,17 @@ op_roomOps:
   and #$001F
 
   cmp #$01
-  beq _roomOps.scroll                ; scroll: 2x p16
+  bne +
+  jmp _roomOps.scroll                ; scroll: 2x p16
++
   cmp #$03
-  beq _roomOps.setScreen             ; setScreen: 2x p16
+  bne +
+  jmp _roomOps.setScreen             ; setScreen: 2x p16
++
   cmp #$04
-  beq _roomOps.palColor              ; setPalColor: 3x p16 + p8[7]
+  bne +
+  jmp _roomOps.palColor              ; setPalColor: 3x p16 + aux + p8
++
   cmp #$05
   bne +
   jmp _roomOps.shakeOn               ; shakeOn: no params
@@ -6117,6 +6125,10 @@ op_roomOps:
   cmp #$08
   bne +
   jmp _roomOps.scaleSimple           ; roomScale simple: 3x p8
++
+  cmp #$09
+  bne +
+  jmp _roomOps.saveGame              ; saveGame: 2x p8
 +
   cmp #$0A
   bne +
@@ -6178,10 +6190,13 @@ _roomOps.setScreen:
 _roomOps.palColor:
   .ACCU 16
   .INDEX 16
-  ; r, g, b: 3x p16, index: p8[bit7 of sub]
-  jsr _scummvm.fetchWord
-  jsr _scummvm.fetchWord
-  jsr _scummvm.fetchWord
+  ; sub-op 4: 3x p16(r,g,b) + fetchByte(aux) + p8(palette index)
+  ; ScummVM: getVarOrDirectWord(0x80) x3, fetchScriptByte, getVarOrDirectByte(0x80)
+  jsr _scummvm.fetchWord             ; r
+  jsr _scummvm.fetchWord             ; g
+  jsr _scummvm.fetchWord             ; b
+  jsr _scummvm.fetchByte             ; aux opcode
+  sta.w SCUMM.scratch                ; replace scratch so p8 below uses new flags
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6190,6 +6205,18 @@ _roomOps.palColor:
   rts
 +
   jsr _scummvm.fetchByte
+  clc
+  rts
+
+_roomOps.saveGame:
+  .ACCU 16
+  .INDEX 16
+  ; sub-op 9: getVarOrDirectByte(0x80) + getVarOrDirectByte(0x40)
+  ; Only 1 invocation (room 77) — consume params and discard
+  lda #$0080
+  jsr _scummvm.skipP8fromScratch     ; save/load slot
+  lda #$0040
+  jsr _scummvm.skipP8fromScratch     ; save/load flag
   clc
   rts
 
@@ -12072,6 +12099,15 @@ _rpd.fontReady:
 
   ;--- Dialog tilemap DMA -> VRAM $9800 ---
   rep #$20
+  lda.w SCUMM.dialogBootSuppress
+  beq _rpd.bootOk
+  dec.w SCUMM.dialogBootSuppress
+  stz.w SCUMM.dialogDmaPending    ; eat the DMA request silently
+  stz.w SCUMM.dialogActive        ; kill the dialog state too
+  bra _rpd.noDialog
+_rpd.bootOk:
+  .ACCU 16
+  .INDEX 16
   lda.w SCUMM.dialogDmaPending
   beq _rpd.noDialog
   stz.w SCUMM.dialogDmaPending

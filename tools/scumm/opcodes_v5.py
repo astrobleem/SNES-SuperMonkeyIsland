@@ -486,10 +486,15 @@ def _room_subop_decoder(sub: int, s: BytesIO) -> int:
         return 0
     elif key == 0x03:  # setScreen: b(p16), h(p16)
         return _read_p16(s) + _read_p16(s)
-    elif key == 0x04:  # setPalColor: r(p16), g(p16), b(p16), index(p8)
-        # In ScummVM: reads fetchScriptByte for aux opcode, then params
-        # Actually it reads 3 p16 + 1 p8 from the sub-opcode flags
-        return _read_p16(s) + _read_p16(s) + _read_p16(s) + _read_p8(s, sub, 0x80)
+    elif key == 0x04:  # setPalColor: r(p16), g(p16), b(p16), aux byte, index(p8)
+        # ScummVM: 3x getVarOrDirectWord + fetchScriptByte(aux) + getVarOrDirectByte(0x80 of aux)
+        total = _read_p16(s) + _read_p16(s) + _read_p16(s)
+        aux = s.read(1)
+        if not aux:
+            return total
+        total += 1
+        total += _read_p8(s, aux[0], 0x80)
+        return total
     elif key == 0x05:  # shakeOn
         return 0
     elif key == 0x06:  # shakeOff

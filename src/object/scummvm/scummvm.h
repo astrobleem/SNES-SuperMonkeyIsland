@@ -464,6 +464,7 @@ SCUMM.dialogY            dw      ; text top Y (SCUMM pixel coords)
 SCUMM.dialogColor        dw      ; text color — SCUMM color index (0-15), 0=default white
 SCUMM.dialogActor        dw      ; actor ID (for positioning)
 SCUMM.dialogDmaPending   dw      ; nonzero = DMA tilemap to VRAM next VBlank
+SCUMM.dialogBootSuppress dw      ; nonzero = suppress boot dialog DMA (countdown)
 SCUMM.dialogFontDone     dw      ; nonzero = font tiles already DMA'd
 SCUMM.dialogCharCount    dw      ; number of printable chars (for timer calc)
 SCUMM.dialogTilemap      ds 2048 ; BG3 WRAM tilemap buffer (32x32 x 2B)

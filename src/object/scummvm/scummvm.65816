@@ -7088,59 +7088,285 @@ _startObj.noHandler:
 
 
 ;-------------------------------------------------------------------
-; stringOps ($27) -- sub-opcode dispatch, no-op
+; stringOps ($27) -- real string table operations
+; SCUMM.stringTable: 16 slots x 128 bytes (raw byte buffers)
 ;-------------------------------------------------------------------
 op_stringOps:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchByte             ; sub-opcode byte
-  sta.w SCUMM.scratch
+  sta.w SCUMM.currentOpcode          ; SET ONCE — getVarOrDirectByte reads this, does NOT clobber it
   and #$001F
 
   cmp #$01
-  beq _stringOps.putCode             ; putCodeInString: p8[7] + null string
-  cmp #$04
-  beq _stringOps.getChar             ; getStringChar: result + p8[7] + p8[6]
+  bne +
+  jmp _stringOps.putCode
++
+  .ACCU 16
+  .INDEX 16
+  cmp #$02
+  bne +
+  jmp _stringOps.copyString
++
+  .ACCU 16
+  .INDEX 16
   cmp #$03
-  beq _stringOps.threeP8             ; setStringChar: p8[7] + p8[6] + p8[5]
+  bne +
+  jmp _stringOps.setChar
++
+  .ACCU 16
+  .INDEX 16
+  cmp #$04
+  bne +
+  jmp _stringOps.getChar
++
+  .ACCU 16
+  .INDEX 16
+  cmp #$05
+  bne +
+  jmp _stringOps.createString
++
+  .ACCU 16
+  .INDEX 16
+  ; unknown sub-op — consume 2 p8 params as fallback
+  jmp _stringOps.fallbackTwoP8
 
-  ; $02 (copyString), $05 (createString): p8[7] + p8[6]
-  bra _stringOps.twoP8
+;--- Sub-op 5: createString(stringId, size) ---
+; Zero-fills the 128-byte slot. Size param consumed but ignored (fixed slots).
+_stringOps.createString:
+  .ACCU 16
+  .INDEX 16
+  lda #$0080
+  jsr _scummvm.getVarOrDirectByte    ; stringId
+  pha                                ; save stringId
+  lda #$0040
+  jsr _scummvm.getVarOrDirectByte    ; size (consumed, ignored)
+  pla                                ; restore stringId
+  and #$000F                         ; clamp to 0-15
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = slot base WRAM address
+  tax                                ; X = slot address
+  lda #$0000
+  ldy #0
+_stringOps.createLoop:
+  .ACCU 16
+  .INDEX 16
+  sta.w $0000,x                      ; zero 2 bytes
+  inx
+  inx
+  iny
+  iny
+  cpy #128
+  bcc _stringOps.createLoop
+  clc
+  rts
 
+;--- Sub-op 1: putCodeInString(stringId, null-terminated string from script) ---
+; Reads bytes from script stream into slot until $00 terminator.
 _stringOps.putCode:
   .ACCU 16
   .INDEX 16
   lda #$0080
-  jsr _scummvm.skipP8fromScratch     ; stringId
-  jsr _scummvm.skipNullString         ; string data
+  jsr _scummvm.getVarOrDirectByte    ; stringId
+  and #$000F                         ; clamp to 0-15
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = slot base WRAM address
+  sta.w SCUMM.scratch3               ; scratch3 = dest slot base
+  ldx #0                             ; X = write offset into slot
+_stringOps.putCodeLoop:
+  .ACCU 16
+  .INDEX 16
+  phx                                ; save write offset
+  jsr _scummvm.fetchByte             ; read byte from script stream
+  plx                                ; restore write offset
+  and #$00FF
+  beq _stringOps.putCodeDone         ; $00 terminator — done
+  cpx #SCUMM_STRING_MAX_LEN
+  bcs _stringOps.putCodeDrain        ; slot full — drain remaining bytes
+  ; Store char at slot[X]: compute dest = scratch3 + X
+  pha                                ; save char value
+  txa                                ; A = offset
+  clc
+  adc.w SCUMM.scratch3               ; A = slot base + offset
+  tay                                ; Y = target WRAM address
+  pla                                ; A = char value
+  sep #$20                           ; 8-bit A for byte store
+  .ACCU 8
+  sta.w $0000,y                      ; store char byte
+  rep #$20                           ; back to 16-bit A
+  .ACCU 16
+  inx                                ; advance write offset
+  bra _stringOps.putCodeLoop
+
+_stringOps.putCodeDrain:
+  .ACCU 16
+  .INDEX 16
+  ; Slot is full — keep consuming script bytes until null terminator
+  phx
+  jsr _scummvm.fetchByte
+  plx
+  and #$00FF
+  bne _stringOps.putCodeDrain
+  ; fall through to write terminator
+
+_stringOps.putCodeDone:
+  .ACCU 16
+  .INDEX 16
+  ; Write null terminator at slot[X]
+  txa                                ; A = offset
+  clc
+  adc.w SCUMM.scratch3               ; A = slot base + offset
+  tay                                ; Y = target address
+  sep #$20
+  .ACCU 8
+  lda #$00
+  sta.w $0000,y                      ; null terminator
+  rep #$20
+  .ACCU 16
   clc
   rts
 
+;--- Sub-op 3: setStringChar(stringId, index, char) ---
+_stringOps.setChar:
+  .ACCU 16
+  .INDEX 16
+  lda #$0080
+  jsr _scummvm.getVarOrDirectByte    ; stringId
+  pha                                ; [stack +2] save stringId
+  lda #$0040
+  jsr _scummvm.getVarOrDirectByte    ; index
+  pha                                ; [stack +4] save index
+  lda #$0020
+  jsr _scummvm.getVarOrDirectByte    ; char value
+  pha                                ; [stack +6] save char
+  ; Stack (top→bottom): char[2], index[2], stringId[2]
+  ;   1,s = char, 3,s = index, 5,s = stringId
+  lda 5,s                            ; stringId
+  and #$000F
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = slot base
+  sta.w SCUMM.scratch3               ; save slot base
+  lda 3,s                            ; index
+  and #$007F                         ; clamp to 0-127
+  cmp #SCUMM_STRING_MAX_LEN
+  bcc _stringOps.setCharOk
+  lda #SCUMM_STRING_MAX_LEN
+_stringOps.setCharOk:
+  .ACCU 16
+  .INDEX 16
+  clc
+  adc.w SCUMM.scratch3               ; A = slot base + index
+  tay                                ; Y = target WRAM address
+  lda 1,s                            ; char
+  sep #$20
+  .ACCU 8
+  sta.w $0000,y                      ; store byte
+  rep #$20
+  .ACCU 16
+  pla                                ; discard char
+  pla                                ; discard index
+  pla                                ; discard stringId
+  clc
+  rts
+
+;--- Sub-op 4: getStringChar(stringId, index) -> result ---
 _stringOps.getChar:
   .ACCU 16
   .INDEX 16
-  jsr _scummvm.fetchWord             ; result variable
-  ; fall through to twoP8
-
-_stringOps.twoP8:
+  jsr _scummvm.getResultPos          ; sets SCUMM.resultVar
+  lda #$0080
+  jsr _scummvm.getVarOrDirectByte    ; stringId
+  pha                                ; [stack +2] save stringId
+  lda #$0040
+  jsr _scummvm.getVarOrDirectByte    ; index
+  pha                                ; [stack +4] save index
+  ; Stack: index[2], stringId[2]
+  ;   1,s = index, 3,s = stringId
+  lda 3,s                            ; stringId
+  and #$000F
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = slot base
+  sta.w SCUMM.scratch3               ; save slot base
+  pla                                ; A = index
+  and #$007F                         ; clamp to 0-127
+  cmp #SCUMM_STRING_MAX_LEN
+  bcc _stringOps.getCharOk
+  lda #SCUMM_STRING_MAX_LEN
+_stringOps.getCharOk:
   .ACCU 16
   .INDEX 16
-  lda #$0080
-  jsr _scummvm.skipP8fromScratch     ; param1
-  lda #$0040
-  jsr _scummvm.skipP8fromScratch     ; param2
+  clc
+  adc.w SCUMM.scratch3               ; A = slot base + index
+  tay                                ; Y = source WRAM address
+  pla                                ; discard stringId from stack
+  lda.w $0000,y                      ; load 16-bit
+  and #$00FF                         ; byte only
+  jsr _scummvm.writeVariable         ; write A to SCUMM.resultVar
   clc
   rts
 
-_stringOps.threeP8:
+;--- Sub-op 2: copyString(destId, srcId) ---
+; Copies 128 bytes from src slot to dest slot.
+_stringOps.copyString:
   .ACCU 16
   .INDEX 16
   lda #$0080
-  jsr _scummvm.skipP8fromScratch     ; param1
+  jsr _scummvm.getVarOrDirectByte    ; dest stringId
+  pha                                ; save dest
   lda #$0040
-  jsr _scummvm.skipP8fromScratch     ; param2
-  lda #$0020
-  jsr _scummvm.skipP8fromScratch     ; param3
+  jsr _scummvm.getVarOrDirectByte    ; src stringId
+  ; A = src id
+  and #$000F
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = src slot base
+  sta.w SCUMM.scratch3               ; scratch3 = src base
+  pla                                ; dest id
+  and #$000F
+  xba                                ; *256
+  lsr a                              ; /2 = net *128
+  clc
+  adc #SCUMM.stringTable             ; A = dest slot base
+  tax                                ; X = dest base address
+  ldy #0                             ; Y = byte counter (0, 2, 4, ... 126)
+_stringOps.copyLoop:
+  .ACCU 16
+  .INDEX 16
+  ; Compute src address: A = scratch3 + Y
+  tya                                ; A = offset
+  clc
+  adc.w SCUMM.scratch3               ; A = src base + offset
+  phy                                ; save counter (need Y for src addressing)
+  tay                                ; Y = src address
+  lda.w $0000,y                      ; load 16-bit from src
+  sta.w $0000,x                      ; store 16-bit to dest
+  ply                                ; restore counter
+  inx
+  inx
+  iny
+  iny
+  cpy #128
+  bcc _stringOps.copyLoop
+  clc
+  rts
+
+;--- Fallback: consume 2x p8 for unknown sub-ops ---
+_stringOps.fallbackTwoP8:
+  .ACCU 16
+  .INDEX 16
+  lda #$0080
+  jsr _scummvm.getVarOrDirectByte    ; param1 (discarded)
+  lda #$0040
+  jsr _scummvm.getVarOrDirectByte    ; param2 (discarded)
   clc
   rts
 

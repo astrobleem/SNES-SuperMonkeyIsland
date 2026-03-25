@@ -299,11 +299,10 @@ SCUMM.slotHeadChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; head CHR transfer length
 .ends
 
 ; String resource table (16 slots x 128 bytes = 2048 bytes)
-; Slot layout: 2-byte length + 126 bytes data = 128 bytes per slot
+; Slot layout: raw byte buffer, null-terminated, no length prefix
 .define SCUMM_STRING_SLOTS     16
 .define SCUMM_STRING_SLOT_SIZE 128
-.define SCUMM_STRING_DATA_OFS  2      ; data starts at offset 2 (after length word)
-.define SCUMM_STRING_MAX_LEN   126    ; max string data bytes
+.define SCUMM_STRING_MAX_LEN   126    ; max usable bytes (last byte reserved for null)
 
 .ramsection "scumm string table" bank 0 slot 1
 SCUMM.stringTable  ds SCUMM_STRING_SLOTS * SCUMM_STRING_SLOT_SIZE  ; 2048 bytes

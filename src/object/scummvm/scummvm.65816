@@ -6001,7 +6001,9 @@ op_matrixOps:
   pha                                ; save for flag bit checks
   and #$001F                         ; extract key
   cmp #$04
-  beq _matrixOps.create              ; createBoxMatrix: no params
+  bne +
+  jmp _matrixOps.create              ; createBoxMatrix: no params
++
   cmp #$01
   beq _matrixOps.setFlags
   cmp #$02
@@ -6009,7 +6011,7 @@ op_matrixOps:
   cmp #$03
   beq _matrixOps.setSlot
   pla                                ; pop sub-opcode (unknown)
-  bra _matrixOps.done
+  jmp _matrixOps.done
 
 _matrixOps.setFlags:
   .ACCU 16
@@ -6020,13 +6022,12 @@ _matrixOps.setFlags:
 _matrixOps.setScale:
   .ACCU 16
   .INDEX 16
-  lda #$12                           ; scale offset in scummBoxEntry
-  bra _matrixOps.writeField
+  jmp _matrixOps.setScaleImpl
 
 _matrixOps.setSlot:
   .ACCU 16
   .INDEX 16
-  lda #$10                           ; mask offset in scummBoxEntry
+  jmp _matrixOps.setSlotImpl
 
 _matrixOps.writeField:
   .ACCU 16
@@ -6081,6 +6082,104 @@ _matrixOps.writeField:
   sta.l $7F0000,x                    ;write field byte
   rep #$20
   .ACCU 16
+  jmp _matrixOps.done
+
+_matrixOps.setScaleImpl:
+  .ACCU 16
+  .INDEX 16
+  ;--- decode param 1: box number (p8, flag bit $80 of sub-opcode) ---
+  pla                                ; pull sub-opcode byte
+  pha                                ; save again for param 2
+  and #$0080
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  and #$00FF
+  sta.w SCUMM.scratch3               ; box number
+
+  ;--- decode param 2: scale value (p8, flag bit $40 of sub-opcode) ---
+  pla                                ; pull sub-opcode byte (final pop)
+  and #$0040
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  and #$00FF                         ; scale value (high byte = 0)
+  pha                                ; save value
+
+  ;--- compute BOXD entry address: $5002 + box*20 + $12 ---
+  lda.w SCUMM.scratch3
+  asl a                              ;*2
+  asl a                              ;*4
+  sta.w SCUMM.scratch3
+  asl a                              ;*8
+  asl a                              ;*16
+  clc
+  adc.w SCUMM.scratch3              ;*20
+  clc
+  adc #$5002 + $12                   ;skip count word + scale offset
+  tax
+
+  pla                                ;A = scale value (16-bit, high byte = 0)
+  sta.l $7F0000,x                    ;write 16-bit to BOXD scale field
+  bra _matrixOps.done
+
+_matrixOps.setSlotImpl:
+  .ACCU 16
+  .INDEX 16
+  ;--- decode param 1: box number (p8, flag bit $80 of sub-opcode) ---
+  pla                                ; pull sub-opcode byte
+  pha                                ; save again for param 2
+  and #$0080
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  and #$00FF
+  pha                                ; save box number
+
+  ;--- decode param 2: slot value (p8, flag bit $40 of sub-opcode) ---
+  lda 3,s                            ; peek sub-opcode from under box number
+  and #$0040
+  beq +
+    jsr _scummvm.fetchWord
+    jsr _scummvm.readVariable
+    bra ++
++
+    jsr _scummvm.fetchByte
+++
+  and #$00FF
+  dec a                              ; value - 1
+  ora #$8000                         ; (value-1) | $8000
+  pha                                ; save transformed value
+
+  ;--- compute BOXD entry address: $5002 + box*20 + $12 ---
+  lda 3,s                            ; peek box number (under value on stack)
+  asl a                              ;*2
+  asl a                              ;*4
+  sta.w SCUMM.scratch3
+  asl a                              ;*8
+  asl a                              ;*16
+  clc
+  adc.w SCUMM.scratch3              ;*20
+  clc
+  adc #$5002 + $12                   ;skip count word + scale offset
+  tax
+
+  pla                                ;A = transformed value
+  sta.l $7F0000,x                    ;write 16-bit to BOXD scale field
+  pla                                ; discard box number
+  pla                                ; discard sub-opcode byte
   bra _matrixOps.done
 
 _matrixOps.create:
@@ -6258,53 +6357,105 @@ _roomOps.shakeOff:
 _roomOps.scale:
   .ACCU 16
   .INDEX 16
-  ; scale1: p8[7], y1: p8[6]
+  ; scale1: p8[7]
   lda.w SCUMM.scratch
   and #$0080
   beq +
   jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
   bra ++
 +
   jsr _scummvm.fetchByte
 ++
+  and #$00FF
+  pha                                ; [SP+10] = scale1
+
+  ; y1: p8[6]
   lda.w SCUMM.scratch
   and #$0040
   beq +
   jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
   bra ++
 +
   jsr _scummvm.fetchByte
 ++
-  ; aux1 byte, then p8[7], p8[6]
+  and #$00FF
+  pha                                ; [SP+8] = y1
+
+  ; aux1 byte — new flags for next params
   jsr _scummvm.fetchByte
   sta.w SCUMM.scratch
+
+  ; scale2: p8[7] of aux1
   lda.w SCUMM.scratch
   and #$0080
   beq +
   jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
   bra ++
 +
   jsr _scummvm.fetchByte
 ++
+  and #$00FF
+  pha                                ; [SP+6] = scale2
+
+  ; y2: p8[6] of aux1
   lda.w SCUMM.scratch
   and #$0040
   beq +
   jsr _scummvm.fetchWord
+  jsr _scummvm.readVariable
   bra ++
 +
   jsr _scummvm.fetchByte
 ++
-  ; aux2 byte, then p8[7]
+  and #$00FF
+  pha                                ; [SP+4] = y2
+
+  ; aux2 byte — new flags for slot param
   jsr _scummvm.fetchByte
   sta.w SCUMM.scratch
+
+  ; slot: p8[7] of aux2
   lda.w SCUMM.scratch
   and #$0080
   beq +
   jsr _scummvm.fetchWord
-  clc
-  rts
+  jsr _scummvm.readVariable
+  bra ++
 +
   jsr _scummvm.fetchByte
+++
+  and #$00FF                         ; slot number (1-based from script)
+
+  ; Compute WRAM offset: (slot - 2) * 8
+  ; Script slot e -> setScaleSlot(e-1) -> _scaleSlots[(e-1)-1] = WRAM slot (e-2)
+  sec
+  sbc #2
+  asl a                              ; *2
+  asl a                              ; *4
+  asl a                              ; *8
+  tax
+
+  ; Write params to SCAL slot WRAM
+  ; Stack: y2 [SP+2], scale2 [SP+4], y1 [SP+6], scale1 [SP+8]
+  ; (stack grew by 4 pushes = 8 bytes, but slot calc didn't push)
+  lda 7,s                            ; scale1
+  sta.w SCUMM.scalSlot0_s1,x
+  lda 5,s                            ; y1
+  sta.w SCUMM.scalSlot0_y1,x
+  lda 3,s                            ; scale2
+  sta.w SCUMM.scalSlot0_s2,x
+  lda 1,s                            ; y2
+  sta.w SCUMM.scalSlot0_y2,x
+
+  ; Clean up stack (4 words = 8 bytes)
+  pla
+  pla
+  pla
+  pla
+
   clc
   rts
 
@@ -8387,6 +8538,32 @@ _ua.skipSlot:
 +
   sta.w SCUMM.actorOamCount           ; |dx| temp
 
+  ; Compute scaled walk speed: max(1, walkSpeed * actorScale / 256)
+  ldx.w SCUMM.uaActorStructOfs
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.scalex,x        ; actor's current scale (0-255)
+  sta.l $4202                         ; WRMPYA
+  ldx.w SCUMM.scratch3               ; walk slot index
+  lda.w SCUMM.actorWalkSpeedX,x      ; per-actor walk speed
+  bne _ua.hasWalkSpeed
+  lda #WALK_SPEED                     ; default if 0
+_ua.hasWalkSpeed:
+  .ACCU 8
+  sta.l $4203                         ; WRMPYB — start multiply
+  nop
+  nop
+  nop
+  nop                                 ; 8 cycle wait for hardware multiply
+  lda.l $4217                         ; high byte = (scale * speed) >> 8
+  bne _ua.walkSpeedOk
+  lda #1                              ; minimum 1 pixel/frame
+_ua.walkSpeedOk:
+  .ACCU 8
+  sta.w SCUMM.chrDmaPending          ; effective speed temp
+  rep #$20
+  .ACCU 16
+
   ; Update facing ALWAYS (before arrival check so standing frame is correct)
   lda.w SCUMM.scratch2
   bpl +
@@ -8429,9 +8606,15 @@ _ua.setFacing:
 +
   ; A = |dy|
   clc
-  adc.w SCUMM.actorOamCount           ; |dx|+|dy|
-  cmp #WALK_SPEED + 1
-  bcs _ua.notArrived
+  adc.w SCUMM.actorOamCount           ; A = |dx|+|dy|
+  ; Compare sum with effective speed: if sum > speed, not arrived
+  sep #$20
+  .ACCU 8
+  cmp.w SCUMM.chrDmaPending          ; sum vs effective speed
+  rep #$20
+  .ACCU 16
+  beq _ua.notArrived                  ; sum == speed → not arrived (still moving)
+  bcs _ua.notArrived                  ; sum > speed → not arrived
 
   ; --- Arrived at waypoint: snap position ---
   pla                                 ; waypointY
@@ -8470,11 +8653,16 @@ _ua.notArrived:
   pla                                 ; discard saved waypointY
   pla                                 ; discard saved waypointX
 
-  ; Move X toward current waypoint
+  ; Move X toward current waypoint (effective speed already in chrDmaPending)
   lda.w SCUMM.actorOamCount           ; |dx|
-  cmp #WALK_SPEED + 1
+  sep #$20
+  .ACCU 8
+  cmp.w SCUMM.chrDmaPending
+  rep #$20
+  .ACCU 16
   bcc +
-  lda #WALK_SPEED
+  lda.w SCUMM.chrDmaPending
+  and #$00FF
 +
   ldx.w SCUMM.scratch                 ; dx sign
   bpl _ua.dxPos
@@ -8494,9 +8682,14 @@ _ua.dxPos:
   eor #$FFFF
   inc a
 +
-  cmp #WALK_SPEED + 1
+  sep #$20
+  .ACCU 8
+  cmp.w SCUMM.chrDmaPending
+  rep #$20
+  .ACCU 16
   bcc +
-  lda #WALK_SPEED
+  lda.w SCUMM.chrDmaPending
+  and #$00FF
 +
   ldx.w SCUMM.scratch2                ; dy sign
   bpl _ua.dyPos
@@ -9574,6 +9767,23 @@ _ri.scaleClampLo:
   .ACCU 16
 
 _ri.scaleDone:
+  .ACCU 16
+  .INDEX 16
+  ; Write computed scale back to actor struct's scalex field
+  ldx.w SCUMM.scratch3               ; render slot index
+  lda.w SCUMM.renderSlotActor,x
+  and #$00FF                          ; actor number
+  asl a
+  asl a
+  asl a
+  asl a                               ; * 16 = struct offset
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  sta.w SCUMM.actors.scalex,x
+  rep #$20
+  .ACCU 16
 
 _ri.debugDone:
 

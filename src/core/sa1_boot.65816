@@ -50,6 +50,12 @@ sa1.entry:
   lda #0
   sta.l CIE               ; $220A — no IRQ/NMI for SA-1
 
+  ; Enable SA-1 BW-RAM writes (CBWE $2227)
+  ; Must be written by SA-1 CPU — SNES CPU write via sa1.init doesn't
+  ; take effect in Mesen's SA-1 emulation.
+  lda #CBWE_SA1_BWRAM_WRITE_ENABLE
+  sta.l CBWE
+
   ; Write handshake: "I'm alive"
   lda #$42
   sta.l SA1_MAILBOX_STATUS
@@ -69,15 +75,20 @@ sa1.idleLoop:
   ; unknown command: clear and loop
   lda #0
   sta.l SA1_MAILBOX_CMD
-  bra sa1.idleLoop
+  jml sa1.idleLoop
 
 sa1.cmdScale:
-  jsr _sa1.doScale
+  jml _sa1.doScale
+  ; _sa1.doScale jumps directly to sa1.cmdScaleDone when finished
+
+sa1.cmdScaleDone:
+  sep #$20
+  .ACCU 8
   lda #1                  ; status = done
   sta.l SA1_MAILBOX_STATUS
   lda #0                  ; clear command
   sta.l SA1_MAILBOX_CMD
-  bra sa1.idleLoop
+  jml sa1.idleLoop
 
 ; ---------------------------------------------------------------------------
 ; _sa1.doScale — CC Type 2 tile passthrough (Step 2A: no scaling)
@@ -116,7 +127,7 @@ _sa1.doScale:
   lda.l SA1_MAILBOX_TILES
   sta $08                 ; tileCount
   bne +                   ; nonzero = process tiles
-  jmp _sa1.doScale.done   ; zero tiles = nothing to do
+  jml _sa1.doScale.done   ; zero tiles = nothing to do
 +
   ; --- Enable CC Type 2 ---
   sep #$20
@@ -136,7 +147,7 @@ _sa1.tileLoop:
   lda $0A
   cmp $08                 ; tileIdx >= tileCount?
   bcc +                   ; tileIdx < tileCount, continue
-  jmp _sa1.tilesFinished  ; done
+  jml _sa1.tilesFinished  ; done
 +
 
   ; Set DDA = $0100 + tileIdx * 64 (I-RAM offset for output)
@@ -366,7 +377,7 @@ _sa1.rowLoop:
   inx
   cpx #8                  ; 8 rows per tile
   bcs +                   ; row >= 8 = done with tile
-  jmp _sa1.rowLoop
+  jml _sa1.rowLoop
 +
 
   ; --- Advance to next tile ---
@@ -375,7 +386,7 @@ _sa1.rowLoop:
   lda $0A
   inc a
   sta $0A                 ; tileIdx++
-  jmp _sa1.tileLoop       ; stay in 16-bit A for tile loop compare
+  jml _sa1.tileLoop       ; stay in 16-bit A for tile loop compare
 
 _sa1.tilesFinished:
   .ACCU 16
@@ -392,7 +403,7 @@ _sa1.tilesFinished:
 _sa1.doScale.done:
   sep #$20
   .ACCU 8
-  rts
+  jml sa1.cmdScaleDone
 
 ; SA-1 IRQ handler (minimal for now)
 sa1.irqHandler:

@@ -60,7 +60,7 @@ core.boot.init:
 
 	jsl scummvm.zeroExtraWram
 
-	;jsl sa1.ccTest		;SA-1 CC Type 2 test — DISABLED (times out in Mesen, blocks boot)
+	jsl sa1.ccTest
 
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main

@@ -1,29 +1,29 @@
 .include "src/core/sa1_boot.h"
 
-; SA-1 I-RAM layout — two address views of the same physical 2KB:
-;   SA-1 CPU sees I-RAM at $0000-$07FF
-;   SNES CPU sees I-RAM at $3000-$37FF
-; Code running on SA-1 uses the SA1_ prefix ($0xxx).
-; Code running on SNES uses the SNES_IRAM_ prefix ($3xxx).
+; SA-1 memory layout:
+;   I-RAM: SA-1 sees $0000-$07FF, SNES sees $3000-$37FF (scratch/stack/tile buffer)
+;   BW-RAM: both CPUs see $6000-$7FFF (mailbox lives here to avoid Mesen I-RAM write bug)
+; Mailbox defines use $6000+ (BW-RAM). Scratch/stack/tile buffer stay in I-RAM ($3000+).
 
-; I-RAM addresses — both CPUs use $3000-$37FF (shared view)
-; SA-1 also sees I-RAM at $0000-$07FF but $3000 range works for both.
-.define SA1_MAILBOX_CMD    $3000   ; command byte: 0=idle, 1=scale, $FF=ack
-.define SA1_MAILBOX_SCALE  $3001   ; scale factor (1-255)
-.define SA1_MAILBOX_SRC    $3002   ; source ROM addr (3 bytes)
-.define SA1_MAILBOX_TILES  $3005   ; tile count (word)
-.define SA1_MAILBOX_WIDTH  $3007   ; sprite width in tiles (word)
-.define SA1_MAILBOX_HEIGHT $3009   ; sprite height in tiles (word)
-.define SA1_MAILBOX_OUT    $300B   ; output I-RAM offset (word)
-.define SA1_MAILBOX_OUTTILES $300D ; output tile count (byte)
-.define SA1_MAILBOX_STATUS $300E   ; status: 0=busy, 1=done, $42=alive, $FF=error
-.define SA1_SCRATCH        $3010   ; 112 bytes scratch
-.define SA1_STACK_TOP      $30FF   ; stack grows down from here
-.define SA1_TILE_BUFFER    $3100   ; 1792 bytes tile output
+; Mailbox in BW-RAM ($6000-$600F) — accessible by both CPUs.
+; BW-RAM avoids Mesen emulation bug where SNES CPU writes to I-RAM are silently lost.
+; SA-1 accesses BW-RAM at $6000-$7FFF (same as SNES view in bank $00).
+.define SA1_MAILBOX_CMD    $6000   ; command byte: 0=idle, 1=scale, $FF=ack
+.define SA1_MAILBOX_SCALE  $6001   ; scale factor (1-255)
+.define SA1_MAILBOX_SRC    $6002   ; source ROM addr (3 bytes)
+.define SA1_MAILBOX_TILES  $6005   ; tile count (word)
+.define SA1_MAILBOX_WIDTH  $6007   ; sprite width in tiles (word)
+.define SA1_MAILBOX_HEIGHT $6009   ; sprite height in tiles (word)
+.define SA1_MAILBOX_OUT    $600B   ; output I-RAM offset (word)
+.define SA1_MAILBOX_OUTTILES $600D ; output tile count (byte)
+.define SA1_MAILBOX_STATUS $600E   ; status: 0=busy, 1=done, $42=alive, $FF=error
+.define SA1_SCRATCH        $3010   ; 112 bytes scratch (stays in I-RAM)
+.define SA1_STACK_TOP      $30FF   ; stack grows down from here (stays in I-RAM)
+.define SA1_TILE_BUFFER    $3100   ; 1792 bytes tile output (stays in I-RAM, CC Type 2 output)
 
-; SNES CPU addresses ($3000-$37FF) — same physical bytes
-.define SNES_IRAM_CMD      $3000
-.define SNES_IRAM_STATUS   $300E
+; SNES CPU aliases for mailbox (BW-RAM at $6000+)
+.define SNES_IRAM_CMD      $6000
+.define SNES_IRAM_STATUS   $600E
 
 .bank 0 slot 0
 .section "SA-1 boot" free
@@ -44,11 +44,11 @@ sa1.entry:
   lda #SA1_STACK_TOP
   tcs
 
-  ; Enable IRQ from SNES (CIE bit 7)
+  ; Disable all SA-1 interrupts (polling mode only)
   sep #$20
   .ACCU 8
-  lda #CIE_IRQ_SNES2SA1_ENABLE
-  sta.l CIE               ; $220A
+  lda #0
+  sta.l CIE               ; $220A — no IRQ/NMI for SA-1
 
   ; Write handshake: "I'm alive"
   lda #$42
@@ -58,17 +58,341 @@ sa1.entry:
   lda #0
   sta.l SA1_MAILBOX_CMD
 
-  ; Enter idle loop
+  ; Enter polling idle loop
+  ; Poll-based instead of WAI — simpler, avoids IRQ timing issues.
+  ; SA-1 runs at 10.74 MHz so polling cost is negligible.
 sa1.idleLoop:
-  wai                     ; wait for interrupt
-  ; After IRQ handler returns, check command byte
   lda.l SA1_MAILBOX_CMD
-  beq sa1.idleLoop        ; 0 = no command, keep waiting
-  ; Future: dispatch commands here
-  ; For now, just clear and loop
+  beq sa1.idleLoop        ; 0 = no command, keep polling
+  cmp #1
+  beq sa1.cmdScale        ; command 1 = scale tiles
+  ; unknown command: clear and loop
   lda #0
   sta.l SA1_MAILBOX_CMD
   bra sa1.idleLoop
+
+sa1.cmdScale:
+  jsr _sa1.doScale
+  lda #1                  ; status = done
+  sta.l SA1_MAILBOX_STATUS
+  lda #0                  ; clear command
+  sta.l SA1_MAILBOX_CMD
+  bra sa1.idleLoop
+
+; ---------------------------------------------------------------------------
+; _sa1.doScale — CC Type 2 tile passthrough (Step 2A: no scaling)
+;
+; Reads source tiles from ROM in 4bpp planar format, decodes each row to
+; 8 pixel values, writes them to BRF registers. CC Type 2 hardware converts
+; back to planar and stores in I-RAM.
+;
+; Mailbox inputs (BW-RAM):
+;   $6002-$6004  source ROM address (24-bit)
+;   $6005-$6006  tile count (word)
+;
+; Mailbox outputs (BW-RAM):
+;   $600D        output tile count
+;   $600E        status (set by caller)
+;
+; Direct page = $3010 (SA-1 scratch area in I-RAM)
+;   dp $00: bp0        dp $01: bp1        dp $02: bp2        dp $03: bp3
+;   dp $04: pixel      dp $05-$07: srcAddr (24-bit)
+;   dp $08-$09: tileCount    dp $0A-$0B: tileIdx
+;   dp $0C-$0E: curTileBase (24-bit)
+; ---------------------------------------------------------------------------
+_sa1.doScale:
+  .ACCU 8
+
+  ; --- Read mailbox parameters ---
+  lda.l SA1_MAILBOX_SRC
+  sta $05                 ; srcAddr low
+  lda.l SA1_MAILBOX_SRC+1
+  sta $06                 ; srcAddr high
+  lda.l SA1_MAILBOX_SRC+2
+  sta $07                 ; srcAddr bank
+
+  rep #$20
+  .ACCU 16
+  lda.l SA1_MAILBOX_TILES
+  sta $08                 ; tileCount
+  bne +                   ; nonzero = process tiles
+  jmp _sa1.doScale.done   ; zero tiles = nothing to do
++
+  ; --- Enable CC Type 2 ---
+  sep #$20
+  .ACCU 8
+  lda #$B0                ; bit7=DMA enable, bit5=CC enable, bit4=1 (Type 2 semi-auto)
+  sta.l DCNT
+  lda #CDMA_4BPP          ; $01 = 4bpp depth
+  sta.l CDMA
+
+  ; --- Tile loop ---
+  rep #$20
+  .ACCU 16
+  stz $0A                 ; tileIdx = 0
+
+_sa1.tileLoop:
+  .ACCU 16
+  lda $0A
+  cmp $08                 ; tileIdx >= tileCount?
+  bcc +                   ; tileIdx < tileCount, continue
+  jmp _sa1.tilesFinished  ; done
++
+
+  ; Set DDA = $0100 + tileIdx * 64 (I-RAM offset for output)
+  lda $0A
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                   ; tileIdx * 64
+  clc
+  adc #$0100              ; base offset in I-RAM
+  sep #$20
+  .ACCU 8
+  sta.l DDA               ; DDA low byte
+  xba
+  sta.l DDA+1             ; DDA high byte
+
+  ; Compute source tile ROM base = srcAddr + tileIdx * 32
+  rep #$20
+  .ACCU 16
+  lda $0A
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                   ; tileIdx * 32
+  clc
+  adc $05                 ; add srcAddr lo/hi
+  sta $0C                 ; curTileBase lo/hi
+  sep #$20
+  .ACCU 8
+  lda $07                 ; srcAddr bank
+  adc #0                  ; add carry from 16-bit add
+  sta $0E                 ; curTileBase bank
+
+  ; --- Row loop: 8 rows per tile ---
+  ldx #0                  ; row counter (X = 0..7)
+
+_sa1.rowLoop:
+  .ACCU 8
+  ; Calculate ROM offset for this row:
+  ;   bp0 = base + row*2,     bp1 = base + row*2 + 1
+  ;   bp2 = base + row*2 + 16, bp3 = base + row*2 + 17
+  rep #$20
+  .ACCU 16
+  txa
+  asl a                   ; row * 2
+  clc
+  adc $0C                 ; + curTileBase lo/hi
+  sta $10                 ; temp: row base address lo/hi
+
+  sep #$20
+  .ACCU 8
+  lda $0E                 ; bank
+  adc #0                  ; carry from 16-bit add
+  sta $12                 ; temp: row base bank
+
+  ; Read bp0 = [rowBase + 0]
+  lda [$10]               ; long indirect via dp $10-$12
+  sta $00                 ; bp0
+
+  ; Read bp1 = [rowBase + 1]
+  rep #$20
+  .ACCU 16
+  lda $10
+  inc a
+  sta $10
+  sep #$20
+  .ACCU 8
+  lda [$10]
+  sta $01                 ; bp1
+
+  ; Read bp2 = [rowBase + 15] (original base + row*2 + 16 = rowBase - 1 + 16 = rowBase + 15)
+  ; Actually: bp2 is at (base + row*2 + 16), rowBase is (base + row*2), so bp2 = rowBase+16
+  ; We incremented $10 by 1 for bp1, so now $10 = rowBase+1. Add 15 to get rowBase+16.
+  rep #$20
+  .ACCU 16
+  lda $10
+  clc
+  adc #15                 ; $10 was rowBase+1, +15 = rowBase+16
+  sta $10
+  sep #$20
+  .ACCU 8
+  lda [$10]
+  sta $02                 ; bp2
+
+  ; Read bp3 = [rowBase + 17] = current $10 + 1
+  rep #$20
+  .ACCU 16
+  lda $10
+  inc a
+  sta $10
+  sep #$20
+  .ACCU 8
+  lda [$10]
+  sta $03                 ; bp3
+
+  ; --- Decode 8 pixels from bp0-bp3 using shift-accumulate ---
+  ; For each pixel, shift bp3/bp2/bp1/bp0 left, rotating MSB into pixel.
+  ; Result: pixel = (bp3_msb << 3) | (bp2_msb << 2) | (bp1_msb << 1) | bp0_msb
+
+  ; Determine BRF base: even rows -> $2240, odd rows -> $2248
+  ; Use Y register to hold BRF offset (0 or 8)
+  txa                     ; row index
+  and #1
+  beq +
+  ldy #8                  ; odd row: BRF $2248-$224F
+  bra ++
++ ldy #0                  ; even row: BRF $2240-$2247
+++
+
+  phx                     ; save row counter
+
+  ; Pixel 0
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y             ; BRF + 0
+  iny
+
+  ; Pixel 1
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 2
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 3
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 4
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 5
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 6
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y
+  iny
+
+  ; Pixel 7 — writing this 8th byte triggers CC Type 2 auto-conversion
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta BRF,y             ; triggers conversion for this row
+
+  plx                     ; restore row counter
+  inx
+  cpx #8                  ; 8 rows per tile
+  bcs +                   ; row >= 8 = done with tile
+  jmp _sa1.rowLoop
++
+
+  ; --- Advance to next tile ---
+  rep #$20
+  .ACCU 16
+  lda $0A
+  inc a
+  sta $0A                 ; tileIdx++
+  jmp _sa1.tileLoop       ; stay in 16-bit A for tile loop compare
+
+_sa1.tilesFinished:
+  .ACCU 16
+  ; Disable CC Type 2
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l DCNT
+
+  ; Write output tile count
+  lda $0A                 ; tileIdx low byte = tile count (fits in byte)
+  sta.l SA1_MAILBOX_OUTTILES
+
+_sa1.doScale.done:
+  sep #$20
+  .ACCU 8
+  rts
 
 ; SA-1 IRQ handler (minimal for now)
 sa1.irqHandler:
@@ -78,5 +402,155 @@ sa1.irqHandler:
   lda #CIC_IRQ_SNES2SA1_CLEAR
   sta.l CIC               ; $220B — clear the IRQ flag
   rti
+
+.ends
+
+; ---------------------------------------------------------------------------
+; sa1.ccTest — SNES-side test: send 1-tile decode command to SA-1, verify output
+;
+; Runs on SNES CPU during boot. Writes mailbox via BW-RAM at $6000,
+; polls for SA-1 completion, stores 32-byte output + status to BW-RAM $40:0000+.
+;
+; BW-RAM results layout ($40:0000+):
+;   $7E1F00: status byte (1=done, $FD=timeout)
+;   $7E1F01: output tile count from $600D
+;   $7E1F02: match flag (1=all 32 bytes match source ROM, 0=mismatch)
+;   $7E1F03: mismatch count
+;   $7E1F10-$40002F: 32 bytes of CC Type 2 output from I-RAM $3100
+;   $7E1F30-$40004F: 32 bytes of source ROM for comparison
+; ---------------------------------------------------------------------------
+.bank 0 slot 0
+.section "SA-1 CC test" superfree
+
+sa1.ccTest:
+  php
+  phb
+  phk
+  plb
+  sep #$20
+  .ACCU 8
+  rep #$10
+  .INDEX 16
+
+  ; Skip alive handshake — SA-1 boots much faster than SNES reaches here.
+  ; Just clear status and write command directly.
+
+  ; Clear status byte (BW-RAM)
+  lda #0
+  sta.l $600E
+
+  ; Write source address = Cost001_Pic00_Chr (BW-RAM mailbox)
+  lda #Cost001_Pic00_Chr & $FF
+  sta.l $6002
+  lda #(Cost001_Pic00_Chr >> 8) & $FF
+  sta.l $6003
+  lda #:Cost001_Pic00_Chr
+  sta.l $6004
+
+  ; Tile count = 1
+  lda #$01
+  sta.l $6005
+  lda #$00
+  sta.l $6006
+
+  ; Verify SNES writes to BW-RAM by reading back
+  ; Store readback values at $40:0004-0008 for diagnosis
+  lda.l $6002
+  sta.l $7E1F04             ; should be src low byte
+  lda.l $6003
+  sta.l $7E1F05             ; should be src high byte
+  lda.l $6004
+  sta.l $7E1F06             ; should be src bank byte
+  lda.l $6005
+  sta.l $7E1F07             ; should be tiles low
+  lda.l $600E
+  sta.l $7E1F08             ; should be $00 (status)
+
+  ; CMD = 1 (trigger tile decode) — write LAST
+  lda #$01
+  sta.l $6000
+
+  ; Poll for completion (status = 1) with timeout
+  ; Short timeout: 4 * 65535 iterations (~2ms at SNES speed, plenty for 1 tile)
+  ldy #$0004
+_ccTest.waitDoneOuter:
+  ldx #$FFFF
+_ccTest.waitDone:
+  lda.l $600E
+  cmp #$01
+  beq _ccTest.completed
+  dex
+  bne _ccTest.waitDone
+  dey
+  bne _ccTest.waitDoneOuter
+  ; Timeout — store debug info
+  lda #$FD
+  sta.l $7E1F00
+  lda.l $600E
+  sta.l $7E1F01
+  lda.l $6000
+  sta.l $7E1F02
+  ; Also store what the BW-RAM mailbox area looks like
+  ldx #$0000
+_ccTest.dumpMbox:
+  lda.l $6000,x
+  sta.l $7E1F10,x
+  inx
+  cpx #$0020
+  bcc _ccTest.dumpMbox
+  brl _ccTest.done
+
+_ccTest.completed:
+  ; Store status = 1 (success)
+  lda #$01
+  sta.l $7E1F00
+
+  ; Store output tile count
+  lda.l $600D
+  sta.l $7E1F01
+
+  ; Copy 32 bytes of output from I-RAM $3100 to WRAM $0810
+  ldx #$0000
+_ccTest.copyOut:
+  lda.l $3100,x
+  sta.l $7E1F10,x
+  inx
+  cpx #$0020
+  bcc _ccTest.copyOut
+
+  ; Copy 32 bytes of source ROM to WRAM $0830 (using symbol)
+  ldx #$0000
+_ccTest.copySrc:
+  lda.l Cost001_Pic00_Chr,x
+  sta.l $7E1F30,x
+  inx
+  cpx #$0020
+  bcc _ccTest.copySrc
+
+  ; Compare output vs source, count mismatches
+  lda #$01                ; assume match
+  sta.l $7E1F02
+  lda #$00
+  sta.l $7E1F03           ; mismatch count = 0
+  ldx #$0000
+_ccTest.cmpLoop:
+  lda.l $7E1F10,x
+  cmp.l $7E1F30,x
+  beq _ccTest.cmpOk
+  ; Mismatch
+  lda #$00
+  sta.l $7E1F02           ; match = false
+  lda.l $7E1F03
+  inc a
+  sta.l $7E1F03           ; mismatch count++
+_ccTest.cmpOk:
+  inx
+  cpx #$0020
+  bcc _ccTest.cmpLoop
+
+_ccTest.done:
+  plb
+  plp
+  rtl
 
 .ends

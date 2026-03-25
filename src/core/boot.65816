@@ -60,6 +60,8 @@ core.boot.init:
 
 	jsl scummvm.zeroExtraWram
 
+	;jsl sa1.ccTest		;SA-1 CC Type 2 test — DISABLED (times out in Mesen, blocks boot)
+
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main
 
@@ -178,6 +180,10 @@ sa1.init:
   .ACCU 16
   lda #$FF9C
   sta.l CRV               ; $2203-$2204
+
+  ; Set SA-1 NMI vector (points to irqHandler which just does RTI)
+  lda #sa1.irqHandler
+  sta.l CNV               ; $2205-$2206
 
   ; Set SA-1 IRQ vector
   lda #sa1.irqHandler

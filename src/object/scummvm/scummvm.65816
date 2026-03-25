@@ -11396,16 +11396,16 @@ _uc.noRight:
 
   ;--- Write SCUMM mouse variables ---
   lda.w SCUMM.cursorX
-  ldx #42*2
-  sta.w SCUMM.globalVars,x            ; VAR(42) = VAR_MOUSE_X
   ldx #44*2
-  sta.w SCUMM.globalVars,x            ; VAR(44) = VAR_VIRT_MOUSE_X
+  sta.w SCUMM.globalVars,x            ; VAR(44) = VAR_MOUSE_X
+  ldx #20*2
+  sta.w SCUMM.globalVars,x            ; VAR(20) = VAR_VIRT_MOUSE_X
 
   lda.w SCUMM.cursorY
-  ldx #43*2
-  sta.w SCUMM.globalVars,x            ; VAR(43) = VAR_MOUSE_Y
   ldx #45*2
-  sta.w SCUMM.globalVars,x            ; VAR(45) = VAR_VIRT_MOUSE_Y
+  sta.w SCUMM.globalVars,x            ; VAR(45) = VAR_MOUSE_Y
+  ldx #21*2
+  sta.w SCUMM.globalVars,x            ; VAR(21) = VAR_VIRT_MOUSE_Y
 
   ;--- Per-frame object hover detection ---
   jsl scummvm.updateObjectHover

@@ -427,8 +427,6 @@ _getVideoMode:
   php
   rep #$31
   sep #$20
-  lda #0
-  sta.l MEMSEL
   ldx #$ffff
 -	lda.l HVBJOY
 	bmi -
@@ -441,9 +439,6 @@ _getVideoMode:
 	bmi -
   cpx.w #MSU1_VIDEOMODE_THRESHOLD
   bcc _isNtsc
-  
-  lda #MEMSEL_FASTROM_ENABLE
-  sta.l MEMSEL
 
   plp
   sec
@@ -452,9 +447,7 @@ _getVideoMode:
 _isNtsc:
   .ACCU 8
   .INDEX 16
-  lda #MEMSEL_FASTROM_ENABLE
-  sta.l MEMSEL
-  
+
   ;reserve a bit more blanking time for NTSC mode.
   jsr core.irq.position.get
   ldy.w #IRQ.VPOS.NTSC

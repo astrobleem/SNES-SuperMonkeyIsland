@@ -3,6 +3,7 @@
 
 .include "src/definition/snes.registers"
 .include "src/definition/msu1.registers"
+.include "src/definition/sa1.registers"
 .include "src/config/macros.inc"
 .include "src/config/structs.inc"
 

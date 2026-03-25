@@ -143,14 +143,54 @@ Boot:
 	plb
 	sep #$20
 	stz NMITIMEN		;disable timers, NMI,and auto-joyread
-	lda #MEMSEL_FASTROM_ENABLE
-	sta MEMSEL		;set memory mode to fastrom
-	sta.l GLOBAL.memsel
+	stz MEMSEL		;SA-1 mode: no FastROM
+	jsl sa1.init		;initialize SA-1 co-processor
 	jml core.boot.init
 
 IrqHookUp:
 	jml core.irq.play
 
+.ends
+
+.bank 0 slot 0
+.section "SA-1 init" superfree
+sa1.init:
+  php
+  sep #$20
+  .ACCU 8
+
+  ; Disable I-RAM write protection for both CPUs
+  ; SIWP/CIWP: bit=1 PROTECTS that block. $00 = no protection = both can write.
+  lda #$00
+  sta.l SIWP              ; $2229 — allow SA-1 to write I-RAM
+  sta.l CIWP              ; $222A — allow SNES CPU to write I-RAM
+
+  ; Enable BW-RAM writes for both CPUs
+  lda #SBWE_SNES_BWRAM_WRITE_ENABLE
+  sta.l SBWE              ; $2226
+  lda #CBWE_SA1_BWRAM_WRITE_ENABLE
+  sta.l CBWE              ; $2227
+
+  ; Set SA-1 reset vector to LoROM trampoline
+  ; SA-1 starts at PBR=$00, so CRV must be a LoROM-accessible address.
+  ; $FF9C = LoROM addr of Sa1CpuTrampoline (file offset $7F9C).
+  rep #$20
+  .ACCU 16
+  lda #$FF9C
+  sta.l CRV               ; $2203-$2204
+
+  ; Set SA-1 IRQ vector
+  lda #sa1.irqHandler
+  sta.l CIV               ; $2207-$2208
+
+  ; Un-reset SA-1 (clear bit 5 of CCNT)
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l CCNT              ; $2200 — bit 5 = 0 means run
+
+  plp
+  rtl
 .ends
 
 ;wla dx is too fucking stupid to properly allocate the memory it later needs for its own header creation feature, so we have to create it manually:
@@ -166,8 +206,28 @@ IrqHookUp:
 ;overwriting data tables (OopClassLut, ClearWramBytePatterns, etc.) and
 ;causing palette corruption + black bars on screen.
 .bank 0 slot 0
-.org $7fb0
+.org $7f9c
 .section "lorom header and vectors" force
+  ;--- SA-1 CPU reset trampoline at $7F9C (LoROM addr $FF9C) ---
+  ;SA-1 CPU also starts at PBR=$00 via CRV. Needs LoROM trampoline.
+Sa1CpuTrampoline:
+  jml sa1.entry
+  ;--- SNES CPU LoROM reset trampoline at $7FA0 (LoROM addr $FFA0) ---
+  ;In SA-1 mode, SNES CPU reads RESET vector via LoROM mapping.
+  ;LoROM address $FFA0 = file offset $7FA0. This trampoline immediately
+  ;long-jumps to Boot in HiROM space ($C0:xxxx) where the real code lives.
+Sa1ResetTrampoline:
+  sei
+  clc
+  xce
+  jml Boot
+  ;--- NMI/IRQ trampolines at $7FA7/$7FAB (LoROM $FFA7/$FFAB) ---
+Sa1NmiTrampoline:
+  jml NmiHandler
+Sa1IrqTrampoline:
+  jml IrqHookUp
+  ;--- 1 byte padding to $7FB0 ---
+  .db 0
   ;--- header at $7FB0-$7FDF (48 bytes) ---
   .db "CD"		;maker code
   .db "AMIE"		;game code
@@ -176,8 +236,8 @@ IrqHookUp:
   .db 0		;special version
   .db 0		;sub-cartridge type
   .db "SUPER MONKEY ISLAND  "
-  .db $31	;mapping (HiROM+FastROM)
-  .db $02	;cartridgetype (ROM+RAM+Battery)
+  .db $23	;mapping (SA-1)
+  .db $35	;cartridgetype (SA-1+RAM+Battery)
   .db 10	;romsize
   .db 3	;sramsize
   .db 1	;country
@@ -188,12 +248,14 @@ IrqHookUp:
   ;--- padding $7FE0-$7FE3 (4 bytes) ---
   .dsb 4 0
   ;--- native vectors at $7FE4-$7FEF (12 bytes) ---
+  ;In SA-1 mode, NMI/IRQ set PBR=$00 and read vectors via LoROM.
+  ;Trampolines at LoROM $FFA7/$FFAB jml to real handlers in HiROM.
   .dw StopCop
   .dw Stop
   .dw EmptyHandler
-  .dw NmiHandler
+  .dw $FFA7		;NMI → Sa1NmiTrampoline (jml NmiHandler)
   .dw EmptyHandler
-  .dw IrqHookUp
+  .dw $FFAB		;IRQ → Sa1IrqTrampoline (jml IrqHookUp)
   ;--- padding $7FF0-$7FF3 (4 bytes) ---
   .dsb 4 0
   ;--- emu vectors at $7FF4-$7FFF (12 bytes) ---
@@ -201,7 +263,7 @@ IrqHookUp:
   .dw EmptyHandler
   .dw EmptyHandler
   .dw EmptyHandler
-  .dw Boot
+  .dw $FFA0		;RESET → SA-1 LoROM trampoline (file offset $7FA0)
   .dw EmptyHandler
 .ends
 
@@ -220,8 +282,8 @@ IrqHookUp:
 .org $ffc0
 .section "header hack" force
   .db "SUPER MONKEY ISLAND  "
-  .db $31	;mapping (HiROM+FastROM)
-  .db $02	;cartridgetype (ROM+RAM+Battery)
+  .db $23	;mapping (SA-1)
+  .db $35	;cartridgetype (SA-1+RAM+Battery)
   .db 10	;romsize
   .db 3	;sramsize (8KB — max that works with FXPak MSU-1)
   .db 1	;country (1=USA/NTSC)

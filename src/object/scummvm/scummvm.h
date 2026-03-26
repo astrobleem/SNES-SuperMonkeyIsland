@@ -11,8 +11,9 @@
 .define SA1_MBOX_TILES    $3005
 .define SA1_MBOX_WIDTH    $3007
 .define SA1_MBOX_HEIGHT   $3009
-.define SA1_MBOX_OUTTILES $300D
-.define SA1_MBOX_STATUS   $300E
+.define SA1_MBOX_OAM      $300B
+.define SA1_MBOX_OUTTILES $300E
+.define SA1_MBOX_STATUS   $300F
 .define SA1_TILE_BUF      $3100
 
 ; TAD audio driver commands (from tad_interface.h)

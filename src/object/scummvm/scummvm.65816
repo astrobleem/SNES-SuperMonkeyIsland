@@ -9363,27 +9363,7 @@ _ri.headGot:
   and #$00FF
   cmp.w SCUMM.scratch
   bne _ri.frameChanged
-
-  ; Frame unchanged — check if actor is scaled (scale < 255 means
-  ; walkbox depth scaling is active; scale changes every frame as
-  ; actor walks, so we must re-render even when pic hasn't changed)
-  phx                                 ; save actor number
-  txa
-  asl a
-  asl a
-  asl a
-  asl a                               ; actor * 16 = struct offset
-  tax
-  sep #$20
-  .ACCU 8
-  lda.w SCUMM.actors.scalex,x         ; last frame's computed scale
-  rep #$20
-  .ACCU 16
-  plx                                 ; restore actor number
-  and #$00FF
-  cmp #$00FF
-  bne _ri.frameChanged                ; scale < 255 -> force re-render
-  jmp _ri.chrReady                    ; scale == 255, frame same -> skip
+  jmp _ri.chrReady                    ; frame same -> skip
 _ri.frameChanged:
 
   ; Store new lastFrame
@@ -9489,6 +9469,8 @@ _ri.frameChanged:
   plx                                 ; restore actor number
 
 _ri.chrReady:
+  .ACCU 16
+  .INDEX 16
   ; --- Set up OAM source pointer for current frame ---
   ; Look up OAM data from CostumeDirOamTable
   phx                                 ; save actor number
@@ -9817,43 +9799,73 @@ _ri.scaleDone:
   .ACCU 16
 
   ; --- SA-1 sprite scaling hook ---
-  ; If scale < 255 AND slot is dirty, redirect CHR source to SA-1 I-RAM
+  ; Trigger scaler when: (a) slot dirty (frame changed), OR
+  ;                      (b) scale changed since last frame (standing actor)
   sep #$20
   .ACCU 8
   lda.w SCUMM.actorCurScale
   cmp #$FF
   beq _ri.scaleHookDone               ; 255 = no scaling needed
+  cmp #64
+  bcc _ri.scaleHookDone               ; < 64 = extreme downscale, skip
 
-  ; Check if slot is dirty (CHR DMA was staged)
   ldx.w SCUMM.scratch3                ; render slot
-  lda.w SCUMM.renderSlotDirty,x
-  beq _ri.scaleHookDone               ; not dirty = no CHR to redirect
 
-  ; Call SA-1 scaler: reads slot params from WRAM, OAM header from ZP
-  ; A = scale factor
+  ; Path A: slot is dirty (frame changed) -> always scale
+  lda.w SCUMM.renderSlotDirty,x
+  bne _ri.scaleCall
+
+  ; Path B: scale changed since last frame? (standing actor, no frame change)
+  lda.w SCUMM.actorCurScale
+  cmp.w SCUMM.renderSlotLastScale,x
+  beq _ri.scaleHookDone               ; scale unchanged -> skip
+
+  ; Verify slot has been loaded at least once (slotChrSrcLo != 0)
+  rep #$20
+  .ACCU 16
+  txa
+  asl a                                ; slot * 2 for word arrays
+  tax
+  lda.w SCUMM.slotChrSrcLo,x
+  beq _ri.scaleHookDoneFrom16         ; no CHR staged yet -> skip
   sep #$20
   .ACCU 8
+  ldx.w SCUMM.scratch3                ; restore byte slot index
+
+_ri.scaleCall:
+  .ACCU 8
+  ; Call SA-1 scaler: reads slot params from WRAM, OAM header from ZP
   lda.w SCUMM.actorCurScale           ; scale factor (1-254)
   rep #$20
   .ACCU 16
   and #$00FF
   jsl scummvm.requestScaledTiles
-  bcc _ri.scaleHookDone               ; timeout/failure -> use ROM tiles
+  bcs _ri.scaleSuccess                ; carry set = success
+  sep #$20
+  .ACCU 8
+  bra _ri.scaleHookDone               ; timeout/failure -> use ROM tiles
+_ri.scaleSuccess:
 
-  ; Update renderSlotLastScale
+  ; Update renderSlotLastScale and ensure DMA processes this slot
   ldx.w SCUMM.scratch3
   sep #$20
   .ACCU 8
   lda.w SCUMM.actorCurScale
   sta.w SCUMM.renderSlotLastScale,x
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x       ; mark dirty so DMA transfers I-RAM tiles
   rep #$20
   .ACCU 16
   bra _ri.buildOam
 
-_ri.scaleHookDone:
-  ; Not scaling or failed: update lastScale to current
+_ri.scaleHookDoneFrom16:
+  .ACCU 16
   sep #$20
   .ACCU 8
+_ri.scaleHookDone:
+  .ACCU 8
+  .INDEX 16
+  ; Not scaling or failed: update lastScale to current
   ldx.w SCUMM.scratch3
   lda.w SCUMM.actorCurScale
   sta.w SCUMM.renderSlotLastScale,x
@@ -9862,6 +9874,7 @@ _ri.scaleHookDone:
 
 _ri.buildOam:
   .ACCU 16
+  .INDEX 16
   ; Compute flip mask: priority 3 + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   sep #$20
@@ -10626,7 +10639,6 @@ scummvm.requestScaledTiles:
   ; Scale factor from WRAM (A was clobbered by DBR setup)
   lda.w SCUMM.actorCurScale
   sta.l SA1_MBOX_SCALE
-
   ; Source ROM address from slot arrays
   ldx.w SCUMM.scratch3                ; render slot (byte index)
   lda.w SCUMM.slotChrSrcHi,x         ; bank byte
@@ -10680,9 +10692,17 @@ scummvm.requestScaledTiles:
   and #$00FF
   sta.l SA1_MBOX_HEIGHT                ; write full word
 
-  ; Set command = 1 (triggers SA-1 processing)
+  ; Write OAM data ROM pointer for SA-1 pixel reconstruction
+  rep #$20
+  .ACCU 16
+  lda.b _oamSrcPtr                       ; OAM addr lo/hi
+  sta.l SA1_MBOX_OAM
   sep #$20
   .ACCU 8
+  lda.b _oamSrcPtr + 2                   ; OAM bank
+  sta.l SA1_MBOX_OAM + 2
+
+  ; Set command = 1 (triggers SA-1 processing)
   lda #1
   sta.l SA1_MBOX_CMD
 

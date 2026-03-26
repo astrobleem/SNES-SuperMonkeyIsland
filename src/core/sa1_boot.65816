@@ -2,7 +2,7 @@
 
 ; SA-1 memory layout:
 ;   I-RAM: mailbox at $3000-$300F (both CPUs access I-RAM at $3000-$37FF)
-;   I-RAM: scratch/stack at $3010-$30FF
+;   I-RAM: scratch/stack at $3010-$30FF (DP base=$3010, no mailbox overlap)
 ;   I-RAM: tile output buffer at $3100+ (CC Type 2 DDA target)
 ; SIWP/CIWP=$FF in boot.65816 enables I-RAM writes for both CPUs.
 
@@ -13,16 +13,16 @@
 .define SA1_MAILBOX_TILES  $3005     ; tile count (word)
 .define SA1_MAILBOX_WIDTH  $3007     ; sprite width in tiles (word)
 .define SA1_MAILBOX_HEIGHT $3009     ; sprite height in tiles (word)
-.define SA1_MAILBOX_OUT    $300B     ; output I-RAM offset (word)
-.define SA1_MAILBOX_OUTTILES $300D   ; output tile count (byte)
-.define SA1_MAILBOX_STATUS $300E     ; status: 0=busy, 1=done, $42=alive, $FF=error
-.define SA1_SCRATCH        $3010     ; I-RAM scratch area
+.define SA1_MAILBOX_OAM    $300B     ; OAM data ROM addr (3 bytes: lo, hi, bank)
+.define SA1_MAILBOX_OUTTILES $300E   ; output tile count (byte)
+.define SA1_MAILBOX_STATUS $300F     ; status: 0=busy, 1=done, $42=alive, $FF=error
+.define SA1_SCRATCH        $3010     ; I-RAM scratch area (no mailbox overlap)
 .define SA1_STACK_TOP      $30FF     ; I-RAM stack (grows down)
 .define SA1_TILE_BUFFER    $3100     ; 1792 bytes tile output (CC Type 2 DDA target)
 
 ; SNES CPU aliases for mailbox (same I-RAM addresses)
 .define SNES_IRAM_CMD      $3000
-.define SNES_IRAM_STATUS   $300E
+.define SNES_IRAM_STATUS   $300F
 
 ; --- Direct page layout (DP base = $3010) ---
 ; Shared variables:
@@ -43,11 +43,14 @@
 ;   dp $1F: current output tile Y (oty)
 ;   dp $20-$21: globalY for current row
 ;   dp $22-$23: srcY (mapped source Y)
-;   dp $24: srcTileRow (srcY / 8)
-;   dp $25: srcLocalRow (srcY & 7)
-;   dp $26: scratch (srcWidthTiles / globalX base)
-;   dp $27: current source column
+;   dp $24: oamRelX (signed, from OAM header byte 3)
+;   dp $25: scratch (spriteY / localRow)
+;   dp $26: scratch (localRow / globalX base)
+;   dp $27: oam entry index (NN path) / source column (passthrough)
 ;   dp $28-$2A: temp tile addr (24-bit)
+;   dp $2B-$2D: oamRomPtr (24-bit pointer to OAM data in ROM)
+;   dp $2E: oamEntryCount (from OAM header byte 0)
+;   dp $2F: oamRelX (OAM header byte 3, signed — sprite anchor X offset)
 ; Source pixel line buffer:
 ;   dp $30-$6F: 64 bytes (8 tiles * 8 pixels max)
 
@@ -96,6 +99,37 @@
   lda $04
   sta $30,y
   iny
+.endm
+
+; Macro: decode one pixel from bp0-bp3, store to pixel buffer dp $30+Y, dec Y
+.macro _SA1_DECODE_PIXEL_BUF_DEC
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta $30,y
+  dey
+.endm
+
+; Same but last pixel of hflip row (no dey)
+.macro _SA1_DECODE_PIXEL_BUF_DEC_LAST
+  stz $04
+  asl $03
+  rol $04
+  asl $02
+  rol $04
+  asl $01
+  rol $04
+  asl $00
+  rol $04
+  lda $04
+  sta $30,y
 .endm
 
 ; Macro: 5 nops for SA-1 math hardware wait
@@ -215,24 +249,20 @@ _sa1.doScale:
   lda.l SA1_MAILBOX_SCALE
   sta $16
 
-  ; Dispatch: 255 = passthrough, < 255 = nearest-neighbor
-  cmp #$FF
-  beq +
-  jml _sa1.doScaleNN
-+
+  ; Passthrough for all scales (position-based scaling via OAM dx/dy)
+  ; NN per-pixel scaling deferred — needs full-image reconstruction
 
-  ; --- PASSTHROUGH (scale == 255) ---
+  ; --- PASSTHROUGH ---
   rep #$20
   .ACCU 16
   lda.l SA1_MAILBOX_TILES
   sta $08
   beq _sa1.doScale.done
 
-  ; Enable CC Type 2
   sep #$20
   .ACCU 8
   lda #$A0
-  sta.l DCNT
+  sta.l DCNT              ; enable CC Type 2
   lda #CDMA_4BPP
   sta.l CDMA
 
@@ -246,14 +276,18 @@ _sa1.ptTileLoop:
   cmp $08
   bcs _sa1.tilesFinished
 
-  ; DDA = $0100 + tileIdx * 64
+  ; Set DDA every 2 tiles (counter 0-7 fills first 32B, 8-15 fills next 32B)
+  lda $0A
+  and #$0001
+  bne _sa1.ptSkipDDA      ; odd tile: DDA already set by even tile
+
+  ; DDA = $0100 + (tileIdx / 2) * 64 = $0100 + tileIdx * 32
   lda $0A
   asl a
   asl a
   asl a
   asl a
-  asl a
-  asl a                   ; * 64
+  asl a                   ; tileIdx * 32 (= tileIdx/2 * 64)
   clc
   adc #$0100
   sep #$20
@@ -261,6 +295,10 @@ _sa1.ptTileLoop:
   sta.l DDA
   xba
   sta.l DDA+1
+  rep #$20
+  .ACCU 16
+
+_sa1.ptSkipDDA:
 
   ; Source tile base = srcAddr + tileIdx * 32
   rep #$20
@@ -395,277 +433,205 @@ _sa1.decodeRowToBRF:
   rts
 
 ; ===========================================================================
-; Nearest-neighbor scaling path (scale < 255)
+; Nearest-neighbor per-tile scaling path (scale < 255)
+;
+; Architecture: scale each OAM entry's source tile independently.
+; Output tile N = scaled version of OAM entry N's source tile.
+; The SNES OAM builder uses tile_id as an index into the compacted CHR
+; sequence — by outputting one tile per OAM entry in entry order, the
+; tile_ids naturally align without remapping.
+;
+; DP layout for NN path:
+;   $00-$03: bp0-bp3 (bitplane scratch)
+;   $04:     pixel scratch
+;   $05-$07: srcAddr (24-bit, from mailbox)
+;   $08-$09: tileCount (word)
+;   $0A-$0B: tileIdx (current output tile index)
+;   $0C-$0E: curTileBase (24-bit)
+;   $10-$12: temp pointer (24-bit)
+;   $14-$15: ratio ($7F00 / scale)
+;   $16:     scale
+;   $17:     colMap[0..7] — 8 bytes: precomputed source column for each output col
+;   $1F:     rowMap[0..7] — 8 bytes: precomputed source row for each output row
+;   $27:     current OAM entry index
+;   $28-$2A: temp tile addr (24-bit)
+;   $2B-$2D: oamRomPtr (24-bit)
+;   $2E:     oamEntryCount
+;   $30-$6F: 64-byte pixel buffer (decoded source tile, row-major)
 ; ===========================================================================
 _sa1.doScaleNN:
   .ACCU 8
 
-  ; Read sprite dimensions, convert to pixels
+  ; Read OAM pointer from mailbox
+  lda.l SA1_MAILBOX_OAM
+  sta $2B
+  lda.l SA1_MAILBOX_OAM+1
+  sta $2C
+  lda.l SA1_MAILBOX_OAM+2
+  sta $2D
+
+  ; Read OAM header byte 0 = entry count
   rep #$20
   .ACCU 16
-  lda.l SA1_MAILBOX_WIDTH
-  asl a
-  asl a
-  asl a                   ; * 8
+  lda $2B
+  sta $10
   sep #$20
   .ACCU 8
-  sta $17                 ; srcWidthPx (max 64)
+  lda $2D
+  sta $12
+  lda [$10]
+  sta $2E                 ; oamEntryCount
 
-  rep #$20
-  .ACCU 16
-  lda.l SA1_MAILBOX_HEIGHT
-  asl a
-  asl a
-  asl a
-  sep #$20
-  .ACCU 8
-  sta $18                 ; srcHeightPx (max 64)
-
-  ; Bail on zero dimensions
-  lda $17
-  beq _sa1.nnBailZero
-  lda $18
+  ; Bail on zero entries
+  lda $2E
   bne +
-_sa1.nnBailZero:
   lda #0
   sta.l SA1_MAILBOX_OUTTILES
   jml _sa1.doScale.done
 +
 
-  ; Precompute ratio = $FF00 / scale for coordinate mapping.
-  ; srcCoord = (globalCoord * ratio) >> 8
+  ; Precompute ratio = $7F00 / scale
   lda #MCNT_DIVISION
   sta.l MCNT
   lda #$00
-  sta.l MA                ; dividend = $FF00
-  lda #$FF
+  sta.l MA
+  lda #$7F
   sta.l MA+1
   lda $16
-  sta.l MB                ; divisor = scale
+  sta.l MB
   lda #0
   sta.l MB+1
   _SA1_MATH_WAIT
   lda.l MR
-  sta $14                 ; ratio low
+  sta $14
   lda.l MR+1
-  sta $15                 ; ratio high
+  sta $15
 
-  ; outWidthPx = ceil(srcWidthPx * scale / 255)
-  lda #MCNT_MULTIPLICATION
-  sta.l MCNT
-  lda $17
-  sta.l MA
-  lda #0
-  sta.l MA+1
-  lda $16
-  sta.l MB
-  lda #0
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  rep #$20
-  .ACCU 16
-  lda.l MR                ; srcWidthPx * scale
-  clc
-  adc #254                ; ceiling division
-  sep #$20
-  .ACCU 8
-  sta.l MA
-  xba
-  sta.l MA+1
-  lda #MCNT_DIVISION
-  sta.l MCNT
-  lda #255
-  sta.l MB
-  lda #0
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  lda.l MR                ; outWidthPx
-  clc
-  adc #7
-  lsr a
-  lsr a
-  lsr a                   ; ceil(outWidthPx / 8)
-  sta $1A                 ; outTilesWide
-
-  ; outHeightPx = ceil(srcHeightPx * scale / 255)
-  lda #MCNT_MULTIPLICATION
-  sta.l MCNT
-  lda $18
-  sta.l MA
-  lda #0
-  sta.l MA+1
-  lda $16
-  sta.l MB
-  lda #0
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  rep #$20
-  .ACCU 16
-  lda.l MR
-  clc
-  adc #254
-  sep #$20
-  .ACCU 8
-  sta.l MA
-  xba
-  sta.l MA+1
-  lda #MCNT_DIVISION
-  sta.l MCNT
-  lda #255
-  sta.l MB
-  lda #0
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  lda.l MR                ; outHeightPx
-  clc
-  adc #7
-  lsr a
-  lsr a
-  lsr a
-  sta $1B                 ; outTilesTall
-
-  ; outTotalTiles = outTilesWide * outTilesTall
-  lda #MCNT_MULTIPLICATION
-  sta.l MCNT
-  lda $1A
-  sta.l MA
-  lda #0
-  sta.l MA+1
-  lda $1B
-  sta.l MB
-  lda #0
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  rep #$20
-  .ACCU 16
-  lda.l MR
-  sta $1C                 ; outTotalTiles
-
-  ; Clamp to tile buffer capacity: 27 tiles max
-  cmp #28
-  bcc +
-  lda #27
-  sta $1C
-+
-
-  ; Enable CC Type 2
-  sep #$20
-  .ACCU 8
-  lda #$A0
-  sta.l DCNT
-  lda #CDMA_4BPP
-  sta.l CDMA
-
-  ; Init output tile traversal
-  stz $1E                 ; otx = 0
-  stz $1F                 ; oty = 0
-  rep #$20
-  .ACCU 16
-  stz $0A                 ; tileIdx = 0
-
-; --- Outer loop: output tiles in row-major order ---
-_sa1.nnTileLoop:
-  .ACCU 16
-  lda $0A
-  cmp $1C
-  bcc +
-  jml _sa1.tilesFinished
-+
-
-  ; DDA = $0100 + tileIdx * 64
-  lda $0A
-  asl a
-  asl a
-  asl a
-  asl a
-  asl a
-  asl a
-  clc
-  adc #$0100
-  sep #$20
-  .ACCU 8
-  sta.l DDA
-  xba
-  sta.l DDA+1
-
-  ; Process 8 rows of this output tile
+  ; Precompute colMap[0..7]: for each output col, srcCol = (col * ratio) >> 7
+  ; Values >= 8 mean out-of-bounds (transparent)
   ldx #0
-
-_sa1.nnRowLoop:
+_sa1.nnBuildColMap:
   .ACCU 8
-  ; globalY = oty * 8 + row
-  lda $1F
-  asl a
-  asl a
-  asl a                   ; oty * 8
-  stx $20
-  clc
-  adc $20                 ; + row
-  sta $20                 ; globalY low
-  stz $21                 ; globalY high (always 0, max 63)
-
-  ; srcY = (globalY * ratio) >> 8
+  txa
+  sta.l MA
+  lda #0
+  sta.l MA+1
   lda #MCNT_MULTIPLICATION
   sta.l MCNT
-  lda $20
-  sta.l MA
-  lda $21
-  sta.l MA+1
   lda $14
   sta.l MB
   lda $15
   sta.l MB+1
   _SA1_MATH_WAIT
-  lda.l MR+1              ; srcY low
-  sta $22
-  lda.l MR+2              ; srcY high
-  sta $23
+  lda.l MR
+  asl a
+  lda.l MR+1
+  rol a                   ; >>7 result
+  sta $17,x              ; colMap[x]
+  inx
+  cpx #8
+  bcc _sa1.nnBuildColMap
 
-  ; Bounds check: srcY >= srcHeightPx -> transparent row
-  lda $23
-  beq +
-  jml _sa1.nnTransparentRow
-+
-  lda $22
-  cmp $18
-  bcc +
-  jml _sa1.nnTransparentRow
-+
-
-  ; srcTileRow = srcY / 8, srcLocalRow = srcY & 7
-  lda $22
-  lsr a
-  lsr a
-  lsr a
-  sta $24
-
-  lda $22
-  and #$07
-  sta $25
-
-  ; --- Decode entire source row into pixel buffer (dp $30-$6F) ---
-  ; srcWidthTiles = srcWidthPx / 8
-  lda $17
-  lsr a
-  lsr a
-  lsr a
-  sta $26                 ; srcWidthTiles
-
-  ; rowTileBase = srcAddr + (srcTileRow * srcWidthTiles) * 32
-  lda #MCNT_MULTIPLICATION
-  sta.l MCNT
-  lda $24
+  ; Precompute rowMap[0..7]: identical math
+  ldx #0
+_sa1.nnBuildRowMap:
+  .ACCU 8
+  txa
   sta.l MA
   lda #0
   sta.l MA+1
-  lda $26
+  lda #MCNT_MULTIPLICATION
+  sta.l MCNT
+  lda $14
   sta.l MB
-  lda #0
+  lda $15
   sta.l MB+1
   _SA1_MATH_WAIT
+  lda.l MR
+  asl a
+  lda.l MR+1
+  rol a
+  sta $1F,x              ; rowMap[x]
+  inx
+  cpx #8
+  bcc _sa1.nnBuildRowMap
+
+  lda #$A0
+  sta.l DCNT              ; enable CC Type 2
+  lda #CDMA_4BPP
+  sta.l CDMA
+
+  ; Init
+  stz $27                 ; OAM entry index = 0
   rep #$20
   .ACCU 16
-  lda.l MR                ; srcTileRow * srcWidthTiles
+  stz $0A                 ; tileIdx = 0
+
+; --- Per-entry loop: one output tile per OAM entry ---
+_sa1.nnEntryLoop:
+  .ACCU 16
+  sep #$20
+  .ACCU 8
+  lda $27
+  cmp $2E                 ; >= oamEntryCount?
+  bcc +
+  jml _sa1.nnAllDone
++
+
+  ; Compute OAM entry ROM address = oamRomPtr + 6 + entryIdx * 4
+  lda $27
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a                   ; * 4
+  clc
+  adc #6                  ; skip 6-byte header
+  clc
+  adc $2B                 ; + oamRomPtr lo/hi
+  sta $10
+  sep #$20
+  .ACCU 8
+  lda $2D
+  adc #0
+  sta $12                 ; $10-$12 = 24-bit ptr to entry
+
+  ; Read tile_id (entry byte 2)
+  rep #$20
+  .ACCU 16
+  lda $10
+  clc
+  adc #2
+  sta $28
+  sep #$20
+  .ACCU 8
+  lda $12
+  sta $2A
+  lda [$28]               ; tile_id
+
+  ; Read flags (entry byte 3)
+  rep #$20
+  .ACCU 16
+  lda $28
+  inc a
+  sta $28
+  sep #$20
+  .ACCU 8
+  lda [$28]               ; flags: bit 6=hflip, bit 7=vflip
+  pha                     ; save flags on stack
+
+  ; Compute source tile ROM address = srcAddr + tile_id * 32
+  rep #$20
+  .ACCU 16
+  lda $28
+  dec a
+  sta $28
+  sep #$20
+  .ACCU 8
+  lda [$28]               ; re-read tile_id
+  rep #$20
+  .ACCU 16
+  and #$00FF
   asl a
   asl a
   asl a
@@ -673,95 +639,130 @@ _sa1.nnRowLoop:
   asl a                   ; * 32
   clc
   adc $05                 ; + srcAddr lo/hi
-  sta $10                 ; rowTileBase lo/hi
+  sta $0C
   sep #$20
   .ACCU 8
   lda $07
   adc #0
-  sta $12                 ; rowTileBase bank
+  sta $0E                 ; $0C-$0E = source tile base (24-bit)
 
-  ; Decode each source tile column
-  phx                     ; save row counter
-  ldy #0                  ; pixel buffer write offset
-  stz $27                 ; column = 0
+  ; --- Decode all 64 source pixels into buffer dp $30-$6F ---
+  ; 8 rows x 8 pixels, row-major: buffer[row*8 + col]
+  pla                     ; flags
+  pha                     ; re-save
+  ldx #0                  ; row counter
 
-_sa1.nnDecodeCol:
-  lda $27
-  cmp $26
-  bcc +
-  jml _sa1.nnDecodeDone
-+
-
-  ; tileAddr = rowTileBase + col * 32
-  lda $27
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  asl a
-  asl a
-  asl a
-  asl a
-  asl a                   ; * 32
-  clc
-  adc $10
-  sta $28
-  sep #$20
+_sa1.nnDecodeAllRows:
   .ACCU 8
-  lda $12
-  adc #0
-  sta $2A
+  ; Compute row address: check vflip
+  txa                     ; row (0-7)
+  pha                     ; save row on stack temporarily
+  ; Check vflip
+  lda 2,s                 ; flags (2 bytes back on stack: 1 for pha row, 1 for... wait)
 
-  ; Add localRow * 2 for row offset within tile
-  lda $25
-  asl a
+  ; Stack: [flags(1 byte)] [row(1 byte)] ...
+  ; lda 2,s = flags byte
+  and #$80                ; vflip?
+  beq _sa1.nnDecRowNoVflip
+  ; vflip: actualRow = 7 - row
+  pla                     ; row
+  eor #$07                ; 7 - row (for values 0-7, XOR 7 = 7-N)
+  bra _sa1.nnDecRowReady
+_sa1.nnDecRowNoVflip:
+  pla                     ; row (unmodified)
+_sa1.nnDecRowReady:
+  ; A = actual source row (0-7), X = output row
+  asl a                   ; row * 2
   rep #$20
   .ACCU 16
   and #$00FF
   clc
-  adc $28
-  sta $28
+  adc $0C
+  sta $10                 ; temp ptr lo/hi
   sep #$20
   .ACCU 8
-  lda $2A
+  lda $0E
   adc #0
-  sta $2A
+  sta $12                 ; temp ptr bank
 
-  ; Read 4 bitplanes
-  lda [$28]
-  sta $00                 ; bp0
-
+  ; Read bp0
+  lda [$10]
+  sta $00
+  ; Read bp1 (offset +1)
   rep #$20
   .ACCU 16
-  lda $28
+  lda $10
   inc a
-  sta $28
+  sta $10
   sep #$20
   .ACCU 8
-  lda [$28]
-  sta $01                 ; bp1
-
+  lda [$10]
+  sta $01
+  ; Read bp2 (offset +16 from row base = current +15)
   rep #$20
   .ACCU 16
-  lda $28
+  lda $10
   clc
   adc #15
-  sta $28
+  sta $10
   sep #$20
   .ACCU 8
-  lda [$28]
-  sta $02                 ; bp2
-
+  lda [$10]
+  sta $02
+  ; Read bp3 (offset +17 from row base = current +1)
   rep #$20
   .ACCU 16
-  lda $28
+  lda $10
   inc a
-  sta $28
+  sta $10
   sep #$20
   .ACCU 8
-  lda [$28]
-  sta $03                 ; bp3
+  lda [$10]
+  sta $03
 
-  ; Decode 8 pixels into pixel buffer at dp $30+Y
+  ; Decode 8 pixels into buffer at dp $30 + row*8
+  ; Check hflip
+  lda 1,s                 ; flags (1 byte back: flags on stack)
+  and #$40                ; hflip?
+  bne +
+  jml _sa1.nnDecNormal
++
+
+  ; H-flip: decode right to left (pixel 7 first, pixel 0 last)
+  txa
+  asl a
+  asl a
+  asl a                   ; row * 8
+  clc
+  adc #7                  ; start at rightmost pixel
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tay
+  sep #$20
+  .ACCU 8
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC
+  _SA1_DECODE_PIXEL_BUF_DEC_LAST
+  jml _sa1.nnDecRowDone
+
+_sa1.nnDecNormal:
+  ; Normal: decode left to right
+  txa
+  asl a
+  asl a
+  asl a                   ; row * 8
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tay
+  sep #$20
+  .ACCU 8
   _SA1_DECODE_PIXEL_BUF
   _SA1_DECODE_PIXEL_BUF
   _SA1_DECODE_PIXEL_BUF
@@ -771,14 +772,65 @@ _sa1.nnDecodeCol:
   _SA1_DECODE_PIXEL_BUF
   _SA1_DECODE_PIXEL_BUF
 
-  inc $27
-  jml _sa1.nnDecodeCol
+_sa1.nnDecRowDone:
+  inx
+  cpx #8
+  bcs +
+  jml _sa1.nnDecodeAllRows
++
 
-_sa1.nnDecodeDone:
-  plx                     ; restore row counter
+  pla                     ; discard flags from stack
 
-  ; --- Sample 8 output pixels from decoded source row ---
-  ; BRF base: even rows -> 0, odd rows -> 8
+  ; --- Source tile fully decoded in dp $30-$6F ---
+  ; Now produce one scaled output tile via NN sampling + CC Type 2
+
+  ; Set DDA every 2 tiles (counter 0-7 fills first 32B, 8-15 fills next 32B)
+  rep #$20
+  .ACCU 16
+  lda $0A
+  and #$0001
+  bne _sa1.nnSkipDDA      ; odd tile: DDA already set by even tile
+
+  ; DDA = $0100 + tileIdx * 32 (= tileIdx/2 * 64)
+  lda $0A
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                   ; tileIdx * 32
+  clc
+  adc #$0100
+  sep #$20
+  .ACCU 8
+  sta.l DDA
+  xba
+  sta.l DDA+1
+  rep #$20
+  .ACCU 16
+
+_sa1.nnSkipDDA:
+  sep #$20
+  .ACCU 8
+
+  ; Process 8 output rows
+  ldx #0                  ; output row counter
+
+_sa1.nnScaleRow:
+  .ACCU 8
+  ; srcRow = rowMap[outRow]; if >= 8, transparent row
+  lda $1F,x              ; rowMap[outRow]
+  cmp #8
+  bcc +
+  jml _sa1.nnTranspRow
++
+
+  ; Compute pixel buffer base for this source row: $30 + srcRow * 8
+  asl a
+  asl a
+  asl a                   ; srcRow * 8
+  sta $04                 ; save srcRowBase
+
+  ; BRF offset: even output rows -> 0 ($2240), odd -> 8 ($2248)
   txa
   and #1
   beq +
@@ -787,81 +839,179 @@ _sa1.nnDecodeDone:
 + ldy #0
 ++
 
-  ; globalX base = otx * 8
-  lda $1E
-  asl a
-  asl a
-  asl a
-  sta $26                 ; globalXbase
+  ; Sample 8 output pixels using colMap
+  ; Save row counter to scratch (avoid push/pop width issues with 16-bit X)
+  stx $0C                 ; borrow $0C (curTileBase no longer needed)
 
-  phx                     ; save row counter
+  ; For each output pixel: srcCol = colMap[N], bufIdx = srcRowBase + srcCol
+  ; colMap is at dp $17-$1E (8 bytes). Read each as 8-bit.
+  ; X is 16-bit but colMap values are 0-7 or >=8 (OOB).
+  ; Use A to load colMap entry, transfer to X for indexing.
 
   ; Pixel 0
-  lda $26
-  jsr _sa1.nnSamplePixel
+  lda $17                 ; colMap[0]
+  cmp #8
+  bcs _sa1.nnP0oob
+  clc
+  adc $04                 ; + srcRowBase
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP0w
+_sa1.nnP0oob:
+  lda #0
+_sa1.nnP0w:
   sta BRF,y
   iny
 
   ; Pixel 1
-  lda $26
-  inc a
-  jsr _sa1.nnSamplePixel
+  lda $18
+  cmp #8
+  bcs _sa1.nnP1oob
+  clc
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP1w
+_sa1.nnP1oob:
+  lda #0
+_sa1.nnP1w:
   sta BRF,y
   iny
 
   ; Pixel 2
-  lda $26
+  lda $19
+  cmp #8
+  bcs _sa1.nnP2oob
   clc
-  adc #2
-  jsr _sa1.nnSamplePixel
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP2w
+_sa1.nnP2oob:
+  lda #0
+_sa1.nnP2w:
   sta BRF,y
   iny
 
   ; Pixel 3
-  lda $26
+  lda $1A
+  cmp #8
+  bcs _sa1.nnP3oob
   clc
-  adc #3
-  jsr _sa1.nnSamplePixel
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP3w
+_sa1.nnP3oob:
+  lda #0
+_sa1.nnP3w:
   sta BRF,y
   iny
 
   ; Pixel 4
-  lda $26
+  lda $1B
+  cmp #8
+  bcs _sa1.nnP4oob
   clc
-  adc #4
-  jsr _sa1.nnSamplePixel
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP4w
+_sa1.nnP4oob:
+  lda #0
+_sa1.nnP4w:
   sta BRF,y
   iny
 
   ; Pixel 5
-  lda $26
+  lda $1C
+  cmp #8
+  bcs _sa1.nnP5oob
   clc
-  adc #5
-  jsr _sa1.nnSamplePixel
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP5w
+_sa1.nnP5oob:
+  lda #0
+_sa1.nnP5w:
   sta BRF,y
   iny
 
   ; Pixel 6
-  lda $26
+  lda $1D
+  cmp #8
+  bcs _sa1.nnP6oob
   clc
-  adc #6
-  jsr _sa1.nnSamplePixel
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda $30,x
+  bra _sa1.nnP6w
+_sa1.nnP6oob:
+  lda #0
+_sa1.nnP6w:
   sta BRF,y
   iny
 
-  ; Pixel 7 -- 8th byte triggers CC conversion
-  lda $26
+  ; Pixel 7 (8th write triggers CC Type 2)
+  lda $1E
+  cmp #8
+  bcs _sa1.nnP7oob
   clc
-  adc #7
-  jsr _sa1.nnSamplePixel
-  sta BRF,y               ; triggers CC Type 2
-
-  plx                     ; restore row counter
-  jml _sa1.nnRowNext
-
-; --- Transparent row: 8 zero pixels to BRF ---
-_sa1.nnTransparentRow:
+  adc $04
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
   .ACCU 8
+  lda $30,x
+  bra _sa1.nnP7w
+_sa1.nnP7oob:
+  lda #0
+_sa1.nnP7w:
+  sta BRF,y               ; triggers CC conversion
+
+  ldx $0C                 ; restore row counter
+  bra _sa1.nnScaleRowNext
+
+_sa1.nnTranspRow:
+  ; Write 8 transparent pixels to BRF
   txa
   and #1
   beq +
@@ -886,71 +1036,35 @@ _sa1.nnTransparentRow:
   iny
   sta BRF,y               ; 8th triggers CC
 
-_sa1.nnRowNext:
+_sa1.nnScaleRowNext:
   .ACCU 8
   inx
   cpx #8
   bcs +
-  jml _sa1.nnRowLoop
+  jml _sa1.nnScaleRow
 +
-  ; Tile done. Advance output position (row-major).
+
+  ; Output tile done. Advance counters.
   rep #$20
   .ACCU 16
   lda $0A
   inc a
   sta $0A                 ; tileIdx++
-
   sep #$20
   .ACCU 8
-  inc $1E                 ; otx++
-  lda $1E
-  cmp $1A                 ; otx >= outTilesWide?
-  bcc +
-  stz $1E                 ; otx = 0
-  inc $1F                 ; oty++
-+
+  inc $27                 ; entryIdx++
   rep #$20
   .ACCU 16
-  jml _sa1.nnTileLoop
+  jml _sa1.nnEntryLoop
 
-; ---------------------------------------------------------------------------
-; _sa1.nnSamplePixel -- Map output X coordinate to source pixel
-;
-; Input:  A = globalX (8-bit)
-; Output: A = pixel value (0-15), or 0 if out of bounds
-; Preserves: Y
-; ---------------------------------------------------------------------------
-_sa1.nnSamplePixel:
+_sa1.nnAllDone:
   .ACCU 8
-  phy
-  phx
+  ; Output tile count = number of OAM entries processed
+  lda $27
+  sta.l SA1_MAILBOX_OUTTILES
+  rep #$20
+  .ACCU 16
+  jml _sa1.tilesFinished
 
-  ; srcX = (globalX * ratio) >> 8
-  sta.l MA
-  lda #0
-  sta.l MA+1
-  lda #MCNT_MULTIPLICATION
-  sta.l MCNT
-  lda $14
-  sta.l MB
-  lda $15
-  sta.l MB+1
-  _SA1_MATH_WAIT
-  lda.l MR+1              ; srcX
-
-  cmp $17                 ; >= srcWidthPx?
-  bcs _sa1.nnPixelOOB
-
-  tax
-  lda $30,x
-  plx
-  ply
-  rts
-
-_sa1.nnPixelOOB:
-  plx
-  ply
-  lda #0
-  rts
 
 .ends

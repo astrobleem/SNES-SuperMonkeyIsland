@@ -487,6 +487,17 @@ _init.lastFrame:
   inx
   cpx #SCUMM_WALK_ACTORS
   bcc _init.lastFrame
+
+  ;--- Init renderSlotLastScale to $FF (unscaled) ---
+  ldx #0
+  lda #$FF
+_init.lastScale:
+  .ACCU 8
+  .INDEX 16
+  sta.w SCUMM.renderSlotLastScale,x
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _init.lastScale
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
@@ -9351,9 +9362,29 @@ _ri.headGot:
   .ACCU 16
   and #$00FF
   cmp.w SCUMM.scratch
-  bne +
-  jmp _ri.chrReady
-+
+  bne _ri.frameChanged
+
+  ; Frame unchanged — check if actor is scaled (scale < 255 means
+  ; walkbox depth scaling is active; scale changes every frame as
+  ; actor walks, so we must re-render even when pic hasn't changed)
+  phx                                 ; save actor number
+  txa
+  asl a
+  asl a
+  asl a
+  asl a                               ; actor * 16 = struct offset
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.scalex,x         ; last frame's computed scale
+  rep #$20
+  .ACCU 16
+  plx                                 ; restore actor number
+  and #$00FF
+  cmp #$00FF
+  bne _ri.frameChanged                ; scale < 255 -> force re-render
+  jmp _ri.chrReady                    ; scale == 255, frame same -> skip
+_ri.frameChanged:
 
   ; Store new lastFrame
   lda.w SCUMM.scratch
@@ -9785,7 +9816,49 @@ _ri.scaleDone:
   rep #$20
   .ACCU 16
 
-_ri.debugDone:
+  ; --- SA-1 sprite scaling hook ---
+  ; If scale < 255 AND slot is dirty, redirect CHR source to SA-1 I-RAM
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  beq _ri.scaleHookDone               ; 255 = no scaling needed
+
+  ; Check if slot is dirty (CHR DMA was staged)
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.w SCUMM.renderSlotDirty,x
+  beq _ri.scaleHookDone               ; not dirty = no CHR to redirect
+
+  ; Call SA-1 scaler: reads slot params from WRAM, OAM header from ZP
+  ; A = scale factor
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale           ; scale factor (1-254)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  jsl scummvm.requestScaledTiles
+  bcc _ri.scaleHookDone               ; timeout/failure -> use ROM tiles
+
+  ; Update renderSlotLastScale
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  sta.w SCUMM.renderSlotLastScale,x
+  rep #$20
+  .ACCU 16
+  bra _ri.buildOam
+
+_ri.scaleHookDone:
+  ; Not scaling or failed: update lastScale to current
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.actorCurScale
+  sta.w SCUMM.renderSlotLastScale,x
+  rep #$20
+  .ACCU 16
 
 _ri.buildOam:
   .ACCU 16
@@ -10518,6 +10591,164 @@ _ri.noCursor:
   rep #$20
   .ACCU 16
 
+  rtl
+
+.ends
+
+;===========================================================================
+; requestScaledTiles — Send CHR data to SA-1 for nearest-neighbor scaling
+;
+; Input:
+;   A (16-bit) = scale factor (1-254)
+;   SCUMM.scratch3 = render slot index
+;   slotChrSrcLo/Hi/Len = ROM source (already populated)
+;   _oamSrcPtr (ZP) = OAM header pointer (for width/height)
+; Output:
+;   slotChrSrcLo/Hi/Len redirected to I-RAM on success
+;   Carry set = success, carry clear = timeout/failure
+; Clobbers: A, X, Y
+;===========================================================================
+.section "scummvm SA1 scale request" superfree
+.base BSL
+
+scummvm.requestScaledTiles:
+  php
+  rep #$20
+  .ACCU 16
+
+  ; --- Write mailbox parameters to I-RAM ---
+  ; Clear status first
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l SA1_MBOX_STATUS             ; 0 = busy
+
+  ; Scale factor from WRAM (A was clobbered by DBR setup)
+  lda.w SCUMM.actorCurScale
+  sta.l SA1_MBOX_SCALE
+
+  ; Source ROM address from slot arrays
+  ldx.w SCUMM.scratch3                ; render slot (byte index)
+  lda.w SCUMM.slotChrSrcHi,x         ; bank byte
+  sta.l SA1_MBOX_SRC+2
+
+  rep #$20
+  .ACCU 16
+  txa
+  asl a                                ; slot * 2 for word arrays
+  tax
+  lda.w SCUMM.slotChrSrcLo,x         ; addr lo/hi
+  sta.l SA1_MBOX_SRC
+
+  ; Tile count = ChrLen / 32
+  lda.w SCUMM.slotChrLen,x
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a                                ; / 32
+  sta.l SA1_MBOX_TILES
+
+  ; Width/height from OAM header (bytes 1,2 = pixel dimensions)
+  ; Read width, convert pixels to tiles, write as 16-bit word
+  sep #$20
+  .ACCU 8
+  ldy #1
+  lda [_oamSrcPtr],y                  ; width in pixels
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a                                ; ceil(widthPx / 8) = tiles wide
+  rep #$20
+  .ACCU 16
+  and #$00FF                           ; zero-extend to 16-bit
+  sta.l SA1_MBOX_WIDTH                 ; write full word
+
+  ; Read height, convert pixels to tiles, write as 16-bit word
+  sep #$20
+  .ACCU 8
+  ldy #2
+  lda [_oamSrcPtr],y                  ; height in pixels
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a                                ; ceil(heightPx / 8) = tiles tall
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.l SA1_MBOX_HEIGHT                ; write full word
+
+  ; Set command = 1 (triggers SA-1 processing)
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.l SA1_MBOX_CMD
+
+  ; --- Poll for completion ---
+  ; SA-1 runs at 10.74 MHz; a 27-tile scale takes ~50K SA-1 cycles
+  ; = ~5K SNES cycles. Timeout after ~32K iterations (generous).
+  rep #$20
+  .ACCU 16
+  ldx #$7FFF                           ; timeout counter
+_srt.poll:
+  sep #$20
+  .ACCU 8
+  lda.l SA1_MBOX_STATUS
+  cmp #1
+  beq _srt.done
+  rep #$20
+  .ACCU 16
+  dex
+  bne _srt.poll
+
+  ; Timeout — leave CHR source pointing at ROM (fallback)
+  plp
+  clc                                  ; carry clear = failure
+  rtl
+
+_srt.done:
+  ; --- Read output tile count, redirect DMA source to I-RAM ---
+  rep #$20
+  .ACCU 16
+  lda.l SA1_MBOX_OUTTILES
+  and #$00FF
+  beq _srt.zeroOut                     ; 0 output tiles = bail
+
+  ; Compute output CHR length = outTiles * 32
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                                ; * 32
+  pha                                  ; save output length
+
+  ; Redirect slot CHR source to I-RAM ($00:3100)
+  ldx.w SCUMM.scratch3                ; render slot
+  txa
+  asl a
+  tax                                  ; slot * 2
+
+  pla                                  ; output length
+  sta.w SCUMM.slotChrLen,x            ; update CHR length
+
+  lda #SA1_TILE_BUF
+  sta.w SCUMM.slotChrSrcLo,x          ; I-RAM addr = $3100
+
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda #$00                             ; bank $00 (I-RAM lives at $00:3000)
+  sta.w SCUMM.slotChrSrcHi,x
+
+  plp
+  sec                                  ; carry set = success
+  rtl
+
+_srt.zeroOut:
+  plp
+  clc                                  ; carry clear = no output
   rtl
 
 .ends

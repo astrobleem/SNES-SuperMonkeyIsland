@@ -4,6 +4,17 @@
 ; SCUMM v5 Interpreter — Constants, Structs, WRAM layout
 ;---------------------------------------------------------------------------
 
+; SA-1 I-RAM mailbox addresses (mirrors sa1_boot.65816 defines for cross-unit use)
+.define SA1_MBOX_CMD      $3000
+.define SA1_MBOX_SCALE    $3001
+.define SA1_MBOX_SRC      $3002
+.define SA1_MBOX_TILES    $3005
+.define SA1_MBOX_WIDTH    $3007
+.define SA1_MBOX_HEIGHT   $3009
+.define SA1_MBOX_OUTTILES $300D
+.define SA1_MBOX_STATUS   $300E
+.define SA1_TILE_BUF      $3100
+
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0
 .define TadCommand_UNPAUSE               4
@@ -285,6 +296,7 @@ SCUMM.renderSlotLastPic  ds SCUMM_MAX_RENDER_SLOTS      ; last rendered pic ($FF
 SCUMM.renderSlotDirty    ds SCUMM_MAX_RENDER_SLOTS      ; nonzero = needs CHR DMA
 SCUMM.renderSlotLastHead ds SCUMM_MAX_RENDER_SLOTS      ; last rendered head pic ($FF=dirty)
 SCUMM.renderSlotHeadDirty ds SCUMM_MAX_RENDER_SLOTS     ; nonzero = needs head CHR DMA
+SCUMM.renderSlotLastScale ds SCUMM_MAX_RENDER_SLOTS     ; last rendered scale (255=unscaled)
 .ends
 
 ; Per-slot CHR DMA parameters (filled by renderActors, consumed by registerPendingDma)

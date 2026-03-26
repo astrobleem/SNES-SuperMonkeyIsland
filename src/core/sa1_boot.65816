@@ -287,6 +287,22 @@ _sa1.rowLoop:
   adc #0                  ; carry from 16-bit add
   sta $12                 ; temp: row base bank
 
+  ; --- Diagnostic: save pointer for row 0 ---
+  cpx #0
+  bne _sa1.skipPtrDiag
+  lda $10
+  sta.l $3038             ; pointer low
+  lda $11
+  sta.l $3039             ; pointer high
+  lda $12
+  sta.l $303A             ; pointer bank
+  lda #$01
+  sta $15                 ; diag flag: row 0 active
+  bra _sa1.ptrDiagDone
+_sa1.skipPtrDiag:
+  stz $15                 ; diag flag: not row 0
+_sa1.ptrDiagDone:
+
   ; Read bp0 = [rowBase + 0]
   lda [$10]               ; long indirect via dp $10-$12
   sta $00                 ; bp0
@@ -327,6 +343,19 @@ _sa1.rowLoop:
   lda [$10]
   sta $03                 ; bp3
 
+  ; --- Diagnostic: save bp0-bp3 for row 0 ---
+  lda $15                 ; diag flag
+  beq _sa1.skipBpDiag
+  lda $00
+  sta.l $3028             ; bp0
+  lda $01
+  sta.l $3029             ; bp1
+  lda $02
+  sta.l $302A             ; bp2
+  lda $03
+  sta.l $302B             ; bp3
+_sa1.skipBpDiag:
+
   ; --- Decode 8 pixels from bp0-bp3 using shift-accumulate ---
   ; For each pixel, shift bp3/bp2/bp1/bp0 left, rotating MSB into pixel.
   ; Result: pixel = (bp3_msb << 3) | (bp2_msb << 2) | (bp1_msb << 1) | bp0_msb
@@ -355,6 +384,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y             ; BRF + 0
+  bit $15
+  beq _sa1.noPx0
+  sta.l $3030
+_sa1.noPx0:
   iny
 
   ; Pixel 1
@@ -369,6 +402,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx1
+  sta.l $3031
+_sa1.noPx1:
   iny
 
   ; Pixel 2
@@ -383,6 +420,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx2
+  sta.l $3032
+_sa1.noPx2:
   iny
 
   ; Pixel 3
@@ -397,6 +438,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx3
+  sta.l $3033
+_sa1.noPx3:
   iny
 
   ; Pixel 4
@@ -411,6 +456,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx4
+  sta.l $3034
+_sa1.noPx4:
   iny
 
   ; Pixel 5
@@ -425,6 +474,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx5
+  sta.l $3035
+_sa1.noPx5:
   iny
 
   ; Pixel 6
@@ -439,6 +492,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y
+  bit $15
+  beq _sa1.noPx6
+  sta.l $3036
+_sa1.noPx6:
   iny
 
   ; Pixel 7 — writing this 8th byte triggers CC Type 2 auto-conversion
@@ -453,6 +510,10 @@ _sa1.rowLoop:
   rol $04
   lda $04
   sta BRF,y             ; triggers conversion for this row
+  bit $15
+  beq _sa1.noPx7
+  sta.l $3037
+_sa1.noPx7:
 
   plx                     ; restore row counter
   inx

@@ -60,7 +60,8 @@ core.boot.init:
 
 	jsl scummvm.zeroExtraWram
 
-	jsl sa1.ccTest
+	; sa1.ccTest removed — CC Type 2 test now runs during SA-1 boot
+	; (no cross-CPU communication needed)
 
 	rep #$31
 	NEW Script.CLS.PTR oopCreateNoPtr main
@@ -161,11 +162,11 @@ sa1.init:
   sep #$20
   .ACCU 8
 
-  ; Disable I-RAM write protection for both CPUs
-  ; SIWP/CIWP: bit=1 PROTECTS that block. $00 = no protection = both can write.
-  lda #$00
-  sta.l SIWP              ; $2229 — allow SA-1 to write I-RAM
-  sta.l CIWP              ; $222A — allow SNES CPU to write I-RAM
+  ; Enable I-RAM writes for both CPUs
+  ; SIWP/CIWP: bit=1 ENABLES writes for that 256-byte block. $FF = all writable.
+  lda #$FF
+  sta.l SIWP              ; $2229 — enable SNES CPU I-RAM writes
+  sta.l CIWP              ; $222A — enable SA-1 CPU I-RAM writes
 
   ; Enable BW-RAM writes for both CPUs
   lda #SBWE_SNES_BWRAM_WRITE_ENABLE
@@ -194,6 +195,10 @@ sa1.init:
   .ACCU 8
   lda #0
   sta.l CCNT              ; $2200 — bit 5 = 0 means run
+
+  ; Re-write CBWE now that SA-1 is running (belt-and-suspenders for BW-RAM access).
+  lda #CBWE_SA1_BWRAM_WRITE_ENABLE
+  sta.l CBWE              ; $2227
 
   plp
   rtl

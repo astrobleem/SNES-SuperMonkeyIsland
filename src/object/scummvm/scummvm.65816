@@ -9804,6 +9804,32 @@ _ri.scaleDone:
   .ACCU 8
   lda.w SCUMM.actorCurScale
   sta.w SCUMM.actors.scalex,x
+
+  ; --- Apply elevation: screenY -= (elevation * scale) / 256 ---
+  ; X = actor struct offset, actorCurScale already computed
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.actors.elevation,x
+  beq _ri.elevDone                        ; elevation 0 = skip (common case)
+  sep #$20
+  .ACCU 8
+  sta.l $4202                             ; WRMPYA = elevation low byte
+  lda.w SCUMM.actorCurScale
+  sta.l $4203                             ; WRMPYB = scale -> start multiply
+  nop
+  nop
+  nop
+  nop
+  lda.l $4217                             ; high byte = (elev * scale) >> 8
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.scratch                     ; scaled elevation
+  lda.w SCUMM.actorScreenY
+  sec
+  sbc.w SCUMM.scratch
+  sta.w SCUMM.actorScreenY
+_ri.elevDone:
   rep #$20
   .ACCU 16
 

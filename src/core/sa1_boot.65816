@@ -109,13 +109,13 @@
 ; Macro: decode one pixel from bp0-bp3, store to pixel buffer dp $30+Y, inc Y
 .macro _SA1_DECODE_PIXEL_BUF
   stz $04
-  asl $03
-  rol $04
-  asl $02
+  asl $00
   rol $04
   asl $01
   rol $04
-  asl $00
+  asl $02
+  rol $04
+  asl $03
   rol $04
   lda $04
   sta $30,y
@@ -125,13 +125,13 @@
 ; Macro: decode one pixel from bp0-bp3, store to pixel buffer dp $30+Y, dec Y
 .macro _SA1_DECODE_PIXEL_BUF_DEC
   stz $04
-  asl $03
-  rol $04
-  asl $02
+  asl $00
   rol $04
   asl $01
   rol $04
-  asl $00
+  asl $02
+  rol $04
+  asl $03
   rol $04
   lda $04
   sta $30,y
@@ -141,13 +141,13 @@
 ; Same but last pixel of hflip row (no dey)
 .macro _SA1_DECODE_PIXEL_BUF_DEC_LAST
   stz $04
-  asl $03
-  rol $04
-  asl $02
+  asl $00
   rol $04
   asl $01
   rol $04
-  asl $00
+  asl $02
+  rol $04
+  asl $03
   rol $04
   lda $04
   sta $30,y
@@ -970,31 +970,31 @@ _sa1.comp.bodyLoop:
   lda $26                 ; entry index
   bne _sa1.comp.skipDiag
   lda $12
-  sta.l $3030E0           ; $30E0: minX
+  sta.l $0030E0           ; $30E0: minX
   lda $13
-  sta.l $3030E1           ; $30E1: minY
+  sta.l $0030E1           ; $30E1: minY
   lda $14
-  sta.l $3030E2           ; $30E2: compositeW
+  sta.l $0030E2           ; $30E2: compositeW
   lda $15
-  sta.l $3030E3           ; $30E3: compositeH
+  sta.l $0030E3           ; $30E3: compositeH
   ; raw dx = bufX + minX (reverse the sbc)
   lda $38
   clc
   adc $12
-  sta.l $3030E4           ; $30E4: first entry dx (raw)
+  sta.l $0030E4           ; $30E4: first entry dx (raw)
   ; raw dy = bufY + minY
   lda $39
   clc
   adc $13
-  sta.l $3030E5           ; $30E5: first entry dy (raw)
+  sta.l $0030E5           ; $30E5: first entry dy (raw)
   lda $38
-  sta.l $3030E6           ; $30E6: computed bufX
+  sta.l $0030E6           ; $30E6: computed bufX
   lda $39
-  sta.l $3030E7           ; $30E7: computed bufY
+  sta.l $0030E7           ; $30E7: computed bufY
   lda $1E
-  sta.l $3030E8           ; $30E8: bodyEntryCount
+  sta.l $0030E8           ; $30E8: bodyEntryCount
   lda $20
-  sta.l $3030E9           ; $30E9: first entry tile_id
+  sta.l $0030E9           ; $30E9: first entry tile_id
 _sa1.comp.skipDiag:
 
   ; Compute source tile ROM: bodyChrBase + tile_id * 32
@@ -1022,10 +1022,19 @@ _sa1.comp.skipDiag:
   jml _sa1.comp.bodyLoop
 
 _sa1.comp.bodyDone:
-
-  ; --- Step 4: Composite head tiles (overlay) ---
+  ; DEBUG: write iteration count + last entry data to I-RAM
   sep #$20
   .ACCU 8
+  lda $26
+  sta.l $0030EA           ; $30EA: entries processed (should be 11)
+  lda $20
+  sta.l $0030EB           ; $30EB: last entry tile_id
+  lda $38
+  sta.l $0030EC           ; $30EC: last entry bufX
+  lda $39
+  sta.l $0030ED           ; $30ED: last entry bufY
+
+  ; --- Step 4: Composite head tiles (overlay) ---
   lda $1F                 ; headEntryCount
   beq _sa1.comp.headDone
 

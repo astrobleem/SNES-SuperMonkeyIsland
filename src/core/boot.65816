@@ -148,6 +148,7 @@ Boot:
 	stz NMITIMEN		;disable timers, NMI,and auto-joyread
 	stz MEMSEL		;SA-1 mode: no FastROM
 	jsl sa1.init		;initialize SA-1 co-processor
+	jsl bwram.bootInit	;zero volatile BW-RAM + init save header
 	jml core.boot.init
 
 IrqHookUp:
@@ -204,6 +205,92 @@ sa1.init:
   rtl
 .ends
 
+.bank 0 slot 0
+.section "BW-RAM boot init" superfree
+.base BSL
+
+;Zero BW-RAM volatile region ($40:8000-$40:FFFF) via SNES CPU DMA,
+;then check/init the persistent save header.
+bwram.bootInit:
+  php
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; --- Zero volatile region via DMA channel 7 ---
+  ; Use a zero source byte in WRAM (address $0000 in bank $00, already cleared)
+  sep #$20
+  .ACCU 8
+
+  lda #$08                ; DMA mode: fixed source, A-bus to B-bus, 1-byte transfer
+  sta.l $4370             ; DMA7 params: fixed source (bit 3), A→B
+  lda #$80                ; B-bus target: $2180 (WRAM data port) — NO, BW-RAM is A-bus addressable
+  ; Actually BW-RAM at $40:xxxx is directly on the A-bus. We can't DMA to it via B-bus.
+  ; Use a CPU loop instead.
+
+  ; --- Zero volatile region via 16-bit CPU loop ---
+  ; $40:8000-$40:FFFF = 32KB. Use 16-bit stores for speed.
+  rep #$20
+  .ACCU 16
+  lda #0
+  ldx #0
+_bwram.zeroVolLoop:
+  sta.l BWRAM_VOLATILE_BASE,x
+  inx
+  inx
+  cpx #BWRAM_VOLATILE_CLEAR_SIZE
+  bne _bwram.zeroVolLoop
+
+  ; --- Check save header magic ---
+  lda.l BWRAM_SAVE_MAGIC
+  cmp #BWRAM_MAGIC_LO
+  bne _bwram.initSaveHeader
+  lda.l BWRAM_SAVE_MAGIC+2
+  cmp #BWRAM_MAGIC_HI
+  beq _bwram.bootDone
+
+_bwram.initSaveHeader:
+  ; Zero persistent region ($40:0000-$40:7FFF, 32KB)
+  rep #$20
+  .ACCU 16
+  lda #0
+  ldx #0
+_bwram.zeroPersLoop:
+  sta.l BWRAM_SAVE_HEADER,x
+  inx
+  inx
+  cpx #$8000
+  bne _bwram.zeroPersLoop
+
+  ; Write save header: "SMI1" magic
+  rep #$20
+  .ACCU 16
+  lda #BWRAM_MAGIC_LO
+  sta.l BWRAM_SAVE_MAGIC          ; $400000: "SM"
+  lda #BWRAM_MAGIC_HI
+  sta.l BWRAM_SAVE_MAGIC+2        ; $400002: "I1"
+
+  ; Version = 1
+  lda #BWRAM_FORMAT_VERSION
+  sta.l BWRAM_SAVE_VERSION        ; $400004
+
+  ; Slot count = 3
+  lda #3
+  sta.l BWRAM_SAVE_SLOTS          ; $400006
+
+  ; Slot size = 8192
+  lda #8192
+  sta.l BWRAM_SAVE_SLOTSIZE       ; $400008
+
+  ; Active slot = 0 (already zero from clear, but be explicit)
+  lda #0
+  sta.l BWRAM_SAVE_ACTIVE         ; $40000A
+
+_bwram.bootDone:
+  plp
+  rtl
+.ends
+
 ;wla dx is too fucking stupid to properly allocate the memory it later needs for its own header creation feature, so we have to create it manually:
 
 ;--- LoROM header + vectors at $7FB0-$7FFF (one contiguous forced section) ---
@@ -217,8 +304,19 @@ sa1.init:
 ;overwriting data tables (OopClassLut, ClearWramBytePatterns, etc.) and
 ;causing palette corruption + black bars on screen.
 .bank 0 slot 0
-.org $7f9c
+.org $7f8c
 .section "lorom header and vectors" force
+  ;--- BRK/COP/ABORT trampolines at $7F8C-$7F97 (LoROM $FF8C/$FF90/$FF94) ---
+  ;In SA-1 mode, LoROM vectors can't use raw HiROM addresses (wrong file offset).
+  ;These JML trampolines resolve correctly from LoROM space.
+Sa1BrkTrampoline:
+  jml Stop                      ; $7F8C → LoROM addr $FF8C
+Sa1CopTrampoline:
+  jml StopCop                   ; $7F90 → LoROM addr $FF90
+Sa1AbortTrampoline:
+  jml EmptyHandler              ; $7F94 → LoROM addr $FF94
+  ;--- 4 bytes padding to $7F9C ---
+  .dsb 4 0
   ;--- SA-1 CPU reset trampoline at $7F9C (LoROM addr $FF9C) ---
   ;SA-1 CPU also starts at PBR=$00 via CRV. Needs LoROM trampoline.
 Sa1CpuTrampoline:
@@ -250,7 +348,7 @@ Sa1IrqTrampoline:
   .db $23	;mapping (SA-1)
   .db $35	;cartridgetype (SA-1+RAM+Battery)
   .db 10	;romsize
-  .db 3	;sramsize
+  .db 5	;sramsize (32KB — covers persistent save region $40:0000-$40:7FFF)
   .db 1	;country
   .db $33	;licenseecode
   .db 2	;version
@@ -260,22 +358,22 @@ Sa1IrqTrampoline:
   .dsb 4 0
   ;--- native vectors at $7FE4-$7FEF (12 bytes) ---
   ;In SA-1 mode, NMI/IRQ set PBR=$00 and read vectors via LoROM.
-  ;Trampolines at LoROM $FFA7/$FFAB jml to real handlers in HiROM.
-  .dw StopCop
-  .dw Stop
-  .dw EmptyHandler
+  ;All vectors use LoROM JML trampolines to reach HiROM handlers.
+  .dw $FF90		;COP → Sa1CopTrampoline (jml StopCop)
+  .dw $FF8C		;BRK → Sa1BrkTrampoline (jml Stop)
+  .dw $FF94		;ABORT → Sa1AbortTrampoline (jml EmptyHandler)
   .dw $FFA7		;NMI → Sa1NmiTrampoline (jml NmiHandler)
-  .dw EmptyHandler
+  .dw $FF94		;unused → Sa1AbortTrampoline (safe RTI)
   .dw $FFAB		;IRQ → Sa1IrqTrampoline (jml IrqHookUp)
   ;--- padding $7FF0-$7FF3 (4 bytes) ---
   .dsb 4 0
   ;--- emu vectors at $7FF4-$7FFF (12 bytes) ---
-  .dw StopCop
-  .dw EmptyHandler
-  .dw EmptyHandler
-  .dw EmptyHandler
-  .dw $FFA0		;RESET → SA-1 LoROM trampoline (file offset $7FA0)
-  .dw EmptyHandler
+  .dw $FF90		;COP → Sa1CopTrampoline
+  .dw $FF94		;unused → Sa1AbortTrampoline (safe RTI)
+  .dw $FF94		;ABORT → Sa1AbortTrampoline (safe RTI)
+  .dw $FF94		;NMI → Sa1AbortTrampoline (safe RTI, emu mode NMI unlikely)
+  .dw $FFA0		;RESET → Sa1ResetTrampoline
+  .dw $FF8C		;IRQ/BRK → Sa1BrkTrampoline
 .ends
 
 ;--- HiROM header at $FFB0 (primary, used by SNES CPU) ---
@@ -296,7 +394,7 @@ Sa1IrqTrampoline:
   .db $23	;mapping (SA-1)
   .db $35	;cartridgetype (SA-1+RAM+Battery)
   .db 10	;romsize
-  .db 3	;sramsize (8KB — max that works with FXPak MSU-1)
+  .db 5	;sramsize (32KB — covers persistent save region $40:0000-$40:7FFF)
   .db 1	;country (1=USA/NTSC)
   .db $33	;licenseecode ($33=extended header active)
   .db 2	;version

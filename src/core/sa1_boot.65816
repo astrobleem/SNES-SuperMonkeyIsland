@@ -31,8 +31,8 @@
 .define SNES_IRAM_CMD         $3000
 .define SNES_IRAM_STATUS      $300F
 
-; BW-RAM composite buffer (SA-1 address space: $40:0000)
-.define SA1_COMPOSITE_BUF_BANK $40
+; BW-RAM composite buffer (SA-1 address space: $40:8100, in volatile region)
+.define SA1_COMPOSITE_BUF_ADDR $408100
 .define SA1_COMPOSITE_MAX_W    32     ; max pixels wide
 .define SA1_COMPOSITE_MAX_H    64     ; max pixels tall
 
@@ -879,7 +879,7 @@ _sa1.comp.zeroBuf:
   tax
   lda #0
 _sa1.comp.zeroLoop:
-  sta.l $400000,x
+  sta.l $408100,x
   dex
   dex
   bpl _sa1.comp.zeroLoop
@@ -887,7 +887,7 @@ _sa1.comp.zeroLoop:
   sep #$20
   .ACCU 8
   lda #0
-  sta.l $400000              ; zero byte 0 explicitly
+  sta.l $408100              ; zero byte 0 explicitly
   rep #$20
   .ACCU 16
 
@@ -1513,7 +1513,7 @@ _sa1.comp.samplePixel:
   cmp $14                 ; >= compositeW?
   bcs _sa1.comp.sampleOOB
 
-  ; pixel = BW-RAM[$400000 + rowOffset + srcX]
+  ; pixel = BW-RAM[$408100 + rowOffset + srcX]
   rep #$20
   .ACCU 16
   and #$00FF
@@ -1522,7 +1522,7 @@ _sa1.comp.samplePixel:
   tax
   sep #$20
   .ACCU 8
-  lda.l $400000,x
+  lda.l $408100,x
   rts
 
 _sa1.comp.sampleOOB:
@@ -1785,7 +1785,7 @@ _sa1.comp.blitWritePixels:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw0skip:
 
   ; Pixel 1
@@ -1808,7 +1808,7 @@ _sa1.comp.bw0skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw1skip:
 
   ; Pixel 2
@@ -1832,7 +1832,7 @@ _sa1.comp.bw1skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw2skip:
 
   ; Pixel 3
@@ -1856,7 +1856,7 @@ _sa1.comp.bw2skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw3skip:
 
   ; Pixel 4
@@ -1880,7 +1880,7 @@ _sa1.comp.bw3skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw4skip:
 
   ; Pixel 5
@@ -1904,7 +1904,7 @@ _sa1.comp.bw4skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw5skip:
 
   ; Pixel 6
@@ -1928,7 +1928,7 @@ _sa1.comp.bw5skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw6skip:
 
   ; Pixel 7
@@ -1952,7 +1952,7 @@ _sa1.comp.bw6skip:
   sep #$20
   .ACCU 8
   pla
-  sta.l $400000,x
+  sta.l $408100,x
 _sa1.comp.bw7skip:
 
 _sa1.comp.blitRowSkip:

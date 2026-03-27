@@ -145,35 +145,14 @@ room.loadHeader:
 
 
 /**
-* Register CGRAM DMA transfer from MSU_DATA (palette).
-* MSU_DATA stream is positioned right after the header.
-* Uses FIXED_SOURCE since MSU_DATA is a fixed-address auto-advancing port.
+* Read palette from MSU_DATA, write to both CGRAM and BW-RAM shadow.
+* Delegates to superfree section to avoid room section size changes.
+* Called during forced blank — direct CGRAM writes are safe.
 */
 room.loadPalette:
   php
   rep #$31
-  tsx
-
-  sep #$20
-  lda.b #DMA_TRANSFER.CGRAM | DMA_TRANSFER.OPTION.FIXED_SOURCE
-  pha                           ;1 byte: transfer type
-
-  pea MSU_DATA                  ;2 bytes: source address ($2001)
-
-  sep #$20
-  lda #0
-  pha                           ;1 byte: source bank ($00)
-
-  rep #$20
-  lda #0
-  pha                           ;2 bytes: target address (CGRAM addr 0)
-
-  lda.w #ROOM_PALETTE_SIZE
-  pha                           ;2 bytes: transfer length (256)
-
-  jsr core.dma.registerTransfer
-  txs                           ;restore stack (clean up 8 bytes)
-
+  jsl room.loadPaletteShadow
   plp
   rts
 
@@ -1645,5 +1624,41 @@ room.refreshObjectColumns:
 _roc.done:
   plp
   rts
+
+.ends
+
+
+;===================================================================
+; room.loadPaletteShadow — read MSU_DATA palette into CGRAM + BW-RAM
+; Called via JSL from room.loadPalette during forced blank.
+; Writes 256 bytes to both CGRAM port ($2122) and BWRAM_CGRAM_SHADOW.
+;===================================================================
+.bank 0 slot 0
+.section "room palette shadow copy" superfree
+.base BSL
+
+room.loadPaletteShadow:
+  php
+  sep #$20
+  .ACCU 8
+
+  ; Set CGRAM write address to 0
+  lda #0
+  sta.l $002121
+
+  ; Read 256 bytes from MSU_DATA, write to CGRAM and BW-RAM shadow
+  rep #$10
+  .INDEX 16
+  ldx #0
+_rps.loop:
+  lda.l MSU_DATA
+  sta.l $002122                     ; CGRAM data port (auto-increments per pair)
+  sta.l BWRAM_CGRAM_SHADOW,x
+  inx
+  cpx #BWRAM_CGRAM_SHADOW_SIZE
+  bne _rps.loop
+
+  plp
+  rtl
 
 .ends

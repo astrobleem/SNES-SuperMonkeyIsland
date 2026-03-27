@@ -6260,7 +6260,7 @@ op_roomOps:
 +
   cmp #$0C
   bne +
-  jmp _roomOps.intensity             ; roomShadow (same format)
+  jmp _roomOps.roomShadow            ; roomShadow (same format, consume-only)
 +
   cmp #$0D
   bne +
@@ -6312,19 +6312,24 @@ _roomOps.palColor:
   .INDEX 16
   ; sub-op 4: 3x p16(r,g,b) + fetchByte(aux) + p8(palette index)
   ; ScummVM: getVarOrDirectWord(0x80) x3, fetchScriptByte, getVarOrDirectByte(0x80)
-  jsr _scummvm.fetchWord             ; r
+  jsr _scummvm.fetchWord             ; r (VGA 0-63)
+  sta.l BWRAM_PALETTE_SCRATCH        ; +0 = r
   jsr _scummvm.fetchWord             ; g
+  sta.l BWRAM_PALETTE_SCRATCH+2      ; +2 = g
   jsr _scummvm.fetchWord             ; b
+  sta.l BWRAM_PALETTE_SCRATCH+4      ; +4 = b
   jsr _scummvm.fetchByte             ; aux opcode
-  sta.w SCUMM.scratch                ; replace scratch so p8 below uses new flags
+  sta.w SCUMM.scratch
   lda.w SCUMM.scratch
   and #$0080
   beq +
   jsr _scummvm.fetchWord
-  clc
-  rts
+  bra ++
 +
   jsr _scummvm.fetchByte
+++
+  sta.l BWRAM_PALETTE_SCRATCH+6      ; +6 = palette index
+  jsl scummvm.setPalColor_impl
   clc
   rts
 
@@ -6504,11 +6509,46 @@ _roomOps.scaleSimple:
 _roomOps.intensity:
   .ACCU 16
   .INDEX 16
-  ; r, g, b: 3x p16
+  ; sub-op $0B: rgbRoomIntensity
+  ; r, g, b scales (0-255), aux byte, startColor (p8), endColor (p8)
   jsr _scummvm.fetchWord
+  sta.l BWRAM_PALETTE_SCRATCH        ; +0 = redScale
   jsr _scummvm.fetchWord
+  sta.l BWRAM_PALETTE_SCRATCH+2      ; +2 = greenScale
   jsr _scummvm.fetchWord
+  sta.l BWRAM_PALETTE_SCRATCH+4      ; +4 = blueScale
   ; aux byte, then startcolor: p8[7], endcolor: p8[6]
+  jsr _scummvm.fetchByte
+  sta.w SCUMM.scratch
+  lda.w SCUMM.scratch
+  and #$0080
+  beq +
+  jsr _scummvm.fetchWord
+  bra ++
++
+  jsr _scummvm.fetchByte
+++
+  sta.l BWRAM_PALETTE_SCRATCH+6      ; +6 = startColor
+  lda.w SCUMM.scratch
+  and #$0040
+  beq +
+  jsr _scummvm.fetchWord
+  bra ++
++
+  jsr _scummvm.fetchByte
+++
+  sta.l BWRAM_PALETTE_SCRATCH+8      ; +8 = endColor
+  jsl scummvm.darkenPalette_impl
+  clc
+  rts
+
+_roomOps.roomShadow:
+  .ACCU 16
+  .INDEX 16
+  ; sub-op $0C: roomShadow — software renderer feature, consume params only
+  jsr _scummvm.fetchWord
+  jsr _scummvm.fetchWord
+  jsr _scummvm.fetchWord
   jsr _scummvm.fetchByte
   sta.w SCUMM.scratch
   lda.w SCUMM.scratch
@@ -15843,22 +15883,239 @@ _gcoa.return:
 
 
 ;===================================================================
-; darkenPalette_impl — STUB (Step 4 deferred, WRAM packing issue)
+; darkenPalette_impl — scale RGB from CGRAM shadow, write to CGRAM
+; Params in BWRAM_PALETTE_SCRATCH: +0=redScale, +2=greenScale,
+;   +4=blueScale (0-255 each), +6=startColor, +8=endColor
 ;===================================================================
+.bank 0 slot 0
 .section "ScummVM darkenPalette impl" superfree
+.base BSL
 
 scummvm.darkenPalette_impl:
+  php
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; Set CGRAM write address to startColor
+  lda.l BWRAM_PALETTE_SCRATCH+6     ; startColor
+  sep #$20
+  .ACCU 8
+  sta.l $2121                       ; CGADD
+  rep #$20
+  .ACCU 16
+
+  ; X = byte offset into shadow = startColor * 2
+  lda.l BWRAM_PALETTE_SCRATCH+6
+  asl a
+  tax
+
+  ; Calculate loop count = (endColor - startColor + 1)
+  lda.l BWRAM_PALETTE_SCRATCH+8     ; endColor
+  sec
+  sbc.l BWRAM_PALETTE_SCRATCH+6     ; - startColor
+  inc a                             ; + 1
+  tay                               ; Y = remaining count
+  bne +
+  jmp _darken.done
++
+  bpl _darken.loop
+  jmp _darken.done
+
+_darken.loop:
+
+  ; Read BGR555 word from shadow
+  lda.l BWRAM_CGRAM_SHADOW,x
+  pha                               ; save original word
+
+  ; --- Extract and scale R (bits 0-4) ---
+  and #$001F
+  ; result = (channel * scale + 128) >> 8
+  sep #$20
+  .ACCU 8
+  sta.l BWRAM_PALETTE_SCRATCH+10    ; temp: R channel (low byte only)
+  rep #$20
+  .ACCU 16
+  lda.l BWRAM_PALETTE_SCRATCH+10
+  and #$00FF
+  pha                               ; save R on stack
+  lda.l BWRAM_PALETTE_SCRATCH       ; redScale
+  and #$00FF
+  sta.l BWRAM_PALETTE_SCRATCH+12    ; temp: scale
+  pla                               ; A = R
+  ; A * scale: 16-bit multiply via shift-add
+  ; Use software multiply: result = A * scratch+12
+  jsr _darken.multiply              ; A = (channel * scale + 128) >> 8
+  sta.l BWRAM_PALETTE_SCRATCH+14    ; scaled R
+
+  ; --- Extract and scale G (bits 5-9) ---
+  pla                               ; restore original BGR555
+  pha                               ; keep it for B
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  and #$001F
+  pha
+  lda.l BWRAM_PALETTE_SCRATCH+2     ; greenScale
+  and #$00FF
+  sta.l BWRAM_PALETTE_SCRATCH+12
+  pla
+  jsr _darken.multiply
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  ora.l BWRAM_PALETTE_SCRATCH+14
+  sta.l BWRAM_PALETTE_SCRATCH+14    ; R | (G << 5)
+
+  ; --- Extract and scale B (bits 10-14) ---
+  pla                               ; restore original BGR555
+  xba
+  lsr a
+  lsr a
+  and #$001F
+  pha
+  lda.l BWRAM_PALETTE_SCRATCH+4     ; blueScale
+  and #$00FF
+  sta.l BWRAM_PALETTE_SCRATCH+12
+  pla
+  jsr _darken.multiply
+  ; shift B into bits 10-14
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  ora.l BWRAM_PALETTE_SCRATCH+14    ; R | (G << 5) | (B << 10)
+
+  ; Write to CGRAM (auto-increments)
+  sep #$20
+  .ACCU 8
+  sta.l $2122                       ; CGDATA low byte
+  xba
+  sta.l $2122                       ; CGDATA high byte
+  rep #$20
+  .ACCU 16
+
+  inx
+  inx
+  dey
+  beq _darken.done
+  jmp _darken.loop
+
+_darken.done:
+  plp
   rtl
+
+; Software multiply helper: A = (A * scratch+12 + 128) >> 8
+; Input: A = channel (0-31), scratch+12 = scale (0-255)
+; Output: A = scaled value (0-31)
+; Uses simple add-loop: channel is max 31, so at most 31 additions.
+_darken.multiply:
+  .ACCU 16
+  and #$001F
+  beq _darken.mulDone               ; channel=0 -> result=0
+  tay                               ; Y = channel (loop counter)
+  lda #0                            ; accumulator
+_darken.mulAdd:
+  clc
+  adc.l BWRAM_PALETTE_SCRATCH+12    ; += scale
+  dey
+  bne _darken.mulAdd
+  ; A = channel * scale. Apply (+ 128) >> 8
+  clc
+  adc #128
+  xba                               ; >> 8
+  and #$00FF
+  cmp #32
+  bcc _darken.mulDone
+  lda #31
+_darken.mulDone:
+  rts
 
 .ends
 
 
 ;===================================================================
-; setPalColor_impl — STUB (Step 4 deferred, WRAM packing issue)
+; setPalColor_impl — convert VGA RGB to BGR555, write shadow + CGRAM
+; Params in BWRAM_PALETTE_SCRATCH: +0=r, +2=g, +4=b (VGA 0-63),
+;   +6=palette index
 ;===================================================================
+.bank 0 slot 0
 .section "ScummVM setPalColor impl" superfree
+.base BSL
 
 scummvm.setPalColor_impl:
+  php
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; Convert VGA (0-63) to SNES (0-31): snes_channel = vga >> 1
+  lda.l BWRAM_PALETTE_SCRATCH       ; r
+  lsr a
+  and #$001F
+  sta.l BWRAM_PALETTE_SCRATCH+10    ; SNES R
+
+  lda.l BWRAM_PALETTE_SCRATCH+2     ; g
+  lsr a
+  and #$001F
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  ora.l BWRAM_PALETTE_SCRATCH+10
+  sta.l BWRAM_PALETTE_SCRATCH+10    ; R | (G << 5)
+
+  lda.l BWRAM_PALETTE_SCRATCH+4     ; b
+  lsr a
+  and #$001F
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  ora.l BWRAM_PALETTE_SCRATCH+10    ; R | (G << 5) | (B << 10)
+  pha                               ; save BGR555 word
+
+  ; Write to BWRAM_CGRAM_SHADOW at index*2
+  lda.l BWRAM_PALETTE_SCRATCH+6     ; palette index
+  asl a
+  tax
+  pla                               ; BGR555 word
+  sta.l BWRAM_CGRAM_SHADOW,x        ; update shadow
+
+  ; Write to CGRAM
+  sep #$20
+  .ACCU 8
+  lda.l BWRAM_PALETTE_SCRATCH+6
+  sta.l $2121                       ; CGADD = index
+  rep #$20
+  .ACCU 16
+  lda.l BWRAM_CGRAM_SHADOW,x        ; re-read BGR555
+  sep #$20
+  .ACCU 8
+  sta.l $2122                       ; CGDATA low
+  xba
+  sta.l $2122                       ; CGDATA high
+  rep #$20
+  .ACCU 16
+
+  plp
   rtl
 
 .ends

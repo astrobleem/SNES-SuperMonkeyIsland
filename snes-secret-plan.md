@@ -541,23 +541,48 @@ The audio system uses a **hybrid architecture**: SPC700 for native chip music an
 - Voice ducking: lower SPC700 music volume during voice playback via `Tad_SetMainVolume`
 - Gap-filling: record new voice lines for text-only dialogue (stretch goal)
 
-### 5.7 Save System
+### 5.7 Save System — BW-RAM INFRASTRUCTURE COMPLETE
 
-SNES has 32KB SRAM (battery-backed or FPGA-retained).
+SA-1 BW-RAM (128KB at $40:0000-$41:FFFF) used for save data and volatile buffers. ROM header declares 32KB SRAM (`sramsize=$05`) so emulators/flashcarts persist the save region.
 
-**Save Data Layout:**
+**BW-RAM Memory Map** (`src/definition/bwram.inc`):
 ```
-Per Save Slot (~4KB, allowing 8 slots):
-- Current room number
-- All global variables (1600 bytes)
-- Actor states (positions, costumes, rooms)
-- Inventory contents
-- Active script states (PCs, local vars)
-- Object ownership/state table
-- Checksum
+PERSISTENT ($40:0000-$40:7FFF, 32KB) — battery-backed
+  $40:0000  Save Header (32 bytes: magic "SMI1", version, slot count, slot size)
+  $40:0020  Save Slot 0 (~8KB)
+  $40:2000  Save Slot 1 (8KB)
+  $40:4000  Save Slot 2 (8KB)
+  $40:6000  Settings (8KB: player prefs, controls)
+
+VOLATILE ($40:8000-$41:FFFF, 96KB) — zeroed on boot
+  $40:8000  CGRAM Shadow (256 bytes: room palette in BGR555, read by darkenPalette)
+  $40:8100  SA-1 Composite Buffer (2KB: sprite compositing/scaling)
+  $40:8900  Palette Scratch (1.75KB: darkenPalette temps)
+  $40:9000  Save Staging (12KB: atomic serialize before copy to slot)
+  $40:C000  Future Buffers (16KB)
+  $41:0000  Future Expansion (64KB)
 ```
 
-**Save/Load triggered by in-game SCUMM save menu or custom SNES UI.**
+**Boot Init** (`bwram.bootInit` in `src/core/boot.65816`):
+- Zeros volatile region ($40:8000-$40:FFFF) via CPU loop
+- First-boot detection: reads magic at $40:0000, writes header if not "SMI1"
+- Called from Boot sequence after `sa1.init`
+
+**Save Data Per Slot (~6.7KB):**
+```
+- Global variables: 800 words = 1600 bytes
+- Bit variables: 2048 bits = 256 bytes
+- Actor state: 13 actors x ~32 bytes = 416 bytes
+- Object ownership: 1024 bytes
+- Object state: 800 bytes
+- Script slot state: 25 slots x ~16 bytes = 400 bytes
+- Current room + camera + cursor: ~64 bytes
+- Inventory: ~128 bytes
+- String table: variable
+- CRC-16 checksum
+```
+
+**Save/Load triggered by in-game SCUMM save menu (roomOps sub-op $09) or custom SNES UI. Atomic writes: serialize to staging ($40:9000), CRC, then copy to slot.**
 
 ---
 
@@ -893,7 +918,7 @@ We're not starting from zero on understanding the data format. ScummVM has been 
 **Success Criteria:** MET — ROM boots, runs MI1's boot script (script 1), loads and renders rooms correctly. 105 dispatch entries (with ~20 parameter-consuming stubs, down from ~35 after actorOps audit). Multi-room smoke test passes 15/15 rooms (including room 15). Global script cache reload on room transitions prevents stale pointer crashes. Expression evaluator correct with signed multiply/divide. Sound opcodes wired to TAD audio driver. **Guybrush Threepwood walking on beach** — costume decoder, SNES tile converter, OAM renderer, and walking animation all working. Walking animation functional — Guybrush moves and animates with direction changes and dynamic frame rendering. actorOps audit complete (14/19 sub-ops store to real data). Object ownership table wired. Actor getters read real struct data. Still needed: resource cache eviction.
 
 **Bank 0 overflow discovery:**
-- Bank 0 is ~88% full; adding ~300 bytes triggers WLA-DX linker section rearrangement → boot crash
+- Bank 0 is ~89% full (29KB/32KB); adding code to existing sections triggers WLA-DX linker reshuffling → boot crash
 - Fix: move heavy code (renderActors) to superfree sections, call via jsl/rtl trampoline
 - `_` prefix labels don't resolve across superfree section boundaries — use global names
 - core.nmi.stop zeros ScreenBrightness — must save/restore around force-blank DMA
@@ -928,7 +953,7 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] Sentence line on BG2 verb row 0: "Walk to" default, verb name on click (matches original MI layout)
 - [x] Palette corruption fixes: cursor VRAM overflow guard, sentence moved from BG3→BG2 to eliminate CGRAM overlap
 - [x] Per-actor talk colors via SCUMM color LUT (16 EGA-standard colors → BGR555)
-- [ ] Inventory: display, scrolling, object combination
+- [x] Inventory: display, scrolling, object combination (Phase 2k)
 - [x] drawObject opcode — OCHR pre-composited BG1 tile overlay, state machine (hidden↔visible), dirty column NMI refresh
 - [x] findObject opcode — real AABB hit testing, screen→room coord conversion, reverse-priority iteration, visibility check
 - [x] getRandomNr opcode — real RNG with internal state, modulo range
@@ -961,27 +986,52 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 
 **Success Criteria:** Player can walk Guybrush around the SCUMM Bar, talk to the three pirates, pick up objects, use objects. First ~15 minutes of gameplay functional.
 
-### Phase 3: Full Playthrough (12-16 weeks)
+### Phase 3: Full Playthrough (12-16 weeks) — IN PROGRESS
 
 **Goal:** Complete the game start to finish.
 
-- [ ] Process all rooms through the pipeline
-- [ ] Process all costumes
+**Phase 3 Audit — COMPLETE** (2026-03-27):
+- [x] roomFade — real impl (brightness + effect flags, commit cb5a38a)
+- [x] getStringWidth — real impl (commit cb5a38a)
+- [x] getClosestObjActor — real impl (commit cb5a38a)
+- [x] darkenPalette / rgbRoomIntensity (roomOps $0B) — real impl via BW-RAM CGRAM shadow (commit 6437307)
+- [x] setPalColor (roomOps $04) — real impl, VGA→BGR555 conversion (commit 6437307)
+- [x] BW-RAM infrastructure — save header, volatile clear, composite migration, CGRAM shadow (commit 6437307)
+- [x] LoROM BRK/COP/ABORT vector trampolines — pre-existing bug fixed (commit 6437307)
+
+**Costume Pipeline (NEXT PRIORITY):**
+- [ ] Process all 123 costumes through converter pipeline
+  - Only costume 1 (Guybrush walk) is converted. All other actors fall back to it.
+  - Pipeline: `scumm_costume_decoder.py` → `snes_costume_converter.py` → `gen_costume_rom.py`
+  - Blocking: every NPC, cutscene character, and object animation needs its costume
+
+**Cutscene System:**
+- [ ] beginOverride/endOverride opcodes — cutscene stack, ESC-to-skip
+- [ ] freezeScripts — pause non-current scripts during cutscenes (8 MI1 occurrences)
+
+**Game Logic:**
 - [x] Implement all remaining MI1-used opcodes — 105/105 done (completed in Phase 1)
-- [ ] Cutscene system (beginOverride/endOverride, ESC to skip)
 - [ ] All puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion, etc.)
+- [ ] Process all 86 rooms through the pipeline (rooms already converted, need gameplay verification per-room)
+
+**Audio:**
 - [ ] SPC700 music — MI1 tracks arranged as MML, compiled via TAD (SCUMM opcodes already wired)
 - [ ] SPC700 sound effects — MI1 SFX as BRR samples in TAD project (SCUMM opcodes already wired)
-- [ ] MSU-1 voice acting — CD Talkie voice lines extracted and packed as PCM tracks
 - [ ] SCUMM-to-TAD ID mapping table (SCUMM sound numbers → TAD song/SFX IDs)
-- [ ] Sound Check screen — title menu option to preview MSU-1 PCM tracks
-  - Requires: MI1 music rendered to WAV (from MIDI/iMUSE recordings), converted via `tools/msu1pcmwriter.py`
-  - Title screen third menu row: "SOUND CHECK" → enters track browser (Left/Right to pick track, A to play, B to stop/back)
-  - Uses same `_scummvm.msu1PlayTrack` / `msu1StopTrack` helpers from dual music mode
-  - Track list display: track number + name (if known) on BG3 text layer
-  - Prerequisite: at least one PCM track file in `distribution/SuperMonkeyIsland-N.pcm`
-- [ ] Save/load game (SRAM)
-- [ ] Room transitions, screen fades
+- [ ] MSU-1 voice acting — CD Talkie voice lines extracted and packed as PCM tracks (stretch goal)
+
+**Save System:**
+- [x] BW-RAM memory map defined — persistent region ($40:0000-$40:7FFF), 3 save slots
+- [x] Boot-time init — first-boot detection, volatile clear, save header
+- [ ] Save/load game — serialize SCUMM VM state to BW-RAM save slot
+- [ ] Save UI — save/load menu triggered by roomOps saveGame sub-op
+
+**Room Transitions:**
+- [x] Room transitions — processRoomChange, room.load, MSU-1 streaming
+- [x] roomFade — brightness control, deferred screen effects
+- [x] Palette ops — darkenPalette (room intensity), setPalColor (individual color)
+- [ ] palManipulate — gradual palette transition (used for sunsets, etc.)
+- [ ] Screen effect animations (iris, dissolve, etc.) — currently instant-cut only
 
 **Success Criteria:** Complete playthrough from the dock to LeChuck's ghost ship. All puzzles solvable. No blocking bugs.
 
@@ -1028,6 +1078,9 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 | `pseudoRoom` not implemented | Medium | Low | Maps virtual→physical room numbers for resource loading. 7 MI1 occurrences. Silent resource lookup failures if missing. |
 | `saveRestoreVerbs` stubbed | Medium | Medium | Changes verb set in cutscenes/special scenes. Wrong verb state after cutscenes without real implementation. |
 | `freezeScripts` stubbed | Medium | Medium | Pauses all scripts except current. 8 MI1 occurrences. Background scripts interfere with cutscene timing without it. |
+| ~~WRAM packing instability~~ | ~~High~~ | ~~High~~ | **RESOLVED** — BW-RAM ($40:xxxx) used for all new large allocations. Addresses are `.define` constants immune to WLA-DX linker packing. CGRAM shadow, palette scratch, save slots all in BW-RAM. |
+| ~~LoROM vector bug~~ | ~~High~~ | ~~High~~ | **RESOLVED** — BRK/COP/ABORT vectors used raw HiROM addresses, crashed into SA-1 boot code. Fixed with JML trampolines at $7F8C-$7F97 (commit 6437307). |
+| Section size stability | High | High | Adding code to existing non-superfree sections triggers WLA-DX reshuffling. All new logic must use superfree JSL thunks. Learned the hard way with loadPalette. |
 
 ---
 
@@ -1065,7 +1118,7 @@ Cross-referenced the plan against the ScummVM v5 C++ source (`E:/gh/scummvm/engi
 
 8. **`resourceRoutines` complexity** — 8th most frequent MI1 opcode (763 occurrences). Has ~17 sub-opcodes for loading/locking/unlocking/nuking scripts, sounds, costumes, rooms, and charsets. Need to decide how resource lock/unlock/nuke maps to MSU-1 streaming model (where resources aren't heap-allocated). At minimum, lock/unlock could be no-ops, but nuke and load-if-not-loaded need real semantics for the script cache.
 
-9. **`roomOps` complexity** — Extensive sub-opcodes: roomScroll (set min/max scroll limits), roomColor, setScreen, setPalette, shakeOn/shakeOff, roomScale (set scale slots), roomIntensity, savegame/loadgame, roomFade, roomShadow, rgbRoomIntensity, roomTransform. Several directly affect rendering: roomScale, roomIntensity, roomFade, roomColor. Need real implementations for MI1. roomScroll sets camera bounds. roomFade controls screen transitions.
+9. ~~**`roomOps` complexity**~~ — **MOSTLY RESOLVED.** Real implementations: roomScroll (camera bounds), shakeOn/Off (flag), roomScale (SCAL slots), roomFade (brightness + effects), rgbRoomIntensity/darkenPalette (BW-RAM CGRAM shadow scaling), setPalColor (VGA→BGR555 + shadow). Consume-only stubs: setScreen, saveGame, saveString, palManipulate, roomShadow (software renderer feature). Remaining: palManipulate (gradual palette transitions).
 
 10. **`cursorCommand` sub-opcodes** — ~14 sub-opcodes: cursor on/off, userput on/off, soft cursor on/off, set cursor image, set cursor hotspot, set charset, etc. Some control whether the user can interact at all (userput on/off). Critical for cutscenes where interaction should be disabled.
 
@@ -1083,9 +1136,9 @@ Cross-referenced the plan against the ScummVM v5 C++ source (`E:/gh/scummvm/engi
 
 12. **`decodeParseString` / print sub-opcodes** — The print opcodes call `decodeParseString()` which has ~14 sub-opcodes: position (XY), color, clipping, center, left, overhead, mumble, text string, wrap, charset ID. These control text positioning, multi-line dialog, centering. Plan mentions basic dialog rendering but these sub-opcodes are critical for correct text layout.
 
-13. **`getClosestObjActor` opcode** — At 0x66/0xE6, finds the closest object or actor to a given point. Requires iterating all room objects and actors, computing distances. Not mentioned in plan.
+13. ~~**`getClosestObjActor` opcode**~~ — **RESOLVED** (commit cb5a38a). Real implementation iterating room objects and actors.
 
-14. **`getStringWidth` opcode** — At 0x67/0xE7, measures string pixel width. Used for text centering. Needs font metrics implementation.
+14. ~~**`getStringWidth` opcode**~~ — **RESOLVED** (commit cb5a38a). Real implementation with font metrics.
 
 15. **Entry/exit script dual-layer system** — The plan says "ENCD auto-starts on room entry" but ScummVM actually runs TWO scripts on entry (`script.cpp:981-1048`):
     1. `VAR_ENTRY_SCRIPT` (global var 28) runs FIRST

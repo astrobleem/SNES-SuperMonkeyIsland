@@ -866,6 +866,13 @@ _ios.loop:
 .ACCU 8
   lda.l MSU_DATA                        ;read initial_state from MSU stream
   sta.w SCUMM.objectState,x
+  beq _ios.noApply                      ;state==0? skip patch
+  ; state != 0: composite object image onto tilemap
+  rep #$20
+.ACCU 16
+  txa                                   ;A = obj_id
+  jsl room.applyObjectPatch
+_ios.noApply:
   rep #$20
 .ACCU 16
   ply

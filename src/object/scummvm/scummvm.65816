@@ -6535,7 +6535,31 @@ _roomOps.fade:
   .INDEX 16
   ; roomFade/screenEffect: 1x p16[7]
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord
+  jsr _scummvm.getVarOrDirectWord    ; A = fade param (16-bit)
+  and #$FFFF
+  beq _roomOps.fade.doFadeIn
+  ; A != 0: store deferred effect params
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.switchRoomEffect       ; low byte = fadeIn effect
+  xba
+  sta.w SCUMM.switchRoomEffect2      ; high byte = fadeOut effect
+  rep #$20
+  .ACCU 16
+  clc
+  rts
+
+_roomOps.fade.doFadeIn:
+  .ACCU 16
+  ; Immediate fadeIn: restore full brightness
+  sep #$20
+  .ACCU 8
+  lda #$0F
+  sta.w ScreenBrightness
+  lda #1
+  sta.w SCUMM.screenEffectFlag
+  rep #$20
+  .ACCU 16
   clc
   rts
 
@@ -7722,8 +7746,9 @@ op_getStringWidth:
   .INDEX 16
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte
-  lda #0
+  jsr _scummvm.getVarOrDirectByte    ; A = string slot ID
+  and #$000F                         ; clamp to 0-15
+  jsl scummvm.getStringWidth_impl    ; A = pixel width
   jsr _scummvm.writeVariable
   clc
   rts
@@ -7789,8 +7814,8 @@ op_getClosestObjActor:
   .INDEX 16
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectWord    ; object (p16[7])
-  lda #0
+  jsr _scummvm.getVarOrDirectWord    ; A = reference actor/object ID
+  jsl scummvm.getClosestObjActor_impl ; A = closest actor/obj ID
   jsr _scummvm.writeVariable
   clc
   rts
@@ -15528,6 +15553,312 @@ _srv.done:
   .INDEX 16
   plb
   plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; getStringWidth_impl — measure pixel width of a SCUMM string slot
+; Input: A = string slot ID (0-15, already clamped)
+; Output: A = pixel width (16-bit). JSL/RTL.
+;===================================================================
+.section "ScummVM getStringWidth impl" superfree
+
+scummvm.getStringWidth_impl:
+  phb
+  phx
+  phy
+  and #$000F                         ; clamp slot ID 0-15 (A is 16-bit on entry)
+  pha                                ; save slot ID (2 bytes, 16-bit)
+  sep #$20
+  .ACCU 8
+  lda #$7E
+  pha
+  plb                                ; DBR = $7E for WRAM access
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+  pla                                ; restore slot ID (2 bytes)
+
+  ; compute slot address: SCUMM.stringTable + (slotID * 128)
+  xba                                ; A = slotID << 8
+  lsr a                              ; A = slotID << 7 = slotID * 128
+  clc
+  adc #SCUMM.stringTable & $FFFF     ; 16-bit offset within bank $7E
+  tax                                ; X = pointer into string slot
+
+  ldy #1                             ; Y = width accumulator (init 1 per ScummVM v5)
+
+_gsw.loop:
+  .ACCU 16
+  .INDEX 16
+  lda.w $0000,x                      ; read byte (16-bit load, use low byte)
+  and #$00FF
+  beq _gsw.done                      ; null terminator -> done
+
+  cmp #$00FF
+  beq _gsw.escape
+  cmp #$00FE
+  beq _gsw.escape
+
+  ; printable character: add 8 pixels
+  tya
+  clc
+  adc #8
+  tay
+  inx
+  bra _gsw.loop
+
+_gsw.escape:
+  .ACCU 16
+  .INDEX 16
+  inx                                ; skip $FF/$FE byte
+  lda.w $0000,x                      ; read escape code byte
+  and #$00FF
+  inx                                ; skip code byte
+
+  ; codes 1, 2, 3, 9: stop iteration
+  cmp #1
+  beq _gsw.done
+  cmp #2
+  beq _gsw.done
+  cmp #3
+  beq _gsw.done
+  cmp #9
+  beq _gsw.done
+
+  ; codes 10, 21, 12, 13, 14, 8: skip 2 more bytes
+  cmp #10
+  beq _gsw.skip2
+  cmp #21
+  beq _gsw.skip2
+  cmp #12
+  beq _gsw.skip2
+  cmp #13
+  beq _gsw.skip2
+  cmp #14
+  beq _gsw.skip2
+  cmp #8
+  beq _gsw.skip2
+
+  ; other codes: no extra bytes, continue
+  bra _gsw.loop
+
+_gsw.skip2:
+  .ACCU 16
+  inx
+  inx                                ; skip 2 parameter bytes
+  bra _gsw.loop
+
+_gsw.done:
+  .ACCU 16
+  .INDEX 16
+  tya                                ; A = width
+  ply
+  plx
+  plb
+  rtl
+
+.ends
+
+
+;===================================================================
+; getClosestObjActor_impl — find nearest actor/object to reference
+; Input: A = reference actor/object ID (16-bit)
+; Output: A = closest actor/object ID (or $00FF if none). JSL/RTL.
+;===================================================================
+.section "ScummVM getClosestObjActor impl" superfree
+
+; Stack frame layout (after prologue):
+;   sp+1  = closestObj (word)
+;   sp+3  = closestDist (word)
+;   sp+5  = rangeMin (word)
+;   sp+7  = loopCounter (word)
+;   sp+9  = refY (word)
+;   sp+11 = refX (word)
+.define _gcoa.refX      11
+.define _gcoa.refY       9
+.define _gcoa.counter    7
+.define _gcoa.rangeMin   5
+.define _gcoa.closeDist  3
+.define _gcoa.closeObj   1
+
+scummvm.getClosestObjActor_impl:
+  phb
+  pha                                ; save ref ID (16-bit)
+  sep #$20
+  .ACCU 8
+  lda #$7E
+  pha
+  plb                                ; DBR = $7E for WRAM access
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+  pla                                ; A = ref actor/object ID
+
+  ; if ref >= 13, simplified: return $FF (object distance not implemented)
+  cmp #13
+  bcc +
+  jmp _gcoa.failReturn
++
+
+  ; ref is an actor: get its position
+  ; actor struct = SCUMM.actors + (id * 16)
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a                              ; A = id * 16
+  tax
+  ; check ref actor is in current room
+  lda.w SCUMM.actors.1.room,x
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  beq +
+  jmp _gcoa.failReturn               ; ref not in room -> return $FF
++
+
+  ; build stack frame: refX, refY, counter, rangeMin, closestDist, closestObj
+  lda.w SCUMM.actors.1.x,x
+  pha                                ; sp+11 = refX
+  lda.w SCUMM.actors.1.y,x
+  pha                                ; sp+9 = refY
+
+  ; read VAR_ACTOR_RANGE_MAX (var 16) = globalVars[16], byte offset 32
+  ldx #32
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  pha                                ; sp+7 = loop counter (starts at MAX)
+
+  ; read VAR_ACTOR_RANGE_MIN (var 15) = globalVars[15], byte offset 30
+  ldx #30
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  pha                                ; sp+5 = rangeMin
+
+  lda #$00FF
+  pha                                ; sp+3 = closestDist (init $FF)
+  pha                                ; sp+1 = closestObj (init $FF)
+
+_gcoa.loop:
+  .ACCU 16
+  .INDEX 16
+  lda _gcoa.counter,s                ; A = current obj ID
+  and #$00FF
+  beq _gcoa.next                     ; skip actor 0
+  cmp #13
+  bcs _gcoa.next                     ; skip objects (id >= 13)
+
+  ; get actor struct: A * 16
+  asl a
+  asl a
+  asl a
+  asl a
+  tax
+
+  ; check actor is in current room
+  lda.w SCUMM.actors.1.room,x
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  bne _gcoa.next                     ; not in room -> skip
+
+  ; compute Chebyshev distance: max(abs(x1-x2), abs(y1-y2))
+  ; dx = abs(actorX - refX)
+  lda.w SCUMM.actors.1.x,x
+  sec
+  sbc _gcoa.refX,s
+  bpl +
+  eor #$FFFF
+  inc a
++
+  sta.w SCUMM.scratch                ; scratch = abs(dx)
+
+  ; dy = abs(actorY - refY)
+  lda.w SCUMM.actors.1.y,x
+  sec
+  sbc _gcoa.refY,s
+  bpl +
+  eor #$FFFF
+  inc a
++
+  ; A = abs(dy), scratch = abs(dx)
+  cmp.w SCUMM.scratch
+  bcs +                              ; dy >= dx -> keep dy
+  lda.w SCUMM.scratch                ; else use dx
++
+  ; A = distance; clamp to $FF if > $FF
+  cmp #$0100
+  bcc _gcoa.gotDist
+  lda #$00FF
+_gcoa.gotDist:
+  .ACCU 16
+  ; compare with closestDist
+  cmp _gcoa.closeDist,s
+  beq _gcoa.next                     ; equal -> don't replace
+  bcs _gcoa.next                     ; this >= closest -> don't replace
+  ; this actor is closer
+  sta _gcoa.closeDist,s              ; update closest distance
+  lda _gcoa.counter,s
+  sta _gcoa.closeObj,s               ; update closest object
+
+_gcoa.next:
+  .ACCU 16
+  .INDEX 16
+  lda _gcoa.counter,s
+  dec a
+  sta _gcoa.counter,s
+  cmp _gcoa.rangeMin,s
+  bcs _gcoa.loop                     ; >= min -> continue
+
+  ; done: retrieve closestObj
+  lda _gcoa.closeObj,s
+  ; tear down stack frame (6 words = 12 bytes)
+  tay                                ; save result in Y
+  tsc
+  clc
+  adc #12
+  tcs                                ; SP += 12 (discard frame)
+  tya                                ; A = result
+  bra _gcoa.return
+
+_gcoa.failReturn:
+  .ACCU 16
+  lda #$00FF
+
+_gcoa.return:
+  .ACCU 16
+  .INDEX 16
+  plb
+  rtl
+
+.undefine _gcoa.refX
+.undefine _gcoa.refY
+.undefine _gcoa.counter
+.undefine _gcoa.rangeMin
+.undefine _gcoa.closeDist
+.undefine _gcoa.closeObj
+
+.ends
+
+
+;===================================================================
+; darkenPalette_impl — STUB (Step 4 deferred, WRAM packing issue)
+;===================================================================
+.section "ScummVM darkenPalette impl" superfree
+
+scummvm.darkenPalette_impl:
+  rtl
+
+.ends
+
+
+;===================================================================
+; setPalColor_impl — STUB (Step 4 deferred, WRAM packing issue)
+;===================================================================
+.section "ScummVM setPalColor impl" superfree
+
+scummvm.setPalColor_impl:
   rtl
 
 .ends

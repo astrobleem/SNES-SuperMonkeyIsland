@@ -544,7 +544,10 @@ SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
 
 ; Room effect state
 .ramsection "scumm room effects" bank 0 slot 1
-SCUMM.shakeEnabled    db      ; nonzero = screen shake active (roomOps sub-op 5/6)
+SCUMM.shakeEnabled         db  ; nonzero = screen shake active (roomOps sub-op 5/6)
+SCUMM.switchRoomEffect     db  ; deferred fadeIn effect (low byte of roomFade param)
+SCUMM.switchRoomEffect2    db  ; deferred fadeOut effect (high byte of roomFade param)
+SCUMM.screenEffectFlag     db  ; 1 = screen is visible (fadeIn completed), 0 = black
 .ends
 
 ; BG2 VRAM layout constants
@@ -664,3 +667,4 @@ VerbCgramHdmaTable:
   .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (colors already set)
   .db 0                                 ; end of table
 .ends
+

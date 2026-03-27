@@ -577,11 +577,7 @@ _sa1.comp.hasHead:
   sep #$20
   .ACCU 8
   lda [$28]               ; byte 1: head width px
-  pha                     ; push headWidthPx... wait, order matters.
-
-  ; We need to push in same relative order so we can pop consistently.
-  ; Let me push: headRelY, headRelX, headHeightPx, headWidthPx (same as body)
-  ; But we read in order: width, height, relX, relY. So read all, then push.
+  ; Read all 4 fields into DP temps, then push in consistent order.
   sta $20                 ; headWidthPx temp
 
   rep #$20
@@ -902,7 +898,9 @@ _sa1.comp.zeroLoop:
   .ACCU 8
   stz $26                 ; entry index = 0
   lda $1E                 ; bodyEntryCount
-  beq _sa1.comp.bodyDone
+  bne +
+  jml _sa1.comp.bodyDone
++
 
 _sa1.comp.bodyLoop:
   .ACCU 8
@@ -967,6 +965,37 @@ _sa1.comp.bodyLoop:
   .ACCU 8
   lda [$28]               ; flags
   sta $3A                 ; blitTile flags
+
+  ; --- DEBUG: write diagnostic for first body entry only ---
+  lda $26                 ; entry index
+  bne _sa1.comp.skipDiag
+  lda $12
+  sta.l $3030E0           ; $30E0: minX
+  lda $13
+  sta.l $3030E1           ; $30E1: minY
+  lda $14
+  sta.l $3030E2           ; $30E2: compositeW
+  lda $15
+  sta.l $3030E3           ; $30E3: compositeH
+  ; raw dx = bufX + minX (reverse the sbc)
+  lda $38
+  clc
+  adc $12
+  sta.l $3030E4           ; $30E4: first entry dx (raw)
+  ; raw dy = bufY + minY
+  lda $39
+  clc
+  adc $13
+  sta.l $3030E5           ; $30E5: first entry dy (raw)
+  lda $38
+  sta.l $3030E6           ; $30E6: computed bufX
+  lda $39
+  sta.l $3030E7           ; $30E7: computed bufY
+  lda $1E
+  sta.l $3030E8           ; $30E8: bodyEntryCount
+  lda $20
+  sta.l $3030E9           ; $30E9: first entry tile_id
+_sa1.comp.skipDiag:
 
   ; Compute source tile ROM: bodyChrBase + tile_id * 32
   lda $20                 ; tile_id

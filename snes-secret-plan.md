@@ -948,6 +948,16 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] faceActor — stores direction to actor.facing
 - [x] Upgrade object/verb opcode stubs — getVerbEntrypoint, doSentence, startObject, putActorAtObject, walkActorToObject all wired (Phase 2g)
 - [x] ifClassOfIs — real objectClass[1024×2] WRAM table, vararg class condition loop, classBitLut masking (classes 17-32)
+- [x] Actor scaling — SA-1 composite-first scaler (commits b7757c4..3d72e8d):
+  - Walkbox SCAL interpolation for depth-based scaling (scale slots, roomOps roomScale, matrixOps setBoxScale/setBoxSlot)
+  - Walk speed scaling: `max(1, walkSpeed * actorCurScale / 256)` via SNES hardware multiply
+  - SA-1 co-processor composite-first pipeline: compose body+head OAM tiles into BW-RAM pixel buffer → nearest-neighbor scale → CC Type 2 output to I-RAM → SNES DMA to VRAM
+  - Non-blocking integration: fire-and-forget CMD=2, harvest result next frame (~10 frame latency, cached until frame/scale change)
+  - Per-slot persistent composite flag with grid metadata cache, CHR source poisoning fix, defense-in-depth bank check
+  - Elevation rendering: `screenY -= (elevation * actorCurScale) / 256`
+  - SA-1 math wait optimized (5→3 NOPs, saves ~6000 cycles per composite)
+  - 11 bugs fixed during implementation (stray PHA, bitplane decode order, signed multiply, buffer zero, etc.)
+- [x] Inventory system — pickup, UI, save/restore verbs (Phase 2k)
 
 **Success Criteria:** Player can walk Guybrush around the SCUMM Bar, talk to the three pirates, pick up objects, use objects. First ~15 minutes of gameplay functional.
 
@@ -1012,7 +1022,7 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 | iMUSE transitions jarring | Low | Medium | Pre-render key transitions. MI1 is less demanding than MI2 here. |
 | Walkbox pathfinding edge cases | Medium | Low | ScummVM's implementation is well-tested reference. Port logic faithfully. |
 | Copy protection triggers | Low | Low | Patch out Dial-a-Pirate check in script data (well-documented). |
-| Actor scaling missing | High | High | MI1 v5 uses walkbox-based scaling (see 8.1 item 2). Actors render wrong size, walk speed broken without it. |
+| ~~Actor scaling missing~~ | ~~High~~ | ~~High~~ | **RESOLVED** — SA-1 composite-first scaler implemented (commits b7757c4..3d72e8d). Walkbox SCAL interpolation, walk speed scaling, NN pixel scaling via SA-1 co-processor, non-blocking integration, elevation rendering. |
 | 320→256 coordinate transform incomplete | High | Medium | findObject, actorFromPos, drawBox, print positions all use 320-wide coords. Must specify EXACTLY where transform is applied (see 8.1 item 1). |
 | soundKludge/iMUSE stub risks | Medium | Medium | `isSoundRunning` stub returning 1 may cause infinite loops in scripts expecting 0 when no sound plays. Need at minimum correct return semantics. |
 | `pseudoRoom` not implemented | Medium | Low | Maps virtual→physical room numbers for resource loading. 7 MI1 occurrences. Silent resource lookup failures if missing. |
@@ -1027,18 +1037,19 @@ Cross-referenced the plan against the ScummVM v5 C++ source (`E:/gh/scummvm/engi
 
 ### Corrections to Verify in SNES Code
 
-1. **VAR_CURRENT_LIGHTS is 9, NOT 72** — The plan and possibly the SNES code use variable index 72 for lights. ScummVM `vars.cpp:168` sets `VAR_CURRENT_LIGHTS = 9` for v5. Variable 72 is actually `VAR_NEW_ROOM`. If the SNES code writes lights to index 72, it corrupts the new-room variable. **CHECK IMMEDIATELY.**
+1. ~~**VAR_CURRENT_LIGHTS is 9, NOT 72**~~ — **RESOLVED**. Code is correct (`ldx #9 * 2`). The "var 72" references in older plan text and memory files were stale documentation, not code bugs. Verified correct 3+ times. No action needed.
 
-2. **Actor scaling EXISTS in v5 and MI1 uses it** — The plan claims "MI1 has no scaling (that's v6+)." This is wrong. ScummVM v5 has:
-   - `o5_getActorScale` reads `a->_scalex` (`script_v5.cpp:1324`)
-   - `actorOps` sub-op 17 (`SO_ACTOR_SCALE`) sets `_boxscale`/`_scalex`/`_scaley` (`script_v5.cpp:606`)
-   - `Actor::setupActorScale()` reads scale from walkbox data (`actor.cpp:451`)
-   - `matrixOps` sub-ops 2/3 call `setBoxScale()` (`script_v5.cpp:1917`)
-   - `roomOps` sub-op 7 (`SO_ROOM_SCALE`) calls `setScaleSlot()` (`script_v5.cpp:2443`)
-   - MI1's own opcode audit found `getActorScale` (1 occurrence) and `matrixOps` setBoxScale
-   - Multiple rooms (SCUMM Bar, town, etc.) have walkbox scale data for depth-based actor sizing
-   - Walk speed is also multiplied by scale factors in `actorWalkStep` (`actor.cpp:662`)
-   - **Must implement**: `setupActorScale()`, `getBoxScale()`, scale slot system, scaled walk speed, scaled rendering
+2. ~~**Actor scaling EXISTS in v5 and MI1 uses it**~~ — **RESOLVED**. Full SA-1 composite-first scaler implemented:
+   - `getActorScale` reads actorCurScale from walkbox SCAL interpolation
+   - `actorOps` sub-op 17 stores to actorCurScale
+   - `setupActorScale` equivalent: walkbox SCAL slot interpolation in renderActors_impl
+   - `matrixOps` sub-ops 2/3: setBoxScale and setBoxSlot verified correct (code review)
+   - `roomOps` sub-op 7: roomScale stores SCAL slots, verified correct (code review)
+   - Walk speed: `max(1, walkSpeed * scale / 256)` via SNES hardware multiply
+   - Scaled rendering: SA-1 composite-first pipeline (compose body+head → NN scale → CC Type 2 → I-RAM → VRAM)
+   - Elevation: `screenY -= (elevation * scale) / 256` applied in render pipeline
+   - Non-blocking: fire-and-forget CMD=2, harvest result next frame, ~10 frame latency
+   - All implemented across commits b7757c4..3d72e8d
 
 3. **Actor struct is ~400+ bytes in ScummVM, not 16B** — The plan says "16B struct per actor, 256 actors." The real ScummVM `Actor` class (`actor.h:100-200`) includes: position (4B), width (4B), costume (2B), room (1B), talkColor (1B), boxscale/scalex/scaley (6B), moving (1B), ignoreBoxes (1B), facing/targetFacing (4B), speedx/speedy (8B), elevation (4B), palette[256] (512B!), sound[32] (128B), animVariable[27] (108B), CostumeData, ActorWalkData (~40B), plus many more fields. The SNES can use a more compact representation but 16B is wildly insufficient. **Revise WRAM budget for actor data.**
 

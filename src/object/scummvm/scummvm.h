@@ -5,16 +5,23 @@
 ;---------------------------------------------------------------------------
 
 ; SA-1 I-RAM mailbox addresses (mirrors sa1_boot.65816 defines for cross-unit use)
+; CMD=0: idle, CMD=1: passthrough, CMD=2: composite-scale
 .define SA1_MBOX_CMD      $3000
 .define SA1_MBOX_SCALE    $3001
-.define SA1_MBOX_SRC      $3002
-.define SA1_MBOX_TILES    $3005
-.define SA1_MBOX_WIDTH    $3007
-.define SA1_MBOX_HEIGHT   $3009
-.define SA1_MBOX_OAM      $300B
+.define SA1_MBOX_BODYCHR  $3002   ; body CHR source (3 bytes: lo, hi, bank)
+.define SA1_MBOX_BODYOAM  $3005   ; body OAM pointer (3 bytes: lo, hi, bank)
+.define SA1_MBOX_HEADCHR  $3008   ; head CHR source (3 bytes: lo, hi, bank)
+.define SA1_MBOX_HEADOAM  $300B   ; head OAM pointer (3 bytes: lo, hi, bank)
 .define SA1_MBOX_OUTTILES $300E
 .define SA1_MBOX_STATUS   $300F
 .define SA1_TILE_BUF      $3100
+.define SA1_OUTPUT_META    $30F0  ; 4 bytes: outTilesWide, outTilesTall, scaledRelX, scaledRelY
+; Legacy aliases for passthrough (CMD=1) and existing SNES-side code
+.define SA1_MBOX_SRC      $3002   ; same as BODYCHR
+.define SA1_MBOX_TILES    $3005   ; same as BODYOAM lo/hi (word)
+.define SA1_MBOX_WIDTH    $3007   ; legacy: tiles wide (word) -- overlaps BODYCHR bank + BODYOAM lo
+.define SA1_MBOX_HEIGHT   $3009   ; legacy: tiles tall (word) -- overlaps BODYOAM hi/bank
+.define SA1_MBOX_OAM      $300B   ; legacy: same as HEADOAM
 
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0
@@ -309,6 +316,15 @@ SCUMM.slotChrVram     ds SCUMM_MAX_RENDER_SLOTS * 2  ; VRAM byte target addr (wo
 SCUMM.slotHeadChrSrcLo ds SCUMM_MAX_RENDER_SLOTS * 2 ; head CHR source addr low (word)
 SCUMM.slotHeadChrSrcHi ds SCUMM_MAX_RENDER_SLOTS      ; head CHR source bank (byte)
 SCUMM.slotHeadChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; head CHR transfer length (word)
+SCUMM.slotOrigChrSrcLo ds SCUMM_MAX_RENDER_SLOTS * 2  ; original ROM CHR addr low (word)
+SCUMM.slotOrigChrSrcHi ds SCUMM_MAX_RENDER_SLOTS      ; original ROM CHR bank (byte)
+SCUMM.slotOrigChrLen   ds SCUMM_MAX_RENDER_SLOTS * 2  ; original ROM CHR length (word)
+SCUMM.slotScalePending ds SCUMM_MAX_RENDER_SLOTS      ; nonzero = SA-1 CMD=2 in flight for slot
+SCUMM.renderSlotComposite ds SCUMM_MAX_RENDER_SLOTS   ; nonzero = slot uses composite grid OAM
+SCUMM.slotGridTilesWide ds SCUMM_MAX_RENDER_SLOTS     ; cached outTilesWide from SA-1
+SCUMM.slotGridTilesTall ds SCUMM_MAX_RENDER_SLOTS     ; cached outTilesTall from SA-1
+SCUMM.slotGridRelX      ds SCUMM_MAX_RENDER_SLOTS     ; cached scaledRelX (signed byte)
+SCUMM.slotGridRelY      ds SCUMM_MAX_RENDER_SLOTS     ; cached scaledRelY (signed byte)
 .ends
 
 ; String resource table (16 slots x 128 bytes = 2048 bytes)

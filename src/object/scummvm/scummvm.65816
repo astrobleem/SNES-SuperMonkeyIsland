@@ -8906,6 +8906,8 @@ _lac.clearLoop:
   sta.w SCUMM.renderSlotCostume,x
   sta.w SCUMM.renderSlotDirty,x
   sta.w SCUMM.renderSlotHeadDirty,x
+  sta.w SCUMM.slotScalePending,x
+  sta.w SCUMM.renderSlotComposite,x
   lda #$FF
   sta.w SCUMM.renderSlotLastPic,x
   sta.w SCUMM.renderSlotLastHead,x
@@ -9433,12 +9435,15 @@ _ri.frameChanged:
   lda [_costDirPtr],y                 ; CHR length
   sta.w SCUMM.scratch2                ; save CHR length
 
-  ; Store per-slot DMA params
+  ; Store per-slot DMA params (and original ROM copies for SA-1 re-reads)
   ldx.w SCUMM.scratch3                ; render slot
   pla                                 ; CHR bank
   sep #$20
   .ACCU 8
   sta.w SCUMM.slotChrSrcHi,x
+  sta.w SCUMM.slotOrigChrSrcHi,x     ; preserve original ROM bank
+  stz.w SCUMM.slotScalePending,x     ; clear pending flag on new costume load
+  stz.w SCUMM.renderSlotComposite,x  ; composite output stale on frame change
   rep #$20
   .ACCU 16
   ; Slot arrays use word-per-slot indexing for word fields
@@ -9447,8 +9452,10 @@ _ri.frameChanged:
   tax
   pla                                 ; CHR addr
   sta.w SCUMM.slotChrSrcLo,x
+  sta.w SCUMM.slotOrigChrSrcLo,x     ; preserve original ROM addr
   lda.w SCUMM.scratch2                ; CHR length
   sta.w SCUMM.slotChrLen,x
+  sta.w SCUMM.slotOrigChrLen,x       ; preserve original ROM length
   ; renderSlotTileBase is word-per-slot (slot*2)
   lda.w SCUMM.scratch3
   asl a
@@ -9561,8 +9568,10 @@ _ri.posReady:
   ; =================================================================
   ; ACTOR SCALE COMPUTATION (from walkbox SCAL data)
   ; =================================================================
-  ; Default scale = 255 (full size)
+  ; Per-slot composite flag persists across frames (cleared on frame change/scale change)
   sep #$20
+  .ACCU 8
+  ; Default scale = 255 (full size)
   .ACCU 8
   lda #$FF
   sta.w SCUMM.actorCurScale
@@ -9798,65 +9807,158 @@ _ri.scaleDone:
   rep #$20
   .ACCU 16
 
-  ; --- SA-1 sprite scaling hook ---
-  ; Trigger scaler when: (a) slot dirty (frame changed), OR
-  ;                      (b) scale changed since last frame (standing actor)
+  ; --- SA-1 sprite scaling hook (non-blocking) ---
+  ; Phase 1: Harvest — check if a previous frame's CMD=2 completed
+  ; Phase 2: Submit — fire new CMD=2 if needed, return immediately
   sep #$20
   .ACCU 8
+  ldx.w SCUMM.scratch3                ; render slot
+
+  ; --- Phase 1: Harvest previous request ---
+  lda.w SCUMM.slotScalePending,x
+  beq _ri.scaleNoHarvest              ; nothing pending -> skip harvest
+
+  ; Check SA-1 status
+  lda.l SA1_MBOX_STATUS
+  cmp #1
+  bne _ri.scaleNoHarvest              ; not done yet -> skip (will check next frame)
+
+  ; SA-1 finished! Harvest results.
+  stz.w SCUMM.slotScalePending,x     ; clear pending
+
+  ; Read output tile count
+  lda.l SA1_MBOX_OUTTILES
+  beq _ri.scaleNoHarvest              ; 0 tiles = nothing usable
+
+  ; Redirect slot CHR source to I-RAM ($00:3100)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                                ; outTiles * 32 = CHR length
+  pha                                  ; save CHR length
+  ldx.w SCUMM.scratch3
+  txa
+  asl a
+  tax                                  ; slot * 2
+  pla
+  sta.w SCUMM.slotChrLen,x
+  lda #SA1_TILE_BUF
+  sta.w SCUMM.slotChrSrcLo,x          ; I-RAM addr = $3100
+  ldx.w SCUMM.scratch3
+  sep #$20
+  .ACCU 8
+  lda #$00
+  sta.w SCUMM.slotChrSrcHi,x          ; bank $00 (I-RAM)
+
+  ; Mark slot dirty so DMA transfers I-RAM tiles
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x
+
+  ; Cache grid metadata from I-RAM into per-slot arrays
+  lda.l SA1_OUTPUT_META                ; outTilesWide
+  sta.w SCUMM.slotGridTilesWide,x
+  lda.l SA1_OUTPUT_META + 1            ; outTilesTall
+  sta.w SCUMM.slotGridTilesTall,x
+  lda.l SA1_OUTPUT_META + 2            ; scaledRelX (signed)
+  sta.w SCUMM.slotGridRelX,x
+  lda.l SA1_OUTPUT_META + 3            ; scaledRelY (signed)
+  sta.w SCUMM.slotGridRelY,x
+
+  ; Set per-slot composite flag (persists until frame/scale change)
+  lda #1
+  sta.w SCUMM.renderSlotComposite,x
+  lda.w SCUMM.actorCurScale
+  sta.w SCUMM.renderSlotLastScale,x
+  rep #$20
+  .ACCU 16
+  jmp _ri.buildOam                     ; go build OAM with scaled output
+
+_ri.scaleNoHarvest:
+  .ACCU 8
+
+  ; --- Phase 2: Decide whether to submit a new request ---
   lda.w SCUMM.actorCurScale
   cmp #$FF
-  beq _ri.scaleHookDone               ; 255 = no scaling needed
+  beq _ri.scaleExitRange              ; 255 = no scaling needed
   cmp #64
-  bcc _ri.scaleHookDone               ; < 64 = extreme downscale, skip
+  bcc _ri.scaleExitRange              ; < 64 = extreme downscale, skip
+  bra _ri.scaleInRange
 
+_ri.scaleExitRange:
+  ; Scale outside composite range: clear composite flag if it was set
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.renderSlotComposite,x
+  beq _ri.scaleHookDone               ; wasn't composite -> done
+  stz.w SCUMM.renderSlotComposite,x   ; clear composite
+  ; Restore original ROM CHR source so DMA reads ROM tiles again
+  lda.w SCUMM.slotOrigChrSrcHi,x
+  sta.w SCUMM.slotChrSrcHi,x
+  rep #$20
+  .ACCU 16
+  txa
+  asl a
+  tax
+  lda.w SCUMM.slotOrigChrSrcLo,x
+  sta.w SCUMM.slotChrSrcLo,x
+  lda.w SCUMM.slotOrigChrLen,x
+  sta.w SCUMM.slotChrLen,x
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda #1
+  sta.w SCUMM.renderSlotDirty,x       ; force re-DMA from ROM
+  bra _ri.scaleHookDone
+
+_ri.scaleInRange:
   ldx.w SCUMM.scratch3                ; render slot
+
+  ; Don't submit if a request is already in flight
+  lda.w SCUMM.slotScalePending,x
+  bne _ri.scaleHookDone               ; still pending -> wait
 
   ; Path A: slot is dirty (frame changed) -> always scale
   lda.w SCUMM.renderSlotDirty,x
-  bne _ri.scaleCall
+  bne _ri.scaleSubmit
 
-  ; Path B: scale changed since last frame? (standing actor, no frame change)
+  ; Path B: scale changed since last frame?
   lda.w SCUMM.actorCurScale
   cmp.w SCUMM.renderSlotLastScale,x
   beq _ri.scaleHookDone               ; scale unchanged -> skip
 
-  ; Verify slot has been loaded at least once (slotChrSrcLo != 0)
+  ; Scale changed: invalidate stale composite output
+  stz.w SCUMM.renderSlotComposite,x
+
+  ; Verify slot has been loaded at least once (slotOrigChrSrcLo != 0)
   rep #$20
   .ACCU 16
   txa
   asl a                                ; slot * 2 for word arrays
   tax
-  lda.w SCUMM.slotChrSrcLo,x
+  lda.w SCUMM.slotOrigChrSrcLo,x
   beq _ri.scaleHookDoneFrom16         ; no CHR staged yet -> skip
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3                ; restore byte slot index
 
-_ri.scaleCall:
+_ri.scaleSubmit:
   .ACCU 8
-  ; Call SA-1 scaler: reads slot params from WRAM, OAM header from ZP
-  lda.w SCUMM.actorCurScale           ; scale factor (1-254)
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  jsl scummvm.requestScaledTiles
-  bcs _ri.scaleSuccess                ; carry set = success
-  sep #$20
-  .ACCU 8
-  bra _ri.scaleHookDone               ; timeout/failure -> use ROM tiles
-_ri.scaleSuccess:
-
-  ; Update renderSlotLastScale and ensure DMA processes this slot
+  ; Check SA-1 is idle before submitting (only one CMD at a time)
+  lda.l SA1_MBOX_CMD
+  bne _ri.scaleHookDone               ; SA-1 still processing -> skip
+  ; Fire-and-forget: submit CMD=2 to SA-1 (non-blocking)
+  jsl scummvm.requestCompositeScale
+  ; requestCompositeScale now returns immediately after writing mailbox.
+  ; Mark slot as pending — harvest will happen next frame.
   ldx.w SCUMM.scratch3
-  sep #$20
-  .ACCU 8
+  lda #1
+  sta.w SCUMM.slotScalePending,x
   lda.w SCUMM.actorCurScale
   sta.w SCUMM.renderSlotLastScale,x
-  lda #1
-  sta.w SCUMM.renderSlotDirty,x       ; mark dirty so DMA transfers I-RAM tiles
-  rep #$20
-  .ACCU 16
-  bra _ri.buildOam
+  bra _ri.scaleHookDone
 
 _ri.scaleHookDoneFrom16:
   .ACCU 16
@@ -9865,7 +9967,7 @@ _ri.scaleHookDoneFrom16:
 _ri.scaleHookDone:
   .ACCU 8
   .INDEX 16
-  ; Not scaling or failed: update lastScale to current
+  ; Not scaling or waiting: update lastScale to current
   ldx.w SCUMM.scratch3
   lda.w SCUMM.actorCurScale
   sta.w SCUMM.renderSlotLastScale,x
@@ -9905,6 +10007,20 @@ _ri.buildOam:
   ldx.w SCUMM.scratch3
   lda.l _ri.tileBaseLut,x
   sta.w SCUMM.scratch2                ; tile base (byte, low 8 bits of scratch2)
+
+  ; Check if this slot uses composite grid OAM (per-slot persistent flag)
+  lda.w SCUMM.renderSlotComposite,x
+  beq _ri.usePerEntry
+  ; Defense-in-depth: CHR source must be I-RAM (bank $00) for grid OAM
+  lda.w SCUMM.slotChrSrcHi,x
+  bne _ri.fixStaleComposite            ; CHR is ROM, not I-RAM -> flag is stale
+  rep #$20
+  .ACCU 16
+  jmp _ri.buildGridOam
+
+_ri.fixStaleComposite:
+  stz.w SCUMM.renderSlotComposite,x   ; clear stale composite flag
+_ri.usePerEntry:
   rep #$20
   .ACCU 16
 
@@ -10127,11 +10243,283 @@ _ri.nextEntry:
   jmp _ri.entryLoop
 +
   stx.w GLOBAL.currentOamSlot
+  jmp _ri.headRender                     ; per-entry OAM done, proceed to head
+
+  ; =================================================================
+  ; GRID OAM BUILDER — for composite-scaled actors
+  ; Reads SA-1 output metadata from I-RAM $30F0-$30F3:
+  ;   $30F0: outTilesWide, $30F1: outTilesTall
+  ;   $30F2: scaledRelX (signed), $30F3: scaledRelY (signed)
+  ; Builds a grid of 8x8 OAM entries, row-major, using tile IDs
+  ; starting from the slot's tile base.
+  ; =================================================================
+_ri.buildGridOam:
+  .ACCU 16
+  .INDEX 16
+
+  ; Read per-slot grid metadata into temps (X will be OAM index for the loop)
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3                ; render slot
+  lda.w SCUMM.slotGridTilesWide,x
+  sta.w SCUMM.actorOamCount           ; tilesWide temp
+  lda.w SCUMM.slotGridRelX,x          ; scaledRelX (signed byte)
+  sta.w SCUMM.chrDmaSrcLo             ; temp storage
+  lda.w SCUMM.slotGridRelY,x
+  sta.w SCUMM.chrDmaSrcHi             ; temp storage
+  lda.w SCUMM.slotGridTilesTall,x
+
+  ; Now switch X to OAM slot for the rest of the grid builder
+  ldx.w GLOBAL.currentOamSlot
+  pha                                  ; save outTilesTall on stack
+
+  ; Compute screen anchor for scaled sprite:
+  ; screenX + scaledRelX, screenY + scaledRelY
+  lda.w SCUMM.chrDmaSrcLo             ; scaledRelX (signed byte)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00                           ; sign-extend
++
+  ; If facing west, mirror: scaledX = screenX - scaledRelX - outW*8
+  pha                                  ; save scaledRelX extended
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorFlipMask
+  rep #$20
+  .ACCU 16
+  and #$0040
+  beq _ri.gridNoFlipX
+
+  ; West facing: anchorX = screenX - scaledRelX - outTilesWide*8
+  pla                                  ; scaledRelX extended
+  eor #$FFFF
+  inc a                                ; -scaledRelX
+  clc
+  adc.w SCUMM.actorScreenX
+  pha                                  ; save partial
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorOamCount            ; outTilesWide
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a
+  asl a                                ; * 8
+  sta.w SCUMM.scratch                  ; outW pixels
+  pla
+  sec
+  sbc.w SCUMM.scratch                  ; - outW
+  sta.w SCUMM.scratch                  ; gridBaseX
+  bra _ri.gridXDone
+
+_ri.gridNoFlipX:
+  pla                                  ; scaledRelX extended
+  clc
+  adc.w SCUMM.actorScreenX
+  sta.w SCUMM.scratch                  ; gridBaseX
+
+_ri.gridXDone:
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.chrDmaSrcHi              ; scaledRelY (from per-slot cache)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  clc
+  adc.w SCUMM.actorScreenY
+  pha                                  ; stack: [gridBaseY, outTilesTall]
+
+  ; --- Grid tile loop: row-major ---
+  ; Stack layout: SP+1 = gridBaseY(2), SP+3 = outTilesTall(1)
+  ; SCUMM.scratch = gridBaseX
+  ; SCUMM.actorOamCount = outTilesWide
+  ; SCUMM.scratch2 low byte = tile base for slot
+  sep #$20
+  .ACCU 8
+  lda #0
+  pha                                  ; push tileRow counter (1 byte)
+  pha                                  ; push tileIdx counter (1 byte)
+  ; Stack: SP+1=tileIdx, SP+2=tileRow, SP+3..4=gridBaseY, SP+5=outTilesTall
+
+_ri.gridRowLoop:
+  sep #$20
+  .ACCU 8
+  lda 2,s                             ; tileRow
+  cmp 5,s                             ; outTilesTall
+  bcc +
+  jmp _ri.gridDone
++
+  ; tileCol = 0
+  lda #0
+  pha                                  ; push tileCol (1 byte)
+  ; Stack: SP+1=tileCol, SP+2=tileIdx, SP+3=tileRow, SP+4..5=gridBaseY, SP+6=outTilesTall
+
+_ri.gridColLoop:
+  sep #$20
+  .ACCU 8
+  lda 1,s                             ; tileCol
+  cmp.w SCUMM.actorOamCount            ; outTilesWide
+  bcc +
+  jmp _ri.gridColDone
++
+
+  ; Compute screen X for this tile: gridBaseX + tileCol * 8
+  rep #$20
+  .ACCU 16
+  lda 1,s                             ; tileCol
+  and #$00FF
+  asl a
+  asl a
+  asl a                                ; * 8
+  clc
+  adc.w SCUMM.scratch                  ; + gridBaseX
+  ; Bounds check X
+  bmi _ri.gridHide
+  cmp #$0100
+  bcs _ri.gridHide
+
+  ; Save tileScreenX for OAM write
+  pha                                  ; push screenX
+
+  ; Compute screen Y: gridBaseY + tileRow * 8
+  sep #$20
+  .ACCU 8
+  lda 5,s                             ; tileRow (stack shifted by push)
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a
+  asl a                                ; * 8
+  clc
+  adc 6,s                             ; + gridBaseY (shifted)
+  ; Bounds check Y
+  bmi _ri.gridHidePopX
+  cmp #$00E0
+  bcs _ri.gridHidePopX
+
+  ; Write visible OAM entry
+  ; Stack: SP+1..2=screenX, SP+3=tileCol, SP+4=tileIdx, SP+5=tileRow, SP+6..7=gridBaseY, SP+8=outTilesTall
+  sep #$20
+  .ACCU 8
+  pha                                  ; push screenY low byte
+  lda 2,s                             ; screenX low byte (shifted by 1)
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  pla                                  ; screenY low byte
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  ; tile_id = tileIdx + tileBase
+  lda 4,s                             ; tileIdx (shifted: was SP+4, now +2 from pla+pla... let me recalculate)
+
+  ; Actually let me simplify the stack. After the pla of screenY, we popped it.
+  ; The push of screenX is still on stack.
+  ; Stack: SP+1..2=screenX, SP+3=tileCol, SP+4=tileIdx, SP+5=tileRow, SP+6..7=gridBaseY, SP+8=outTilesTall
+  lda 4,s                             ; tileIdx
+  clc
+  adc.w SCUMM.scratch2                ; + tile base
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda.w SCUMM.actorFlipMask           ; priority + palette + flip
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  .ACCU 16
+  pla                                  ; discard screenX
+
+  ; Advance tileIdx
+  sep #$20
+  .ACCU 8
+  lda 2,s                             ; tileIdx
+  inc a
+  sta 2,s
+  ; Advance tileCol
+  lda 1,s                             ; tileCol
+  inc a
+  sta 1,s
+  jmp _ri.gridColLoop
+
+_ri.gridHidePopX:
+  rep #$20
+  .ACCU 16
+  pla                                  ; discard saved screenX
+
+_ri.gridHide:
+  ; Write hidden OAM entry (off-screen)
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #$F0                            ; off-screen Y
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  .ACCU 16
+
+  ; Advance tileIdx + tileCol
+  sep #$20
+  .ACCU 8
+  lda 2,s                             ; tileIdx
+  inc a
+  sta 2,s
+  lda 1,s                             ; tileCol
+  inc a
+  sta 1,s
+  jmp _ri.gridColLoop
+
+_ri.gridColDone:
+  pla                                  ; discard tileCol
+  ; Advance tileRow
+  sep #$20
+  .ACCU 8
+  lda 2,s                             ; tileRow
+  inc a
+  sta 2,s
+  jmp _ri.gridRowLoop
+
+_ri.gridDone:
+  ; Stack cleanup: tileIdx(1) + tileRow(1) + gridBaseY(2) + outTilesTall(1) = 5 bytes
+  ; Adjust SP directly to avoid mixed-width pla confusion
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  tsc
+  clc
+  adc #5
+  tcs
+
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.noHead                       ; skip head — SA-1 already composited it
 
   ; =================================================================
   ; HEAD OAM RENDERING (limb 1, composited on top of body)
   ; =================================================================
 _ri.headRender:
+  rep #$20
+  .ACCU 16
+
+  ; Skip head if SA-1 already composited it (per-slot persistent flag)
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.renderSlotComposite,x
+  beq +
+  jmp _ri.noHead
++
   rep #$20
   .ACCU 16
 
@@ -10769,6 +11157,211 @@ _srt.done:
 _srt.zeroOut:
   plp
   clc                                  ; carry clear = no output
+  rtl
+
+.ends
+
+;===========================================================================
+; requestCompositeScale — Submit body+head CHR/OAM to SA-1 CMD=2
+;
+; NON-BLOCKING: writes mailbox and returns immediately. Caller checks
+; SA1_MBOX_STATUS next frame to harvest results.
+;
+; Input:
+;   SCUMM.scratch3 = render slot index
+;   SCUMM.actorCurScale = scale factor (64-254)
+;   slotOrigChrSrcLo/Hi = body CHR ROM source (never poisoned)
+;   _oamSrcPtr (ZP) = body OAM header pointer
+;   SCUMM.actorHeadPicCur = head pic index ($FF = no head)
+;   renderSlotCostume = costume number (for head lookup)
+; Output:
+;   Returns after writing CMD=2. No CHR redirect — caller harvests.
+; Clobbers: A, X, Y, _costDirPtr
+;===========================================================================
+.section "scummvm SA1 composite request" superfree
+.base BSL
+
+scummvm.requestCompositeScale:
+  php
+  sep #$20
+  .ACCU 8
+
+  ; --- Clear mailbox status ---
+  lda #0
+  sta.l SA1_MBOX_STATUS                ; 0 = busy
+
+  ; --- Write scale ---
+  lda.w SCUMM.actorCurScale
+  sta.l SA1_MBOX_SCALE
+
+  ; --- Write body CHR source from ORIGINAL ROM addresses (3 bytes) ---
+  ldx.w SCUMM.scratch3                ; render slot (byte index)
+  lda.w SCUMM.slotOrigChrSrcHi,x     ; body CHR bank (original ROM)
+  sta.l SA1_MBOX_BODYCHR + 2
+
+  rep #$20
+  .ACCU 16
+  txa
+  asl a                                ; slot * 2 for word arrays
+  tax
+  lda.w SCUMM.slotOrigChrSrcLo,x     ; body CHR addr (original ROM)
+  sta.l SA1_MBOX_BODYCHR
+
+  ; --- Write body OAM pointer (3 bytes) ---
+  lda.b _oamSrcPtr                    ; body OAM addr lo/hi
+  sta.l SA1_MBOX_BODYOAM
+  sep #$20
+  .ACCU 8
+  lda.b _oamSrcPtr + 2               ; body OAM bank
+  sta.l SA1_MBOX_BODYOAM + 2
+
+  ; --- Look up head CHR + OAM and write to mailbox ---
+  lda.w SCUMM.actorHeadPicCur
+  cmp #$FF
+  bne _rcs.hasHead
+
+  ; No head: write zero pointers
+  rep #$20
+  .ACCU 16
+  lda #0
+  sta.l SA1_MBOX_HEADCHR
+  sta.l SA1_MBOX_HEADOAM
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l SA1_MBOX_HEADCHR + 2
+  sta.l SA1_MBOX_HEADOAM + 2
+  jmp _rcs.sendCmd
+
+_rcs.hasHead:
+  ; Look up head data from CostumeHeadDirTable
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM.scratch3
+  lda.w SCUMM.renderSlotCostume,x
+  and #$00FF
+  asl a
+  asl a                                ; costume * 4
+  tax
+  lda.l CostumeHeadDirTable,x         ; headBasePtr
+  bne +
+  jml _rcs.noHeadData                 ; 0 = no head for this costume
++
+  sta.b _costDirPtr
+  sep #$20
+  .ACCU 8
+  lda.l CostumeHeadDirTable + 2,x     ; headBaseBank
+  sta.b _costDirPtr + 2
+  lda.l CostumeHeadDirTable + 3,x     ; numHeadPics
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.actorOamCount           ; numHeadPics (nHP)
+
+  ; --- Head CHR: ChrLo[headPic] ---
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  asl a                                ; x2 for word table
+  tay
+  lda [_costDirPtr],y                 ; head CHR addr
+  sta.w SCUMM.chrDmaSrcLo             ; scratch
+
+  ; Advance _costDirPtr to ChrHi table: base + nHP*2
+  lda.w SCUMM.actorOamCount
+  asl a
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr
+
+  ; ChrHi[headPic] (byte table, read via 16-bit and mask)
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  tay
+  lda [_costDirPtr],y
+  and #$00FF
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.chrDmaSrcHi             ; head CHR bank
+
+  ; Write head CHR to mailbox
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.chrDmaSrcLo
+  sta.l SA1_MBOX_HEADCHR
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.chrDmaSrcHi
+  sta.l SA1_MBOX_HEADCHR + 2
+
+  ; --- Head OAM lookup ---
+  ; From current _costDirPtr (=ChrHi base):
+  ; Skip ChrHi(nHP bytes) + ChrLen(nHP*2 bytes) = nHP*3 to reach OamLo
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.actorOamCount           ; nHP
+  asl a                                ; nHP*2
+  clc
+  adc.w SCUMM.actorOamCount           ; nHP*3
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> OamLo table
+
+  ; OamLo[headPic]
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  asl a
+  tay
+  lda [_costDirPtr],y                 ; head OAM addr
+  sta.w SCUMM.chrDmaSrcLo
+
+  ; Advance to OamHi: OamLo + nHP*2
+  lda.w SCUMM.actorOamCount
+  asl a
+  clc
+  adc.b _costDirPtr
+  sta.b _costDirPtr                   ; -> OamHi table
+
+  lda.w SCUMM.actorHeadPicCur
+  and #$00FF
+  tay
+  lda [_costDirPtr],y                 ; head OAM bank
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.chrDmaSrcHi
+
+  ; Write head OAM to mailbox
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.chrDmaSrcLo
+  sta.l SA1_MBOX_HEADOAM
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.chrDmaSrcHi
+  sta.l SA1_MBOX_HEADOAM + 2
+
+  jmp _rcs.sendCmd
+
+_rcs.noHeadData:
+  ; Costume has no head data: zero head pointers
+  rep #$20
+  .ACCU 16
+  lda #0
+  sta.l SA1_MBOX_HEADCHR
+  sta.l SA1_MBOX_HEADOAM
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l SA1_MBOX_HEADCHR + 2
+  sta.l SA1_MBOX_HEADOAM + 2
+
+_rcs.sendCmd:
+  ; Fire CMD=2 and return immediately (non-blocking)
+  sep #$20
+  .ACCU 8
+  lda #2
+  sta.l SA1_MBOX_CMD
+
+  plp
   rtl
 
 .ends

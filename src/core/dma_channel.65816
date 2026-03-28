@@ -21,9 +21,9 @@ core.dma_channel.init:
   ldx.w #GLOBAL.DMA_CHANNELS.START
   jsr ClearWRAM
 
-  ;lda #TRUE
-  ;sta.w GLOBAL.DMA_CHANNELS.7.entry
-  ;sta.w GLOBAL.DMA_CHANNELS.1.entry
+  lda #TRUE
+  ldx #7
+  sta.w GLOBAL.DMA_CHANNELS.START,x    ;reserve channel 7 for NMI tile DMA
   plp
   rts
 

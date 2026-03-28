@@ -1682,7 +1682,17 @@ room.refreshObjectColumns:
   bcc _roc.done
   beq _roc.done
 
-  ;all dirty columns staged — clear flag
+  ;pass complete — check if another pass needed
+  lda.w SCUMM.objDirtyFlag
+  cmp #2
+  bne _roc.clearDirty
+  ;first pass done — start second pass
+  lda #1
+  sta.w SCUMM.objDirtyFlag
+  lda.w SCUMM.objDirtyColMin
+  sta.w SCUMM.objDirtyNext
+  bra _roc.done
+_roc.clearDirty:
   stz.w SCUMM.objDirtyFlag
 
 _roc.done:

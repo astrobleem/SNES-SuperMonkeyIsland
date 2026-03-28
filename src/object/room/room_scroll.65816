@@ -466,6 +466,9 @@ _syncScroll.scrolledLeft:
 _syncScroll.bgRefresh:
   .ACCU 16
   .INDEX 16
+  ;skip bgRefresh while OCHR dirty processing is active
+  lda.w SCUMM.objDirtyFlag
+  bne _syncScroll.bgRefreshSkip
   ;no boundary crossing — refresh one viewport column in background
   lda.w GLOBAL.room.cameraX
   lsr a
@@ -545,10 +548,12 @@ _stageCol.mulDone:
   sta.b tmp+12                  ;WRAM byte offset
 
   ;--- Pass 1: handle cache misses, stage tile data for NMI ---
-  stz.w GLOBAL.room.nmiTileCount
-  stz.w GLOBAL.room.nmiTileStageLen
-  lda #0
+  ;Initialize staging offsets from current accumulated values
+  ;(per-frame reset done in SCUMM play loop before callers run)
+  lda.w GLOBAL.room.nmiTileStageLen
   sta.b tmp+6                   ;tile data staging byte offset
+  lda.w GLOBAL.room.nmiTileCount
+  asl a                         ;* 2 for word offset
   sta.b tmp+8                   ;VRAM addr array byte offset
 
   ldx.b tmp+12                  ;X = WRAM source offset

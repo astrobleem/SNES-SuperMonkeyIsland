@@ -121,7 +121,7 @@ core.nmi.play:
     lda.w yScrollBG3&$ffff+1
     sta.l BG3VOFS
 
-	;--- room scroll: write staged tile data to VRAM (cache misses) ---
+	;--- room scroll: write staged tile data to VRAM via DMA ch7 ---
 	lda.w GLOBAL.room.nmiTileFlag
 	beq _nmi.noTileWrite
 
@@ -134,53 +134,60 @@ core.nmi.play:
 	lda.w GLOBAL.room.nmiTileCount
 	beq _nmi.noTileWrite2
 
-	;stack: [addrOffset, tileCount]
-	pha                           ;tileCount
-	lda #0
-	pha                           ;addrOffset = 0
-	ldx #0                        ;data offset into SCROLL_TILE_STAGE_WRAM
+	;--- DMA channel 7 static setup for tile data ---
+	sep #$20
+	.ACCU 8
+	lda.b #$01                    ;A->B, increment A, 2-register write ($2118/$2119)
+	sta.l DMAP7
+	lda.b #$18                    ;B-bus target: VMDATAL
+	sta.l DMADEST7
+	lda.b #$7F                    ;source bank: $7F (SCROLL_TILE_STAGE_WRAM)
+	sta.l DMASRC7B
+	rep #$20
+	.ACCU 16
 
-_nmi.tileOuterLoop:
+	;X = VRAM address array offset, Y = staging buffer offset
+	ldx #0
+	ldy #0
+
+_nmi.tileDmaLoop:
 	.ACCU 16
 	.INDEX 16
-	;read VRAM address from NMI slots array (need X for long,x)
-	phx                           ;save tile data offset
-	lda 3,s                       ;addrOffset (shifted +2 by phx)
-	tax
+	;set VRAM destination address for this tile
+	phx                           ;save addr offset (need X for long,x)
 	lda.l SCROLL_NMI_SLOTS_WRAM,x
 	sta.l VMADDL
+	plx
 
-	;advance addrOffset by 2
-	lda 3,s
+	;set DMA source: low 16 bits of staging buffer + offset
+	tya
 	clc
-	adc #2
-	sta 3,s
-	plx                           ;restore tile data offset
+	adc #SCROLL_TILE_STAGE_WRAM & $ffff
+	sta.l DMASRC7L
 
-	;write 16 words (32 bytes) of tile data
-	ldy #16
-_nmi.tileInnerLoop:
-	.ACCU 16
-	.INDEX 16
+	;set transfer length: 32 bytes (one 4bpp tile)
+	lda #32
+	sta.l DMALEN7L
+
+	;trigger DMA channel 7
 	sep #$20
-	lda.l SCROLL_TILE_STAGE_WRAM,x
-	sta.l VMDATAL
-	inx
-	lda.l SCROLL_TILE_STAGE_WRAM,x
-	sta.l VMDATAH
-	inx
+	.ACCU 8
+	lda.b #$80
+	sta.l MDMAEN
 	rep #$20
-	dey
-	bne _nmi.tileInnerLoop
+	.ACCU 16
 
-	;decrement tile count (addrOffset at 1,s, tileCount at 3,s)
-	lda 3,s
-	dec a
-	sta 3,s
-	bne _nmi.tileOuterLoop
+	;advance offsets
+	tya
+	clc
+	adc #32
+	tay                           ;staging offset += 32
+	inx
+	inx                           ;VRAM addr array offset += 2
 
-	pla                           ;clean addrOffset
-	pla                           ;clean tileCount
+	;decrement tile count
+	dec.w GLOBAL.room.nmiTileCount
+	bne _nmi.tileDmaLoop
 
 _nmi.noTileWrite2:
 	.ACCU 16
@@ -190,7 +197,7 @@ _nmi.noTileWrite:
 	.ACCU 8
 	.INDEX 16
 
-	;--- room scroll: write staged tilemap column to VRAM ---
+	;--- room scroll: write staged tilemap column to VRAM via DMA ch7 ---
 	lda.w GLOBAL.room.nmiColFlag
 	beq _nmi.noColWrite
 
@@ -200,27 +207,37 @@ _nmi.noTileWrite:
 	sta.l VMAIN
 
 	rep #$20
+	.ACCU 16
 	lda.w GLOBAL.room.nmiColVramAddr
 	sta.l VMADDL
 
-	;write heightTiles words from $7F staging buffer
-	ldx #0
-	ldy.w GLOBAL.room.nmiColRows
-_nmi.colWriteLoop:
-	.ACCU 16
-	.INDEX 16
-	lda.w GLOBAL.room.colStaging,x
+	;--- DMA channel 7 setup for column tilemap ---
 	sep #$20
-	sta.l VMDATAL
-	xba
-	sta.l VMDATAH               ;triggers VRAM addr += 32
+	.ACCU 8
+	lda.b #$01                    ;A->B, increment A, 2-register write ($2118/$2119)
+	sta.l DMAP7
+	lda.b #$18                    ;B-bus target: VMDATAL
+	sta.l DMADEST7
+	lda.b #$7E                      ;source bank (WRAM)
+	sta.l DMASRC7B
 	rep #$20
-	inx
-	inx
-	dey
-	bne _nmi.colWriteLoop
+	.ACCU 16
 
+	;source address: low 16 bits of colStaging
+	lda #GLOBAL.room.colStaging & $ffff
+	sta.l DMASRC7L
+
+	;transfer length: nmiColRows * 2 bytes
+	lda.w GLOBAL.room.nmiColRows
+	asl a
+	sta.l DMALEN7L
+
+	;trigger DMA channel 7
 	sep #$20
+	.ACCU 8
+	lda.b #$80
+	sta.l MDMAEN
+
 	lda.b #VMAIN_INCREMENT_MODE
 	sta.l VMAIN
 

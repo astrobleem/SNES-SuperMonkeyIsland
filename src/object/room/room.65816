@@ -739,9 +739,9 @@ _rl.objDone:
   jsr room.initScroll
   jsr room.initTileCache
 
-  ;apply OCHR patches BEFORE viewport load so composited tile IDs
-  ;are in SCROLL_TILEMAP_WRAM when loadInitialViewport caches tiles
-  jsl room.applyVisibleObjectPatches
+  ;OCHR patches are now applied by op_setState + instant forced-blank
+  ;redraw when ENCD scripts run. No need to apply initial patches here
+  ;(they would flash the wrong state before ENCD corrects them).
 
   ;cache-aware initial viewport load (still in force blank)
   jsr room.loadInitialViewport

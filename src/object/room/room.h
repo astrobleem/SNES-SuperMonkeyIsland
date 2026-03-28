@@ -33,6 +33,7 @@
 .define SCROLL_TILE2SLOT_WRAM    $7F3000  ;tileIdToSlot[2048] (4KB, 2 bytes per entry)
 .define SCROLL_SLOT2TILE_WRAM    $7F4000  ;slotToTileId[896]  (1792 bytes)
 .define SCROLL_TILE_STAGE_WRAM   $7F4800  ;tile data staging (1024B max, 32 tiles * 32B)
+.define SCROLL_NMI_SLOTS_WRAM   $7F4C00  ;VRAM slot addresses for NMI tile writes
 .define ROOM_CACHE_SLOTS         896
 .define ROOM_TILE_NOT_CACHED     $FFFF
 .define ROOM_MAX_LOOKUP_TILES    2048     ;max tile IDs in lookup table

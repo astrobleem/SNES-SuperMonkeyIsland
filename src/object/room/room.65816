@@ -1655,8 +1655,10 @@ _aop.done:
 
 
 ;===================================================================
-; room.refreshObjectColumns — stage dirty tilemap columns for NMI
-; after object patches change. Called per-frame from play loop.
+; room.refreshObjectColumns — instant VRAM refresh for dirty columns
+; after OCHR patches change object visibility. Enters force blank,
+; processes ALL dirty columns with direct VRAM DMA writes, then
+; restores display. Called per-frame from play loop.
 ; Must be in bank 0 to use jsr room.stageColumnForNmi.
 ;===================================================================
 .base BSL
@@ -1668,19 +1670,153 @@ room.refreshObjectColumns:
   rep #$31
 
   lda.w SCUMM.objDirtyFlag
-  beq _roc.done
+  bne _roc.hasDirty
+  jmp _roc.done
+_roc.hasDirty:
 
-  ;stage one column
+  ;--- enter force blank for direct VRAM access ---
+  sei                             ;block IRQ
+  jsr core.nmi.stop               ;disable NMI
+
+  sep #$20
+  .ACCU 8
+  lda.w ScreenBrightness
+  pha                             ;save brightness
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha                             ;save HDMA channels
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN                    ;kill HDMA (runs during force blank!)
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP                    ;force blank on
+
+  ;clear any pending NMI flags from syncScroll — we will overwrite
+  ;the staging buffers, so NMI must not transfer stale data
+  stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiTileFlag
+
+  rep #$20
+  .ACCU 16
+
+  ;--- process all dirty columns (may do 2 passes if flag==2) ---
+_roc.passLoop:
+_roc.colLoop:
+  .ACCU 16
+  .INDEX 16
+
+  ;reset staging counters for this column
+  stz.w GLOBAL.room.nmiTileCount
+  stz.w GLOBAL.room.nmiTileStageLen
+
+  ;stage this column (cache-miss handling + tilemap remap)
   lda.w SCUMM.objDirtyNext
   jsr room.stageColumnForNmi
 
-  ;advance to next dirty column
+  ;--- flush staged tile data to VRAM via DMA ch7 ---
+  rep #$31
+  lda.w GLOBAL.room.nmiTileCount
+  beq _roc.noTiles
+
+  sep #$20
+  .ACCU 8
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  lda.b #$01                     ;A->B, increment A, 2-register write
+  sta.l DMAP7
+  lda.b #$18                     ;B-bus: VMDATAL
+  sta.l DMADEST7
+  lda.b #$7F                     ;source bank: $7F
+  sta.l DMASRC7B
+  rep #$20
+  .ACCU 16
+
+  ldx #0                         ;VRAM address array offset
+  ldy #0                         ;staging buffer offset
+
+_roc.tileDmaLoop:
+  .ACCU 16
+  .INDEX 16
+  phx
+  lda.l SCROLL_NMI_SLOTS_WRAM,x
+  sta.l VMADDL
+  plx
+
+  tya
+  clc
+  adc #SCROLL_TILE_STAGE_WRAM & $ffff
+  sta.l DMASRC7L
+
+  lda #32
+  sta.l DMALEN7L
+
+  sep #$20
+  .ACCU 8
+  lda.b #$80
+  sta.l MDMAEN
+  rep #$20
+  .ACCU 16
+
+  tya
+  clc
+  adc #32
+  tay
+  inx
+  inx
+
+  dec.w GLOBAL.room.nmiTileCount
+  bne _roc.tileDmaLoop
+
+_roc.noTiles:
+  .ACCU 16
+  .INDEX 16
+
+  ;--- flush staged tilemap column to VRAM via DMA ch7 ---
+  sep #$20
+  .ACCU 8
+  lda.b #VMAIN_INCREMENT_MODE | VMAIN_INCREMENT_32
+  sta.l VMAIN
+  rep #$20
+  .ACCU 16
+
+  lda.w GLOBAL.room.nmiColVramAddr
+  sta.l VMADDL
+
+  sep #$20
+  .ACCU 8
+  lda.b #$01                     ;A->B, increment A, 2-register write
+  sta.l DMAP7
+  lda.b #$18                     ;B-bus: VMDATAL
+  sta.l DMADEST7
+  lda.b #$7E                     ;source bank: $7E (WRAM)
+  sta.l DMASRC7B
+  rep #$20
+  .ACCU 16
+
+  lda #GLOBAL.room.colStaging & $ffff
+  sta.l DMASRC7L
+
+  lda.w GLOBAL.room.nmiColRows
+  asl a
+  sta.l DMALEN7L
+
+  sep #$20
+  .ACCU 8
+  lda.b #$80
+  sta.l MDMAEN
+  rep #$20
+  .ACCU 16
+
+  ;--- advance to next column ---
   lda.w SCUMM.objDirtyNext
   inc a
   sta.w SCUMM.objDirtyNext
   cmp.w SCUMM.objDirtyColMax
-  bcc _roc.done
-  beq _roc.done
+  bcc _roc.colNext
+  beq _roc.colNext
+  bra _roc.passDone
+_roc.colNext:
+  jmp _roc.colLoop
+_roc.passDone:
 
   ;pass complete — check if another pass needed
   lda.w SCUMM.objDirtyFlag
@@ -1691,11 +1827,32 @@ room.refreshObjectColumns:
   sta.w SCUMM.objDirtyFlag
   lda.w SCUMM.objDirtyColMin
   sta.w SCUMM.objDirtyNext
-  bra _roc.done
+  jmp _roc.passLoop
+
 _roc.clearDirty:
   stz.w SCUMM.objDirtyFlag
 
+  ;--- restore VMAIN, HDMA, brightness, interrupts ---
+  sep #$20
+  .ACCU 8
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+
+  pla                             ;restore HDMA channels
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  pla                             ;restore brightness
+  sta.w ScreenBrightness
+  sta.l INIDSP                    ;exit force blank
+  rep #$20
+  .ACCU 16
+
+  jsr core.nmi.start              ;re-enable NMI
+  cli                             ;re-enable IRQ
+
 _roc.done:
+  .ACCU 16
+  .INDEX 16
   plp
   rts
 

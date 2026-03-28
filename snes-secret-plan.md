@@ -999,6 +999,25 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 - [x] BW-RAM infrastructure — save header, volatile clear, composite migration, CGRAM shadow (commit 6437307)
 - [x] LoROM BRK/COP/ABORT vector trampolines — pre-existing bug fixed (commit 6437307)
 
+**Object State Rendering — COMPLETE** (2026-03-28, commits aa3ba40..e6cb503):
+- [x] op_setState triggers OCHR tile apply/remove via drawObjectSetStateN — script pointer (tmp+0..2, Y) saved/restored around JSL (commit aa3ba40)
+- [x] Dirty column tracking merges ranges for multi-object state changes per frame (commit aa3ba40)
+- [x] NMI tile transfer upgraded to DMA channel 7 — 4x faster (~80 cycles/tile vs ~320), fits VBlank budget (commit c2a3deb)
+- [x] Staging buffer accumulation — two stageColumnForNmi calls per frame append instead of overwrite (commit c2a3deb)
+- [x] Viewport dirty expansion + two-pass processing (objDirtyFlag=2→1→0) for cache eviction coverage (commit c2a3deb)
+- [x] bgRefresh skip during dirty processing prevents cache slot competition (commit c2a3deb)
+- [x] Instant forced-blank OCHR redraw — refreshObjectColumns processes ALL dirty columns in one frame via forced blank + DMA, not one-per-frame staging (commit f57b97b)
+- [x] Deferred INIDSP write — screen stays dark through entire room load + processRoomChange, brightness restored in play loop after ENCD + OCHR redraw. Zero new WRAM variables (WLA-DX ramsection growth causes section reshuffling crashes) (commit e6cb503)
+- [x] Column tilemap DMA bank byte fix: $7E (WRAM) not WLA-DX bank operator (commit c2a3deb)
+- [x] DMA channel 7 reserved in channel allocator to prevent HDMA conflicts (commit c2a3deb)
+
+**Bugs discovered during object state work (5 layered bugs):**
+1. op_setState bypassed OCHR — wrote state byte but never called apply/removeObjectPatch
+2. Staging buffer overwrite — stageColumnForNmi zeroed counters at entry, second call per frame overwrote first. OCHR tiles were phantom-cached (present in lookup, never DMA'd to VRAM). This was the root debugging difficulty.
+3. NMI VBlank overrun — CPU register tile writes exceeded VBlank, column tilemap write got cut off
+4. WLA-DX `:label` bank operator — returned assembler bank $00 instead of SNES bank $7E for WRAM DMA source
+5. Cache eviction during dirty passes — OCHR tiles evicted background tiles from ring buffer
+
 **Costume Pipeline (NEXT PRIORITY):**
 - [ ] Process all 123 costumes through converter pipeline
   - Only costume 1 (Guybrush walk) is converted. All other actors fall back to it.

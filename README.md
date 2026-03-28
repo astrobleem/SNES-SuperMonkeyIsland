@@ -6,8 +6,8 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 |:---:|:---:|
 | ![Beach Objects](screenshots/room01_objects.png) | ![SCUMM Bar](screenshots/room28_scumm_bar.png) |
 | Beach with OCHR object rendering (rocks, shoreline) | SCUMM Bar background |
-| ![Verb Bar](screenshots/room1_verb_bar.png) | ![Guybrush Walking](screenshots/guybrush_on_beach.png) |
-| Full verb bar with HDMA palette split | Guybrush with SA-1 scaled sprite rendering |
+| ![Verb Bar](screenshots/room1_verb_bar.png) | ![Guybrush Scaled](screenshots/guybrush_scaled.png) |
+| Full verb bar with HDMA palette split | Guybrush scaled down near rocks via SA-1 CC Type 2 |
 | ![Melee Town](screenshots/room35_town.png) | ![Moonlit Dock](screenshots/room33_dock.png) |
 | ![Governor's Mansion](screenshots/room53_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
 | ![Monkey Island](screenshots/room12_monkey_island.png) | ![LeChuck's Lair](screenshots/room65_hell.png) |

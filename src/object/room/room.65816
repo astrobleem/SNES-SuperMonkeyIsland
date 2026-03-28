@@ -1399,21 +1399,49 @@ _rop.found:
 _rop.hasPatches:
   sta.b tmp+10                  ;patch_count
 
-  ;read col_min, col_max for dirty tracking
+  ;read col_min, col_max for dirty tracking — merge with existing range
   sep #$20
 .ACCU 8
-  lda.l SCUMM.ochrData+1,x    ;col_min
+  lda.l SCUMM.ochrData+1,x    ;col_min (new)
   rep #$20
 .ACCU 16
   and #$00FF
+  pha                           ;push new col_min
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+2,x    ;col_max (new)
+  rep #$20
+.ACCU 16
+  and #$00FF
+  pha                           ;push new col_max
+
+  lda.w SCUMM.objDirtyFlag
+  beq _rop.dirtyFirst
+  ;merge: colMin = min(existing, new)
+  lda 3,s                       ;new col_min
+  cmp.w SCUMM.objDirtyColMin
+  bcs _rop.minOk
   sta.w SCUMM.objDirtyColMin
-  sep #$20
-.ACCU 8
-  lda.l SCUMM.ochrData+2,x    ;col_max
-  rep #$20
-.ACCU 16
-  and #$00FF
+_rop.minOk:
+  ;merge: colMax = max(existing, new)
+  lda 1,s                       ;new col_max
+  cmp.w SCUMM.objDirtyColMax
+  bcc _rop.maxOk
+  beq _rop.maxOk
   sta.w SCUMM.objDirtyColMax
+_rop.maxOk:
+  bra _rop.dirtyDone
+
+_rop.dirtyFirst:
+  ;first patch this frame — set all fields
+  lda 3,s                       ;new col_min
+  sta.w SCUMM.objDirtyColMin
+  lda 1,s                       ;new col_max
+  sta.w SCUMM.objDirtyColMax
+
+_rop.dirtyDone:
+  pla                           ;discard col_max
+  pla                           ;discard col_min
 
   ;offset to patch entries = blobOffset + 4
   txa
@@ -1492,11 +1520,14 @@ _rop.mulTest:
   dec.b tmp+16
   bne _rop.loop
 
-  ;set dirty flag
-  lda #1
-  sta.w SCUMM.objDirtyFlag
+  ;set dirty flag + objDirtyNext on first patch
+  lda.w SCUMM.objDirtyFlag
+  bne _rop.skipNext
   lda.w SCUMM.objDirtyColMin
   sta.w SCUMM.objDirtyNext
+_rop.skipNext:
+  lda #1
+  sta.w SCUMM.objDirtyFlag
 
 _rop.done:
   plp
@@ -1524,7 +1555,9 @@ room.applyObjectPatch:
 
   ;find this object in the OCHR index
   lda.w SCUMM.ochrObjCount
-  beq _aop.done
+  bne _aop.hasData
+  jmp _aop.done
+_aop.hasData:
   sta.b tmp+6
 
   ;data section offset
@@ -1558,30 +1591,61 @@ _aop.found:
   adc.b tmp+4
   tax
 
-  ;read col_min/col_max for dirty tracking
+  ;read col_min/col_max for dirty tracking — merge with existing range
   sep #$20
 .ACCU 8
-  lda.l SCUMM.ochrData+1,x    ;col_min
+  lda.l SCUMM.ochrData+1,x    ;col_min (new)
   rep #$20
 .ACCU 16
   and #$00FF
+  pha                           ;push new col_min
+  sep #$20
+.ACCU 8
+  lda.l SCUMM.ochrData+2,x    ;col_max (new)
+  rep #$20
+.ACCU 16
+  and #$00FF
+  pha                           ;push new col_max
+
+  lda.w SCUMM.objDirtyFlag
+  beq _aop.dirtyFirst
+  ;merge: colMin = min(existing, new)
+  lda 3,s                       ;new col_min
+  cmp.w SCUMM.objDirtyColMin
+  bcs _aop.minOk
   sta.w SCUMM.objDirtyColMin
-  sep #$20
-.ACCU 8
-  lda.l SCUMM.ochrData+2,x    ;col_max
-  rep #$20
-.ACCU 16
-  and #$00FF
+_aop.minOk:
+  ;merge: colMax = max(existing, new)
+  lda 1,s                       ;new col_max
+  cmp.w SCUMM.objDirtyColMax
+  bcc _aop.maxOk
+  beq _aop.maxOk
   sta.w SCUMM.objDirtyColMax
+_aop.maxOk:
+  bra _aop.dirtyDone
+
+_aop.dirtyFirst:
+  ;first patch this frame — set all fields
+  lda 3,s                       ;new col_min
+  sta.w SCUMM.objDirtyColMin
+  lda 1,s                       ;new col_max
+  sta.w SCUMM.objDirtyColMax
+
+_aop.dirtyDone:
+  pla                           ;discard col_max
+  pla                           ;discard col_min
 
   ;apply patches using shared helper
   jsr room.applyPatchesAtX
 
-  ;set dirty flag
-  lda #1
-  sta.w SCUMM.objDirtyFlag
+  ;set dirty flag + objDirtyNext on first patch
+  lda.w SCUMM.objDirtyFlag
+  bne _aop.skipNext
   lda.w SCUMM.objDirtyColMin
   sta.w SCUMM.objDirtyNext
+_aop.skipNext:
+  lda #1
+  sta.w SCUMM.objDirtyFlag
 
 _aop.done:
   plp

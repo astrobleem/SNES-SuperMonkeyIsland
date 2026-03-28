@@ -4872,10 +4872,22 @@ op_setState:
   ldx.w SCUMM.scratch
   cpx #SCUMM_MAX_OBJECTS
   bcs +                              ; out of bounds → skip
-    sep #$20
+    ; Save script pointer (tmp+0..tmp+2) and Y (script PC)
+    phy                              ; save Y (script PC)
+    lda.b tmp
+    pha                              ; save tmp+0,1
+    lda.b tmp+2
+    pha                              ; save tmp+2,3
+    ; Call drawObjectSetStateN: SCUMM.scratch=obj_id (already set), A=state
     lda.w SCUMM.scratch2
-    sta.w SCUMM.objectState,x        ; objectState[objID] = state
-    rep #$20
+    and #$00FF
+    jsl scummvm.drawObjectSetStateN
+    ; Restore script pointer and Y
+    pla
+    sta.b tmp+2
+    pla
+    sta.b tmp
+    ply                              ; restore Y (script PC)
 +
   clc
   rts

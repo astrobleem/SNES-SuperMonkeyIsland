@@ -746,10 +746,9 @@ _rl.objDone:
   ;cache-aware initial viewport load (still in force blank)
   jsr room.loadInitialViewport
 
-  ;restore display brightness
+  ;keep INIDSP in forced blank ($80) — the play loop restores
+  ;brightness after ENCD scripts + OCHR redraw complete
   sep #$20
-  lda.w ScreenBrightness
-  sta.l INIDSP
 
   ;restore interrupt flags (NMI + V-IRQ)
   pla                             ;saved GLOBAL.interruptFlags

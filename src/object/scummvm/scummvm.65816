@@ -672,6 +672,15 @@ _play.noPendingVerb:
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
 
+  ; Commit screen brightness to hardware. Deferred from processRoomChange so
+  ; that ENCD scripts + refreshObjectColumns run first, preventing a one-frame
+  ; flash of incorrect object states on room entry.
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
@@ -934,9 +943,12 @@ _prc.bgReady:
   sep #$20
   pla                                   ; pop saved hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE      ; NMI will enable at next VBlank
-  pla
-  sta.w ScreenBrightness
-  sta.l INIDSP
+  pla                                   ; pop saved brightness (stack balance only)
+  ; ScreenBrightness stays 0 — screen dark until play loop deferred restore
+  ; NOTE: Do NOT write INIDSP here. Screen stays dark until the play loop
+  ; has executed ENCD scripts + refreshObjectColumns, ensuring correct object
+  ; states are visible on the first displayed frame. INIDSP is written after
+  ; refreshObjectColumns in the play loop.
   rep #$20
   pla
 
@@ -1041,10 +1053,7 @@ _prc.noEntryScript2:
   ; Clear any stale BG3 text from boot scripts before making screen visible
   jsl scummvm.clearDialogTilemap
 
-  ; Fade up brightness
-  sep #$20
-  lda.b #$0F
-  sta.w ScreenBrightness
+  ; ScreenBrightness stays 0 here — play loop deferred write sets $0F
   rep #$20
 
 _prc.failed:

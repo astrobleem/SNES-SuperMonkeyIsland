@@ -1012,6 +1012,12 @@ _prc.noExitScript2:
   sta.w SCUMM.globalVars,x
   ; var[143] NOT set here — ENCD needs previous room's value for first-visit check
 
+  ; Set camera to follow ego actor (ScummVM: startScene sets camera._follows)
+  ldx #1*2                           ; VAR_EGO = globalVar[1]
+  lda.w SCUMM.globalVars,x           ; ego actor number
+  and #$00FF
+  sta.w SCUMM.cameraFollows
+
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
 
@@ -6696,6 +6702,11 @@ op_loadRoomWithEgo:
   sta.w SCUMM.actors.visible,x
   stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
   rep #$20
+  ; ScummVM: camera._follows = a->_number (ego actor)
+  ldx #1*2                           ; VAR_EGO = globalVar[1]
+  lda.w SCUMM.globalVars,x           ; ego actor number
+  and #$00FF
+  sta.w SCUMM.cameraFollows
 _loadRoomEgo.done:
   .ACCU 16
   .INDEX 16

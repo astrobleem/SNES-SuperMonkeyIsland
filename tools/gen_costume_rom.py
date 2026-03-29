@@ -135,8 +135,10 @@ def scan_costumes():
             "palette": pal_file,
             "pics": pics,
             "num_pics": len(pics),
+            "max_pic_idx": max((p["index"] for p in pics), default=0),
             "head_pics": head_pics,
             "num_head_pics": len(head_pics),
+            "max_head_idx": max((p["index"] for p in head_pics), default=0) if head_pics else 0,
         }
 
     return costumes
@@ -223,32 +225,45 @@ def generate_assembly(costumes, dcos_remap=None):
         lines.append(f'  .incbin "{pal_rel}"')
         lines.append("")
 
-        # Body frame lookup tables
+        # Body frame lookup tables — indexed by pic FILE number (sparse, gaps → pic00 fallback)
+        # This ensures walk cycle tables (which use file-number indices) work correctly
+        # even when some pic numbers are missing (e.g., pic01 absent from Cost058)
+        max_pic_idx = max(p["index"] for p in info["pics"])
+        pic_by_idx = {p["index"]: p for p in info["pics"]}
+        fallback_pic = info["pics"][0]  # pic00 as fallback for gaps
+
         lines.append(f"; Body frame CHR lookup (word addr, bank, length)")
+        lines.append(f"; Sparse table: {max_pic_idx + 1} entries indexed by pic file number")
         lines.append(f"{prefix}_ChrLo:")
-        for pic in info["pics"]:
-            lines.append(f"  .dw {prefix}_Pic{pic['index']:02d}_Chr")
+        for i in range(max_pic_idx + 1):
+            p = pic_by_idx.get(i, fallback_pic)
+            gap = "  ; gap->pic00" if i not in pic_by_idx else ""
+            lines.append(f"  .dw {prefix}_Pic{p['index']:02d}_Chr{gap}")
         lines.append("")
 
         lines.append(f"{prefix}_ChrHi:")
-        for pic in info["pics"]:
-            lines.append(f"  .db :{prefix}_Pic{pic['index']:02d}_Chr")
+        for i in range(max_pic_idx + 1):
+            p = pic_by_idx.get(i, fallback_pic)
+            lines.append(f"  .db :{prefix}_Pic{p['index']:02d}_Chr")
         lines.append("")
 
         lines.append(f"{prefix}_ChrLen:")
-        for pic in info["pics"]:
-            lines.append(f"  .dw {prefix}_Pic{pic['index']:02d}_ChrEnd - {prefix}_Pic{pic['index']:02d}_Chr")
+        for i in range(max_pic_idx + 1):
+            p = pic_by_idx.get(i, fallback_pic)
+            lines.append(f"  .dw {prefix}_Pic{p['index']:02d}_ChrEnd - {prefix}_Pic{p['index']:02d}_Chr")
         lines.append("")
 
         lines.append(f"; Body frame OAM lookup (word addr, bank)")
         lines.append(f"{prefix}_OamLo:")
-        for pic in info["pics"]:
-            lines.append(f"  .dw {prefix}_Pic{pic['index']:02d}_Oam")
+        for i in range(max_pic_idx + 1):
+            p = pic_by_idx.get(i, fallback_pic)
+            lines.append(f"  .dw {prefix}_Pic{p['index']:02d}_Oam")
         lines.append("")
 
         lines.append(f"{prefix}_OamHi:")
-        for pic in info["pics"]:
-            lines.append(f"  .db :{prefix}_Pic{pic['index']:02d}_Oam")
+        for i in range(max_pic_idx + 1):
+            p = pic_by_idx.get(i, fallback_pic)
+            lines.append(f"  .db :{prefix}_Pic{p['index']:02d}_Oam")
         lines.append("")
 
         # Body frame data (CHR + OAM binary includes)
@@ -262,33 +277,42 @@ def generate_assembly(costumes, dcos_remap=None):
             lines.append(f'  .incbin "{oam_rel}"')
             lines.append("")
 
-        # Head frame tables (if limb 1 exists)
+        # Head frame tables (if limb 1 exists) — sparse like body tables
         if info["head_pics"]:
-            lines.append(f"; Head frame CHR lookup (limb 1)")
+            max_head_idx = max(p["index"] for p in info["head_pics"])
+            head_by_idx = {p["index"]: p for p in info["head_pics"]}
+            fallback_head = info["head_pics"][0]
+
+            lines.append(f"; Head frame CHR lookup (limb 1, sparse: {max_head_idx + 1} entries)")
             lines.append(f"{prefix}_HeadChrLo:")
-            for pic in info["head_pics"]:
-                lines.append(f"  .dw {prefix}_HeadPic{pic['index']:02d}_Chr")
+            for i in range(max_head_idx + 1):
+                p = head_by_idx.get(i, fallback_head)
+                lines.append(f"  .dw {prefix}_HeadPic{p['index']:02d}_Chr")
             lines.append("")
 
             lines.append(f"{prefix}_HeadChrHi:")
-            for pic in info["head_pics"]:
-                lines.append(f"  .db :{prefix}_HeadPic{pic['index']:02d}_Chr")
+            for i in range(max_head_idx + 1):
+                p = head_by_idx.get(i, fallback_head)
+                lines.append(f"  .db :{prefix}_HeadPic{p['index']:02d}_Chr")
             lines.append("")
 
             lines.append(f"{prefix}_HeadChrLen:")
-            for pic in info["head_pics"]:
-                lines.append(f"  .dw {prefix}_HeadPic{pic['index']:02d}_ChrEnd - {prefix}_HeadPic{pic['index']:02d}_Chr")
+            for i in range(max_head_idx + 1):
+                p = head_by_idx.get(i, fallback_head)
+                lines.append(f"  .dw {prefix}_HeadPic{p['index']:02d}_ChrEnd - {prefix}_HeadPic{p['index']:02d}_Chr")
             lines.append("")
 
             lines.append(f"; Head frame OAM lookup (limb 1)")
             lines.append(f"{prefix}_HeadOamLo:")
-            for pic in info["head_pics"]:
-                lines.append(f"  .dw {prefix}_HeadPic{pic['index']:02d}_Oam")
+            for i in range(max_head_idx + 1):
+                p = head_by_idx.get(i, fallback_head)
+                lines.append(f"  .dw {prefix}_HeadPic{p['index']:02d}_Oam")
             lines.append("")
 
             lines.append(f"{prefix}_HeadOamHi:")
-            for pic in info["head_pics"]:
-                lines.append(f"  .db :{prefix}_HeadPic{pic['index']:02d}_Oam")
+            for i in range(max_head_idx + 1):
+                p = head_by_idx.get(i, fallback_head)
+                lines.append(f"  .db :{prefix}_HeadPic{p['index']:02d}_Oam")
             lines.append("")
 
             # Head frame data
@@ -335,7 +359,8 @@ def generate_assembly(costumes, dcos_remap=None):
         num = costume_remap.get(i, i) if i in costumes or i in costume_remap else fallback
         if num is not None:
             prefix = f"Cost{num:03d}"
-            n_pics = costumes[num]["num_pics"]
+            # Use sparse table size (max pic index + 1) not count of existing pics
+            n_pics = costumes[num]["max_pic_idx"] + 1
             lines.append(f"  ; costume {i}" + (f" -> fallback {num}" if i not in costumes else ""))
             lines.append(f"  .dw {prefix}_Pal")
             lines.append(f"  .db :{prefix}_Pal")
@@ -385,7 +410,7 @@ def generate_assembly(costumes, dcos_remap=None):
         actual = costume_remap.get(i, i) if i in costumes or i in costume_remap else None
         if actual is not None and actual in costumes and costumes[actual]["head_pics"]:
             prefix = f"Cost{actual:03d}"
-            n_head = costumes[actual]["num_head_pics"]
+            n_head = costumes[actual]["max_head_idx"] + 1
             lines.append(f"  .dw {prefix}_HeadChrLo          ; costume {i}")
             lines.append(f"  .db :{prefix}_HeadChrLo, {n_head}")
         else:

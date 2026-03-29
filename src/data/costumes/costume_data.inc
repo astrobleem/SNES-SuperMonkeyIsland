@@ -37,6 +37,7 @@ Cost000_Pal:
   .incbin "data/snes_converted/costumes/cost_000/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 20 entries indexed by pic file number
 Cost000_ChrLo:
   .dw Cost000_Pic00_Chr
   .dw Cost000_Pic01_Chr
@@ -268,7 +269,7 @@ Cost000_Pic19_ChrEnd:
 Cost000_Pic19_Oam:
   .incbin "data/snes_converted/costumes/cost_000/pic19.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 12 entries)
 Cost000_HeadChrLo:
   .dw Cost000_HeadPic00_Chr
   .dw Cost000_HeadPic01_Chr
@@ -423,6 +424,7 @@ Cost001_Pal:
   .incbin "data/snes_converted/costumes/cost_001/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 48 entries indexed by pic file number
 Cost001_ChrLo:
   .dw Cost001_Pic00_Chr
   .dw Cost001_Pic01_Chr
@@ -962,7 +964,7 @@ Cost001_Pic47_ChrEnd:
 Cost001_Pic47_Oam:
   .incbin "data/snes_converted/costumes/cost_001/pic47.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 16 entries)
 Cost001_HeadChrLo:
   .dw Cost001_HeadPic00_Chr
   .dw Cost001_HeadPic01_Chr
@@ -1161,6 +1163,7 @@ Cost003_Pal:
   .incbin "data/snes_converted/costumes/cost_003/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 15 entries indexed by pic file number
 Cost003_ChrLo:
   .dw Cost003_Pic00_Chr
   .dw Cost003_Pic01_Chr
@@ -1348,6 +1351,7 @@ Cost004_Pal:
   .incbin "data/snes_converted/costumes/cost_004/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 3 entries indexed by pic file number
 Cost004_ChrLo:
   .dw Cost004_Pic00_Chr
   .dw Cost004_Pic01_Chr
@@ -1403,8 +1407,10 @@ Cost005_Pal:
   .incbin "data/snes_converted/costumes/cost_005/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 8 entries indexed by pic file number
 Cost005_ChrLo:
   .dw Cost005_Pic00_Chr
+  .dw Cost005_Pic00_Chr  ; gap->pic00
   .dw Cost005_Pic02_Chr
   .dw Cost005_Pic03_Chr
   .dw Cost005_Pic04_Chr
@@ -1414,6 +1420,7 @@ Cost005_ChrLo:
 
 Cost005_ChrHi:
   .db :Cost005_Pic00_Chr
+  .db :Cost005_Pic00_Chr
   .db :Cost005_Pic02_Chr
   .db :Cost005_Pic03_Chr
   .db :Cost005_Pic04_Chr
@@ -1422,6 +1429,7 @@ Cost005_ChrHi:
   .db :Cost005_Pic07_Chr
 
 Cost005_ChrLen:
+  .dw Cost005_Pic00_ChrEnd - Cost005_Pic00_Chr
   .dw Cost005_Pic00_ChrEnd - Cost005_Pic00_Chr
   .dw Cost005_Pic02_ChrEnd - Cost005_Pic02_Chr
   .dw Cost005_Pic03_ChrEnd - Cost005_Pic03_Chr
@@ -1433,6 +1441,7 @@ Cost005_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost005_OamLo:
   .dw Cost005_Pic00_Oam
+  .dw Cost005_Pic00_Oam
   .dw Cost005_Pic02_Oam
   .dw Cost005_Pic03_Oam
   .dw Cost005_Pic04_Oam
@@ -1441,6 +1450,7 @@ Cost005_OamLo:
   .dw Cost005_Pic07_Oam
 
 Cost005_OamHi:
+  .db :Cost005_Pic00_Oam
   .db :Cost005_Pic00_Oam
   .db :Cost005_Pic02_Oam
   .db :Cost005_Pic03_Oam
@@ -1502,6 +1512,7 @@ Cost006_Pal:
   .incbin "data/snes_converted/costumes/cost_006/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 28 entries indexed by pic file number
 Cost006_ChrLo:
   .dw Cost006_Pic00_Chr
   .dw Cost006_Pic01_Chr
@@ -1832,6 +1843,7 @@ Cost007_Pal:
   .incbin "data/snes_converted/costumes/cost_007/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 2 entries indexed by pic file number
 Cost007_ChrLo:
   .dw Cost007_Pic00_Chr
   .dw Cost007_Pic01_Chr
@@ -1876,6 +1888,7 @@ Cost008_Pal:
   .incbin "data/snes_converted/costumes/cost_008/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost008_ChrLo:
   .dw Cost008_Pic00_Chr
   .dw Cost008_Pic01_Chr
@@ -2041,6 +2054,7 @@ Cost009_Pal:
   .incbin "data/snes_converted/costumes/cost_009/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 7 entries indexed by pic file number
 Cost009_ChrLo:
   .dw Cost009_Pic00_Chr
   .dw Cost009_Pic01_Chr
@@ -2140,6 +2154,7 @@ Cost010_Pal:
   .incbin "data/snes_converted/costumes/cost_010/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 34 entries indexed by pic file number
 Cost010_ChrLo:
   .dw Cost010_Pic00_Chr
   .dw Cost010_Pic01_Chr
@@ -2525,7 +2540,7 @@ Cost010_Pic33_ChrEnd:
 Cost010_Pic33_Oam:
   .incbin "data/snes_converted/costumes/cost_010/pic33.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost010_HeadChrLo:
   .dw Cost010_HeadPic00_Chr
   .dw Cost010_HeadPic01_Chr
@@ -2768,6 +2783,7 @@ Cost012_Pal:
   .incbin "data/snes_converted/costumes/cost_012/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 7 entries indexed by pic file number
 Cost012_ChrLo:
   .dw Cost012_Pic00_Chr
   .dw Cost012_Pic01_Chr
@@ -2867,6 +2883,7 @@ Cost013_Pal:
   .incbin "data/snes_converted/costumes/cost_013/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 36 entries indexed by pic file number
 Cost013_ChrLo:
   .dw Cost013_Pic00_Chr
   .dw Cost013_Pic01_Chr
@@ -3285,6 +3302,7 @@ Cost014_Pal:
   .incbin "data/snes_converted/costumes/cost_014/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 12 entries indexed by pic file number
 Cost014_ChrLo:
   .dw Cost014_Pic00_Chr
   .dw Cost014_Pic01_Chr
@@ -3292,6 +3310,7 @@ Cost014_ChrLo:
   .dw Cost014_Pic03_Chr
   .dw Cost014_Pic04_Chr
   .dw Cost014_Pic05_Chr
+  .dw Cost014_Pic00_Chr  ; gap->pic00
   .dw Cost014_Pic07_Chr
   .dw Cost014_Pic08_Chr
   .dw Cost014_Pic09_Chr
@@ -3305,6 +3324,7 @@ Cost014_ChrHi:
   .db :Cost014_Pic03_Chr
   .db :Cost014_Pic04_Chr
   .db :Cost014_Pic05_Chr
+  .db :Cost014_Pic00_Chr
   .db :Cost014_Pic07_Chr
   .db :Cost014_Pic08_Chr
   .db :Cost014_Pic09_Chr
@@ -3318,6 +3338,7 @@ Cost014_ChrLen:
   .dw Cost014_Pic03_ChrEnd - Cost014_Pic03_Chr
   .dw Cost014_Pic04_ChrEnd - Cost014_Pic04_Chr
   .dw Cost014_Pic05_ChrEnd - Cost014_Pic05_Chr
+  .dw Cost014_Pic00_ChrEnd - Cost014_Pic00_Chr
   .dw Cost014_Pic07_ChrEnd - Cost014_Pic07_Chr
   .dw Cost014_Pic08_ChrEnd - Cost014_Pic08_Chr
   .dw Cost014_Pic09_ChrEnd - Cost014_Pic09_Chr
@@ -3332,6 +3353,7 @@ Cost014_OamLo:
   .dw Cost014_Pic03_Oam
   .dw Cost014_Pic04_Oam
   .dw Cost014_Pic05_Oam
+  .dw Cost014_Pic00_Oam
   .dw Cost014_Pic07_Oam
   .dw Cost014_Pic08_Oam
   .dw Cost014_Pic09_Oam
@@ -3345,6 +3367,7 @@ Cost014_OamHi:
   .db :Cost014_Pic03_Oam
   .db :Cost014_Pic04_Oam
   .db :Cost014_Pic05_Oam
+  .db :Cost014_Pic00_Oam
   .db :Cost014_Pic07_Oam
   .db :Cost014_Pic08_Oam
   .db :Cost014_Pic09_Oam
@@ -3428,6 +3451,7 @@ Cost015_Pal:
   .incbin "data/snes_converted/costumes/cost_015/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 3 entries indexed by pic file number
 Cost015_ChrLo:
   .dw Cost015_Pic00_Chr
   .dw Cost015_Pic01_Chr
@@ -3483,6 +3507,7 @@ Cost016_Pal:
   .incbin "data/snes_converted/costumes/cost_016/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 7 entries indexed by pic file number
 Cost016_ChrLo:
   .dw Cost016_Pic00_Chr
   .dw Cost016_Pic01_Chr
@@ -3582,6 +3607,7 @@ Cost017_Pal:
   .incbin "data/snes_converted/costumes/cost_017/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 14 entries indexed by pic file number
 Cost017_ChrLo:
   .dw Cost017_Pic00_Chr
   .dw Cost017_Pic01_Chr
@@ -3758,6 +3784,7 @@ Cost018_Pal:
   .incbin "data/snes_converted/costumes/cost_018/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 5 entries indexed by pic file number
 Cost018_ChrLo:
   .dw Cost018_Pic00_Chr
   .dw Cost018_Pic01_Chr
@@ -3835,11 +3862,13 @@ Cost019_Pal:
   .incbin "data/snes_converted/costumes/cost_019/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 6 entries indexed by pic file number
 Cost019_ChrLo:
   .dw Cost019_Pic00_Chr
   .dw Cost019_Pic01_Chr
   .dw Cost019_Pic02_Chr
   .dw Cost019_Pic03_Chr
+  .dw Cost019_Pic00_Chr  ; gap->pic00
   .dw Cost019_Pic05_Chr
 
 Cost019_ChrHi:
@@ -3847,6 +3876,7 @@ Cost019_ChrHi:
   .db :Cost019_Pic01_Chr
   .db :Cost019_Pic02_Chr
   .db :Cost019_Pic03_Chr
+  .db :Cost019_Pic00_Chr
   .db :Cost019_Pic05_Chr
 
 Cost019_ChrLen:
@@ -3854,6 +3884,7 @@ Cost019_ChrLen:
   .dw Cost019_Pic01_ChrEnd - Cost019_Pic01_Chr
   .dw Cost019_Pic02_ChrEnd - Cost019_Pic02_Chr
   .dw Cost019_Pic03_ChrEnd - Cost019_Pic03_Chr
+  .dw Cost019_Pic00_ChrEnd - Cost019_Pic00_Chr
   .dw Cost019_Pic05_ChrEnd - Cost019_Pic05_Chr
 
 ; Body frame OAM lookup (word addr, bank)
@@ -3862,6 +3893,7 @@ Cost019_OamLo:
   .dw Cost019_Pic01_Oam
   .dw Cost019_Pic02_Oam
   .dw Cost019_Pic03_Oam
+  .dw Cost019_Pic00_Oam
   .dw Cost019_Pic05_Oam
 
 Cost019_OamHi:
@@ -3869,6 +3901,7 @@ Cost019_OamHi:
   .db :Cost019_Pic01_Oam
   .db :Cost019_Pic02_Oam
   .db :Cost019_Pic03_Oam
+  .db :Cost019_Pic00_Oam
   .db :Cost019_Pic05_Oam
 
 Cost019_Pic00_Chr:
@@ -3912,6 +3945,7 @@ Cost020_Pal:
   .incbin "data/snes_converted/costumes/cost_020/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost020_ChrLo:
   .dw Cost020_Pic00_Chr
   .dw Cost020_Pic01_Chr
@@ -4473,7 +4507,7 @@ Cost020_Pic49_ChrEnd:
 Cost020_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_020/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 8 entries)
 Cost020_HeadChrLo:
   .dw Cost020_HeadPic00_Chr
   .dw Cost020_HeadPic01_Chr
@@ -4584,6 +4618,7 @@ Cost021_Pal:
   .incbin "data/snes_converted/costumes/cost_021/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 10 entries indexed by pic file number
 Cost021_ChrLo:
   .dw Cost021_Pic00_Chr
   .dw Cost021_Pic01_Chr
@@ -4705,7 +4740,7 @@ Cost021_Pic09_ChrEnd:
 Cost021_Pic09_Oam:
   .incbin "data/snes_converted/costumes/cost_021/pic09.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 4 entries)
 Cost021_HeadChrLo:
   .dw Cost021_HeadPic00_Chr
   .dw Cost021_HeadPic01_Chr
@@ -4772,6 +4807,7 @@ Cost022_Pal:
   .incbin "data/snes_converted/costumes/cost_022/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 17 entries indexed by pic file number
 Cost022_ChrLo:
   .dw Cost022_Pic00_Chr
   .dw Cost022_Pic01_Chr
@@ -4981,6 +5017,7 @@ Cost023_Pal:
   .incbin "data/snes_converted/costumes/cost_023/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost023_ChrLo:
   .dw Cost023_Pic00_Chr
   .dw Cost023_Pic01_Chr
@@ -5146,6 +5183,7 @@ Cost024_Pal:
   .incbin "data/snes_converted/costumes/cost_024/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 18 entries indexed by pic file number
 Cost024_ChrLo:
   .dw Cost024_Pic00_Chr
   .dw Cost024_Pic01_Chr
@@ -5366,6 +5404,7 @@ Cost025_Pal:
   .incbin "data/snes_converted/costumes/cost_025/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 27 entries indexed by pic file number
 Cost025_ChrLo:
   .dw Cost025_Pic00_Chr
   .dw Cost025_Pic01_Chr
@@ -5685,6 +5724,7 @@ Cost026_Pal:
   .incbin "data/snes_converted/costumes/cost_026/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 25 entries indexed by pic file number
 Cost026_ChrLo:
   .dw Cost026_Pic00_Chr
   .dw Cost026_Pic01_Chr
@@ -5693,6 +5733,7 @@ Cost026_ChrLo:
   .dw Cost026_Pic04_Chr
   .dw Cost026_Pic05_Chr
   .dw Cost026_Pic06_Chr
+  .dw Cost026_Pic00_Chr  ; gap->pic00
   .dw Cost026_Pic08_Chr
   .dw Cost026_Pic09_Chr
   .dw Cost026_Pic10_Chr
@@ -5719,6 +5760,7 @@ Cost026_ChrHi:
   .db :Cost026_Pic04_Chr
   .db :Cost026_Pic05_Chr
   .db :Cost026_Pic06_Chr
+  .db :Cost026_Pic00_Chr
   .db :Cost026_Pic08_Chr
   .db :Cost026_Pic09_Chr
   .db :Cost026_Pic10_Chr
@@ -5745,6 +5787,7 @@ Cost026_ChrLen:
   .dw Cost026_Pic04_ChrEnd - Cost026_Pic04_Chr
   .dw Cost026_Pic05_ChrEnd - Cost026_Pic05_Chr
   .dw Cost026_Pic06_ChrEnd - Cost026_Pic06_Chr
+  .dw Cost026_Pic00_ChrEnd - Cost026_Pic00_Chr
   .dw Cost026_Pic08_ChrEnd - Cost026_Pic08_Chr
   .dw Cost026_Pic09_ChrEnd - Cost026_Pic09_Chr
   .dw Cost026_Pic10_ChrEnd - Cost026_Pic10_Chr
@@ -5772,6 +5815,7 @@ Cost026_OamLo:
   .dw Cost026_Pic04_Oam
   .dw Cost026_Pic05_Oam
   .dw Cost026_Pic06_Oam
+  .dw Cost026_Pic00_Oam
   .dw Cost026_Pic08_Oam
   .dw Cost026_Pic09_Oam
   .dw Cost026_Pic10_Oam
@@ -5798,6 +5842,7 @@ Cost026_OamHi:
   .db :Cost026_Pic04_Oam
   .db :Cost026_Pic05_Oam
   .db :Cost026_Pic06_Oam
+  .db :Cost026_Pic00_Oam
   .db :Cost026_Pic08_Oam
   .db :Cost026_Pic09_Oam
   .db :Cost026_Pic10_Oam
@@ -5971,6 +6016,7 @@ Cost027_Pal:
   .incbin "data/snes_converted/costumes/cost_027/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 7 entries indexed by pic file number
 Cost027_ChrLo:
   .dw Cost027_Pic00_Chr
   .dw Cost027_Pic01_Chr
@@ -6070,6 +6116,7 @@ Cost028_Pal:
   .incbin "data/snes_converted/costumes/cost_028/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost028_ChrLo:
   .dw Cost028_Pic00_Chr
   .dw Cost028_Pic01_Chr
@@ -6078,6 +6125,7 @@ Cost028_ChrLo:
   .dw Cost028_Pic04_Chr
   .dw Cost028_Pic05_Chr
   .dw Cost028_Pic06_Chr
+  .dw Cost028_Pic00_Chr  ; gap->pic00
   .dw Cost028_Pic08_Chr
   .dw Cost028_Pic09_Chr
   .dw Cost028_Pic10_Chr
@@ -6100,6 +6148,9 @@ Cost028_ChrLo:
   .dw Cost028_Pic27_Chr
   .dw Cost028_Pic28_Chr
   .dw Cost028_Pic29_Chr
+  .dw Cost028_Pic00_Chr  ; gap->pic00
+  .dw Cost028_Pic00_Chr  ; gap->pic00
+  .dw Cost028_Pic00_Chr  ; gap->pic00
   .dw Cost028_Pic33_Chr
   .dw Cost028_Pic34_Chr
   .dw Cost028_Pic35_Chr
@@ -6126,6 +6177,7 @@ Cost028_ChrHi:
   .db :Cost028_Pic04_Chr
   .db :Cost028_Pic05_Chr
   .db :Cost028_Pic06_Chr
+  .db :Cost028_Pic00_Chr
   .db :Cost028_Pic08_Chr
   .db :Cost028_Pic09_Chr
   .db :Cost028_Pic10_Chr
@@ -6148,6 +6200,9 @@ Cost028_ChrHi:
   .db :Cost028_Pic27_Chr
   .db :Cost028_Pic28_Chr
   .db :Cost028_Pic29_Chr
+  .db :Cost028_Pic00_Chr
+  .db :Cost028_Pic00_Chr
+  .db :Cost028_Pic00_Chr
   .db :Cost028_Pic33_Chr
   .db :Cost028_Pic34_Chr
   .db :Cost028_Pic35_Chr
@@ -6174,6 +6229,7 @@ Cost028_ChrLen:
   .dw Cost028_Pic04_ChrEnd - Cost028_Pic04_Chr
   .dw Cost028_Pic05_ChrEnd - Cost028_Pic05_Chr
   .dw Cost028_Pic06_ChrEnd - Cost028_Pic06_Chr
+  .dw Cost028_Pic00_ChrEnd - Cost028_Pic00_Chr
   .dw Cost028_Pic08_ChrEnd - Cost028_Pic08_Chr
   .dw Cost028_Pic09_ChrEnd - Cost028_Pic09_Chr
   .dw Cost028_Pic10_ChrEnd - Cost028_Pic10_Chr
@@ -6196,6 +6252,9 @@ Cost028_ChrLen:
   .dw Cost028_Pic27_ChrEnd - Cost028_Pic27_Chr
   .dw Cost028_Pic28_ChrEnd - Cost028_Pic28_Chr
   .dw Cost028_Pic29_ChrEnd - Cost028_Pic29_Chr
+  .dw Cost028_Pic00_ChrEnd - Cost028_Pic00_Chr
+  .dw Cost028_Pic00_ChrEnd - Cost028_Pic00_Chr
+  .dw Cost028_Pic00_ChrEnd - Cost028_Pic00_Chr
   .dw Cost028_Pic33_ChrEnd - Cost028_Pic33_Chr
   .dw Cost028_Pic34_ChrEnd - Cost028_Pic34_Chr
   .dw Cost028_Pic35_ChrEnd - Cost028_Pic35_Chr
@@ -6223,6 +6282,7 @@ Cost028_OamLo:
   .dw Cost028_Pic04_Oam
   .dw Cost028_Pic05_Oam
   .dw Cost028_Pic06_Oam
+  .dw Cost028_Pic00_Oam
   .dw Cost028_Pic08_Oam
   .dw Cost028_Pic09_Oam
   .dw Cost028_Pic10_Oam
@@ -6245,6 +6305,9 @@ Cost028_OamLo:
   .dw Cost028_Pic27_Oam
   .dw Cost028_Pic28_Oam
   .dw Cost028_Pic29_Oam
+  .dw Cost028_Pic00_Oam
+  .dw Cost028_Pic00_Oam
+  .dw Cost028_Pic00_Oam
   .dw Cost028_Pic33_Oam
   .dw Cost028_Pic34_Oam
   .dw Cost028_Pic35_Oam
@@ -6271,6 +6334,7 @@ Cost028_OamHi:
   .db :Cost028_Pic04_Oam
   .db :Cost028_Pic05_Oam
   .db :Cost028_Pic06_Oam
+  .db :Cost028_Pic00_Oam
   .db :Cost028_Pic08_Oam
   .db :Cost028_Pic09_Oam
   .db :Cost028_Pic10_Oam
@@ -6293,6 +6357,9 @@ Cost028_OamHi:
   .db :Cost028_Pic27_Oam
   .db :Cost028_Pic28_Oam
   .db :Cost028_Pic29_Oam
+  .db :Cost028_Pic00_Oam
+  .db :Cost028_Pic00_Oam
+  .db :Cost028_Pic00_Oam
   .db :Cost028_Pic33_Oam
   .db :Cost028_Pic34_Oam
   .db :Cost028_Pic35_Oam
@@ -6587,7 +6654,7 @@ Cost028_Pic49_ChrEnd:
 Cost028_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_028/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost028_HeadChrLo:
   .dw Cost028_HeadPic00_Chr
   .dw Cost028_HeadPic01_Chr
@@ -6830,6 +6897,7 @@ Cost029_Pal:
   .incbin "data/snes_converted/costumes/cost_029/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 22 entries indexed by pic file number
 Cost029_ChrLo:
   .dw Cost029_Pic00_Chr
   .dw Cost029_Pic01_Chr
@@ -7094,7 +7162,9 @@ Cost030_Pal:
   .incbin "data/snes_converted/costumes/cost_030/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 12 entries indexed by pic file number
 Cost030_ChrLo:
+  .dw Cost030_Pic01_Chr  ; gap->pic00
   .dw Cost030_Pic01_Chr
   .dw Cost030_Pic02_Chr
   .dw Cost030_Pic03_Chr
@@ -7109,6 +7179,7 @@ Cost030_ChrLo:
 
 Cost030_ChrHi:
   .db :Cost030_Pic01_Chr
+  .db :Cost030_Pic01_Chr
   .db :Cost030_Pic02_Chr
   .db :Cost030_Pic03_Chr
   .db :Cost030_Pic04_Chr
@@ -7121,6 +7192,7 @@ Cost030_ChrHi:
   .db :Cost030_Pic11_Chr
 
 Cost030_ChrLen:
+  .dw Cost030_Pic01_ChrEnd - Cost030_Pic01_Chr
   .dw Cost030_Pic01_ChrEnd - Cost030_Pic01_Chr
   .dw Cost030_Pic02_ChrEnd - Cost030_Pic02_Chr
   .dw Cost030_Pic03_ChrEnd - Cost030_Pic03_Chr
@@ -7136,6 +7208,7 @@ Cost030_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost030_OamLo:
   .dw Cost030_Pic01_Oam
+  .dw Cost030_Pic01_Oam
   .dw Cost030_Pic02_Oam
   .dw Cost030_Pic03_Oam
   .dw Cost030_Pic04_Oam
@@ -7148,6 +7221,7 @@ Cost030_OamLo:
   .dw Cost030_Pic11_Oam
 
 Cost030_OamHi:
+  .db :Cost030_Pic01_Oam
   .db :Cost030_Pic01_Oam
   .db :Cost030_Pic02_Oam
   .db :Cost030_Pic03_Oam
@@ -7226,7 +7300,7 @@ Cost030_Pic11_ChrEnd:
 Cost030_Pic11_Oam:
   .incbin "data/snes_converted/costumes/cost_030/pic11.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 5 entries)
 Cost030_HeadChrLo:
   .dw Cost030_HeadPic00_Chr
   .dw Cost030_HeadPic01_Chr
@@ -7304,6 +7378,7 @@ Cost031_Pal:
   .incbin "data/snes_converted/costumes/cost_031/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 47 entries indexed by pic file number
 Cost031_ChrLo:
   .dw Cost031_Pic00_Chr
   .dw Cost031_Pic01_Chr
@@ -7334,6 +7409,7 @@ Cost031_ChrLo:
   .dw Cost031_Pic26_Chr
   .dw Cost031_Pic27_Chr
   .dw Cost031_Pic28_Chr
+  .dw Cost031_Pic00_Chr  ; gap->pic00
   .dw Cost031_Pic30_Chr
   .dw Cost031_Pic31_Chr
   .dw Cost031_Pic32_Chr
@@ -7382,6 +7458,7 @@ Cost031_ChrHi:
   .db :Cost031_Pic26_Chr
   .db :Cost031_Pic27_Chr
   .db :Cost031_Pic28_Chr
+  .db :Cost031_Pic00_Chr
   .db :Cost031_Pic30_Chr
   .db :Cost031_Pic31_Chr
   .db :Cost031_Pic32_Chr
@@ -7430,6 +7507,7 @@ Cost031_ChrLen:
   .dw Cost031_Pic26_ChrEnd - Cost031_Pic26_Chr
   .dw Cost031_Pic27_ChrEnd - Cost031_Pic27_Chr
   .dw Cost031_Pic28_ChrEnd - Cost031_Pic28_Chr
+  .dw Cost031_Pic00_ChrEnd - Cost031_Pic00_Chr
   .dw Cost031_Pic30_ChrEnd - Cost031_Pic30_Chr
   .dw Cost031_Pic31_ChrEnd - Cost031_Pic31_Chr
   .dw Cost031_Pic32_ChrEnd - Cost031_Pic32_Chr
@@ -7479,6 +7557,7 @@ Cost031_OamLo:
   .dw Cost031_Pic26_Oam
   .dw Cost031_Pic27_Oam
   .dw Cost031_Pic28_Oam
+  .dw Cost031_Pic00_Oam
   .dw Cost031_Pic30_Oam
   .dw Cost031_Pic31_Oam
   .dw Cost031_Pic32_Oam
@@ -7527,6 +7606,7 @@ Cost031_OamHi:
   .db :Cost031_Pic26_Oam
   .db :Cost031_Pic27_Oam
   .db :Cost031_Pic28_Oam
+  .db :Cost031_Pic00_Oam
   .db :Cost031_Pic30_Oam
   .db :Cost031_Pic31_Oam
   .db :Cost031_Pic32_Oam
@@ -7821,7 +7901,7 @@ Cost031_Pic46_ChrEnd:
 Cost031_Pic46_Oam:
   .incbin "data/snes_converted/costumes/cost_031/pic46.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost031_HeadChrLo:
   .dw Cost031_HeadPic00_Chr
   .dw Cost031_HeadPic01_Chr
@@ -7829,6 +7909,7 @@ Cost031_HeadChrLo:
   .dw Cost031_HeadPic03_Chr
   .dw Cost031_HeadPic04_Chr
   .dw Cost031_HeadPic05_Chr
+  .dw Cost031_HeadPic00_Chr
   .dw Cost031_HeadPic07_Chr
   .dw Cost031_HeadPic08_Chr
   .dw Cost031_HeadPic09_Chr
@@ -7850,6 +7931,7 @@ Cost031_HeadChrHi:
   .db :Cost031_HeadPic03_Chr
   .db :Cost031_HeadPic04_Chr
   .db :Cost031_HeadPic05_Chr
+  .db :Cost031_HeadPic00_Chr
   .db :Cost031_HeadPic07_Chr
   .db :Cost031_HeadPic08_Chr
   .db :Cost031_HeadPic09_Chr
@@ -7871,6 +7953,7 @@ Cost031_HeadChrLen:
   .dw Cost031_HeadPic03_ChrEnd - Cost031_HeadPic03_Chr
   .dw Cost031_HeadPic04_ChrEnd - Cost031_HeadPic04_Chr
   .dw Cost031_HeadPic05_ChrEnd - Cost031_HeadPic05_Chr
+  .dw Cost031_HeadPic00_ChrEnd - Cost031_HeadPic00_Chr
   .dw Cost031_HeadPic07_ChrEnd - Cost031_HeadPic07_Chr
   .dw Cost031_HeadPic08_ChrEnd - Cost031_HeadPic08_Chr
   .dw Cost031_HeadPic09_ChrEnd - Cost031_HeadPic09_Chr
@@ -7893,6 +7976,7 @@ Cost031_HeadOamLo:
   .dw Cost031_HeadPic03_Oam
   .dw Cost031_HeadPic04_Oam
   .dw Cost031_HeadPic05_Oam
+  .dw Cost031_HeadPic00_Oam
   .dw Cost031_HeadPic07_Oam
   .dw Cost031_HeadPic08_Oam
   .dw Cost031_HeadPic09_Oam
@@ -7914,6 +7998,7 @@ Cost031_HeadOamHi:
   .db :Cost031_HeadPic03_Oam
   .db :Cost031_HeadPic04_Oam
   .db :Cost031_HeadPic05_Oam
+  .db :Cost031_HeadPic00_Oam
   .db :Cost031_HeadPic07_Oam
   .db :Cost031_HeadPic08_Oam
   .db :Cost031_HeadPic09_Oam
@@ -8053,7 +8138,9 @@ Cost033_Pal:
   .incbin "data/snes_converted/costumes/cost_033/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost033_ChrLo:
+  .dw Cost033_Pic01_Chr  ; gap->pic00
   .dw Cost033_Pic01_Chr
   .dw Cost033_Pic02_Chr
   .dw Cost033_Pic03_Chr
@@ -8106,6 +8193,7 @@ Cost033_ChrLo:
 
 Cost033_ChrHi:
   .db :Cost033_Pic01_Chr
+  .db :Cost033_Pic01_Chr
   .db :Cost033_Pic02_Chr
   .db :Cost033_Pic03_Chr
   .db :Cost033_Pic04_Chr
@@ -8156,6 +8244,7 @@ Cost033_ChrHi:
   .db :Cost033_Pic49_Chr
 
 Cost033_ChrLen:
+  .dw Cost033_Pic01_ChrEnd - Cost033_Pic01_Chr
   .dw Cost033_Pic01_ChrEnd - Cost033_Pic01_Chr
   .dw Cost033_Pic02_ChrEnd - Cost033_Pic02_Chr
   .dw Cost033_Pic03_ChrEnd - Cost033_Pic03_Chr
@@ -8209,6 +8298,7 @@ Cost033_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost033_OamLo:
   .dw Cost033_Pic01_Oam
+  .dw Cost033_Pic01_Oam
   .dw Cost033_Pic02_Oam
   .dw Cost033_Pic03_Oam
   .dw Cost033_Pic04_Oam
@@ -8259,6 +8349,7 @@ Cost033_OamLo:
   .dw Cost033_Pic49_Oam
 
 Cost033_OamHi:
+  .db :Cost033_Pic01_Oam
   .db :Cost033_Pic01_Oam
   .db :Cost033_Pic02_Oam
   .db :Cost033_Pic03_Oam
@@ -8614,6 +8705,7 @@ Cost034_Pal:
   .incbin "data/snes_converted/costumes/cost_034/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 48 entries indexed by pic file number
 Cost034_ChrLo:
   .dw Cost034_Pic00_Chr
   .dw Cost034_Pic01_Chr
@@ -9153,7 +9245,7 @@ Cost034_Pic47_ChrEnd:
 Cost034_Pic47_Oam:
   .incbin "data/snes_converted/costumes/cost_034/pic47.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 19 entries)
 Cost034_HeadChrLo:
   .dw Cost034_HeadPic00_Chr
   .dw Cost034_HeadPic01_Chr
@@ -9385,8 +9477,10 @@ Cost035_Pal:
   .incbin "data/snes_converted/costumes/cost_035/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost035_ChrLo:
   .dw Cost035_Pic00_Chr
+  .dw Cost035_Pic00_Chr  ; gap->pic00
   .dw Cost035_Pic02_Chr
   .dw Cost035_Pic03_Chr
   .dw Cost035_Pic04_Chr
@@ -9411,6 +9505,7 @@ Cost035_ChrLo:
   .dw Cost035_Pic23_Chr
   .dw Cost035_Pic24_Chr
   .dw Cost035_Pic25_Chr
+  .dw Cost035_Pic00_Chr  ; gap->pic00
   .dw Cost035_Pic27_Chr
   .dw Cost035_Pic28_Chr
   .dw Cost035_Pic29_Chr
@@ -9437,6 +9532,7 @@ Cost035_ChrLo:
 
 Cost035_ChrHi:
   .db :Cost035_Pic00_Chr
+  .db :Cost035_Pic00_Chr
   .db :Cost035_Pic02_Chr
   .db :Cost035_Pic03_Chr
   .db :Cost035_Pic04_Chr
@@ -9461,6 +9557,7 @@ Cost035_ChrHi:
   .db :Cost035_Pic23_Chr
   .db :Cost035_Pic24_Chr
   .db :Cost035_Pic25_Chr
+  .db :Cost035_Pic00_Chr
   .db :Cost035_Pic27_Chr
   .db :Cost035_Pic28_Chr
   .db :Cost035_Pic29_Chr
@@ -9487,6 +9584,7 @@ Cost035_ChrHi:
 
 Cost035_ChrLen:
   .dw Cost035_Pic00_ChrEnd - Cost035_Pic00_Chr
+  .dw Cost035_Pic00_ChrEnd - Cost035_Pic00_Chr
   .dw Cost035_Pic02_ChrEnd - Cost035_Pic02_Chr
   .dw Cost035_Pic03_ChrEnd - Cost035_Pic03_Chr
   .dw Cost035_Pic04_ChrEnd - Cost035_Pic04_Chr
@@ -9511,6 +9609,7 @@ Cost035_ChrLen:
   .dw Cost035_Pic23_ChrEnd - Cost035_Pic23_Chr
   .dw Cost035_Pic24_ChrEnd - Cost035_Pic24_Chr
   .dw Cost035_Pic25_ChrEnd - Cost035_Pic25_Chr
+  .dw Cost035_Pic00_ChrEnd - Cost035_Pic00_Chr
   .dw Cost035_Pic27_ChrEnd - Cost035_Pic27_Chr
   .dw Cost035_Pic28_ChrEnd - Cost035_Pic28_Chr
   .dw Cost035_Pic29_ChrEnd - Cost035_Pic29_Chr
@@ -9538,6 +9637,7 @@ Cost035_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost035_OamLo:
   .dw Cost035_Pic00_Oam
+  .dw Cost035_Pic00_Oam
   .dw Cost035_Pic02_Oam
   .dw Cost035_Pic03_Oam
   .dw Cost035_Pic04_Oam
@@ -9562,6 +9662,7 @@ Cost035_OamLo:
   .dw Cost035_Pic23_Oam
   .dw Cost035_Pic24_Oam
   .dw Cost035_Pic25_Oam
+  .dw Cost035_Pic00_Oam
   .dw Cost035_Pic27_Oam
   .dw Cost035_Pic28_Oam
   .dw Cost035_Pic29_Oam
@@ -9588,6 +9689,7 @@ Cost035_OamLo:
 
 Cost035_OamHi:
   .db :Cost035_Pic00_Oam
+  .db :Cost035_Pic00_Oam
   .db :Cost035_Pic02_Oam
   .db :Cost035_Pic03_Oam
   .db :Cost035_Pic04_Oam
@@ -9612,6 +9714,7 @@ Cost035_OamHi:
   .db :Cost035_Pic23_Oam
   .db :Cost035_Pic24_Oam
   .db :Cost035_Pic25_Oam
+  .db :Cost035_Pic00_Oam
   .db :Cost035_Pic27_Oam
   .db :Cost035_Pic28_Oam
   .db :Cost035_Pic29_Oam
@@ -9924,7 +10027,7 @@ Cost035_Pic49_ChrEnd:
 Cost035_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_035/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost035_HeadChrLo:
   .dw Cost035_HeadPic00_Chr
   .dw Cost035_HeadPic01_Chr
@@ -10167,6 +10270,7 @@ Cost036_Pal:
   .incbin "data/snes_converted/costumes/cost_036/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 29 entries indexed by pic file number
 Cost036_ChrLo:
   .dw Cost036_Pic00_Chr
   .dw Cost036_Pic01_Chr
@@ -10186,6 +10290,8 @@ Cost036_ChrLo:
   .dw Cost036_Pic15_Chr
   .dw Cost036_Pic16_Chr
   .dw Cost036_Pic17_Chr
+  .dw Cost036_Pic00_Chr  ; gap->pic00
+  .dw Cost036_Pic00_Chr  ; gap->pic00
   .dw Cost036_Pic20_Chr
   .dw Cost036_Pic21_Chr
   .dw Cost036_Pic22_Chr
@@ -10215,6 +10321,8 @@ Cost036_ChrHi:
   .db :Cost036_Pic15_Chr
   .db :Cost036_Pic16_Chr
   .db :Cost036_Pic17_Chr
+  .db :Cost036_Pic00_Chr
+  .db :Cost036_Pic00_Chr
   .db :Cost036_Pic20_Chr
   .db :Cost036_Pic21_Chr
   .db :Cost036_Pic22_Chr
@@ -10244,6 +10352,8 @@ Cost036_ChrLen:
   .dw Cost036_Pic15_ChrEnd - Cost036_Pic15_Chr
   .dw Cost036_Pic16_ChrEnd - Cost036_Pic16_Chr
   .dw Cost036_Pic17_ChrEnd - Cost036_Pic17_Chr
+  .dw Cost036_Pic00_ChrEnd - Cost036_Pic00_Chr
+  .dw Cost036_Pic00_ChrEnd - Cost036_Pic00_Chr
   .dw Cost036_Pic20_ChrEnd - Cost036_Pic20_Chr
   .dw Cost036_Pic21_ChrEnd - Cost036_Pic21_Chr
   .dw Cost036_Pic22_ChrEnd - Cost036_Pic22_Chr
@@ -10274,6 +10384,8 @@ Cost036_OamLo:
   .dw Cost036_Pic15_Oam
   .dw Cost036_Pic16_Oam
   .dw Cost036_Pic17_Oam
+  .dw Cost036_Pic00_Oam
+  .dw Cost036_Pic00_Oam
   .dw Cost036_Pic20_Oam
   .dw Cost036_Pic21_Oam
   .dw Cost036_Pic22_Oam
@@ -10303,6 +10415,8 @@ Cost036_OamHi:
   .db :Cost036_Pic15_Oam
   .db :Cost036_Pic16_Oam
   .db :Cost036_Pic17_Oam
+  .db :Cost036_Pic00_Oam
+  .db :Cost036_Pic00_Oam
   .db :Cost036_Pic20_Oam
   .db :Cost036_Pic21_Oam
   .db :Cost036_Pic22_Oam
@@ -10475,7 +10589,7 @@ Cost036_Pic28_ChrEnd:
 Cost036_Pic28_Oam:
   .incbin "data/snes_converted/costumes/cost_036/pic28.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 18 entries)
 Cost036_HeadChrLo:
   .dw Cost036_HeadPic00_Chr
   .dw Cost036_HeadPic01_Chr
@@ -10484,6 +10598,8 @@ Cost036_HeadChrLo:
   .dw Cost036_HeadPic04_Chr
   .dw Cost036_HeadPic05_Chr
   .dw Cost036_HeadPic06_Chr
+  .dw Cost036_HeadPic00_Chr
+  .dw Cost036_HeadPic00_Chr
   .dw Cost036_HeadPic09_Chr
   .dw Cost036_HeadPic10_Chr
   .dw Cost036_HeadPic11_Chr
@@ -10502,6 +10618,8 @@ Cost036_HeadChrHi:
   .db :Cost036_HeadPic04_Chr
   .db :Cost036_HeadPic05_Chr
   .db :Cost036_HeadPic06_Chr
+  .db :Cost036_HeadPic00_Chr
+  .db :Cost036_HeadPic00_Chr
   .db :Cost036_HeadPic09_Chr
   .db :Cost036_HeadPic10_Chr
   .db :Cost036_HeadPic11_Chr
@@ -10520,6 +10638,8 @@ Cost036_HeadChrLen:
   .dw Cost036_HeadPic04_ChrEnd - Cost036_HeadPic04_Chr
   .dw Cost036_HeadPic05_ChrEnd - Cost036_HeadPic05_Chr
   .dw Cost036_HeadPic06_ChrEnd - Cost036_HeadPic06_Chr
+  .dw Cost036_HeadPic00_ChrEnd - Cost036_HeadPic00_Chr
+  .dw Cost036_HeadPic00_ChrEnd - Cost036_HeadPic00_Chr
   .dw Cost036_HeadPic09_ChrEnd - Cost036_HeadPic09_Chr
   .dw Cost036_HeadPic10_ChrEnd - Cost036_HeadPic10_Chr
   .dw Cost036_HeadPic11_ChrEnd - Cost036_HeadPic11_Chr
@@ -10539,6 +10659,8 @@ Cost036_HeadOamLo:
   .dw Cost036_HeadPic04_Oam
   .dw Cost036_HeadPic05_Oam
   .dw Cost036_HeadPic06_Oam
+  .dw Cost036_HeadPic00_Oam
+  .dw Cost036_HeadPic00_Oam
   .dw Cost036_HeadPic09_Oam
   .dw Cost036_HeadPic10_Oam
   .dw Cost036_HeadPic11_Oam
@@ -10557,6 +10679,8 @@ Cost036_HeadOamHi:
   .db :Cost036_HeadPic04_Oam
   .db :Cost036_HeadPic05_Oam
   .db :Cost036_HeadPic06_Oam
+  .db :Cost036_HeadPic00_Oam
+  .db :Cost036_HeadPic00_Oam
   .db :Cost036_HeadPic09_Oam
   .db :Cost036_HeadPic10_Oam
   .db :Cost036_HeadPic11_Oam
@@ -10674,12 +10798,15 @@ Cost037_Pal:
   .incbin "data/snes_converted/costumes/cost_037/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 26 entries indexed by pic file number
 Cost037_ChrLo:
   .dw Cost037_Pic00_Chr
   .dw Cost037_Pic01_Chr
   .dw Cost037_Pic02_Chr
   .dw Cost037_Pic03_Chr
   .dw Cost037_Pic04_Chr
+  .dw Cost037_Pic00_Chr  ; gap->pic00
+  .dw Cost037_Pic00_Chr  ; gap->pic00
   .dw Cost037_Pic07_Chr
   .dw Cost037_Pic08_Chr
   .dw Cost037_Pic09_Chr
@@ -10687,6 +10814,8 @@ Cost037_ChrLo:
   .dw Cost037_Pic11_Chr
   .dw Cost037_Pic12_Chr
   .dw Cost037_Pic13_Chr
+  .dw Cost037_Pic00_Chr  ; gap->pic00
+  .dw Cost037_Pic00_Chr  ; gap->pic00
   .dw Cost037_Pic16_Chr
   .dw Cost037_Pic17_Chr
   .dw Cost037_Pic18_Chr
@@ -10704,6 +10833,8 @@ Cost037_ChrHi:
   .db :Cost037_Pic02_Chr
   .db :Cost037_Pic03_Chr
   .db :Cost037_Pic04_Chr
+  .db :Cost037_Pic00_Chr
+  .db :Cost037_Pic00_Chr
   .db :Cost037_Pic07_Chr
   .db :Cost037_Pic08_Chr
   .db :Cost037_Pic09_Chr
@@ -10711,6 +10842,8 @@ Cost037_ChrHi:
   .db :Cost037_Pic11_Chr
   .db :Cost037_Pic12_Chr
   .db :Cost037_Pic13_Chr
+  .db :Cost037_Pic00_Chr
+  .db :Cost037_Pic00_Chr
   .db :Cost037_Pic16_Chr
   .db :Cost037_Pic17_Chr
   .db :Cost037_Pic18_Chr
@@ -10728,6 +10861,8 @@ Cost037_ChrLen:
   .dw Cost037_Pic02_ChrEnd - Cost037_Pic02_Chr
   .dw Cost037_Pic03_ChrEnd - Cost037_Pic03_Chr
   .dw Cost037_Pic04_ChrEnd - Cost037_Pic04_Chr
+  .dw Cost037_Pic00_ChrEnd - Cost037_Pic00_Chr
+  .dw Cost037_Pic00_ChrEnd - Cost037_Pic00_Chr
   .dw Cost037_Pic07_ChrEnd - Cost037_Pic07_Chr
   .dw Cost037_Pic08_ChrEnd - Cost037_Pic08_Chr
   .dw Cost037_Pic09_ChrEnd - Cost037_Pic09_Chr
@@ -10735,6 +10870,8 @@ Cost037_ChrLen:
   .dw Cost037_Pic11_ChrEnd - Cost037_Pic11_Chr
   .dw Cost037_Pic12_ChrEnd - Cost037_Pic12_Chr
   .dw Cost037_Pic13_ChrEnd - Cost037_Pic13_Chr
+  .dw Cost037_Pic00_ChrEnd - Cost037_Pic00_Chr
+  .dw Cost037_Pic00_ChrEnd - Cost037_Pic00_Chr
   .dw Cost037_Pic16_ChrEnd - Cost037_Pic16_Chr
   .dw Cost037_Pic17_ChrEnd - Cost037_Pic17_Chr
   .dw Cost037_Pic18_ChrEnd - Cost037_Pic18_Chr
@@ -10753,6 +10890,8 @@ Cost037_OamLo:
   .dw Cost037_Pic02_Oam
   .dw Cost037_Pic03_Oam
   .dw Cost037_Pic04_Oam
+  .dw Cost037_Pic00_Oam
+  .dw Cost037_Pic00_Oam
   .dw Cost037_Pic07_Oam
   .dw Cost037_Pic08_Oam
   .dw Cost037_Pic09_Oam
@@ -10760,6 +10899,8 @@ Cost037_OamLo:
   .dw Cost037_Pic11_Oam
   .dw Cost037_Pic12_Oam
   .dw Cost037_Pic13_Oam
+  .dw Cost037_Pic00_Oam
+  .dw Cost037_Pic00_Oam
   .dw Cost037_Pic16_Oam
   .dw Cost037_Pic17_Oam
   .dw Cost037_Pic18_Oam
@@ -10777,6 +10918,8 @@ Cost037_OamHi:
   .db :Cost037_Pic02_Oam
   .db :Cost037_Pic03_Oam
   .db :Cost037_Pic04_Oam
+  .db :Cost037_Pic00_Oam
+  .db :Cost037_Pic00_Oam
   .db :Cost037_Pic07_Oam
   .db :Cost037_Pic08_Oam
   .db :Cost037_Pic09_Oam
@@ -10784,6 +10927,8 @@ Cost037_OamHi:
   .db :Cost037_Pic11_Oam
   .db :Cost037_Pic12_Oam
   .db :Cost037_Pic13_Oam
+  .db :Cost037_Pic00_Oam
+  .db :Cost037_Pic00_Oam
   .db :Cost037_Pic16_Oam
   .db :Cost037_Pic17_Oam
   .db :Cost037_Pic18_Oam
@@ -10927,13 +11072,15 @@ Cost037_Pic25_ChrEnd:
 Cost037_Pic25_Oam:
   .incbin "data/snes_converted/costumes/cost_037/pic25.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 17 entries)
 Cost037_HeadChrLo:
   .dw Cost037_HeadPic00_Chr
   .dw Cost037_HeadPic01_Chr
   .dw Cost037_HeadPic02_Chr
   .dw Cost037_HeadPic03_Chr
   .dw Cost037_HeadPic04_Chr
+  .dw Cost037_HeadPic00_Chr
+  .dw Cost037_HeadPic00_Chr
   .dw Cost037_HeadPic07_Chr
   .dw Cost037_HeadPic08_Chr
   .dw Cost037_HeadPic09_Chr
@@ -10951,6 +11098,8 @@ Cost037_HeadChrHi:
   .db :Cost037_HeadPic02_Chr
   .db :Cost037_HeadPic03_Chr
   .db :Cost037_HeadPic04_Chr
+  .db :Cost037_HeadPic00_Chr
+  .db :Cost037_HeadPic00_Chr
   .db :Cost037_HeadPic07_Chr
   .db :Cost037_HeadPic08_Chr
   .db :Cost037_HeadPic09_Chr
@@ -10968,6 +11117,8 @@ Cost037_HeadChrLen:
   .dw Cost037_HeadPic02_ChrEnd - Cost037_HeadPic02_Chr
   .dw Cost037_HeadPic03_ChrEnd - Cost037_HeadPic03_Chr
   .dw Cost037_HeadPic04_ChrEnd - Cost037_HeadPic04_Chr
+  .dw Cost037_HeadPic00_ChrEnd - Cost037_HeadPic00_Chr
+  .dw Cost037_HeadPic00_ChrEnd - Cost037_HeadPic00_Chr
   .dw Cost037_HeadPic07_ChrEnd - Cost037_HeadPic07_Chr
   .dw Cost037_HeadPic08_ChrEnd - Cost037_HeadPic08_Chr
   .dw Cost037_HeadPic09_ChrEnd - Cost037_HeadPic09_Chr
@@ -10986,6 +11137,8 @@ Cost037_HeadOamLo:
   .dw Cost037_HeadPic02_Oam
   .dw Cost037_HeadPic03_Oam
   .dw Cost037_HeadPic04_Oam
+  .dw Cost037_HeadPic00_Oam
+  .dw Cost037_HeadPic00_Oam
   .dw Cost037_HeadPic07_Oam
   .dw Cost037_HeadPic08_Oam
   .dw Cost037_HeadPic09_Oam
@@ -11003,6 +11156,8 @@ Cost037_HeadOamHi:
   .db :Cost037_HeadPic02_Oam
   .db :Cost037_HeadPic03_Oam
   .db :Cost037_HeadPic04_Oam
+  .db :Cost037_HeadPic00_Oam
+  .db :Cost037_HeadPic00_Oam
   .db :Cost037_HeadPic07_Oam
   .db :Cost037_HeadPic08_Oam
   .db :Cost037_HeadPic09_Oam
@@ -11115,8 +11270,10 @@ Cost038_Pal:
   .incbin "data/snes_converted/costumes/cost_038/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 34 entries indexed by pic file number
 Cost038_ChrLo:
   .dw Cost038_Pic00_Chr
+  .dw Cost038_Pic00_Chr  ; gap->pic00
   .dw Cost038_Pic02_Chr
   .dw Cost038_Pic03_Chr
   .dw Cost038_Pic04_Chr
@@ -11152,6 +11309,7 @@ Cost038_ChrLo:
 
 Cost038_ChrHi:
   .db :Cost038_Pic00_Chr
+  .db :Cost038_Pic00_Chr
   .db :Cost038_Pic02_Chr
   .db :Cost038_Pic03_Chr
   .db :Cost038_Pic04_Chr
@@ -11186,6 +11344,7 @@ Cost038_ChrHi:
   .db :Cost038_Pic33_Chr
 
 Cost038_ChrLen:
+  .dw Cost038_Pic00_ChrEnd - Cost038_Pic00_Chr
   .dw Cost038_Pic00_ChrEnd - Cost038_Pic00_Chr
   .dw Cost038_Pic02_ChrEnd - Cost038_Pic02_Chr
   .dw Cost038_Pic03_ChrEnd - Cost038_Pic03_Chr
@@ -11223,6 +11382,7 @@ Cost038_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost038_OamLo:
   .dw Cost038_Pic00_Oam
+  .dw Cost038_Pic00_Oam
   .dw Cost038_Pic02_Oam
   .dw Cost038_Pic03_Oam
   .dw Cost038_Pic04_Oam
@@ -11257,6 +11417,7 @@ Cost038_OamLo:
   .dw Cost038_Pic33_Oam
 
 Cost038_OamHi:
+  .db :Cost038_Pic00_Oam
   .db :Cost038_Pic00_Oam
   .db :Cost038_Pic02_Oam
   .db :Cost038_Pic03_Oam
@@ -11500,24 +11661,29 @@ Cost039_Pal:
   .incbin "data/snes_converted/costumes/cost_039/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost039_ChrLo:
   .dw Cost039_Pic00_Chr
   .dw Cost039_Pic01_Chr
   .dw Cost039_Pic02_Chr
   .dw Cost039_Pic03_Chr
+  .dw Cost039_Pic00_Chr  ; gap->pic00
   .dw Cost039_Pic05_Chr
   .dw Cost039_Pic06_Chr
   .dw Cost039_Pic07_Chr
   .dw Cost039_Pic08_Chr
+  .dw Cost039_Pic00_Chr  ; gap->pic00
   .dw Cost039_Pic10_Chr
   .dw Cost039_Pic11_Chr
   .dw Cost039_Pic12_Chr
+  .dw Cost039_Pic00_Chr  ; gap->pic00
   .dw Cost039_Pic14_Chr
   .dw Cost039_Pic15_Chr
   .dw Cost039_Pic16_Chr
   .dw Cost039_Pic17_Chr
   .dw Cost039_Pic18_Chr
   .dw Cost039_Pic19_Chr
+  .dw Cost039_Pic00_Chr  ; gap->pic00
   .dw Cost039_Pic21_Chr
   .dw Cost039_Pic22_Chr
   .dw Cost039_Pic23_Chr
@@ -11532,6 +11698,7 @@ Cost039_ChrLo:
   .dw Cost039_Pic32_Chr
   .dw Cost039_Pic33_Chr
   .dw Cost039_Pic34_Chr
+  .dw Cost039_Pic00_Chr  ; gap->pic00
   .dw Cost039_Pic36_Chr
   .dw Cost039_Pic37_Chr
   .dw Cost039_Pic38_Chr
@@ -11552,19 +11719,23 @@ Cost039_ChrHi:
   .db :Cost039_Pic01_Chr
   .db :Cost039_Pic02_Chr
   .db :Cost039_Pic03_Chr
+  .db :Cost039_Pic00_Chr
   .db :Cost039_Pic05_Chr
   .db :Cost039_Pic06_Chr
   .db :Cost039_Pic07_Chr
   .db :Cost039_Pic08_Chr
+  .db :Cost039_Pic00_Chr
   .db :Cost039_Pic10_Chr
   .db :Cost039_Pic11_Chr
   .db :Cost039_Pic12_Chr
+  .db :Cost039_Pic00_Chr
   .db :Cost039_Pic14_Chr
   .db :Cost039_Pic15_Chr
   .db :Cost039_Pic16_Chr
   .db :Cost039_Pic17_Chr
   .db :Cost039_Pic18_Chr
   .db :Cost039_Pic19_Chr
+  .db :Cost039_Pic00_Chr
   .db :Cost039_Pic21_Chr
   .db :Cost039_Pic22_Chr
   .db :Cost039_Pic23_Chr
@@ -11579,6 +11750,7 @@ Cost039_ChrHi:
   .db :Cost039_Pic32_Chr
   .db :Cost039_Pic33_Chr
   .db :Cost039_Pic34_Chr
+  .db :Cost039_Pic00_Chr
   .db :Cost039_Pic36_Chr
   .db :Cost039_Pic37_Chr
   .db :Cost039_Pic38_Chr
@@ -11599,19 +11771,23 @@ Cost039_ChrLen:
   .dw Cost039_Pic01_ChrEnd - Cost039_Pic01_Chr
   .dw Cost039_Pic02_ChrEnd - Cost039_Pic02_Chr
   .dw Cost039_Pic03_ChrEnd - Cost039_Pic03_Chr
+  .dw Cost039_Pic00_ChrEnd - Cost039_Pic00_Chr
   .dw Cost039_Pic05_ChrEnd - Cost039_Pic05_Chr
   .dw Cost039_Pic06_ChrEnd - Cost039_Pic06_Chr
   .dw Cost039_Pic07_ChrEnd - Cost039_Pic07_Chr
   .dw Cost039_Pic08_ChrEnd - Cost039_Pic08_Chr
+  .dw Cost039_Pic00_ChrEnd - Cost039_Pic00_Chr
   .dw Cost039_Pic10_ChrEnd - Cost039_Pic10_Chr
   .dw Cost039_Pic11_ChrEnd - Cost039_Pic11_Chr
   .dw Cost039_Pic12_ChrEnd - Cost039_Pic12_Chr
+  .dw Cost039_Pic00_ChrEnd - Cost039_Pic00_Chr
   .dw Cost039_Pic14_ChrEnd - Cost039_Pic14_Chr
   .dw Cost039_Pic15_ChrEnd - Cost039_Pic15_Chr
   .dw Cost039_Pic16_ChrEnd - Cost039_Pic16_Chr
   .dw Cost039_Pic17_ChrEnd - Cost039_Pic17_Chr
   .dw Cost039_Pic18_ChrEnd - Cost039_Pic18_Chr
   .dw Cost039_Pic19_ChrEnd - Cost039_Pic19_Chr
+  .dw Cost039_Pic00_ChrEnd - Cost039_Pic00_Chr
   .dw Cost039_Pic21_ChrEnd - Cost039_Pic21_Chr
   .dw Cost039_Pic22_ChrEnd - Cost039_Pic22_Chr
   .dw Cost039_Pic23_ChrEnd - Cost039_Pic23_Chr
@@ -11626,6 +11802,7 @@ Cost039_ChrLen:
   .dw Cost039_Pic32_ChrEnd - Cost039_Pic32_Chr
   .dw Cost039_Pic33_ChrEnd - Cost039_Pic33_Chr
   .dw Cost039_Pic34_ChrEnd - Cost039_Pic34_Chr
+  .dw Cost039_Pic00_ChrEnd - Cost039_Pic00_Chr
   .dw Cost039_Pic36_ChrEnd - Cost039_Pic36_Chr
   .dw Cost039_Pic37_ChrEnd - Cost039_Pic37_Chr
   .dw Cost039_Pic38_ChrEnd - Cost039_Pic38_Chr
@@ -11647,19 +11824,23 @@ Cost039_OamLo:
   .dw Cost039_Pic01_Oam
   .dw Cost039_Pic02_Oam
   .dw Cost039_Pic03_Oam
+  .dw Cost039_Pic00_Oam
   .dw Cost039_Pic05_Oam
   .dw Cost039_Pic06_Oam
   .dw Cost039_Pic07_Oam
   .dw Cost039_Pic08_Oam
+  .dw Cost039_Pic00_Oam
   .dw Cost039_Pic10_Oam
   .dw Cost039_Pic11_Oam
   .dw Cost039_Pic12_Oam
+  .dw Cost039_Pic00_Oam
   .dw Cost039_Pic14_Oam
   .dw Cost039_Pic15_Oam
   .dw Cost039_Pic16_Oam
   .dw Cost039_Pic17_Oam
   .dw Cost039_Pic18_Oam
   .dw Cost039_Pic19_Oam
+  .dw Cost039_Pic00_Oam
   .dw Cost039_Pic21_Oam
   .dw Cost039_Pic22_Oam
   .dw Cost039_Pic23_Oam
@@ -11674,6 +11855,7 @@ Cost039_OamLo:
   .dw Cost039_Pic32_Oam
   .dw Cost039_Pic33_Oam
   .dw Cost039_Pic34_Oam
+  .dw Cost039_Pic00_Oam
   .dw Cost039_Pic36_Oam
   .dw Cost039_Pic37_Oam
   .dw Cost039_Pic38_Oam
@@ -11694,19 +11876,23 @@ Cost039_OamHi:
   .db :Cost039_Pic01_Oam
   .db :Cost039_Pic02_Oam
   .db :Cost039_Pic03_Oam
+  .db :Cost039_Pic00_Oam
   .db :Cost039_Pic05_Oam
   .db :Cost039_Pic06_Oam
   .db :Cost039_Pic07_Oam
   .db :Cost039_Pic08_Oam
+  .db :Cost039_Pic00_Oam
   .db :Cost039_Pic10_Oam
   .db :Cost039_Pic11_Oam
   .db :Cost039_Pic12_Oam
+  .db :Cost039_Pic00_Oam
   .db :Cost039_Pic14_Oam
   .db :Cost039_Pic15_Oam
   .db :Cost039_Pic16_Oam
   .db :Cost039_Pic17_Oam
   .db :Cost039_Pic18_Oam
   .db :Cost039_Pic19_Oam
+  .db :Cost039_Pic00_Oam
   .db :Cost039_Pic21_Oam
   .db :Cost039_Pic22_Oam
   .db :Cost039_Pic23_Oam
@@ -11721,6 +11907,7 @@ Cost039_OamHi:
   .db :Cost039_Pic32_Oam
   .db :Cost039_Pic33_Oam
   .db :Cost039_Pic34_Oam
+  .db :Cost039_Pic00_Oam
   .db :Cost039_Pic36_Oam
   .db :Cost039_Pic37_Oam
   .db :Cost039_Pic38_Oam
@@ -12017,6 +12204,7 @@ Cost040_Pal:
   .incbin "data/snes_converted/costumes/cost_040/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 39 entries indexed by pic file number
 Cost040_ChrLo:
   .dw Cost040_Pic00_Chr
   .dw Cost040_Pic01_Chr
@@ -12040,8 +12228,11 @@ Cost040_ChrLo:
   .dw Cost040_Pic19_Chr
   .dw Cost040_Pic20_Chr
   .dw Cost040_Pic21_Chr
+  .dw Cost040_Pic00_Chr  ; gap->pic00
+  .dw Cost040_Pic00_Chr  ; gap->pic00
   .dw Cost040_Pic24_Chr
   .dw Cost040_Pic25_Chr
+  .dw Cost040_Pic00_Chr  ; gap->pic00
   .dw Cost040_Pic27_Chr
   .dw Cost040_Pic28_Chr
   .dw Cost040_Pic29_Chr
@@ -12078,8 +12269,11 @@ Cost040_ChrHi:
   .db :Cost040_Pic19_Chr
   .db :Cost040_Pic20_Chr
   .db :Cost040_Pic21_Chr
+  .db :Cost040_Pic00_Chr
+  .db :Cost040_Pic00_Chr
   .db :Cost040_Pic24_Chr
   .db :Cost040_Pic25_Chr
+  .db :Cost040_Pic00_Chr
   .db :Cost040_Pic27_Chr
   .db :Cost040_Pic28_Chr
   .db :Cost040_Pic29_Chr
@@ -12116,8 +12310,11 @@ Cost040_ChrLen:
   .dw Cost040_Pic19_ChrEnd - Cost040_Pic19_Chr
   .dw Cost040_Pic20_ChrEnd - Cost040_Pic20_Chr
   .dw Cost040_Pic21_ChrEnd - Cost040_Pic21_Chr
+  .dw Cost040_Pic00_ChrEnd - Cost040_Pic00_Chr
+  .dw Cost040_Pic00_ChrEnd - Cost040_Pic00_Chr
   .dw Cost040_Pic24_ChrEnd - Cost040_Pic24_Chr
   .dw Cost040_Pic25_ChrEnd - Cost040_Pic25_Chr
+  .dw Cost040_Pic00_ChrEnd - Cost040_Pic00_Chr
   .dw Cost040_Pic27_ChrEnd - Cost040_Pic27_Chr
   .dw Cost040_Pic28_ChrEnd - Cost040_Pic28_Chr
   .dw Cost040_Pic29_ChrEnd - Cost040_Pic29_Chr
@@ -12155,8 +12352,11 @@ Cost040_OamLo:
   .dw Cost040_Pic19_Oam
   .dw Cost040_Pic20_Oam
   .dw Cost040_Pic21_Oam
+  .dw Cost040_Pic00_Oam
+  .dw Cost040_Pic00_Oam
   .dw Cost040_Pic24_Oam
   .dw Cost040_Pic25_Oam
+  .dw Cost040_Pic00_Oam
   .dw Cost040_Pic27_Oam
   .dw Cost040_Pic28_Oam
   .dw Cost040_Pic29_Oam
@@ -12193,8 +12393,11 @@ Cost040_OamHi:
   .db :Cost040_Pic19_Oam
   .db :Cost040_Pic20_Oam
   .db :Cost040_Pic21_Oam
+  .db :Cost040_Pic00_Oam
+  .db :Cost040_Pic00_Oam
   .db :Cost040_Pic24_Oam
   .db :Cost040_Pic25_Oam
+  .db :Cost040_Pic00_Oam
   .db :Cost040_Pic27_Oam
   .db :Cost040_Pic28_Oam
   .db :Cost040_Pic29_Oam
@@ -12435,6 +12638,7 @@ Cost041_Pal:
   .incbin "data/snes_converted/costumes/cost_041/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 12 entries indexed by pic file number
 Cost041_ChrLo:
   .dw Cost041_Pic00_Chr
   .dw Cost041_Pic01_Chr
@@ -12578,7 +12782,7 @@ Cost041_Pic11_ChrEnd:
 Cost041_Pic11_Oam:
   .incbin "data/snes_converted/costumes/cost_041/pic11.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 10 entries)
 Cost041_HeadChrLo:
   .dw Cost041_HeadPic00_Chr
   .dw Cost041_HeadPic01_Chr
@@ -12711,6 +12915,7 @@ Cost042_Pal:
   .incbin "data/snes_converted/costumes/cost_042/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 34 entries indexed by pic file number
 Cost042_ChrLo:
   .dw Cost042_Pic00_Chr
   .dw Cost042_Pic01_Chr
@@ -13096,7 +13301,7 @@ Cost042_Pic33_ChrEnd:
 Cost042_Pic33_Oam:
   .incbin "data/snes_converted/costumes/cost_042/pic33.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost042_HeadChrLo:
   .dw Cost042_HeadPic00_Chr
   .dw Cost042_HeadPic01_Chr
@@ -13339,6 +13544,7 @@ Cost043_Pal:
   .incbin "data/snes_converted/costumes/cost_043/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost043_ChrLo:
   .dw Cost043_Pic00_Chr
   .dw Cost043_Pic01_Chr
@@ -13346,6 +13552,7 @@ Cost043_ChrLo:
   .dw Cost043_Pic03_Chr
   .dw Cost043_Pic04_Chr
   .dw Cost043_Pic05_Chr
+  .dw Cost043_Pic00_Chr  ; gap->pic00
   .dw Cost043_Pic07_Chr
   .dw Cost043_Pic08_Chr
   .dw Cost043_Pic09_Chr
@@ -13358,6 +13565,7 @@ Cost043_ChrLo:
   .dw Cost043_Pic16_Chr
   .dw Cost043_Pic17_Chr
   .dw Cost043_Pic18_Chr
+  .dw Cost043_Pic00_Chr  ; gap->pic00
   .dw Cost043_Pic20_Chr
   .dw Cost043_Pic21_Chr
   .dw Cost043_Pic22_Chr
@@ -13370,6 +13578,7 @@ Cost043_ChrLo:
   .dw Cost043_Pic29_Chr
   .dw Cost043_Pic30_Chr
   .dw Cost043_Pic31_Chr
+  .dw Cost043_Pic00_Chr  ; gap->pic00
   .dw Cost043_Pic33_Chr
   .dw Cost043_Pic34_Chr
   .dw Cost043_Pic35_Chr
@@ -13382,6 +13591,7 @@ Cost043_ChrLo:
   .dw Cost043_Pic42_Chr
   .dw Cost043_Pic43_Chr
   .dw Cost043_Pic44_Chr
+  .dw Cost043_Pic00_Chr  ; gap->pic00
   .dw Cost043_Pic46_Chr
   .dw Cost043_Pic47_Chr
   .dw Cost043_Pic48_Chr
@@ -13394,6 +13604,7 @@ Cost043_ChrHi:
   .db :Cost043_Pic03_Chr
   .db :Cost043_Pic04_Chr
   .db :Cost043_Pic05_Chr
+  .db :Cost043_Pic00_Chr
   .db :Cost043_Pic07_Chr
   .db :Cost043_Pic08_Chr
   .db :Cost043_Pic09_Chr
@@ -13406,6 +13617,7 @@ Cost043_ChrHi:
   .db :Cost043_Pic16_Chr
   .db :Cost043_Pic17_Chr
   .db :Cost043_Pic18_Chr
+  .db :Cost043_Pic00_Chr
   .db :Cost043_Pic20_Chr
   .db :Cost043_Pic21_Chr
   .db :Cost043_Pic22_Chr
@@ -13418,6 +13630,7 @@ Cost043_ChrHi:
   .db :Cost043_Pic29_Chr
   .db :Cost043_Pic30_Chr
   .db :Cost043_Pic31_Chr
+  .db :Cost043_Pic00_Chr
   .db :Cost043_Pic33_Chr
   .db :Cost043_Pic34_Chr
   .db :Cost043_Pic35_Chr
@@ -13430,6 +13643,7 @@ Cost043_ChrHi:
   .db :Cost043_Pic42_Chr
   .db :Cost043_Pic43_Chr
   .db :Cost043_Pic44_Chr
+  .db :Cost043_Pic00_Chr
   .db :Cost043_Pic46_Chr
   .db :Cost043_Pic47_Chr
   .db :Cost043_Pic48_Chr
@@ -13442,6 +13656,7 @@ Cost043_ChrLen:
   .dw Cost043_Pic03_ChrEnd - Cost043_Pic03_Chr
   .dw Cost043_Pic04_ChrEnd - Cost043_Pic04_Chr
   .dw Cost043_Pic05_ChrEnd - Cost043_Pic05_Chr
+  .dw Cost043_Pic00_ChrEnd - Cost043_Pic00_Chr
   .dw Cost043_Pic07_ChrEnd - Cost043_Pic07_Chr
   .dw Cost043_Pic08_ChrEnd - Cost043_Pic08_Chr
   .dw Cost043_Pic09_ChrEnd - Cost043_Pic09_Chr
@@ -13454,6 +13669,7 @@ Cost043_ChrLen:
   .dw Cost043_Pic16_ChrEnd - Cost043_Pic16_Chr
   .dw Cost043_Pic17_ChrEnd - Cost043_Pic17_Chr
   .dw Cost043_Pic18_ChrEnd - Cost043_Pic18_Chr
+  .dw Cost043_Pic00_ChrEnd - Cost043_Pic00_Chr
   .dw Cost043_Pic20_ChrEnd - Cost043_Pic20_Chr
   .dw Cost043_Pic21_ChrEnd - Cost043_Pic21_Chr
   .dw Cost043_Pic22_ChrEnd - Cost043_Pic22_Chr
@@ -13466,6 +13682,7 @@ Cost043_ChrLen:
   .dw Cost043_Pic29_ChrEnd - Cost043_Pic29_Chr
   .dw Cost043_Pic30_ChrEnd - Cost043_Pic30_Chr
   .dw Cost043_Pic31_ChrEnd - Cost043_Pic31_Chr
+  .dw Cost043_Pic00_ChrEnd - Cost043_Pic00_Chr
   .dw Cost043_Pic33_ChrEnd - Cost043_Pic33_Chr
   .dw Cost043_Pic34_ChrEnd - Cost043_Pic34_Chr
   .dw Cost043_Pic35_ChrEnd - Cost043_Pic35_Chr
@@ -13478,6 +13695,7 @@ Cost043_ChrLen:
   .dw Cost043_Pic42_ChrEnd - Cost043_Pic42_Chr
   .dw Cost043_Pic43_ChrEnd - Cost043_Pic43_Chr
   .dw Cost043_Pic44_ChrEnd - Cost043_Pic44_Chr
+  .dw Cost043_Pic00_ChrEnd - Cost043_Pic00_Chr
   .dw Cost043_Pic46_ChrEnd - Cost043_Pic46_Chr
   .dw Cost043_Pic47_ChrEnd - Cost043_Pic47_Chr
   .dw Cost043_Pic48_ChrEnd - Cost043_Pic48_Chr
@@ -13491,6 +13709,7 @@ Cost043_OamLo:
   .dw Cost043_Pic03_Oam
   .dw Cost043_Pic04_Oam
   .dw Cost043_Pic05_Oam
+  .dw Cost043_Pic00_Oam
   .dw Cost043_Pic07_Oam
   .dw Cost043_Pic08_Oam
   .dw Cost043_Pic09_Oam
@@ -13503,6 +13722,7 @@ Cost043_OamLo:
   .dw Cost043_Pic16_Oam
   .dw Cost043_Pic17_Oam
   .dw Cost043_Pic18_Oam
+  .dw Cost043_Pic00_Oam
   .dw Cost043_Pic20_Oam
   .dw Cost043_Pic21_Oam
   .dw Cost043_Pic22_Oam
@@ -13515,6 +13735,7 @@ Cost043_OamLo:
   .dw Cost043_Pic29_Oam
   .dw Cost043_Pic30_Oam
   .dw Cost043_Pic31_Oam
+  .dw Cost043_Pic00_Oam
   .dw Cost043_Pic33_Oam
   .dw Cost043_Pic34_Oam
   .dw Cost043_Pic35_Oam
@@ -13527,6 +13748,7 @@ Cost043_OamLo:
   .dw Cost043_Pic42_Oam
   .dw Cost043_Pic43_Oam
   .dw Cost043_Pic44_Oam
+  .dw Cost043_Pic00_Oam
   .dw Cost043_Pic46_Oam
   .dw Cost043_Pic47_Oam
   .dw Cost043_Pic48_Oam
@@ -13539,6 +13761,7 @@ Cost043_OamHi:
   .db :Cost043_Pic03_Oam
   .db :Cost043_Pic04_Oam
   .db :Cost043_Pic05_Oam
+  .db :Cost043_Pic00_Oam
   .db :Cost043_Pic07_Oam
   .db :Cost043_Pic08_Oam
   .db :Cost043_Pic09_Oam
@@ -13551,6 +13774,7 @@ Cost043_OamHi:
   .db :Cost043_Pic16_Oam
   .db :Cost043_Pic17_Oam
   .db :Cost043_Pic18_Oam
+  .db :Cost043_Pic00_Oam
   .db :Cost043_Pic20_Oam
   .db :Cost043_Pic21_Oam
   .db :Cost043_Pic22_Oam
@@ -13563,6 +13787,7 @@ Cost043_OamHi:
   .db :Cost043_Pic29_Oam
   .db :Cost043_Pic30_Oam
   .db :Cost043_Pic31_Oam
+  .db :Cost043_Pic00_Oam
   .db :Cost043_Pic33_Oam
   .db :Cost043_Pic34_Oam
   .db :Cost043_Pic35_Oam
@@ -13575,6 +13800,7 @@ Cost043_OamHi:
   .db :Cost043_Pic42_Oam
   .db :Cost043_Pic43_Oam
   .db :Cost043_Pic44_Oam
+  .db :Cost043_Pic00_Oam
   .db :Cost043_Pic46_Oam
   .db :Cost043_Pic47_Oam
   .db :Cost043_Pic48_Oam
@@ -13856,7 +14082,7 @@ Cost043_Pic49_ChrEnd:
 Cost043_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_043/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 19 entries)
 Cost043_HeadChrLo:
   .dw Cost043_HeadPic00_Chr
   .dw Cost043_HeadPic01_Chr
@@ -13864,6 +14090,7 @@ Cost043_HeadChrLo:
   .dw Cost043_HeadPic03_Chr
   .dw Cost043_HeadPic04_Chr
   .dw Cost043_HeadPic05_Chr
+  .dw Cost043_HeadPic00_Chr
   .dw Cost043_HeadPic07_Chr
   .dw Cost043_HeadPic08_Chr
   .dw Cost043_HeadPic09_Chr
@@ -13884,6 +14111,7 @@ Cost043_HeadChrHi:
   .db :Cost043_HeadPic03_Chr
   .db :Cost043_HeadPic04_Chr
   .db :Cost043_HeadPic05_Chr
+  .db :Cost043_HeadPic00_Chr
   .db :Cost043_HeadPic07_Chr
   .db :Cost043_HeadPic08_Chr
   .db :Cost043_HeadPic09_Chr
@@ -13904,6 +14132,7 @@ Cost043_HeadChrLen:
   .dw Cost043_HeadPic03_ChrEnd - Cost043_HeadPic03_Chr
   .dw Cost043_HeadPic04_ChrEnd - Cost043_HeadPic04_Chr
   .dw Cost043_HeadPic05_ChrEnd - Cost043_HeadPic05_Chr
+  .dw Cost043_HeadPic00_ChrEnd - Cost043_HeadPic00_Chr
   .dw Cost043_HeadPic07_ChrEnd - Cost043_HeadPic07_Chr
   .dw Cost043_HeadPic08_ChrEnd - Cost043_HeadPic08_Chr
   .dw Cost043_HeadPic09_ChrEnd - Cost043_HeadPic09_Chr
@@ -13925,6 +14154,7 @@ Cost043_HeadOamLo:
   .dw Cost043_HeadPic03_Oam
   .dw Cost043_HeadPic04_Oam
   .dw Cost043_HeadPic05_Oam
+  .dw Cost043_HeadPic00_Oam
   .dw Cost043_HeadPic07_Oam
   .dw Cost043_HeadPic08_Oam
   .dw Cost043_HeadPic09_Oam
@@ -13945,6 +14175,7 @@ Cost043_HeadOamHi:
   .db :Cost043_HeadPic03_Oam
   .db :Cost043_HeadPic04_Oam
   .db :Cost043_HeadPic05_Oam
+  .db :Cost043_HeadPic00_Oam
   .db :Cost043_HeadPic07_Oam
   .db :Cost043_HeadPic08_Oam
   .db :Cost043_HeadPic09_Oam
@@ -14077,8 +14308,10 @@ Cost044_Pal:
   .incbin "data/snes_converted/costumes/cost_044/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 49 entries indexed by pic file number
 Cost044_ChrLo:
   .dw Cost044_Pic00_Chr
+  .dw Cost044_Pic00_Chr  ; gap->pic00
   .dw Cost044_Pic02_Chr
   .dw Cost044_Pic03_Chr
   .dw Cost044_Pic04_Chr
@@ -14114,9 +14347,11 @@ Cost044_ChrLo:
   .dw Cost044_Pic34_Chr
   .dw Cost044_Pic35_Chr
   .dw Cost044_Pic36_Chr
+  .dw Cost044_Pic00_Chr  ; gap->pic00
   .dw Cost044_Pic38_Chr
   .dw Cost044_Pic39_Chr
   .dw Cost044_Pic40_Chr
+  .dw Cost044_Pic00_Chr  ; gap->pic00
   .dw Cost044_Pic42_Chr
   .dw Cost044_Pic43_Chr
   .dw Cost044_Pic44_Chr
@@ -14126,6 +14361,7 @@ Cost044_ChrLo:
   .dw Cost044_Pic48_Chr
 
 Cost044_ChrHi:
+  .db :Cost044_Pic00_Chr
   .db :Cost044_Pic00_Chr
   .db :Cost044_Pic02_Chr
   .db :Cost044_Pic03_Chr
@@ -14162,9 +14398,11 @@ Cost044_ChrHi:
   .db :Cost044_Pic34_Chr
   .db :Cost044_Pic35_Chr
   .db :Cost044_Pic36_Chr
+  .db :Cost044_Pic00_Chr
   .db :Cost044_Pic38_Chr
   .db :Cost044_Pic39_Chr
   .db :Cost044_Pic40_Chr
+  .db :Cost044_Pic00_Chr
   .db :Cost044_Pic42_Chr
   .db :Cost044_Pic43_Chr
   .db :Cost044_Pic44_Chr
@@ -14174,6 +14412,7 @@ Cost044_ChrHi:
   .db :Cost044_Pic48_Chr
 
 Cost044_ChrLen:
+  .dw Cost044_Pic00_ChrEnd - Cost044_Pic00_Chr
   .dw Cost044_Pic00_ChrEnd - Cost044_Pic00_Chr
   .dw Cost044_Pic02_ChrEnd - Cost044_Pic02_Chr
   .dw Cost044_Pic03_ChrEnd - Cost044_Pic03_Chr
@@ -14210,9 +14449,11 @@ Cost044_ChrLen:
   .dw Cost044_Pic34_ChrEnd - Cost044_Pic34_Chr
   .dw Cost044_Pic35_ChrEnd - Cost044_Pic35_Chr
   .dw Cost044_Pic36_ChrEnd - Cost044_Pic36_Chr
+  .dw Cost044_Pic00_ChrEnd - Cost044_Pic00_Chr
   .dw Cost044_Pic38_ChrEnd - Cost044_Pic38_Chr
   .dw Cost044_Pic39_ChrEnd - Cost044_Pic39_Chr
   .dw Cost044_Pic40_ChrEnd - Cost044_Pic40_Chr
+  .dw Cost044_Pic00_ChrEnd - Cost044_Pic00_Chr
   .dw Cost044_Pic42_ChrEnd - Cost044_Pic42_Chr
   .dw Cost044_Pic43_ChrEnd - Cost044_Pic43_Chr
   .dw Cost044_Pic44_ChrEnd - Cost044_Pic44_Chr
@@ -14223,6 +14464,7 @@ Cost044_ChrLen:
 
 ; Body frame OAM lookup (word addr, bank)
 Cost044_OamLo:
+  .dw Cost044_Pic00_Oam
   .dw Cost044_Pic00_Oam
   .dw Cost044_Pic02_Oam
   .dw Cost044_Pic03_Oam
@@ -14259,9 +14501,11 @@ Cost044_OamLo:
   .dw Cost044_Pic34_Oam
   .dw Cost044_Pic35_Oam
   .dw Cost044_Pic36_Oam
+  .dw Cost044_Pic00_Oam
   .dw Cost044_Pic38_Oam
   .dw Cost044_Pic39_Oam
   .dw Cost044_Pic40_Oam
+  .dw Cost044_Pic00_Oam
   .dw Cost044_Pic42_Oam
   .dw Cost044_Pic43_Oam
   .dw Cost044_Pic44_Oam
@@ -14271,6 +14515,7 @@ Cost044_OamLo:
   .dw Cost044_Pic48_Oam
 
 Cost044_OamHi:
+  .db :Cost044_Pic00_Oam
   .db :Cost044_Pic00_Oam
   .db :Cost044_Pic02_Oam
   .db :Cost044_Pic03_Oam
@@ -14307,9 +14552,11 @@ Cost044_OamHi:
   .db :Cost044_Pic34_Oam
   .db :Cost044_Pic35_Oam
   .db :Cost044_Pic36_Oam
+  .db :Cost044_Pic00_Oam
   .db :Cost044_Pic38_Oam
   .db :Cost044_Pic39_Oam
   .db :Cost044_Pic40_Oam
+  .db :Cost044_Pic00_Oam
   .db :Cost044_Pic42_Oam
   .db :Cost044_Pic43_Oam
   .db :Cost044_Pic44_Oam
@@ -14594,7 +14841,7 @@ Cost044_Pic48_ChrEnd:
 Cost044_Pic48_Oam:
   .incbin "data/snes_converted/costumes/cost_044/pic48.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 19 entries)
 Cost044_HeadChrLo:
   .dw Cost044_HeadPic00_Chr
   .dw Cost044_HeadPic01_Chr
@@ -14611,6 +14858,7 @@ Cost044_HeadChrLo:
   .dw Cost044_HeadPic12_Chr
   .dw Cost044_HeadPic13_Chr
   .dw Cost044_HeadPic14_Chr
+  .dw Cost044_HeadPic00_Chr
   .dw Cost044_HeadPic16_Chr
   .dw Cost044_HeadPic17_Chr
   .dw Cost044_HeadPic18_Chr
@@ -14631,6 +14879,7 @@ Cost044_HeadChrHi:
   .db :Cost044_HeadPic12_Chr
   .db :Cost044_HeadPic13_Chr
   .db :Cost044_HeadPic14_Chr
+  .db :Cost044_HeadPic00_Chr
   .db :Cost044_HeadPic16_Chr
   .db :Cost044_HeadPic17_Chr
   .db :Cost044_HeadPic18_Chr
@@ -14651,6 +14900,7 @@ Cost044_HeadChrLen:
   .dw Cost044_HeadPic12_ChrEnd - Cost044_HeadPic12_Chr
   .dw Cost044_HeadPic13_ChrEnd - Cost044_HeadPic13_Chr
   .dw Cost044_HeadPic14_ChrEnd - Cost044_HeadPic14_Chr
+  .dw Cost044_HeadPic00_ChrEnd - Cost044_HeadPic00_Chr
   .dw Cost044_HeadPic16_ChrEnd - Cost044_HeadPic16_Chr
   .dw Cost044_HeadPic17_ChrEnd - Cost044_HeadPic17_Chr
   .dw Cost044_HeadPic18_ChrEnd - Cost044_HeadPic18_Chr
@@ -14672,6 +14922,7 @@ Cost044_HeadOamLo:
   .dw Cost044_HeadPic12_Oam
   .dw Cost044_HeadPic13_Oam
   .dw Cost044_HeadPic14_Oam
+  .dw Cost044_HeadPic00_Oam
   .dw Cost044_HeadPic16_Oam
   .dw Cost044_HeadPic17_Oam
   .dw Cost044_HeadPic18_Oam
@@ -14692,6 +14943,7 @@ Cost044_HeadOamHi:
   .db :Cost044_HeadPic12_Oam
   .db :Cost044_HeadPic13_Oam
   .db :Cost044_HeadPic14_Oam
+  .db :Cost044_HeadPic00_Oam
   .db :Cost044_HeadPic16_Oam
   .db :Cost044_HeadPic17_Oam
   .db :Cost044_HeadPic18_Oam
@@ -14815,6 +15067,7 @@ Cost045_Pal:
   .incbin "data/snes_converted/costumes/cost_045/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 15 entries indexed by pic file number
 Cost045_ChrLo:
   .dw Cost045_Pic00_Chr
   .dw Cost045_Pic01_Chr
@@ -15002,6 +15255,7 @@ Cost046_Pal:
   .incbin "data/snes_converted/costumes/cost_046/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost046_ChrLo:
   .dw Cost046_Pic00_Chr
   .dw Cost046_Pic01_Chr
@@ -15033,6 +15287,9 @@ Cost046_ChrLo:
   .dw Cost046_Pic27_Chr
   .dw Cost046_Pic28_Chr
   .dw Cost046_Pic29_Chr
+  .dw Cost046_Pic00_Chr  ; gap->pic00
+  .dw Cost046_Pic00_Chr  ; gap->pic00
+  .dw Cost046_Pic00_Chr  ; gap->pic00
   .dw Cost046_Pic33_Chr
   .dw Cost046_Pic34_Chr
   .dw Cost046_Pic35_Chr
@@ -15082,6 +15339,9 @@ Cost046_ChrHi:
   .db :Cost046_Pic27_Chr
   .db :Cost046_Pic28_Chr
   .db :Cost046_Pic29_Chr
+  .db :Cost046_Pic00_Chr
+  .db :Cost046_Pic00_Chr
+  .db :Cost046_Pic00_Chr
   .db :Cost046_Pic33_Chr
   .db :Cost046_Pic34_Chr
   .db :Cost046_Pic35_Chr
@@ -15131,6 +15391,9 @@ Cost046_ChrLen:
   .dw Cost046_Pic27_ChrEnd - Cost046_Pic27_Chr
   .dw Cost046_Pic28_ChrEnd - Cost046_Pic28_Chr
   .dw Cost046_Pic29_ChrEnd - Cost046_Pic29_Chr
+  .dw Cost046_Pic00_ChrEnd - Cost046_Pic00_Chr
+  .dw Cost046_Pic00_ChrEnd - Cost046_Pic00_Chr
+  .dw Cost046_Pic00_ChrEnd - Cost046_Pic00_Chr
   .dw Cost046_Pic33_ChrEnd - Cost046_Pic33_Chr
   .dw Cost046_Pic34_ChrEnd - Cost046_Pic34_Chr
   .dw Cost046_Pic35_ChrEnd - Cost046_Pic35_Chr
@@ -15181,6 +15444,9 @@ Cost046_OamLo:
   .dw Cost046_Pic27_Oam
   .dw Cost046_Pic28_Oam
   .dw Cost046_Pic29_Oam
+  .dw Cost046_Pic00_Oam
+  .dw Cost046_Pic00_Oam
+  .dw Cost046_Pic00_Oam
   .dw Cost046_Pic33_Oam
   .dw Cost046_Pic34_Oam
   .dw Cost046_Pic35_Oam
@@ -15230,6 +15496,9 @@ Cost046_OamHi:
   .db :Cost046_Pic27_Oam
   .db :Cost046_Pic28_Oam
   .db :Cost046_Pic29_Oam
+  .db :Cost046_Pic00_Oam
+  .db :Cost046_Pic00_Oam
+  .db :Cost046_Pic00_Oam
   .db :Cost046_Pic33_Oam
   .db :Cost046_Pic34_Oam
   .db :Cost046_Pic35_Oam
@@ -15541,6 +15810,7 @@ Cost047_Pal:
   .incbin "data/snes_converted/costumes/cost_047/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost047_ChrLo:
   .dw Cost047_Pic00_Chr
   .dw Cost047_Pic01_Chr
@@ -15548,6 +15818,7 @@ Cost047_ChrLo:
   .dw Cost047_Pic03_Chr
   .dw Cost047_Pic04_Chr
   .dw Cost047_Pic05_Chr
+  .dw Cost047_Pic00_Chr  ; gap->pic00
   .dw Cost047_Pic07_Chr
   .dw Cost047_Pic08_Chr
   .dw Cost047_Pic09_Chr
@@ -15585,6 +15856,8 @@ Cost047_ChrLo:
   .dw Cost047_Pic41_Chr
   .dw Cost047_Pic42_Chr
   .dw Cost047_Pic43_Chr
+  .dw Cost047_Pic00_Chr  ; gap->pic00
+  .dw Cost047_Pic00_Chr  ; gap->pic00
   .dw Cost047_Pic46_Chr
   .dw Cost047_Pic47_Chr
   .dw Cost047_Pic48_Chr
@@ -15597,6 +15870,7 @@ Cost047_ChrHi:
   .db :Cost047_Pic03_Chr
   .db :Cost047_Pic04_Chr
   .db :Cost047_Pic05_Chr
+  .db :Cost047_Pic00_Chr
   .db :Cost047_Pic07_Chr
   .db :Cost047_Pic08_Chr
   .db :Cost047_Pic09_Chr
@@ -15634,6 +15908,8 @@ Cost047_ChrHi:
   .db :Cost047_Pic41_Chr
   .db :Cost047_Pic42_Chr
   .db :Cost047_Pic43_Chr
+  .db :Cost047_Pic00_Chr
+  .db :Cost047_Pic00_Chr
   .db :Cost047_Pic46_Chr
   .db :Cost047_Pic47_Chr
   .db :Cost047_Pic48_Chr
@@ -15646,6 +15922,7 @@ Cost047_ChrLen:
   .dw Cost047_Pic03_ChrEnd - Cost047_Pic03_Chr
   .dw Cost047_Pic04_ChrEnd - Cost047_Pic04_Chr
   .dw Cost047_Pic05_ChrEnd - Cost047_Pic05_Chr
+  .dw Cost047_Pic00_ChrEnd - Cost047_Pic00_Chr
   .dw Cost047_Pic07_ChrEnd - Cost047_Pic07_Chr
   .dw Cost047_Pic08_ChrEnd - Cost047_Pic08_Chr
   .dw Cost047_Pic09_ChrEnd - Cost047_Pic09_Chr
@@ -15683,6 +15960,8 @@ Cost047_ChrLen:
   .dw Cost047_Pic41_ChrEnd - Cost047_Pic41_Chr
   .dw Cost047_Pic42_ChrEnd - Cost047_Pic42_Chr
   .dw Cost047_Pic43_ChrEnd - Cost047_Pic43_Chr
+  .dw Cost047_Pic00_ChrEnd - Cost047_Pic00_Chr
+  .dw Cost047_Pic00_ChrEnd - Cost047_Pic00_Chr
   .dw Cost047_Pic46_ChrEnd - Cost047_Pic46_Chr
   .dw Cost047_Pic47_ChrEnd - Cost047_Pic47_Chr
   .dw Cost047_Pic48_ChrEnd - Cost047_Pic48_Chr
@@ -15696,6 +15975,7 @@ Cost047_OamLo:
   .dw Cost047_Pic03_Oam
   .dw Cost047_Pic04_Oam
   .dw Cost047_Pic05_Oam
+  .dw Cost047_Pic00_Oam
   .dw Cost047_Pic07_Oam
   .dw Cost047_Pic08_Oam
   .dw Cost047_Pic09_Oam
@@ -15733,6 +16013,8 @@ Cost047_OamLo:
   .dw Cost047_Pic41_Oam
   .dw Cost047_Pic42_Oam
   .dw Cost047_Pic43_Oam
+  .dw Cost047_Pic00_Oam
+  .dw Cost047_Pic00_Oam
   .dw Cost047_Pic46_Oam
   .dw Cost047_Pic47_Oam
   .dw Cost047_Pic48_Oam
@@ -15745,6 +16027,7 @@ Cost047_OamHi:
   .db :Cost047_Pic03_Oam
   .db :Cost047_Pic04_Oam
   .db :Cost047_Pic05_Oam
+  .db :Cost047_Pic00_Oam
   .db :Cost047_Pic07_Oam
   .db :Cost047_Pic08_Oam
   .db :Cost047_Pic09_Oam
@@ -15782,6 +16065,8 @@ Cost047_OamHi:
   .db :Cost047_Pic41_Oam
   .db :Cost047_Pic42_Oam
   .db :Cost047_Pic43_Oam
+  .db :Cost047_Pic00_Oam
+  .db :Cost047_Pic00_Oam
   .db :Cost047_Pic46_Oam
   .db :Cost047_Pic47_Oam
   .db :Cost047_Pic48_Oam
@@ -16080,6 +16365,7 @@ Cost048_Pal:
   .incbin "data/snes_converted/costumes/cost_048/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 34 entries indexed by pic file number
 Cost048_ChrLo:
   .dw Cost048_Pic00_Chr
   .dw Cost048_Pic01_Chr
@@ -16107,6 +16393,7 @@ Cost048_ChrLo:
   .dw Cost048_Pic23_Chr
   .dw Cost048_Pic24_Chr
   .dw Cost048_Pic25_Chr
+  .dw Cost048_Pic00_Chr  ; gap->pic00
   .dw Cost048_Pic27_Chr
   .dw Cost048_Pic28_Chr
   .dw Cost048_Pic29_Chr
@@ -16142,6 +16429,7 @@ Cost048_ChrHi:
   .db :Cost048_Pic23_Chr
   .db :Cost048_Pic24_Chr
   .db :Cost048_Pic25_Chr
+  .db :Cost048_Pic00_Chr
   .db :Cost048_Pic27_Chr
   .db :Cost048_Pic28_Chr
   .db :Cost048_Pic29_Chr
@@ -16177,6 +16465,7 @@ Cost048_ChrLen:
   .dw Cost048_Pic23_ChrEnd - Cost048_Pic23_Chr
   .dw Cost048_Pic24_ChrEnd - Cost048_Pic24_Chr
   .dw Cost048_Pic25_ChrEnd - Cost048_Pic25_Chr
+  .dw Cost048_Pic00_ChrEnd - Cost048_Pic00_Chr
   .dw Cost048_Pic27_ChrEnd - Cost048_Pic27_Chr
   .dw Cost048_Pic28_ChrEnd - Cost048_Pic28_Chr
   .dw Cost048_Pic29_ChrEnd - Cost048_Pic29_Chr
@@ -16213,6 +16502,7 @@ Cost048_OamLo:
   .dw Cost048_Pic23_Oam
   .dw Cost048_Pic24_Oam
   .dw Cost048_Pic25_Oam
+  .dw Cost048_Pic00_Oam
   .dw Cost048_Pic27_Oam
   .dw Cost048_Pic28_Oam
   .dw Cost048_Pic29_Oam
@@ -16248,6 +16538,7 @@ Cost048_OamHi:
   .db :Cost048_Pic23_Oam
   .db :Cost048_Pic24_Oam
   .db :Cost048_Pic25_Oam
+  .db :Cost048_Pic00_Oam
   .db :Cost048_Pic27_Oam
   .db :Cost048_Pic28_Oam
   .db :Cost048_Pic29_Oam
@@ -16454,7 +16745,7 @@ Cost048_Pic33_ChrEnd:
 Cost048_Pic33_Oam:
   .incbin "data/snes_converted/costumes/cost_048/pic33.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost048_HeadChrLo:
   .dw Cost048_HeadPic00_Chr
   .dw Cost048_HeadPic01_Chr
@@ -16697,6 +16988,7 @@ Cost049_Pal:
   .incbin "data/snes_converted/costumes/cost_049/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 38 entries indexed by pic file number
 Cost049_ChrLo:
   .dw Cost049_Pic00_Chr
   .dw Cost049_Pic01_Chr
@@ -16712,7 +17004,9 @@ Cost049_ChrLo:
   .dw Cost049_Pic11_Chr
   .dw Cost049_Pic12_Chr
   .dw Cost049_Pic13_Chr
+  .dw Cost049_Pic00_Chr  ; gap->pic00
   .dw Cost049_Pic15_Chr
+  .dw Cost049_Pic00_Chr  ; gap->pic00
   .dw Cost049_Pic17_Chr
   .dw Cost049_Pic18_Chr
   .dw Cost049_Pic19_Chr
@@ -16750,7 +17044,9 @@ Cost049_ChrHi:
   .db :Cost049_Pic11_Chr
   .db :Cost049_Pic12_Chr
   .db :Cost049_Pic13_Chr
+  .db :Cost049_Pic00_Chr
   .db :Cost049_Pic15_Chr
+  .db :Cost049_Pic00_Chr
   .db :Cost049_Pic17_Chr
   .db :Cost049_Pic18_Chr
   .db :Cost049_Pic19_Chr
@@ -16788,7 +17084,9 @@ Cost049_ChrLen:
   .dw Cost049_Pic11_ChrEnd - Cost049_Pic11_Chr
   .dw Cost049_Pic12_ChrEnd - Cost049_Pic12_Chr
   .dw Cost049_Pic13_ChrEnd - Cost049_Pic13_Chr
+  .dw Cost049_Pic00_ChrEnd - Cost049_Pic00_Chr
   .dw Cost049_Pic15_ChrEnd - Cost049_Pic15_Chr
+  .dw Cost049_Pic00_ChrEnd - Cost049_Pic00_Chr
   .dw Cost049_Pic17_ChrEnd - Cost049_Pic17_Chr
   .dw Cost049_Pic18_ChrEnd - Cost049_Pic18_Chr
   .dw Cost049_Pic19_ChrEnd - Cost049_Pic19_Chr
@@ -16827,7 +17125,9 @@ Cost049_OamLo:
   .dw Cost049_Pic11_Oam
   .dw Cost049_Pic12_Oam
   .dw Cost049_Pic13_Oam
+  .dw Cost049_Pic00_Oam
   .dw Cost049_Pic15_Oam
+  .dw Cost049_Pic00_Oam
   .dw Cost049_Pic17_Oam
   .dw Cost049_Pic18_Oam
   .dw Cost049_Pic19_Oam
@@ -16865,7 +17165,9 @@ Cost049_OamHi:
   .db :Cost049_Pic11_Oam
   .db :Cost049_Pic12_Oam
   .db :Cost049_Pic13_Oam
+  .db :Cost049_Pic00_Oam
   .db :Cost049_Pic15_Oam
+  .db :Cost049_Pic00_Oam
   .db :Cost049_Pic17_Oam
   .db :Cost049_Pic18_Oam
   .db :Cost049_Pic19_Oam
@@ -17104,7 +17406,7 @@ Cost049_Pic37_ChrEnd:
 Cost049_Pic37_Oam:
   .incbin "data/snes_converted/costumes/cost_049/pic37.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost049_HeadChrLo:
   .dw Cost049_HeadPic00_Chr
   .dw Cost049_HeadPic01_Chr
@@ -17118,7 +17420,9 @@ Cost049_HeadChrLo:
   .dw Cost049_HeadPic09_Chr
   .dw Cost049_HeadPic10_Chr
   .dw Cost049_HeadPic11_Chr
+  .dw Cost049_HeadPic00_Chr
   .dw Cost049_HeadPic13_Chr
+  .dw Cost049_HeadPic00_Chr
   .dw Cost049_HeadPic15_Chr
   .dw Cost049_HeadPic16_Chr
   .dw Cost049_HeadPic17_Chr
@@ -17138,7 +17442,9 @@ Cost049_HeadChrHi:
   .db :Cost049_HeadPic09_Chr
   .db :Cost049_HeadPic10_Chr
   .db :Cost049_HeadPic11_Chr
+  .db :Cost049_HeadPic00_Chr
   .db :Cost049_HeadPic13_Chr
+  .db :Cost049_HeadPic00_Chr
   .db :Cost049_HeadPic15_Chr
   .db :Cost049_HeadPic16_Chr
   .db :Cost049_HeadPic17_Chr
@@ -17158,7 +17464,9 @@ Cost049_HeadChrLen:
   .dw Cost049_HeadPic09_ChrEnd - Cost049_HeadPic09_Chr
   .dw Cost049_HeadPic10_ChrEnd - Cost049_HeadPic10_Chr
   .dw Cost049_HeadPic11_ChrEnd - Cost049_HeadPic11_Chr
+  .dw Cost049_HeadPic00_ChrEnd - Cost049_HeadPic00_Chr
   .dw Cost049_HeadPic13_ChrEnd - Cost049_HeadPic13_Chr
+  .dw Cost049_HeadPic00_ChrEnd - Cost049_HeadPic00_Chr
   .dw Cost049_HeadPic15_ChrEnd - Cost049_HeadPic15_Chr
   .dw Cost049_HeadPic16_ChrEnd - Cost049_HeadPic16_Chr
   .dw Cost049_HeadPic17_ChrEnd - Cost049_HeadPic17_Chr
@@ -17179,7 +17487,9 @@ Cost049_HeadOamLo:
   .dw Cost049_HeadPic09_Oam
   .dw Cost049_HeadPic10_Oam
   .dw Cost049_HeadPic11_Oam
+  .dw Cost049_HeadPic00_Oam
   .dw Cost049_HeadPic13_Oam
+  .dw Cost049_HeadPic00_Oam
   .dw Cost049_HeadPic15_Oam
   .dw Cost049_HeadPic16_Oam
   .dw Cost049_HeadPic17_Oam
@@ -17199,7 +17509,9 @@ Cost049_HeadOamHi:
   .db :Cost049_HeadPic09_Oam
   .db :Cost049_HeadPic10_Oam
   .db :Cost049_HeadPic11_Oam
+  .db :Cost049_HeadPic00_Oam
   .db :Cost049_HeadPic13_Oam
+  .db :Cost049_HeadPic00_Oam
   .db :Cost049_HeadPic15_Oam
   .db :Cost049_HeadPic16_Oam
   .db :Cost049_HeadPic17_Oam
@@ -17325,6 +17637,7 @@ Cost050_Pal:
   .incbin "data/snes_converted/costumes/cost_050/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 14 entries indexed by pic file number
 Cost050_ChrLo:
   .dw Cost050_Pic00_Chr
   .dw Cost050_Pic01_Chr
@@ -17490,7 +17803,7 @@ Cost050_Pic13_ChrEnd:
 Cost050_Pic13_Oam:
   .incbin "data/snes_converted/costumes/cost_050/pic13.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 4 entries)
 Cost050_HeadChrLo:
   .dw Cost050_HeadPic00_Chr
   .dw Cost050_HeadPic01_Chr
@@ -17557,6 +17870,7 @@ Cost051_Pal:
   .incbin "data/snes_converted/costumes/cost_051/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 44 entries indexed by pic file number
 Cost051_ChrLo:
   .dw Cost051_Pic00_Chr
   .dw Cost051_Pic01_Chr
@@ -18052,7 +18366,7 @@ Cost051_Pic43_ChrEnd:
 Cost051_Pic43_Oam:
   .incbin "data/snes_converted/costumes/cost_051/pic43.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 15 entries)
 Cost051_HeadChrLo:
   .dw Cost051_HeadPic00_Chr
   .dw Cost051_HeadPic01_Chr
@@ -18240,6 +18554,7 @@ Cost052_Pal:
   .incbin "data/snes_converted/costumes/cost_052/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost052_ChrLo:
   .dw Cost052_Pic00_Chr
   .dw Cost052_Pic01_Chr
@@ -18273,6 +18588,7 @@ Cost052_ChrLo:
   .dw Cost052_Pic29_Chr
   .dw Cost052_Pic30_Chr
   .dw Cost052_Pic31_Chr
+  .dw Cost052_Pic00_Chr  ; gap->pic00
   .dw Cost052_Pic33_Chr
   .dw Cost052_Pic34_Chr
   .dw Cost052_Pic35_Chr
@@ -18324,6 +18640,7 @@ Cost052_ChrHi:
   .db :Cost052_Pic29_Chr
   .db :Cost052_Pic30_Chr
   .db :Cost052_Pic31_Chr
+  .db :Cost052_Pic00_Chr
   .db :Cost052_Pic33_Chr
   .db :Cost052_Pic34_Chr
   .db :Cost052_Pic35_Chr
@@ -18375,6 +18692,7 @@ Cost052_ChrLen:
   .dw Cost052_Pic29_ChrEnd - Cost052_Pic29_Chr
   .dw Cost052_Pic30_ChrEnd - Cost052_Pic30_Chr
   .dw Cost052_Pic31_ChrEnd - Cost052_Pic31_Chr
+  .dw Cost052_Pic00_ChrEnd - Cost052_Pic00_Chr
   .dw Cost052_Pic33_ChrEnd - Cost052_Pic33_Chr
   .dw Cost052_Pic34_ChrEnd - Cost052_Pic34_Chr
   .dw Cost052_Pic35_ChrEnd - Cost052_Pic35_Chr
@@ -18427,6 +18745,7 @@ Cost052_OamLo:
   .dw Cost052_Pic29_Oam
   .dw Cost052_Pic30_Oam
   .dw Cost052_Pic31_Oam
+  .dw Cost052_Pic00_Oam
   .dw Cost052_Pic33_Oam
   .dw Cost052_Pic34_Oam
   .dw Cost052_Pic35_Oam
@@ -18478,6 +18797,7 @@ Cost052_OamHi:
   .db :Cost052_Pic29_Oam
   .db :Cost052_Pic30_Oam
   .db :Cost052_Pic31_Oam
+  .db :Cost052_Pic00_Oam
   .db :Cost052_Pic33_Oam
   .db :Cost052_Pic34_Oam
   .db :Cost052_Pic35_Oam
@@ -18801,6 +19121,7 @@ Cost053_Pal:
   .incbin "data/snes_converted/costumes/cost_053/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 16 entries indexed by pic file number
 Cost053_ChrLo:
   .dw Cost053_Pic00_Chr
   .dw Cost053_Pic01_Chr
@@ -18999,6 +19320,7 @@ Cost054_Pal:
   .incbin "data/snes_converted/costumes/cost_054/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 47 entries indexed by pic file number
 Cost054_ChrLo:
   .dw Cost054_Pic00_Chr
   .dw Cost054_Pic01_Chr
@@ -19538,30 +19860,46 @@ Cost055_Pal:
   .incbin "data/snes_converted/costumes/cost_055/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 6 entries indexed by pic file number
 Cost055_ChrLo:
   .dw Cost055_Pic00_Chr
   .dw Cost055_Pic01_Chr
+  .dw Cost055_Pic00_Chr  ; gap->pic00
+  .dw Cost055_Pic00_Chr  ; gap->pic00
+  .dw Cost055_Pic00_Chr  ; gap->pic00
   .dw Cost055_Pic05_Chr
 
 Cost055_ChrHi:
   .db :Cost055_Pic00_Chr
   .db :Cost055_Pic01_Chr
+  .db :Cost055_Pic00_Chr
+  .db :Cost055_Pic00_Chr
+  .db :Cost055_Pic00_Chr
   .db :Cost055_Pic05_Chr
 
 Cost055_ChrLen:
   .dw Cost055_Pic00_ChrEnd - Cost055_Pic00_Chr
   .dw Cost055_Pic01_ChrEnd - Cost055_Pic01_Chr
+  .dw Cost055_Pic00_ChrEnd - Cost055_Pic00_Chr
+  .dw Cost055_Pic00_ChrEnd - Cost055_Pic00_Chr
+  .dw Cost055_Pic00_ChrEnd - Cost055_Pic00_Chr
   .dw Cost055_Pic05_ChrEnd - Cost055_Pic05_Chr
 
 ; Body frame OAM lookup (word addr, bank)
 Cost055_OamLo:
   .dw Cost055_Pic00_Oam
   .dw Cost055_Pic01_Oam
+  .dw Cost055_Pic00_Oam
+  .dw Cost055_Pic00_Oam
+  .dw Cost055_Pic00_Oam
   .dw Cost055_Pic05_Oam
 
 Cost055_OamHi:
   .db :Cost055_Pic00_Oam
   .db :Cost055_Pic01_Oam
+  .db :Cost055_Pic00_Oam
+  .db :Cost055_Pic00_Oam
+  .db :Cost055_Pic00_Oam
   .db :Cost055_Pic05_Oam
 
 Cost055_Pic00_Chr:
@@ -19593,7 +19931,9 @@ Cost056_Pal:
   .incbin "data/snes_converted/costumes/cost_056/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 5 entries indexed by pic file number
 Cost056_ChrLo:
+  .dw Cost056_Pic01_Chr  ; gap->pic00
   .dw Cost056_Pic01_Chr
   .dw Cost056_Pic02_Chr
   .dw Cost056_Pic03_Chr
@@ -19601,11 +19941,13 @@ Cost056_ChrLo:
 
 Cost056_ChrHi:
   .db :Cost056_Pic01_Chr
+  .db :Cost056_Pic01_Chr
   .db :Cost056_Pic02_Chr
   .db :Cost056_Pic03_Chr
   .db :Cost056_Pic04_Chr
 
 Cost056_ChrLen:
+  .dw Cost056_Pic01_ChrEnd - Cost056_Pic01_Chr
   .dw Cost056_Pic01_ChrEnd - Cost056_Pic01_Chr
   .dw Cost056_Pic02_ChrEnd - Cost056_Pic02_Chr
   .dw Cost056_Pic03_ChrEnd - Cost056_Pic03_Chr
@@ -19614,11 +19956,13 @@ Cost056_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost056_OamLo:
   .dw Cost056_Pic01_Oam
+  .dw Cost056_Pic01_Oam
   .dw Cost056_Pic02_Oam
   .dw Cost056_Pic03_Oam
   .dw Cost056_Pic04_Oam
 
 Cost056_OamHi:
+  .db :Cost056_Pic01_Oam
   .db :Cost056_Pic01_Oam
   .db :Cost056_Pic02_Oam
   .db :Cost056_Pic03_Oam
@@ -19659,6 +20003,7 @@ Cost057_Pal:
   .incbin "data/snes_converted/costumes/cost_057/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 6 entries indexed by pic file number
 Cost057_ChrLo:
   .dw Cost057_Pic00_Chr
   .dw Cost057_Pic01_Chr
@@ -19747,8 +20092,10 @@ Cost058_Pal:
   .incbin "data/snes_converted/costumes/cost_058/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 48 entries indexed by pic file number
 Cost058_ChrLo:
   .dw Cost058_Pic00_Chr
+  .dw Cost058_Pic00_Chr  ; gap->pic00
   .dw Cost058_Pic02_Chr
   .dw Cost058_Pic03_Chr
   .dw Cost058_Pic04_Chr
@@ -19769,6 +20116,7 @@ Cost058_ChrLo:
   .dw Cost058_Pic19_Chr
   .dw Cost058_Pic20_Chr
   .dw Cost058_Pic21_Chr
+  .dw Cost058_Pic00_Chr  ; gap->pic00
   .dw Cost058_Pic23_Chr
   .dw Cost058_Pic24_Chr
   .dw Cost058_Pic25_Chr
@@ -19797,6 +20145,7 @@ Cost058_ChrLo:
 
 Cost058_ChrHi:
   .db :Cost058_Pic00_Chr
+  .db :Cost058_Pic00_Chr
   .db :Cost058_Pic02_Chr
   .db :Cost058_Pic03_Chr
   .db :Cost058_Pic04_Chr
@@ -19817,6 +20166,7 @@ Cost058_ChrHi:
   .db :Cost058_Pic19_Chr
   .db :Cost058_Pic20_Chr
   .db :Cost058_Pic21_Chr
+  .db :Cost058_Pic00_Chr
   .db :Cost058_Pic23_Chr
   .db :Cost058_Pic24_Chr
   .db :Cost058_Pic25_Chr
@@ -19845,6 +20195,7 @@ Cost058_ChrHi:
 
 Cost058_ChrLen:
   .dw Cost058_Pic00_ChrEnd - Cost058_Pic00_Chr
+  .dw Cost058_Pic00_ChrEnd - Cost058_Pic00_Chr
   .dw Cost058_Pic02_ChrEnd - Cost058_Pic02_Chr
   .dw Cost058_Pic03_ChrEnd - Cost058_Pic03_Chr
   .dw Cost058_Pic04_ChrEnd - Cost058_Pic04_Chr
@@ -19865,6 +20216,7 @@ Cost058_ChrLen:
   .dw Cost058_Pic19_ChrEnd - Cost058_Pic19_Chr
   .dw Cost058_Pic20_ChrEnd - Cost058_Pic20_Chr
   .dw Cost058_Pic21_ChrEnd - Cost058_Pic21_Chr
+  .dw Cost058_Pic00_ChrEnd - Cost058_Pic00_Chr
   .dw Cost058_Pic23_ChrEnd - Cost058_Pic23_Chr
   .dw Cost058_Pic24_ChrEnd - Cost058_Pic24_Chr
   .dw Cost058_Pic25_ChrEnd - Cost058_Pic25_Chr
@@ -19894,6 +20246,7 @@ Cost058_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost058_OamLo:
   .dw Cost058_Pic00_Oam
+  .dw Cost058_Pic00_Oam
   .dw Cost058_Pic02_Oam
   .dw Cost058_Pic03_Oam
   .dw Cost058_Pic04_Oam
@@ -19914,6 +20267,7 @@ Cost058_OamLo:
   .dw Cost058_Pic19_Oam
   .dw Cost058_Pic20_Oam
   .dw Cost058_Pic21_Oam
+  .dw Cost058_Pic00_Oam
   .dw Cost058_Pic23_Oam
   .dw Cost058_Pic24_Oam
   .dw Cost058_Pic25_Oam
@@ -19942,6 +20296,7 @@ Cost058_OamLo:
 
 Cost058_OamHi:
   .db :Cost058_Pic00_Oam
+  .db :Cost058_Pic00_Oam
   .db :Cost058_Pic02_Oam
   .db :Cost058_Pic03_Oam
   .db :Cost058_Pic04_Oam
@@ -19962,6 +20317,7 @@ Cost058_OamHi:
   .db :Cost058_Pic19_Oam
   .db :Cost058_Pic20_Oam
   .db :Cost058_Pic21_Oam
+  .db :Cost058_Pic00_Oam
   .db :Cost058_Pic23_Oam
   .db :Cost058_Pic24_Oam
   .db :Cost058_Pic25_Oam
@@ -20264,7 +20620,7 @@ Cost058_Pic47_ChrEnd:
 Cost058_Pic47_Oam:
   .incbin "data/snes_converted/costumes/cost_058/pic47.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 16 entries)
 Cost058_HeadChrLo:
   .dw Cost058_HeadPic00_Chr
   .dw Cost058_HeadPic01_Chr
@@ -20463,12 +20819,16 @@ Cost059_Pal:
   .incbin "data/snes_converted/costumes/cost_059/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 36 entries indexed by pic file number
 Cost059_ChrLo:
   .dw Cost059_Pic00_Chr
+  .dw Cost059_Pic00_Chr  ; gap->pic00
   .dw Cost059_Pic02_Chr
   .dw Cost059_Pic03_Chr
   .dw Cost059_Pic04_Chr
   .dw Cost059_Pic05_Chr
+  .dw Cost059_Pic00_Chr  ; gap->pic00
+  .dw Cost059_Pic00_Chr  ; gap->pic00
   .dw Cost059_Pic08_Chr
   .dw Cost059_Pic09_Chr
   .dw Cost059_Pic10_Chr
@@ -20480,24 +20840,33 @@ Cost059_ChrLo:
   .dw Cost059_Pic16_Chr
   .dw Cost059_Pic17_Chr
   .dw Cost059_Pic18_Chr
+  .dw Cost059_Pic00_Chr  ; gap->pic00
+  .dw Cost059_Pic00_Chr  ; gap->pic00
   .dw Cost059_Pic21_Chr
   .dw Cost059_Pic22_Chr
   .dw Cost059_Pic23_Chr
   .dw Cost059_Pic24_Chr
   .dw Cost059_Pic25_Chr
+  .dw Cost059_Pic00_Chr  ; gap->pic00
+  .dw Cost059_Pic00_Chr  ; gap->pic00
   .dw Cost059_Pic28_Chr
   .dw Cost059_Pic29_Chr
   .dw Cost059_Pic30_Chr
   .dw Cost059_Pic31_Chr
+  .dw Cost059_Pic00_Chr  ; gap->pic00
+  .dw Cost059_Pic00_Chr  ; gap->pic00
   .dw Cost059_Pic34_Chr
   .dw Cost059_Pic35_Chr
 
 Cost059_ChrHi:
   .db :Cost059_Pic00_Chr
+  .db :Cost059_Pic00_Chr
   .db :Cost059_Pic02_Chr
   .db :Cost059_Pic03_Chr
   .db :Cost059_Pic04_Chr
   .db :Cost059_Pic05_Chr
+  .db :Cost059_Pic00_Chr
+  .db :Cost059_Pic00_Chr
   .db :Cost059_Pic08_Chr
   .db :Cost059_Pic09_Chr
   .db :Cost059_Pic10_Chr
@@ -20509,24 +20878,33 @@ Cost059_ChrHi:
   .db :Cost059_Pic16_Chr
   .db :Cost059_Pic17_Chr
   .db :Cost059_Pic18_Chr
+  .db :Cost059_Pic00_Chr
+  .db :Cost059_Pic00_Chr
   .db :Cost059_Pic21_Chr
   .db :Cost059_Pic22_Chr
   .db :Cost059_Pic23_Chr
   .db :Cost059_Pic24_Chr
   .db :Cost059_Pic25_Chr
+  .db :Cost059_Pic00_Chr
+  .db :Cost059_Pic00_Chr
   .db :Cost059_Pic28_Chr
   .db :Cost059_Pic29_Chr
   .db :Cost059_Pic30_Chr
   .db :Cost059_Pic31_Chr
+  .db :Cost059_Pic00_Chr
+  .db :Cost059_Pic00_Chr
   .db :Cost059_Pic34_Chr
   .db :Cost059_Pic35_Chr
 
 Cost059_ChrLen:
   .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
   .dw Cost059_Pic02_ChrEnd - Cost059_Pic02_Chr
   .dw Cost059_Pic03_ChrEnd - Cost059_Pic03_Chr
   .dw Cost059_Pic04_ChrEnd - Cost059_Pic04_Chr
   .dw Cost059_Pic05_ChrEnd - Cost059_Pic05_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
   .dw Cost059_Pic08_ChrEnd - Cost059_Pic08_Chr
   .dw Cost059_Pic09_ChrEnd - Cost059_Pic09_Chr
   .dw Cost059_Pic10_ChrEnd - Cost059_Pic10_Chr
@@ -20538,25 +20916,34 @@ Cost059_ChrLen:
   .dw Cost059_Pic16_ChrEnd - Cost059_Pic16_Chr
   .dw Cost059_Pic17_ChrEnd - Cost059_Pic17_Chr
   .dw Cost059_Pic18_ChrEnd - Cost059_Pic18_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
   .dw Cost059_Pic21_ChrEnd - Cost059_Pic21_Chr
   .dw Cost059_Pic22_ChrEnd - Cost059_Pic22_Chr
   .dw Cost059_Pic23_ChrEnd - Cost059_Pic23_Chr
   .dw Cost059_Pic24_ChrEnd - Cost059_Pic24_Chr
   .dw Cost059_Pic25_ChrEnd - Cost059_Pic25_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
   .dw Cost059_Pic28_ChrEnd - Cost059_Pic28_Chr
   .dw Cost059_Pic29_ChrEnd - Cost059_Pic29_Chr
   .dw Cost059_Pic30_ChrEnd - Cost059_Pic30_Chr
   .dw Cost059_Pic31_ChrEnd - Cost059_Pic31_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
+  .dw Cost059_Pic00_ChrEnd - Cost059_Pic00_Chr
   .dw Cost059_Pic34_ChrEnd - Cost059_Pic34_Chr
   .dw Cost059_Pic35_ChrEnd - Cost059_Pic35_Chr
 
 ; Body frame OAM lookup (word addr, bank)
 Cost059_OamLo:
   .dw Cost059_Pic00_Oam
+  .dw Cost059_Pic00_Oam
   .dw Cost059_Pic02_Oam
   .dw Cost059_Pic03_Oam
   .dw Cost059_Pic04_Oam
   .dw Cost059_Pic05_Oam
+  .dw Cost059_Pic00_Oam
+  .dw Cost059_Pic00_Oam
   .dw Cost059_Pic08_Oam
   .dw Cost059_Pic09_Oam
   .dw Cost059_Pic10_Oam
@@ -20568,24 +20955,33 @@ Cost059_OamLo:
   .dw Cost059_Pic16_Oam
   .dw Cost059_Pic17_Oam
   .dw Cost059_Pic18_Oam
+  .dw Cost059_Pic00_Oam
+  .dw Cost059_Pic00_Oam
   .dw Cost059_Pic21_Oam
   .dw Cost059_Pic22_Oam
   .dw Cost059_Pic23_Oam
   .dw Cost059_Pic24_Oam
   .dw Cost059_Pic25_Oam
+  .dw Cost059_Pic00_Oam
+  .dw Cost059_Pic00_Oam
   .dw Cost059_Pic28_Oam
   .dw Cost059_Pic29_Oam
   .dw Cost059_Pic30_Oam
   .dw Cost059_Pic31_Oam
+  .dw Cost059_Pic00_Oam
+  .dw Cost059_Pic00_Oam
   .dw Cost059_Pic34_Oam
   .dw Cost059_Pic35_Oam
 
 Cost059_OamHi:
   .db :Cost059_Pic00_Oam
+  .db :Cost059_Pic00_Oam
   .db :Cost059_Pic02_Oam
   .db :Cost059_Pic03_Oam
   .db :Cost059_Pic04_Oam
   .db :Cost059_Pic05_Oam
+  .db :Cost059_Pic00_Oam
+  .db :Cost059_Pic00_Oam
   .db :Cost059_Pic08_Oam
   .db :Cost059_Pic09_Oam
   .db :Cost059_Pic10_Oam
@@ -20597,15 +20993,21 @@ Cost059_OamHi:
   .db :Cost059_Pic16_Oam
   .db :Cost059_Pic17_Oam
   .db :Cost059_Pic18_Oam
+  .db :Cost059_Pic00_Oam
+  .db :Cost059_Pic00_Oam
   .db :Cost059_Pic21_Oam
   .db :Cost059_Pic22_Oam
   .db :Cost059_Pic23_Oam
   .db :Cost059_Pic24_Oam
   .db :Cost059_Pic25_Oam
+  .db :Cost059_Pic00_Oam
+  .db :Cost059_Pic00_Oam
   .db :Cost059_Pic28_Oam
   .db :Cost059_Pic29_Oam
   .db :Cost059_Pic30_Oam
   .db :Cost059_Pic31_Oam
+  .db :Cost059_Pic00_Oam
+  .db :Cost059_Pic00_Oam
   .db :Cost059_Pic34_Oam
   .db :Cost059_Pic35_Oam
 
@@ -20771,16 +21173,20 @@ Cost059_Pic35_ChrEnd:
 Cost059_Pic35_Oam:
   .incbin "data/snes_converted/costumes/cost_059/pic35.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 14 entries)
 Cost059_HeadChrLo:
   .dw Cost059_HeadPic00_Chr
   .dw Cost059_HeadPic01_Chr
   .dw Cost059_HeadPic02_Chr
   .dw Cost059_HeadPic03_Chr
+  .dw Cost059_HeadPic00_Chr
+  .dw Cost059_HeadPic00_Chr
   .dw Cost059_HeadPic06_Chr
   .dw Cost059_HeadPic07_Chr
   .dw Cost059_HeadPic08_Chr
   .dw Cost059_HeadPic09_Chr
+  .dw Cost059_HeadPic00_Chr
+  .dw Cost059_HeadPic00_Chr
   .dw Cost059_HeadPic12_Chr
   .dw Cost059_HeadPic13_Chr
 
@@ -20789,10 +21195,14 @@ Cost059_HeadChrHi:
   .db :Cost059_HeadPic01_Chr
   .db :Cost059_HeadPic02_Chr
   .db :Cost059_HeadPic03_Chr
+  .db :Cost059_HeadPic00_Chr
+  .db :Cost059_HeadPic00_Chr
   .db :Cost059_HeadPic06_Chr
   .db :Cost059_HeadPic07_Chr
   .db :Cost059_HeadPic08_Chr
   .db :Cost059_HeadPic09_Chr
+  .db :Cost059_HeadPic00_Chr
+  .db :Cost059_HeadPic00_Chr
   .db :Cost059_HeadPic12_Chr
   .db :Cost059_HeadPic13_Chr
 
@@ -20801,10 +21211,14 @@ Cost059_HeadChrLen:
   .dw Cost059_HeadPic01_ChrEnd - Cost059_HeadPic01_Chr
   .dw Cost059_HeadPic02_ChrEnd - Cost059_HeadPic02_Chr
   .dw Cost059_HeadPic03_ChrEnd - Cost059_HeadPic03_Chr
+  .dw Cost059_HeadPic00_ChrEnd - Cost059_HeadPic00_Chr
+  .dw Cost059_HeadPic00_ChrEnd - Cost059_HeadPic00_Chr
   .dw Cost059_HeadPic06_ChrEnd - Cost059_HeadPic06_Chr
   .dw Cost059_HeadPic07_ChrEnd - Cost059_HeadPic07_Chr
   .dw Cost059_HeadPic08_ChrEnd - Cost059_HeadPic08_Chr
   .dw Cost059_HeadPic09_ChrEnd - Cost059_HeadPic09_Chr
+  .dw Cost059_HeadPic00_ChrEnd - Cost059_HeadPic00_Chr
+  .dw Cost059_HeadPic00_ChrEnd - Cost059_HeadPic00_Chr
   .dw Cost059_HeadPic12_ChrEnd - Cost059_HeadPic12_Chr
   .dw Cost059_HeadPic13_ChrEnd - Cost059_HeadPic13_Chr
 
@@ -20814,10 +21228,14 @@ Cost059_HeadOamLo:
   .dw Cost059_HeadPic01_Oam
   .dw Cost059_HeadPic02_Oam
   .dw Cost059_HeadPic03_Oam
+  .dw Cost059_HeadPic00_Oam
+  .dw Cost059_HeadPic00_Oam
   .dw Cost059_HeadPic06_Oam
   .dw Cost059_HeadPic07_Oam
   .dw Cost059_HeadPic08_Oam
   .dw Cost059_HeadPic09_Oam
+  .dw Cost059_HeadPic00_Oam
+  .dw Cost059_HeadPic00_Oam
   .dw Cost059_HeadPic12_Oam
   .dw Cost059_HeadPic13_Oam
 
@@ -20826,10 +21244,14 @@ Cost059_HeadOamHi:
   .db :Cost059_HeadPic01_Oam
   .db :Cost059_HeadPic02_Oam
   .db :Cost059_HeadPic03_Oam
+  .db :Cost059_HeadPic00_Oam
+  .db :Cost059_HeadPic00_Oam
   .db :Cost059_HeadPic06_Oam
   .db :Cost059_HeadPic07_Oam
   .db :Cost059_HeadPic08_Oam
   .db :Cost059_HeadPic09_Oam
+  .db :Cost059_HeadPic00_Oam
+  .db :Cost059_HeadPic00_Oam
   .db :Cost059_HeadPic12_Oam
   .db :Cost059_HeadPic13_Oam
 
@@ -20904,6 +21326,7 @@ Cost060_Pal:
   .incbin "data/snes_converted/costumes/cost_060/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 5 entries indexed by pic file number
 Cost060_ChrLo:
   .dw Cost060_Pic00_Chr
   .dw Cost060_Pic01_Chr
@@ -20970,7 +21393,7 @@ Cost060_Pic04_ChrEnd:
 Cost060_Pic04_Oam:
   .incbin "data/snes_converted/costumes/cost_060/pic04.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 1 entries)
 Cost060_HeadChrLo:
   .dw Cost060_HeadPic00_Chr
 
@@ -21004,11 +21427,16 @@ Cost061_Pal:
   .incbin "data/snes_converted/costumes/cost_061/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 16 entries indexed by pic file number
 Cost061_ChrLo:
   .dw Cost061_Pic00_Chr
   .dw Cost061_Pic01_Chr
   .dw Cost061_Pic02_Chr
   .dw Cost061_Pic03_Chr
+  .dw Cost061_Pic00_Chr  ; gap->pic00
+  .dw Cost061_Pic00_Chr  ; gap->pic00
+  .dw Cost061_Pic00_Chr  ; gap->pic00
+  .dw Cost061_Pic00_Chr  ; gap->pic00
   .dw Cost061_Pic08_Chr
   .dw Cost061_Pic09_Chr
   .dw Cost061_Pic10_Chr
@@ -21023,6 +21451,10 @@ Cost061_ChrHi:
   .db :Cost061_Pic01_Chr
   .db :Cost061_Pic02_Chr
   .db :Cost061_Pic03_Chr
+  .db :Cost061_Pic00_Chr
+  .db :Cost061_Pic00_Chr
+  .db :Cost061_Pic00_Chr
+  .db :Cost061_Pic00_Chr
   .db :Cost061_Pic08_Chr
   .db :Cost061_Pic09_Chr
   .db :Cost061_Pic10_Chr
@@ -21037,6 +21469,10 @@ Cost061_ChrLen:
   .dw Cost061_Pic01_ChrEnd - Cost061_Pic01_Chr
   .dw Cost061_Pic02_ChrEnd - Cost061_Pic02_Chr
   .dw Cost061_Pic03_ChrEnd - Cost061_Pic03_Chr
+  .dw Cost061_Pic00_ChrEnd - Cost061_Pic00_Chr
+  .dw Cost061_Pic00_ChrEnd - Cost061_Pic00_Chr
+  .dw Cost061_Pic00_ChrEnd - Cost061_Pic00_Chr
+  .dw Cost061_Pic00_ChrEnd - Cost061_Pic00_Chr
   .dw Cost061_Pic08_ChrEnd - Cost061_Pic08_Chr
   .dw Cost061_Pic09_ChrEnd - Cost061_Pic09_Chr
   .dw Cost061_Pic10_ChrEnd - Cost061_Pic10_Chr
@@ -21052,6 +21488,10 @@ Cost061_OamLo:
   .dw Cost061_Pic01_Oam
   .dw Cost061_Pic02_Oam
   .dw Cost061_Pic03_Oam
+  .dw Cost061_Pic00_Oam
+  .dw Cost061_Pic00_Oam
+  .dw Cost061_Pic00_Oam
+  .dw Cost061_Pic00_Oam
   .dw Cost061_Pic08_Oam
   .dw Cost061_Pic09_Oam
   .dw Cost061_Pic10_Oam
@@ -21066,6 +21506,10 @@ Cost061_OamHi:
   .db :Cost061_Pic01_Oam
   .db :Cost061_Pic02_Oam
   .db :Cost061_Pic03_Oam
+  .db :Cost061_Pic00_Oam
+  .db :Cost061_Pic00_Oam
+  .db :Cost061_Pic00_Oam
+  .db :Cost061_Pic00_Oam
   .db :Cost061_Pic08_Oam
   .db :Cost061_Pic09_Oam
   .db :Cost061_Pic10_Oam
@@ -21158,6 +21602,7 @@ Cost062_Pal:
   .incbin "data/snes_converted/costumes/cost_062/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 1 entries indexed by pic file number
 Cost062_ChrLo:
   .dw Cost062_Pic00_Chr
 
@@ -21191,6 +21636,7 @@ Cost063_Pal:
   .incbin "data/snes_converted/costumes/cost_063/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 8 entries indexed by pic file number
 Cost063_ChrLo:
   .dw Cost063_Pic00_Chr
   .dw Cost063_Pic01_Chr
@@ -21301,6 +21747,7 @@ Cost064_Pal:
   .incbin "data/snes_converted/costumes/cost_064/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 9 entries indexed by pic file number
 Cost064_ChrLo:
   .dw Cost064_Pic00_Chr
   .dw Cost064_Pic01_Chr
@@ -21308,6 +21755,7 @@ Cost064_ChrLo:
   .dw Cost064_Pic03_Chr
   .dw Cost064_Pic04_Chr
   .dw Cost064_Pic05_Chr
+  .dw Cost064_Pic00_Chr  ; gap->pic00
   .dw Cost064_Pic07_Chr
   .dw Cost064_Pic08_Chr
 
@@ -21318,6 +21766,7 @@ Cost064_ChrHi:
   .db :Cost064_Pic03_Chr
   .db :Cost064_Pic04_Chr
   .db :Cost064_Pic05_Chr
+  .db :Cost064_Pic00_Chr
   .db :Cost064_Pic07_Chr
   .db :Cost064_Pic08_Chr
 
@@ -21328,6 +21777,7 @@ Cost064_ChrLen:
   .dw Cost064_Pic03_ChrEnd - Cost064_Pic03_Chr
   .dw Cost064_Pic04_ChrEnd - Cost064_Pic04_Chr
   .dw Cost064_Pic05_ChrEnd - Cost064_Pic05_Chr
+  .dw Cost064_Pic00_ChrEnd - Cost064_Pic00_Chr
   .dw Cost064_Pic07_ChrEnd - Cost064_Pic07_Chr
   .dw Cost064_Pic08_ChrEnd - Cost064_Pic08_Chr
 
@@ -21339,6 +21789,7 @@ Cost064_OamLo:
   .dw Cost064_Pic03_Oam
   .dw Cost064_Pic04_Oam
   .dw Cost064_Pic05_Oam
+  .dw Cost064_Pic00_Oam
   .dw Cost064_Pic07_Oam
   .dw Cost064_Pic08_Oam
 
@@ -21349,6 +21800,7 @@ Cost064_OamHi:
   .db :Cost064_Pic03_Oam
   .db :Cost064_Pic04_Oam
   .db :Cost064_Pic05_Oam
+  .db :Cost064_Pic00_Oam
   .db :Cost064_Pic07_Oam
   .db :Cost064_Pic08_Oam
 
@@ -21411,6 +21863,7 @@ Cost065_Pal:
   .incbin "data/snes_converted/costumes/cost_065/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 18 entries indexed by pic file number
 Cost065_ChrLo:
   .dw Cost065_Pic00_Chr
   .dw Cost065_Pic01_Chr
@@ -21620,7 +22073,7 @@ Cost065_Pic17_ChrEnd:
 Cost065_Pic17_Oam:
   .incbin "data/snes_converted/costumes/cost_065/pic17.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 15 entries)
 Cost065_HeadChrLo:
   .dw Cost065_HeadPic00_Chr
   .dw Cost065_HeadPic01_Chr
@@ -21808,6 +22261,7 @@ Cost067_Pal:
   .incbin "data/snes_converted/costumes/cost_067/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 44 entries indexed by pic file number
 Cost067_ChrLo:
   .dw Cost067_Pic00_Chr
   .dw Cost067_Pic01_Chr
@@ -21822,6 +22276,8 @@ Cost067_ChrLo:
   .dw Cost067_Pic10_Chr
   .dw Cost067_Pic11_Chr
   .dw Cost067_Pic12_Chr
+  .dw Cost067_Pic00_Chr  ; gap->pic00
+  .dw Cost067_Pic00_Chr  ; gap->pic00
   .dw Cost067_Pic15_Chr
   .dw Cost067_Pic16_Chr
   .dw Cost067_Pic17_Chr
@@ -21834,6 +22290,7 @@ Cost067_ChrLo:
   .dw Cost067_Pic24_Chr
   .dw Cost067_Pic25_Chr
   .dw Cost067_Pic26_Chr
+  .dw Cost067_Pic00_Chr  ; gap->pic00
   .dw Cost067_Pic28_Chr
   .dw Cost067_Pic29_Chr
   .dw Cost067_Pic30_Chr
@@ -21865,6 +22322,8 @@ Cost067_ChrHi:
   .db :Cost067_Pic10_Chr
   .db :Cost067_Pic11_Chr
   .db :Cost067_Pic12_Chr
+  .db :Cost067_Pic00_Chr
+  .db :Cost067_Pic00_Chr
   .db :Cost067_Pic15_Chr
   .db :Cost067_Pic16_Chr
   .db :Cost067_Pic17_Chr
@@ -21877,6 +22336,7 @@ Cost067_ChrHi:
   .db :Cost067_Pic24_Chr
   .db :Cost067_Pic25_Chr
   .db :Cost067_Pic26_Chr
+  .db :Cost067_Pic00_Chr
   .db :Cost067_Pic28_Chr
   .db :Cost067_Pic29_Chr
   .db :Cost067_Pic30_Chr
@@ -21908,6 +22368,8 @@ Cost067_ChrLen:
   .dw Cost067_Pic10_ChrEnd - Cost067_Pic10_Chr
   .dw Cost067_Pic11_ChrEnd - Cost067_Pic11_Chr
   .dw Cost067_Pic12_ChrEnd - Cost067_Pic12_Chr
+  .dw Cost067_Pic00_ChrEnd - Cost067_Pic00_Chr
+  .dw Cost067_Pic00_ChrEnd - Cost067_Pic00_Chr
   .dw Cost067_Pic15_ChrEnd - Cost067_Pic15_Chr
   .dw Cost067_Pic16_ChrEnd - Cost067_Pic16_Chr
   .dw Cost067_Pic17_ChrEnd - Cost067_Pic17_Chr
@@ -21920,6 +22382,7 @@ Cost067_ChrLen:
   .dw Cost067_Pic24_ChrEnd - Cost067_Pic24_Chr
   .dw Cost067_Pic25_ChrEnd - Cost067_Pic25_Chr
   .dw Cost067_Pic26_ChrEnd - Cost067_Pic26_Chr
+  .dw Cost067_Pic00_ChrEnd - Cost067_Pic00_Chr
   .dw Cost067_Pic28_ChrEnd - Cost067_Pic28_Chr
   .dw Cost067_Pic29_ChrEnd - Cost067_Pic29_Chr
   .dw Cost067_Pic30_ChrEnd - Cost067_Pic30_Chr
@@ -21952,6 +22415,8 @@ Cost067_OamLo:
   .dw Cost067_Pic10_Oam
   .dw Cost067_Pic11_Oam
   .dw Cost067_Pic12_Oam
+  .dw Cost067_Pic00_Oam
+  .dw Cost067_Pic00_Oam
   .dw Cost067_Pic15_Oam
   .dw Cost067_Pic16_Oam
   .dw Cost067_Pic17_Oam
@@ -21964,6 +22429,7 @@ Cost067_OamLo:
   .dw Cost067_Pic24_Oam
   .dw Cost067_Pic25_Oam
   .dw Cost067_Pic26_Oam
+  .dw Cost067_Pic00_Oam
   .dw Cost067_Pic28_Oam
   .dw Cost067_Pic29_Oam
   .dw Cost067_Pic30_Oam
@@ -21995,6 +22461,8 @@ Cost067_OamHi:
   .db :Cost067_Pic10_Oam
   .db :Cost067_Pic11_Oam
   .db :Cost067_Pic12_Oam
+  .db :Cost067_Pic00_Oam
+  .db :Cost067_Pic00_Oam
   .db :Cost067_Pic15_Oam
   .db :Cost067_Pic16_Oam
   .db :Cost067_Pic17_Oam
@@ -22007,6 +22475,7 @@ Cost067_OamHi:
   .db :Cost067_Pic24_Oam
   .db :Cost067_Pic25_Oam
   .db :Cost067_Pic26_Oam
+  .db :Cost067_Pic00_Oam
   .db :Cost067_Pic28_Oam
   .db :Cost067_Pic29_Oam
   .db :Cost067_Pic30_Oam
@@ -22270,7 +22739,7 @@ Cost067_Pic43_ChrEnd:
 Cost067_Pic43_Oam:
   .incbin "data/snes_converted/costumes/cost_067/pic43.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost067_HeadChrLo:
   .dw Cost067_HeadPic00_Chr
   .dw Cost067_HeadPic01_Chr
@@ -22280,6 +22749,7 @@ Cost067_HeadChrLo:
   .dw Cost067_HeadPic05_Chr
   .dw Cost067_HeadPic06_Chr
   .dw Cost067_HeadPic07_Chr
+  .dw Cost067_HeadPic00_Chr
   .dw Cost067_HeadPic09_Chr
   .dw Cost067_HeadPic10_Chr
   .dw Cost067_HeadPic11_Chr
@@ -22301,6 +22771,7 @@ Cost067_HeadChrHi:
   .db :Cost067_HeadPic05_Chr
   .db :Cost067_HeadPic06_Chr
   .db :Cost067_HeadPic07_Chr
+  .db :Cost067_HeadPic00_Chr
   .db :Cost067_HeadPic09_Chr
   .db :Cost067_HeadPic10_Chr
   .db :Cost067_HeadPic11_Chr
@@ -22322,6 +22793,7 @@ Cost067_HeadChrLen:
   .dw Cost067_HeadPic05_ChrEnd - Cost067_HeadPic05_Chr
   .dw Cost067_HeadPic06_ChrEnd - Cost067_HeadPic06_Chr
   .dw Cost067_HeadPic07_ChrEnd - Cost067_HeadPic07_Chr
+  .dw Cost067_HeadPic00_ChrEnd - Cost067_HeadPic00_Chr
   .dw Cost067_HeadPic09_ChrEnd - Cost067_HeadPic09_Chr
   .dw Cost067_HeadPic10_ChrEnd - Cost067_HeadPic10_Chr
   .dw Cost067_HeadPic11_ChrEnd - Cost067_HeadPic11_Chr
@@ -22344,6 +22816,7 @@ Cost067_HeadOamLo:
   .dw Cost067_HeadPic05_Oam
   .dw Cost067_HeadPic06_Oam
   .dw Cost067_HeadPic07_Oam
+  .dw Cost067_HeadPic00_Oam
   .dw Cost067_HeadPic09_Oam
   .dw Cost067_HeadPic10_Oam
   .dw Cost067_HeadPic11_Oam
@@ -22365,6 +22838,7 @@ Cost067_HeadOamHi:
   .db :Cost067_HeadPic05_Oam
   .db :Cost067_HeadPic06_Oam
   .db :Cost067_HeadPic07_Oam
+  .db :Cost067_HeadPic00_Oam
   .db :Cost067_HeadPic09_Oam
   .db :Cost067_HeadPic10_Oam
   .db :Cost067_HeadPic11_Oam
@@ -22502,6 +22976,7 @@ Cost068_Pal:
   .incbin "data/snes_converted/costumes/cost_068/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 40 entries indexed by pic file number
 Cost068_ChrLo:
   .dw Cost068_Pic00_Chr
   .dw Cost068_Pic01_Chr
@@ -22512,6 +22987,7 @@ Cost068_ChrLo:
   .dw Cost068_Pic06_Chr
   .dw Cost068_Pic07_Chr
   .dw Cost068_Pic08_Chr
+  .dw Cost068_Pic00_Chr  ; gap->pic00
   .dw Cost068_Pic10_Chr
   .dw Cost068_Pic11_Chr
   .dw Cost068_Pic12_Chr
@@ -22553,6 +23029,7 @@ Cost068_ChrHi:
   .db :Cost068_Pic06_Chr
   .db :Cost068_Pic07_Chr
   .db :Cost068_Pic08_Chr
+  .db :Cost068_Pic00_Chr
   .db :Cost068_Pic10_Chr
   .db :Cost068_Pic11_Chr
   .db :Cost068_Pic12_Chr
@@ -22594,6 +23071,7 @@ Cost068_ChrLen:
   .dw Cost068_Pic06_ChrEnd - Cost068_Pic06_Chr
   .dw Cost068_Pic07_ChrEnd - Cost068_Pic07_Chr
   .dw Cost068_Pic08_ChrEnd - Cost068_Pic08_Chr
+  .dw Cost068_Pic00_ChrEnd - Cost068_Pic00_Chr
   .dw Cost068_Pic10_ChrEnd - Cost068_Pic10_Chr
   .dw Cost068_Pic11_ChrEnd - Cost068_Pic11_Chr
   .dw Cost068_Pic12_ChrEnd - Cost068_Pic12_Chr
@@ -22636,6 +23114,7 @@ Cost068_OamLo:
   .dw Cost068_Pic06_Oam
   .dw Cost068_Pic07_Oam
   .dw Cost068_Pic08_Oam
+  .dw Cost068_Pic00_Oam
   .dw Cost068_Pic10_Oam
   .dw Cost068_Pic11_Oam
   .dw Cost068_Pic12_Oam
@@ -22677,6 +23156,7 @@ Cost068_OamHi:
   .db :Cost068_Pic06_Oam
   .db :Cost068_Pic07_Oam
   .db :Cost068_Pic08_Oam
+  .db :Cost068_Pic00_Oam
   .db :Cost068_Pic10_Oam
   .db :Cost068_Pic11_Oam
   .db :Cost068_Pic12_Oam
@@ -22953,6 +23433,7 @@ Cost069_Pal:
   .incbin "data/snes_converted/costumes/cost_069/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 30 entries indexed by pic file number
 Cost069_ChrLo:
   .dw Cost069_Pic00_Chr
   .dw Cost069_Pic01_Chr
@@ -23294,7 +23775,7 @@ Cost069_Pic29_ChrEnd:
 Cost069_Pic29_Oam:
   .incbin "data/snes_converted/costumes/cost_069/pic29.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 16 entries)
 Cost069_HeadChrLo:
   .dw Cost069_HeadPic00_Chr
   .dw Cost069_HeadPic01_Chr
@@ -23493,6 +23974,7 @@ Cost070_Pal:
   .incbin "data/snes_converted/costumes/cost_070/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 2 entries indexed by pic file number
 Cost070_ChrLo:
   .dw Cost070_Pic00_Chr
   .dw Cost070_Pic01_Chr
@@ -23537,6 +24019,7 @@ Cost071_Pal:
   .incbin "data/snes_converted/costumes/cost_071/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 5 entries indexed by pic file number
 Cost071_ChrLo:
   .dw Cost071_Pic00_Chr
   .dw Cost071_Pic01_Chr
@@ -23614,6 +24097,7 @@ Cost072_Pal:
   .incbin "data/snes_converted/costumes/cost_072/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 49 entries indexed by pic file number
 Cost072_ChrLo:
   .dw Cost072_Pic00_Chr
   .dw Cost072_Pic01_Chr
@@ -24164,7 +24648,7 @@ Cost072_Pic48_ChrEnd:
 Cost072_Pic48_Oam:
   .incbin "data/snes_converted/costumes/cost_072/pic48.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 14 entries)
 Cost072_HeadChrLo:
   .dw Cost072_HeadPic00_Chr
   .dw Cost072_HeadPic01_Chr
@@ -24341,6 +24825,7 @@ Cost073_Pal:
   .incbin "data/snes_converted/costumes/cost_073/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 22 entries indexed by pic file number
 Cost073_ChrLo:
   .dw Cost073_Pic00_Chr
   .dw Cost073_Pic01_Chr
@@ -24605,7 +25090,11 @@ Cost074_Pal:
   .incbin "data/snes_converted/costumes/cost_074/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost074_ChrLo:
+  .dw Cost074_Pic03_Chr  ; gap->pic00
+  .dw Cost074_Pic03_Chr  ; gap->pic00
+  .dw Cost074_Pic03_Chr  ; gap->pic00
   .dw Cost074_Pic03_Chr
   .dw Cost074_Pic04_Chr
   .dw Cost074_Pic05_Chr
@@ -24619,6 +25108,9 @@ Cost074_ChrLo:
 
 Cost074_ChrHi:
   .db :Cost074_Pic03_Chr
+  .db :Cost074_Pic03_Chr
+  .db :Cost074_Pic03_Chr
+  .db :Cost074_Pic03_Chr
   .db :Cost074_Pic04_Chr
   .db :Cost074_Pic05_Chr
   .db :Cost074_Pic06_Chr
@@ -24630,6 +25122,9 @@ Cost074_ChrHi:
   .db :Cost074_Pic12_Chr
 
 Cost074_ChrLen:
+  .dw Cost074_Pic03_ChrEnd - Cost074_Pic03_Chr
+  .dw Cost074_Pic03_ChrEnd - Cost074_Pic03_Chr
+  .dw Cost074_Pic03_ChrEnd - Cost074_Pic03_Chr
   .dw Cost074_Pic03_ChrEnd - Cost074_Pic03_Chr
   .dw Cost074_Pic04_ChrEnd - Cost074_Pic04_Chr
   .dw Cost074_Pic05_ChrEnd - Cost074_Pic05_Chr
@@ -24644,6 +25139,9 @@ Cost074_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost074_OamLo:
   .dw Cost074_Pic03_Oam
+  .dw Cost074_Pic03_Oam
+  .dw Cost074_Pic03_Oam
+  .dw Cost074_Pic03_Oam
   .dw Cost074_Pic04_Oam
   .dw Cost074_Pic05_Oam
   .dw Cost074_Pic06_Oam
@@ -24655,6 +25153,9 @@ Cost074_OamLo:
   .dw Cost074_Pic12_Oam
 
 Cost074_OamHi:
+  .db :Cost074_Pic03_Oam
+  .db :Cost074_Pic03_Oam
+  .db :Cost074_Pic03_Oam
   .db :Cost074_Pic03_Oam
   .db :Cost074_Pic04_Oam
   .db :Cost074_Pic05_Oam
@@ -24737,6 +25238,7 @@ Cost075_Pal:
   .incbin "data/snes_converted/costumes/cost_075/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost075_ChrLo:
   .dw Cost075_Pic00_Chr
   .dw Cost075_Pic01_Chr
@@ -24747,6 +25249,7 @@ Cost075_ChrLo:
   .dw Cost075_Pic06_Chr
   .dw Cost075_Pic07_Chr
   .dw Cost075_Pic08_Chr
+  .dw Cost075_Pic00_Chr  ; gap->pic00
   .dw Cost075_Pic10_Chr
   .dw Cost075_Pic11_Chr
   .dw Cost075_Pic12_Chr
@@ -24798,6 +25301,7 @@ Cost075_ChrHi:
   .db :Cost075_Pic06_Chr
   .db :Cost075_Pic07_Chr
   .db :Cost075_Pic08_Chr
+  .db :Cost075_Pic00_Chr
   .db :Cost075_Pic10_Chr
   .db :Cost075_Pic11_Chr
   .db :Cost075_Pic12_Chr
@@ -24849,6 +25353,7 @@ Cost075_ChrLen:
   .dw Cost075_Pic06_ChrEnd - Cost075_Pic06_Chr
   .dw Cost075_Pic07_ChrEnd - Cost075_Pic07_Chr
   .dw Cost075_Pic08_ChrEnd - Cost075_Pic08_Chr
+  .dw Cost075_Pic00_ChrEnd - Cost075_Pic00_Chr
   .dw Cost075_Pic10_ChrEnd - Cost075_Pic10_Chr
   .dw Cost075_Pic11_ChrEnd - Cost075_Pic11_Chr
   .dw Cost075_Pic12_ChrEnd - Cost075_Pic12_Chr
@@ -24901,6 +25406,7 @@ Cost075_OamLo:
   .dw Cost075_Pic06_Oam
   .dw Cost075_Pic07_Oam
   .dw Cost075_Pic08_Oam
+  .dw Cost075_Pic00_Oam
   .dw Cost075_Pic10_Oam
   .dw Cost075_Pic11_Oam
   .dw Cost075_Pic12_Oam
@@ -24952,6 +25458,7 @@ Cost075_OamHi:
   .db :Cost075_Pic06_Oam
   .db :Cost075_Pic07_Oam
   .db :Cost075_Pic08_Oam
+  .db :Cost075_Pic00_Oam
   .db :Cost075_Pic10_Oam
   .db :Cost075_Pic11_Oam
   .db :Cost075_Pic12_Oam
@@ -25298,6 +25805,7 @@ Cost076_Pal:
   .incbin "data/snes_converted/costumes/cost_076/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost076_ChrLo:
   .dw Cost076_Pic00_Chr
   .dw Cost076_Pic01_Chr
@@ -25859,7 +26367,7 @@ Cost076_Pic49_ChrEnd:
 Cost076_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_076/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost076_HeadChrLo:
   .dw Cost076_HeadPic00_Chr
   .dw Cost076_HeadPic01_Chr
@@ -26102,6 +26610,7 @@ Cost077_Pal:
   .incbin "data/snes_converted/costumes/cost_077/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 37 entries indexed by pic file number
 Cost077_ChrLo:
   .dw Cost077_Pic00_Chr
   .dw Cost077_Pic01_Chr
@@ -26531,6 +27040,7 @@ Cost078_Pal:
   .incbin "data/snes_converted/costumes/cost_078/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 30 entries indexed by pic file number
 Cost078_ChrLo:
   .dw Cost078_Pic00_Chr
   .dw Cost078_Pic01_Chr
@@ -26545,6 +27055,8 @@ Cost078_ChrLo:
   .dw Cost078_Pic10_Chr
   .dw Cost078_Pic11_Chr
   .dw Cost078_Pic12_Chr
+  .dw Cost078_Pic00_Chr  ; gap->pic00
+  .dw Cost078_Pic00_Chr  ; gap->pic00
   .dw Cost078_Pic15_Chr
   .dw Cost078_Pic16_Chr
   .dw Cost078_Pic17_Chr
@@ -26557,6 +27069,7 @@ Cost078_ChrLo:
   .dw Cost078_Pic24_Chr
   .dw Cost078_Pic25_Chr
   .dw Cost078_Pic26_Chr
+  .dw Cost078_Pic00_Chr  ; gap->pic00
   .dw Cost078_Pic28_Chr
   .dw Cost078_Pic29_Chr
 
@@ -26574,6 +27087,8 @@ Cost078_ChrHi:
   .db :Cost078_Pic10_Chr
   .db :Cost078_Pic11_Chr
   .db :Cost078_Pic12_Chr
+  .db :Cost078_Pic00_Chr
+  .db :Cost078_Pic00_Chr
   .db :Cost078_Pic15_Chr
   .db :Cost078_Pic16_Chr
   .db :Cost078_Pic17_Chr
@@ -26586,6 +27101,7 @@ Cost078_ChrHi:
   .db :Cost078_Pic24_Chr
   .db :Cost078_Pic25_Chr
   .db :Cost078_Pic26_Chr
+  .db :Cost078_Pic00_Chr
   .db :Cost078_Pic28_Chr
   .db :Cost078_Pic29_Chr
 
@@ -26603,6 +27119,8 @@ Cost078_ChrLen:
   .dw Cost078_Pic10_ChrEnd - Cost078_Pic10_Chr
   .dw Cost078_Pic11_ChrEnd - Cost078_Pic11_Chr
   .dw Cost078_Pic12_ChrEnd - Cost078_Pic12_Chr
+  .dw Cost078_Pic00_ChrEnd - Cost078_Pic00_Chr
+  .dw Cost078_Pic00_ChrEnd - Cost078_Pic00_Chr
   .dw Cost078_Pic15_ChrEnd - Cost078_Pic15_Chr
   .dw Cost078_Pic16_ChrEnd - Cost078_Pic16_Chr
   .dw Cost078_Pic17_ChrEnd - Cost078_Pic17_Chr
@@ -26615,6 +27133,7 @@ Cost078_ChrLen:
   .dw Cost078_Pic24_ChrEnd - Cost078_Pic24_Chr
   .dw Cost078_Pic25_ChrEnd - Cost078_Pic25_Chr
   .dw Cost078_Pic26_ChrEnd - Cost078_Pic26_Chr
+  .dw Cost078_Pic00_ChrEnd - Cost078_Pic00_Chr
   .dw Cost078_Pic28_ChrEnd - Cost078_Pic28_Chr
   .dw Cost078_Pic29_ChrEnd - Cost078_Pic29_Chr
 
@@ -26633,6 +27152,8 @@ Cost078_OamLo:
   .dw Cost078_Pic10_Oam
   .dw Cost078_Pic11_Oam
   .dw Cost078_Pic12_Oam
+  .dw Cost078_Pic00_Oam
+  .dw Cost078_Pic00_Oam
   .dw Cost078_Pic15_Oam
   .dw Cost078_Pic16_Oam
   .dw Cost078_Pic17_Oam
@@ -26645,6 +27166,7 @@ Cost078_OamLo:
   .dw Cost078_Pic24_Oam
   .dw Cost078_Pic25_Oam
   .dw Cost078_Pic26_Oam
+  .dw Cost078_Pic00_Oam
   .dw Cost078_Pic28_Oam
   .dw Cost078_Pic29_Oam
 
@@ -26662,6 +27184,8 @@ Cost078_OamHi:
   .db :Cost078_Pic10_Oam
   .db :Cost078_Pic11_Oam
   .db :Cost078_Pic12_Oam
+  .db :Cost078_Pic00_Oam
+  .db :Cost078_Pic00_Oam
   .db :Cost078_Pic15_Oam
   .db :Cost078_Pic16_Oam
   .db :Cost078_Pic17_Oam
@@ -26674,6 +27198,7 @@ Cost078_OamHi:
   .db :Cost078_Pic24_Oam
   .db :Cost078_Pic25_Oam
   .db :Cost078_Pic26_Oam
+  .db :Cost078_Pic00_Oam
   .db :Cost078_Pic28_Oam
   .db :Cost078_Pic29_Oam
 
@@ -26839,7 +27364,7 @@ Cost078_Pic29_ChrEnd:
 Cost078_Pic29_Oam:
   .incbin "data/snes_converted/costumes/cost_078/pic29.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 11 entries)
 Cost078_HeadChrLo:
   .dw Cost078_HeadPic00_Chr
   .dw Cost078_HeadPic01_Chr
@@ -26849,6 +27374,7 @@ Cost078_HeadChrLo:
   .dw Cost078_HeadPic05_Chr
   .dw Cost078_HeadPic06_Chr
   .dw Cost078_HeadPic07_Chr
+  .dw Cost078_HeadPic00_Chr
   .dw Cost078_HeadPic09_Chr
   .dw Cost078_HeadPic10_Chr
 
@@ -26861,6 +27387,7 @@ Cost078_HeadChrHi:
   .db :Cost078_HeadPic05_Chr
   .db :Cost078_HeadPic06_Chr
   .db :Cost078_HeadPic07_Chr
+  .db :Cost078_HeadPic00_Chr
   .db :Cost078_HeadPic09_Chr
   .db :Cost078_HeadPic10_Chr
 
@@ -26873,6 +27400,7 @@ Cost078_HeadChrLen:
   .dw Cost078_HeadPic05_ChrEnd - Cost078_HeadPic05_Chr
   .dw Cost078_HeadPic06_ChrEnd - Cost078_HeadPic06_Chr
   .dw Cost078_HeadPic07_ChrEnd - Cost078_HeadPic07_Chr
+  .dw Cost078_HeadPic00_ChrEnd - Cost078_HeadPic00_Chr
   .dw Cost078_HeadPic09_ChrEnd - Cost078_HeadPic09_Chr
   .dw Cost078_HeadPic10_ChrEnd - Cost078_HeadPic10_Chr
 
@@ -26886,6 +27414,7 @@ Cost078_HeadOamLo:
   .dw Cost078_HeadPic05_Oam
   .dw Cost078_HeadPic06_Oam
   .dw Cost078_HeadPic07_Oam
+  .dw Cost078_HeadPic00_Oam
   .dw Cost078_HeadPic09_Oam
   .dw Cost078_HeadPic10_Oam
 
@@ -26898,6 +27427,7 @@ Cost078_HeadOamHi:
   .db :Cost078_HeadPic05_Oam
   .db :Cost078_HeadPic06_Oam
   .db :Cost078_HeadPic07_Oam
+  .db :Cost078_HeadPic00_Oam
   .db :Cost078_HeadPic09_Oam
   .db :Cost078_HeadPic10_Oam
 
@@ -26972,6 +27502,7 @@ Cost079_Pal:
   .incbin "data/snes_converted/costumes/cost_079/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 4 entries indexed by pic file number
 Cost079_ChrLo:
   .dw Cost079_Pic00_Chr
   .dw Cost079_Pic01_Chr
@@ -27027,7 +27558,7 @@ Cost079_Pic03_ChrEnd:
 Cost079_Pic03_Oam:
   .incbin "data/snes_converted/costumes/cost_079/pic03.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 3 entries)
 Cost079_HeadChrLo:
   .dw Cost079_HeadPic00_Chr
   .dw Cost079_HeadPic01_Chr
@@ -27083,6 +27614,7 @@ Cost080_Pal:
   .incbin "data/snes_converted/costumes/cost_080/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 3 entries indexed by pic file number
 Cost080_ChrLo:
   .dw Cost080_Pic00_Chr
   .dw Cost080_Pic01_Chr
@@ -27138,14 +27670,18 @@ Cost081_Pal:
   .incbin "data/snes_converted/costumes/cost_081/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 27 entries indexed by pic file number
 Cost081_ChrLo:
   .dw Cost081_Pic00_Chr
   .dw Cost081_Pic01_Chr
   .dw Cost081_Pic02_Chr
   .dw Cost081_Pic03_Chr
+  .dw Cost081_Pic00_Chr  ; gap->pic00
   .dw Cost081_Pic05_Chr
   .dw Cost081_Pic06_Chr
+  .dw Cost081_Pic00_Chr  ; gap->pic00
   .dw Cost081_Pic08_Chr
+  .dw Cost081_Pic00_Chr  ; gap->pic00
   .dw Cost081_Pic10_Chr
   .dw Cost081_Pic11_Chr
   .dw Cost081_Pic12_Chr
@@ -27169,9 +27705,12 @@ Cost081_ChrHi:
   .db :Cost081_Pic01_Chr
   .db :Cost081_Pic02_Chr
   .db :Cost081_Pic03_Chr
+  .db :Cost081_Pic00_Chr
   .db :Cost081_Pic05_Chr
   .db :Cost081_Pic06_Chr
+  .db :Cost081_Pic00_Chr
   .db :Cost081_Pic08_Chr
+  .db :Cost081_Pic00_Chr
   .db :Cost081_Pic10_Chr
   .db :Cost081_Pic11_Chr
   .db :Cost081_Pic12_Chr
@@ -27195,9 +27734,12 @@ Cost081_ChrLen:
   .dw Cost081_Pic01_ChrEnd - Cost081_Pic01_Chr
   .dw Cost081_Pic02_ChrEnd - Cost081_Pic02_Chr
   .dw Cost081_Pic03_ChrEnd - Cost081_Pic03_Chr
+  .dw Cost081_Pic00_ChrEnd - Cost081_Pic00_Chr
   .dw Cost081_Pic05_ChrEnd - Cost081_Pic05_Chr
   .dw Cost081_Pic06_ChrEnd - Cost081_Pic06_Chr
+  .dw Cost081_Pic00_ChrEnd - Cost081_Pic00_Chr
   .dw Cost081_Pic08_ChrEnd - Cost081_Pic08_Chr
+  .dw Cost081_Pic00_ChrEnd - Cost081_Pic00_Chr
   .dw Cost081_Pic10_ChrEnd - Cost081_Pic10_Chr
   .dw Cost081_Pic11_ChrEnd - Cost081_Pic11_Chr
   .dw Cost081_Pic12_ChrEnd - Cost081_Pic12_Chr
@@ -27222,9 +27764,12 @@ Cost081_OamLo:
   .dw Cost081_Pic01_Oam
   .dw Cost081_Pic02_Oam
   .dw Cost081_Pic03_Oam
+  .dw Cost081_Pic00_Oam
   .dw Cost081_Pic05_Oam
   .dw Cost081_Pic06_Oam
+  .dw Cost081_Pic00_Oam
   .dw Cost081_Pic08_Oam
+  .dw Cost081_Pic00_Oam
   .dw Cost081_Pic10_Oam
   .dw Cost081_Pic11_Oam
   .dw Cost081_Pic12_Oam
@@ -27248,9 +27793,12 @@ Cost081_OamHi:
   .db :Cost081_Pic01_Oam
   .db :Cost081_Pic02_Oam
   .db :Cost081_Pic03_Oam
+  .db :Cost081_Pic00_Oam
   .db :Cost081_Pic05_Oam
   .db :Cost081_Pic06_Oam
+  .db :Cost081_Pic00_Oam
   .db :Cost081_Pic08_Oam
+  .db :Cost081_Pic00_Oam
   .db :Cost081_Pic10_Oam
   .db :Cost081_Pic11_Oam
   .db :Cost081_Pic12_Oam
@@ -27424,11 +27972,13 @@ Cost082_Pal:
   .incbin "data/snes_converted/costumes/cost_082/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 10 entries indexed by pic file number
 Cost082_ChrLo:
   .dw Cost082_Pic00_Chr
   .dw Cost082_Pic01_Chr
   .dw Cost082_Pic02_Chr
   .dw Cost082_Pic03_Chr
+  .dw Cost082_Pic00_Chr  ; gap->pic00
   .dw Cost082_Pic05_Chr
   .dw Cost082_Pic06_Chr
   .dw Cost082_Pic07_Chr
@@ -27440,6 +27990,7 @@ Cost082_ChrHi:
   .db :Cost082_Pic01_Chr
   .db :Cost082_Pic02_Chr
   .db :Cost082_Pic03_Chr
+  .db :Cost082_Pic00_Chr
   .db :Cost082_Pic05_Chr
   .db :Cost082_Pic06_Chr
   .db :Cost082_Pic07_Chr
@@ -27451,6 +28002,7 @@ Cost082_ChrLen:
   .dw Cost082_Pic01_ChrEnd - Cost082_Pic01_Chr
   .dw Cost082_Pic02_ChrEnd - Cost082_Pic02_Chr
   .dw Cost082_Pic03_ChrEnd - Cost082_Pic03_Chr
+  .dw Cost082_Pic00_ChrEnd - Cost082_Pic00_Chr
   .dw Cost082_Pic05_ChrEnd - Cost082_Pic05_Chr
   .dw Cost082_Pic06_ChrEnd - Cost082_Pic06_Chr
   .dw Cost082_Pic07_ChrEnd - Cost082_Pic07_Chr
@@ -27463,6 +28015,7 @@ Cost082_OamLo:
   .dw Cost082_Pic01_Oam
   .dw Cost082_Pic02_Oam
   .dw Cost082_Pic03_Oam
+  .dw Cost082_Pic00_Oam
   .dw Cost082_Pic05_Oam
   .dw Cost082_Pic06_Oam
   .dw Cost082_Pic07_Oam
@@ -27474,6 +28027,7 @@ Cost082_OamHi:
   .db :Cost082_Pic01_Oam
   .db :Cost082_Pic02_Oam
   .db :Cost082_Pic03_Oam
+  .db :Cost082_Pic00_Oam
   .db :Cost082_Pic05_Oam
   .db :Cost082_Pic06_Oam
   .db :Cost082_Pic07_Oam
@@ -27534,7 +28088,7 @@ Cost082_Pic09_ChrEnd:
 Cost082_Pic09_Oam:
   .incbin "data/snes_converted/costumes/cost_082/pic09.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 4 entries)
 Cost082_HeadChrLo:
   .dw Cost082_HeadPic00_Chr
   .dw Cost082_HeadPic01_Chr
@@ -27601,6 +28155,7 @@ Cost083_Pal:
   .incbin "data/snes_converted/costumes/cost_083/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 24 entries indexed by pic file number
 Cost083_ChrLo:
   .dw Cost083_Pic00_Chr
   .dw Cost083_Pic01_Chr
@@ -27887,6 +28442,7 @@ Cost084_Pal:
   .incbin "data/snes_converted/costumes/cost_084/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 19 entries indexed by pic file number
 Cost084_ChrLo:
   .dw Cost084_Pic00_Chr
   .dw Cost084_Pic01_Chr
@@ -28107,7 +28663,7 @@ Cost084_Pic18_ChrEnd:
 Cost084_Pic18_Oam:
   .incbin "data/snes_converted/costumes/cost_084/pic18.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 2 entries)
 Cost084_HeadChrLo:
   .dw Cost084_HeadPic00_Chr
   .dw Cost084_HeadPic01_Chr
@@ -28152,12 +28708,15 @@ Cost085_Pal:
   .incbin "data/snes_converted/costumes/cost_085/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost085_ChrLo:
   .dw Cost085_Pic00_Chr
   .dw Cost085_Pic01_Chr
   .dw Cost085_Pic02_Chr
   .dw Cost085_Pic03_Chr
+  .dw Cost085_Pic00_Chr  ; gap->pic00
   .dw Cost085_Pic05_Chr
+  .dw Cost085_Pic00_Chr  ; gap->pic00
   .dw Cost085_Pic07_Chr
   .dw Cost085_Pic08_Chr
   .dw Cost085_Pic09_Chr
@@ -28166,6 +28725,7 @@ Cost085_ChrLo:
   .dw Cost085_Pic12_Chr
   .dw Cost085_Pic13_Chr
   .dw Cost085_Pic14_Chr
+  .dw Cost085_Pic00_Chr  ; gap->pic00
   .dw Cost085_Pic16_Chr
   .dw Cost085_Pic17_Chr
   .dw Cost085_Pic18_Chr
@@ -28186,6 +28746,7 @@ Cost085_ChrLo:
   .dw Cost085_Pic33_Chr
   .dw Cost085_Pic34_Chr
   .dw Cost085_Pic35_Chr
+  .dw Cost085_Pic00_Chr  ; gap->pic00
   .dw Cost085_Pic37_Chr
   .dw Cost085_Pic38_Chr
   .dw Cost085_Pic39_Chr
@@ -28205,7 +28766,9 @@ Cost085_ChrHi:
   .db :Cost085_Pic01_Chr
   .db :Cost085_Pic02_Chr
   .db :Cost085_Pic03_Chr
+  .db :Cost085_Pic00_Chr
   .db :Cost085_Pic05_Chr
+  .db :Cost085_Pic00_Chr
   .db :Cost085_Pic07_Chr
   .db :Cost085_Pic08_Chr
   .db :Cost085_Pic09_Chr
@@ -28214,6 +28777,7 @@ Cost085_ChrHi:
   .db :Cost085_Pic12_Chr
   .db :Cost085_Pic13_Chr
   .db :Cost085_Pic14_Chr
+  .db :Cost085_Pic00_Chr
   .db :Cost085_Pic16_Chr
   .db :Cost085_Pic17_Chr
   .db :Cost085_Pic18_Chr
@@ -28234,6 +28798,7 @@ Cost085_ChrHi:
   .db :Cost085_Pic33_Chr
   .db :Cost085_Pic34_Chr
   .db :Cost085_Pic35_Chr
+  .db :Cost085_Pic00_Chr
   .db :Cost085_Pic37_Chr
   .db :Cost085_Pic38_Chr
   .db :Cost085_Pic39_Chr
@@ -28253,7 +28818,9 @@ Cost085_ChrLen:
   .dw Cost085_Pic01_ChrEnd - Cost085_Pic01_Chr
   .dw Cost085_Pic02_ChrEnd - Cost085_Pic02_Chr
   .dw Cost085_Pic03_ChrEnd - Cost085_Pic03_Chr
+  .dw Cost085_Pic00_ChrEnd - Cost085_Pic00_Chr
   .dw Cost085_Pic05_ChrEnd - Cost085_Pic05_Chr
+  .dw Cost085_Pic00_ChrEnd - Cost085_Pic00_Chr
   .dw Cost085_Pic07_ChrEnd - Cost085_Pic07_Chr
   .dw Cost085_Pic08_ChrEnd - Cost085_Pic08_Chr
   .dw Cost085_Pic09_ChrEnd - Cost085_Pic09_Chr
@@ -28262,6 +28829,7 @@ Cost085_ChrLen:
   .dw Cost085_Pic12_ChrEnd - Cost085_Pic12_Chr
   .dw Cost085_Pic13_ChrEnd - Cost085_Pic13_Chr
   .dw Cost085_Pic14_ChrEnd - Cost085_Pic14_Chr
+  .dw Cost085_Pic00_ChrEnd - Cost085_Pic00_Chr
   .dw Cost085_Pic16_ChrEnd - Cost085_Pic16_Chr
   .dw Cost085_Pic17_ChrEnd - Cost085_Pic17_Chr
   .dw Cost085_Pic18_ChrEnd - Cost085_Pic18_Chr
@@ -28282,6 +28850,7 @@ Cost085_ChrLen:
   .dw Cost085_Pic33_ChrEnd - Cost085_Pic33_Chr
   .dw Cost085_Pic34_ChrEnd - Cost085_Pic34_Chr
   .dw Cost085_Pic35_ChrEnd - Cost085_Pic35_Chr
+  .dw Cost085_Pic00_ChrEnd - Cost085_Pic00_Chr
   .dw Cost085_Pic37_ChrEnd - Cost085_Pic37_Chr
   .dw Cost085_Pic38_ChrEnd - Cost085_Pic38_Chr
   .dw Cost085_Pic39_ChrEnd - Cost085_Pic39_Chr
@@ -28302,7 +28871,9 @@ Cost085_OamLo:
   .dw Cost085_Pic01_Oam
   .dw Cost085_Pic02_Oam
   .dw Cost085_Pic03_Oam
+  .dw Cost085_Pic00_Oam
   .dw Cost085_Pic05_Oam
+  .dw Cost085_Pic00_Oam
   .dw Cost085_Pic07_Oam
   .dw Cost085_Pic08_Oam
   .dw Cost085_Pic09_Oam
@@ -28311,6 +28882,7 @@ Cost085_OamLo:
   .dw Cost085_Pic12_Oam
   .dw Cost085_Pic13_Oam
   .dw Cost085_Pic14_Oam
+  .dw Cost085_Pic00_Oam
   .dw Cost085_Pic16_Oam
   .dw Cost085_Pic17_Oam
   .dw Cost085_Pic18_Oam
@@ -28331,6 +28903,7 @@ Cost085_OamLo:
   .dw Cost085_Pic33_Oam
   .dw Cost085_Pic34_Oam
   .dw Cost085_Pic35_Oam
+  .dw Cost085_Pic00_Oam
   .dw Cost085_Pic37_Oam
   .dw Cost085_Pic38_Oam
   .dw Cost085_Pic39_Oam
@@ -28350,7 +28923,9 @@ Cost085_OamHi:
   .db :Cost085_Pic01_Oam
   .db :Cost085_Pic02_Oam
   .db :Cost085_Pic03_Oam
+  .db :Cost085_Pic00_Oam
   .db :Cost085_Pic05_Oam
+  .db :Cost085_Pic00_Oam
   .db :Cost085_Pic07_Oam
   .db :Cost085_Pic08_Oam
   .db :Cost085_Pic09_Oam
@@ -28359,6 +28934,7 @@ Cost085_OamHi:
   .db :Cost085_Pic12_Oam
   .db :Cost085_Pic13_Oam
   .db :Cost085_Pic14_Oam
+  .db :Cost085_Pic00_Oam
   .db :Cost085_Pic16_Oam
   .db :Cost085_Pic17_Oam
   .db :Cost085_Pic18_Oam
@@ -28379,6 +28955,7 @@ Cost085_OamHi:
   .db :Cost085_Pic33_Oam
   .db :Cost085_Pic34_Oam
   .db :Cost085_Pic35_Oam
+  .db :Cost085_Pic00_Oam
   .db :Cost085_Pic37_Oam
   .db :Cost085_Pic38_Oam
   .db :Cost085_Pic39_Oam
@@ -28680,6 +29257,7 @@ Cost086_Pal:
   .incbin "data/snes_converted/costumes/cost_086/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 1 entries indexed by pic file number
 Cost086_ChrLo:
   .dw Cost086_Pic00_Chr
 
@@ -28713,6 +29291,7 @@ Cost087_Pal:
   .incbin "data/snes_converted/costumes/cost_087/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost087_ChrLo:
   .dw Cost087_Pic00_Chr
   .dw Cost087_Pic01_Chr
@@ -28741,6 +29320,7 @@ Cost087_ChrLo:
   .dw Cost087_Pic24_Chr
   .dw Cost087_Pic25_Chr
   .dw Cost087_Pic26_Chr
+  .dw Cost087_Pic00_Chr  ; gap->pic00
   .dw Cost087_Pic28_Chr
   .dw Cost087_Pic29_Chr
   .dw Cost087_Pic30_Chr
@@ -28752,6 +29332,7 @@ Cost087_ChrLo:
   .dw Cost087_Pic36_Chr
   .dw Cost087_Pic37_Chr
   .dw Cost087_Pic38_Chr
+  .dw Cost087_Pic00_Chr  ; gap->pic00
   .dw Cost087_Pic40_Chr
   .dw Cost087_Pic41_Chr
   .dw Cost087_Pic42_Chr
@@ -28791,6 +29372,7 @@ Cost087_ChrHi:
   .db :Cost087_Pic24_Chr
   .db :Cost087_Pic25_Chr
   .db :Cost087_Pic26_Chr
+  .db :Cost087_Pic00_Chr
   .db :Cost087_Pic28_Chr
   .db :Cost087_Pic29_Chr
   .db :Cost087_Pic30_Chr
@@ -28802,6 +29384,7 @@ Cost087_ChrHi:
   .db :Cost087_Pic36_Chr
   .db :Cost087_Pic37_Chr
   .db :Cost087_Pic38_Chr
+  .db :Cost087_Pic00_Chr
   .db :Cost087_Pic40_Chr
   .db :Cost087_Pic41_Chr
   .db :Cost087_Pic42_Chr
@@ -28841,6 +29424,7 @@ Cost087_ChrLen:
   .dw Cost087_Pic24_ChrEnd - Cost087_Pic24_Chr
   .dw Cost087_Pic25_ChrEnd - Cost087_Pic25_Chr
   .dw Cost087_Pic26_ChrEnd - Cost087_Pic26_Chr
+  .dw Cost087_Pic00_ChrEnd - Cost087_Pic00_Chr
   .dw Cost087_Pic28_ChrEnd - Cost087_Pic28_Chr
   .dw Cost087_Pic29_ChrEnd - Cost087_Pic29_Chr
   .dw Cost087_Pic30_ChrEnd - Cost087_Pic30_Chr
@@ -28852,6 +29436,7 @@ Cost087_ChrLen:
   .dw Cost087_Pic36_ChrEnd - Cost087_Pic36_Chr
   .dw Cost087_Pic37_ChrEnd - Cost087_Pic37_Chr
   .dw Cost087_Pic38_ChrEnd - Cost087_Pic38_Chr
+  .dw Cost087_Pic00_ChrEnd - Cost087_Pic00_Chr
   .dw Cost087_Pic40_ChrEnd - Cost087_Pic40_Chr
   .dw Cost087_Pic41_ChrEnd - Cost087_Pic41_Chr
   .dw Cost087_Pic42_ChrEnd - Cost087_Pic42_Chr
@@ -28892,6 +29477,7 @@ Cost087_OamLo:
   .dw Cost087_Pic24_Oam
   .dw Cost087_Pic25_Oam
   .dw Cost087_Pic26_Oam
+  .dw Cost087_Pic00_Oam
   .dw Cost087_Pic28_Oam
   .dw Cost087_Pic29_Oam
   .dw Cost087_Pic30_Oam
@@ -28903,6 +29489,7 @@ Cost087_OamLo:
   .dw Cost087_Pic36_Oam
   .dw Cost087_Pic37_Oam
   .dw Cost087_Pic38_Oam
+  .dw Cost087_Pic00_Oam
   .dw Cost087_Pic40_Oam
   .dw Cost087_Pic41_Oam
   .dw Cost087_Pic42_Oam
@@ -28942,6 +29529,7 @@ Cost087_OamHi:
   .db :Cost087_Pic24_Oam
   .db :Cost087_Pic25_Oam
   .db :Cost087_Pic26_Oam
+  .db :Cost087_Pic00_Oam
   .db :Cost087_Pic28_Oam
   .db :Cost087_Pic29_Oam
   .db :Cost087_Pic30_Oam
@@ -28953,6 +29541,7 @@ Cost087_OamHi:
   .db :Cost087_Pic36_Oam
   .db :Cost087_Pic37_Oam
   .db :Cost087_Pic38_Oam
+  .db :Cost087_Pic00_Oam
   .db :Cost087_Pic40_Oam
   .db :Cost087_Pic41_Oam
   .db :Cost087_Pic42_Oam
@@ -29252,12 +29841,13 @@ Cost087_Pic49_ChrEnd:
 Cost087_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_087/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost087_HeadChrLo:
   .dw Cost087_HeadPic00_Chr
   .dw Cost087_HeadPic01_Chr
   .dw Cost087_HeadPic02_Chr
   .dw Cost087_HeadPic03_Chr
+  .dw Cost087_HeadPic00_Chr
   .dw Cost087_HeadPic05_Chr
   .dw Cost087_HeadPic06_Chr
   .dw Cost087_HeadPic07_Chr
@@ -29269,6 +29859,7 @@ Cost087_HeadChrLo:
   .dw Cost087_HeadPic13_Chr
   .dw Cost087_HeadPic14_Chr
   .dw Cost087_HeadPic15_Chr
+  .dw Cost087_HeadPic00_Chr
   .dw Cost087_HeadPic17_Chr
   .dw Cost087_HeadPic18_Chr
   .dw Cost087_HeadPic19_Chr
@@ -29278,6 +29869,7 @@ Cost087_HeadChrHi:
   .db :Cost087_HeadPic01_Chr
   .db :Cost087_HeadPic02_Chr
   .db :Cost087_HeadPic03_Chr
+  .db :Cost087_HeadPic00_Chr
   .db :Cost087_HeadPic05_Chr
   .db :Cost087_HeadPic06_Chr
   .db :Cost087_HeadPic07_Chr
@@ -29289,6 +29881,7 @@ Cost087_HeadChrHi:
   .db :Cost087_HeadPic13_Chr
   .db :Cost087_HeadPic14_Chr
   .db :Cost087_HeadPic15_Chr
+  .db :Cost087_HeadPic00_Chr
   .db :Cost087_HeadPic17_Chr
   .db :Cost087_HeadPic18_Chr
   .db :Cost087_HeadPic19_Chr
@@ -29298,6 +29891,7 @@ Cost087_HeadChrLen:
   .dw Cost087_HeadPic01_ChrEnd - Cost087_HeadPic01_Chr
   .dw Cost087_HeadPic02_ChrEnd - Cost087_HeadPic02_Chr
   .dw Cost087_HeadPic03_ChrEnd - Cost087_HeadPic03_Chr
+  .dw Cost087_HeadPic00_ChrEnd - Cost087_HeadPic00_Chr
   .dw Cost087_HeadPic05_ChrEnd - Cost087_HeadPic05_Chr
   .dw Cost087_HeadPic06_ChrEnd - Cost087_HeadPic06_Chr
   .dw Cost087_HeadPic07_ChrEnd - Cost087_HeadPic07_Chr
@@ -29309,6 +29903,7 @@ Cost087_HeadChrLen:
   .dw Cost087_HeadPic13_ChrEnd - Cost087_HeadPic13_Chr
   .dw Cost087_HeadPic14_ChrEnd - Cost087_HeadPic14_Chr
   .dw Cost087_HeadPic15_ChrEnd - Cost087_HeadPic15_Chr
+  .dw Cost087_HeadPic00_ChrEnd - Cost087_HeadPic00_Chr
   .dw Cost087_HeadPic17_ChrEnd - Cost087_HeadPic17_Chr
   .dw Cost087_HeadPic18_ChrEnd - Cost087_HeadPic18_Chr
   .dw Cost087_HeadPic19_ChrEnd - Cost087_HeadPic19_Chr
@@ -29319,6 +29914,7 @@ Cost087_HeadOamLo:
   .dw Cost087_HeadPic01_Oam
   .dw Cost087_HeadPic02_Oam
   .dw Cost087_HeadPic03_Oam
+  .dw Cost087_HeadPic00_Oam
   .dw Cost087_HeadPic05_Oam
   .dw Cost087_HeadPic06_Oam
   .dw Cost087_HeadPic07_Oam
@@ -29330,6 +29926,7 @@ Cost087_HeadOamLo:
   .dw Cost087_HeadPic13_Oam
   .dw Cost087_HeadPic14_Oam
   .dw Cost087_HeadPic15_Oam
+  .dw Cost087_HeadPic00_Oam
   .dw Cost087_HeadPic17_Oam
   .dw Cost087_HeadPic18_Oam
   .dw Cost087_HeadPic19_Oam
@@ -29339,6 +29936,7 @@ Cost087_HeadOamHi:
   .db :Cost087_HeadPic01_Oam
   .db :Cost087_HeadPic02_Oam
   .db :Cost087_HeadPic03_Oam
+  .db :Cost087_HeadPic00_Oam
   .db :Cost087_HeadPic05_Oam
   .db :Cost087_HeadPic06_Oam
   .db :Cost087_HeadPic07_Oam
@@ -29350,6 +29948,7 @@ Cost087_HeadOamHi:
   .db :Cost087_HeadPic13_Oam
   .db :Cost087_HeadPic14_Oam
   .db :Cost087_HeadPic15_Oam
+  .db :Cost087_HeadPic00_Oam
   .db :Cost087_HeadPic17_Oam
   .db :Cost087_HeadPic18_Oam
   .db :Cost087_HeadPic19_Oam
@@ -29473,6 +30072,7 @@ Cost088_Pal:
   .incbin "data/snes_converted/costumes/cost_088/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 36 entries indexed by pic file number
 Cost088_ChrLo:
   .dw Cost088_Pic00_Chr
   .dw Cost088_Pic01_Chr
@@ -29480,6 +30080,7 @@ Cost088_ChrLo:
   .dw Cost088_Pic03_Chr
   .dw Cost088_Pic04_Chr
   .dw Cost088_Pic05_Chr
+  .dw Cost088_Pic00_Chr  ; gap->pic00
   .dw Cost088_Pic07_Chr
   .dw Cost088_Pic08_Chr
   .dw Cost088_Pic09_Chr
@@ -29517,6 +30118,7 @@ Cost088_ChrHi:
   .db :Cost088_Pic03_Chr
   .db :Cost088_Pic04_Chr
   .db :Cost088_Pic05_Chr
+  .db :Cost088_Pic00_Chr
   .db :Cost088_Pic07_Chr
   .db :Cost088_Pic08_Chr
   .db :Cost088_Pic09_Chr
@@ -29554,6 +30156,7 @@ Cost088_ChrLen:
   .dw Cost088_Pic03_ChrEnd - Cost088_Pic03_Chr
   .dw Cost088_Pic04_ChrEnd - Cost088_Pic04_Chr
   .dw Cost088_Pic05_ChrEnd - Cost088_Pic05_Chr
+  .dw Cost088_Pic00_ChrEnd - Cost088_Pic00_Chr
   .dw Cost088_Pic07_ChrEnd - Cost088_Pic07_Chr
   .dw Cost088_Pic08_ChrEnd - Cost088_Pic08_Chr
   .dw Cost088_Pic09_ChrEnd - Cost088_Pic09_Chr
@@ -29592,6 +30195,7 @@ Cost088_OamLo:
   .dw Cost088_Pic03_Oam
   .dw Cost088_Pic04_Oam
   .dw Cost088_Pic05_Oam
+  .dw Cost088_Pic00_Oam
   .dw Cost088_Pic07_Oam
   .dw Cost088_Pic08_Oam
   .dw Cost088_Pic09_Oam
@@ -29629,6 +30233,7 @@ Cost088_OamHi:
   .db :Cost088_Pic03_Oam
   .db :Cost088_Pic04_Oam
   .db :Cost088_Pic05_Oam
+  .db :Cost088_Pic00_Oam
   .db :Cost088_Pic07_Oam
   .db :Cost088_Pic08_Oam
   .db :Cost088_Pic09_Oam
@@ -29869,7 +30474,7 @@ Cost088_Pic35_ChrEnd:
 Cost088_Pic35_Oam:
   .incbin "data/snes_converted/costumes/cost_088/pic35.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost088_HeadChrLo:
   .dw Cost088_HeadPic00_Chr
   .dw Cost088_HeadPic01_Chr
@@ -30112,8 +30717,11 @@ Cost089_Pal:
   .incbin "data/snes_converted/costumes/cost_089/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost089_ChrLo:
   .dw Cost089_Pic00_Chr
+  .dw Cost089_Pic00_Chr  ; gap->pic00
+  .dw Cost089_Pic00_Chr  ; gap->pic00
   .dw Cost089_Pic03_Chr
   .dw Cost089_Pic04_Chr
   .dw Cost089_Pic05_Chr
@@ -30127,6 +30735,8 @@ Cost089_ChrLo:
 
 Cost089_ChrHi:
   .db :Cost089_Pic00_Chr
+  .db :Cost089_Pic00_Chr
+  .db :Cost089_Pic00_Chr
   .db :Cost089_Pic03_Chr
   .db :Cost089_Pic04_Chr
   .db :Cost089_Pic05_Chr
@@ -30139,6 +30749,8 @@ Cost089_ChrHi:
   .db :Cost089_Pic12_Chr
 
 Cost089_ChrLen:
+  .dw Cost089_Pic00_ChrEnd - Cost089_Pic00_Chr
+  .dw Cost089_Pic00_ChrEnd - Cost089_Pic00_Chr
   .dw Cost089_Pic00_ChrEnd - Cost089_Pic00_Chr
   .dw Cost089_Pic03_ChrEnd - Cost089_Pic03_Chr
   .dw Cost089_Pic04_ChrEnd - Cost089_Pic04_Chr
@@ -30154,6 +30766,8 @@ Cost089_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost089_OamLo:
   .dw Cost089_Pic00_Oam
+  .dw Cost089_Pic00_Oam
+  .dw Cost089_Pic00_Oam
   .dw Cost089_Pic03_Oam
   .dw Cost089_Pic04_Oam
   .dw Cost089_Pic05_Oam
@@ -30166,6 +30780,8 @@ Cost089_OamLo:
   .dw Cost089_Pic12_Oam
 
 Cost089_OamHi:
+  .db :Cost089_Pic00_Oam
+  .db :Cost089_Pic00_Oam
   .db :Cost089_Pic00_Oam
   .db :Cost089_Pic03_Oam
   .db :Cost089_Pic04_Oam
@@ -30244,7 +30860,7 @@ Cost089_Pic12_ChrEnd:
 Cost089_Pic12_Oam:
   .incbin "data/snes_converted/costumes/cost_089/pic12.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 5 entries)
 Cost089_HeadChrLo:
   .dw Cost089_HeadPic00_Chr
   .dw Cost089_HeadPic01_Chr
@@ -30322,6 +30938,7 @@ Cost090_Pal:
   .incbin "data/snes_converted/costumes/cost_090/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 27 entries indexed by pic file number
 Cost090_ChrLo:
   .dw Cost090_Pic00_Chr
   .dw Cost090_Pic01_Chr
@@ -30641,7 +31258,9 @@ Cost091_Pal:
   .incbin "data/snes_converted/costumes/cost_091/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost091_ChrLo:
+  .dw Cost091_Pic01_Chr  ; gap->pic00
   .dw Cost091_Pic01_Chr
   .dw Cost091_Pic02_Chr
   .dw Cost091_Pic03_Chr
@@ -30657,6 +31276,7 @@ Cost091_ChrLo:
 
 Cost091_ChrHi:
   .db :Cost091_Pic01_Chr
+  .db :Cost091_Pic01_Chr
   .db :Cost091_Pic02_Chr
   .db :Cost091_Pic03_Chr
   .db :Cost091_Pic04_Chr
@@ -30670,6 +31290,7 @@ Cost091_ChrHi:
   .db :Cost091_Pic12_Chr
 
 Cost091_ChrLen:
+  .dw Cost091_Pic01_ChrEnd - Cost091_Pic01_Chr
   .dw Cost091_Pic01_ChrEnd - Cost091_Pic01_Chr
   .dw Cost091_Pic02_ChrEnd - Cost091_Pic02_Chr
   .dw Cost091_Pic03_ChrEnd - Cost091_Pic03_Chr
@@ -30686,6 +31307,7 @@ Cost091_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost091_OamLo:
   .dw Cost091_Pic01_Oam
+  .dw Cost091_Pic01_Oam
   .dw Cost091_Pic02_Oam
   .dw Cost091_Pic03_Oam
   .dw Cost091_Pic04_Oam
@@ -30699,6 +31321,7 @@ Cost091_OamLo:
   .dw Cost091_Pic12_Oam
 
 Cost091_OamHi:
+  .db :Cost091_Pic01_Oam
   .db :Cost091_Pic01_Oam
   .db :Cost091_Pic02_Oam
   .db :Cost091_Pic03_Oam
@@ -30795,6 +31418,7 @@ Cost092_Pal:
   .incbin "data/snes_converted/costumes/cost_092/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 32 entries indexed by pic file number
 Cost092_ChrLo:
   .dw Cost092_Pic00_Chr
   .dw Cost092_Pic01_Chr
@@ -31158,7 +31782,7 @@ Cost092_Pic31_ChrEnd:
 Cost092_Pic31_Oam:
   .incbin "data/snes_converted/costumes/cost_092/pic31.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost092_HeadChrLo:
   .dw Cost092_HeadPic00_Chr
   .dw Cost092_HeadPic01_Chr
@@ -31401,10 +32025,15 @@ Cost093_Pal:
   .incbin "data/snes_converted/costumes/cost_093/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 11 entries indexed by pic file number
 Cost093_ChrLo:
+  .dw Cost093_Pic03_Chr  ; gap->pic00
+  .dw Cost093_Pic03_Chr  ; gap->pic00
+  .dw Cost093_Pic03_Chr  ; gap->pic00
   .dw Cost093_Pic03_Chr
   .dw Cost093_Pic04_Chr
   .dw Cost093_Pic05_Chr
+  .dw Cost093_Pic03_Chr  ; gap->pic00
   .dw Cost093_Pic07_Chr
   .dw Cost093_Pic08_Chr
   .dw Cost093_Pic09_Chr
@@ -31412,8 +32041,12 @@ Cost093_ChrLo:
 
 Cost093_ChrHi:
   .db :Cost093_Pic03_Chr
+  .db :Cost093_Pic03_Chr
+  .db :Cost093_Pic03_Chr
+  .db :Cost093_Pic03_Chr
   .db :Cost093_Pic04_Chr
   .db :Cost093_Pic05_Chr
+  .db :Cost093_Pic03_Chr
   .db :Cost093_Pic07_Chr
   .db :Cost093_Pic08_Chr
   .db :Cost093_Pic09_Chr
@@ -31421,8 +32054,12 @@ Cost093_ChrHi:
 
 Cost093_ChrLen:
   .dw Cost093_Pic03_ChrEnd - Cost093_Pic03_Chr
+  .dw Cost093_Pic03_ChrEnd - Cost093_Pic03_Chr
+  .dw Cost093_Pic03_ChrEnd - Cost093_Pic03_Chr
+  .dw Cost093_Pic03_ChrEnd - Cost093_Pic03_Chr
   .dw Cost093_Pic04_ChrEnd - Cost093_Pic04_Chr
   .dw Cost093_Pic05_ChrEnd - Cost093_Pic05_Chr
+  .dw Cost093_Pic03_ChrEnd - Cost093_Pic03_Chr
   .dw Cost093_Pic07_ChrEnd - Cost093_Pic07_Chr
   .dw Cost093_Pic08_ChrEnd - Cost093_Pic08_Chr
   .dw Cost093_Pic09_ChrEnd - Cost093_Pic09_Chr
@@ -31431,8 +32068,12 @@ Cost093_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost093_OamLo:
   .dw Cost093_Pic03_Oam
+  .dw Cost093_Pic03_Oam
+  .dw Cost093_Pic03_Oam
+  .dw Cost093_Pic03_Oam
   .dw Cost093_Pic04_Oam
   .dw Cost093_Pic05_Oam
+  .dw Cost093_Pic03_Oam
   .dw Cost093_Pic07_Oam
   .dw Cost093_Pic08_Oam
   .dw Cost093_Pic09_Oam
@@ -31440,8 +32081,12 @@ Cost093_OamLo:
 
 Cost093_OamHi:
   .db :Cost093_Pic03_Oam
+  .db :Cost093_Pic03_Oam
+  .db :Cost093_Pic03_Oam
+  .db :Cost093_Pic03_Oam
   .db :Cost093_Pic04_Oam
   .db :Cost093_Pic05_Oam
+  .db :Cost093_Pic03_Oam
   .db :Cost093_Pic07_Oam
   .db :Cost093_Pic08_Oam
   .db :Cost093_Pic09_Oam
@@ -31489,7 +32134,7 @@ Cost093_Pic10_ChrEnd:
 Cost093_Pic10_Oam:
   .incbin "data/snes_converted/costumes/cost_093/pic10.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 2 entries)
 Cost093_HeadChrLo:
   .dw Cost093_HeadPic00_Chr
   .dw Cost093_HeadPic01_Chr
@@ -31534,17 +32179,30 @@ Cost094_Pal:
   .incbin "data/snes_converted/costumes/cost_094/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 7 entries indexed by pic file number
 Cost094_ChrLo:
+  .dw Cost094_Pic04_Chr  ; gap->pic00
+  .dw Cost094_Pic04_Chr  ; gap->pic00
+  .dw Cost094_Pic04_Chr  ; gap->pic00
+  .dw Cost094_Pic04_Chr  ; gap->pic00
   .dw Cost094_Pic04_Chr
   .dw Cost094_Pic05_Chr
   .dw Cost094_Pic06_Chr
 
 Cost094_ChrHi:
   .db :Cost094_Pic04_Chr
+  .db :Cost094_Pic04_Chr
+  .db :Cost094_Pic04_Chr
+  .db :Cost094_Pic04_Chr
+  .db :Cost094_Pic04_Chr
   .db :Cost094_Pic05_Chr
   .db :Cost094_Pic06_Chr
 
 Cost094_ChrLen:
+  .dw Cost094_Pic04_ChrEnd - Cost094_Pic04_Chr
+  .dw Cost094_Pic04_ChrEnd - Cost094_Pic04_Chr
+  .dw Cost094_Pic04_ChrEnd - Cost094_Pic04_Chr
+  .dw Cost094_Pic04_ChrEnd - Cost094_Pic04_Chr
   .dw Cost094_Pic04_ChrEnd - Cost094_Pic04_Chr
   .dw Cost094_Pic05_ChrEnd - Cost094_Pic05_Chr
   .dw Cost094_Pic06_ChrEnd - Cost094_Pic06_Chr
@@ -31552,10 +32210,18 @@ Cost094_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost094_OamLo:
   .dw Cost094_Pic04_Oam
+  .dw Cost094_Pic04_Oam
+  .dw Cost094_Pic04_Oam
+  .dw Cost094_Pic04_Oam
+  .dw Cost094_Pic04_Oam
   .dw Cost094_Pic05_Oam
   .dw Cost094_Pic06_Oam
 
 Cost094_OamHi:
+  .db :Cost094_Pic04_Oam
+  .db :Cost094_Pic04_Oam
+  .db :Cost094_Pic04_Oam
+  .db :Cost094_Pic04_Oam
   .db :Cost094_Pic04_Oam
   .db :Cost094_Pic05_Oam
   .db :Cost094_Pic06_Oam
@@ -31578,7 +32244,7 @@ Cost094_Pic06_ChrEnd:
 Cost094_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_094/pic06.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 1 entries)
 Cost094_HeadChrLo:
   .dw Cost094_HeadPic00_Chr
 
@@ -31612,6 +32278,7 @@ Cost095_Pal:
   .incbin "data/snes_converted/costumes/cost_095/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 36 entries indexed by pic file number
 Cost095_ChrLo:
   .dw Cost095_Pic00_Chr
   .dw Cost095_Pic01_Chr
@@ -31621,6 +32288,9 @@ Cost095_ChrLo:
   .dw Cost095_Pic05_Chr
   .dw Cost095_Pic06_Chr
   .dw Cost095_Pic07_Chr
+  .dw Cost095_Pic00_Chr  ; gap->pic00
+  .dw Cost095_Pic00_Chr  ; gap->pic00
+  .dw Cost095_Pic00_Chr  ; gap->pic00
   .dw Cost095_Pic11_Chr
   .dw Cost095_Pic12_Chr
   .dw Cost095_Pic13_Chr
@@ -31656,6 +32326,9 @@ Cost095_ChrHi:
   .db :Cost095_Pic05_Chr
   .db :Cost095_Pic06_Chr
   .db :Cost095_Pic07_Chr
+  .db :Cost095_Pic00_Chr
+  .db :Cost095_Pic00_Chr
+  .db :Cost095_Pic00_Chr
   .db :Cost095_Pic11_Chr
   .db :Cost095_Pic12_Chr
   .db :Cost095_Pic13_Chr
@@ -31691,6 +32364,9 @@ Cost095_ChrLen:
   .dw Cost095_Pic05_ChrEnd - Cost095_Pic05_Chr
   .dw Cost095_Pic06_ChrEnd - Cost095_Pic06_Chr
   .dw Cost095_Pic07_ChrEnd - Cost095_Pic07_Chr
+  .dw Cost095_Pic00_ChrEnd - Cost095_Pic00_Chr
+  .dw Cost095_Pic00_ChrEnd - Cost095_Pic00_Chr
+  .dw Cost095_Pic00_ChrEnd - Cost095_Pic00_Chr
   .dw Cost095_Pic11_ChrEnd - Cost095_Pic11_Chr
   .dw Cost095_Pic12_ChrEnd - Cost095_Pic12_Chr
   .dw Cost095_Pic13_ChrEnd - Cost095_Pic13_Chr
@@ -31727,6 +32403,9 @@ Cost095_OamLo:
   .dw Cost095_Pic05_Oam
   .dw Cost095_Pic06_Oam
   .dw Cost095_Pic07_Oam
+  .dw Cost095_Pic00_Oam
+  .dw Cost095_Pic00_Oam
+  .dw Cost095_Pic00_Oam
   .dw Cost095_Pic11_Oam
   .dw Cost095_Pic12_Oam
   .dw Cost095_Pic13_Oam
@@ -31762,6 +32441,9 @@ Cost095_OamHi:
   .db :Cost095_Pic05_Oam
   .db :Cost095_Pic06_Oam
   .db :Cost095_Pic07_Oam
+  .db :Cost095_Pic00_Oam
+  .db :Cost095_Pic00_Oam
+  .db :Cost095_Pic00_Oam
   .db :Cost095_Pic11_Oam
   .db :Cost095_Pic12_Oam
   .db :Cost095_Pic13_Oam
@@ -31986,8 +32668,11 @@ Cost095_Pic35_ChrEnd:
 Cost095_Pic35_Oam:
   .incbin "data/snes_converted/costumes/cost_095/pic35.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost095_HeadChrLo:
+  .dw Cost095_HeadPic03_Chr
+  .dw Cost095_HeadPic03_Chr
+  .dw Cost095_HeadPic03_Chr
   .dw Cost095_HeadPic03_Chr
   .dw Cost095_HeadPic04_Chr
   .dw Cost095_HeadPic05_Chr
@@ -32008,6 +32693,9 @@ Cost095_HeadChrLo:
 
 Cost095_HeadChrHi:
   .db :Cost095_HeadPic03_Chr
+  .db :Cost095_HeadPic03_Chr
+  .db :Cost095_HeadPic03_Chr
+  .db :Cost095_HeadPic03_Chr
   .db :Cost095_HeadPic04_Chr
   .db :Cost095_HeadPic05_Chr
   .db :Cost095_HeadPic06_Chr
@@ -32026,6 +32714,9 @@ Cost095_HeadChrHi:
   .db :Cost095_HeadPic19_Chr
 
 Cost095_HeadChrLen:
+  .dw Cost095_HeadPic03_ChrEnd - Cost095_HeadPic03_Chr
+  .dw Cost095_HeadPic03_ChrEnd - Cost095_HeadPic03_Chr
+  .dw Cost095_HeadPic03_ChrEnd - Cost095_HeadPic03_Chr
   .dw Cost095_HeadPic03_ChrEnd - Cost095_HeadPic03_Chr
   .dw Cost095_HeadPic04_ChrEnd - Cost095_HeadPic04_Chr
   .dw Cost095_HeadPic05_ChrEnd - Cost095_HeadPic05_Chr
@@ -32047,6 +32738,9 @@ Cost095_HeadChrLen:
 ; Head frame OAM lookup (limb 1)
 Cost095_HeadOamLo:
   .dw Cost095_HeadPic03_Oam
+  .dw Cost095_HeadPic03_Oam
+  .dw Cost095_HeadPic03_Oam
+  .dw Cost095_HeadPic03_Oam
   .dw Cost095_HeadPic04_Oam
   .dw Cost095_HeadPic05_Oam
   .dw Cost095_HeadPic06_Oam
@@ -32065,6 +32759,9 @@ Cost095_HeadOamLo:
   .dw Cost095_HeadPic19_Oam
 
 Cost095_HeadOamHi:
+  .db :Cost095_HeadPic03_Oam
+  .db :Cost095_HeadPic03_Oam
+  .db :Cost095_HeadPic03_Oam
   .db :Cost095_HeadPic03_Oam
   .db :Cost095_HeadPic04_Oam
   .db :Cost095_HeadPic05_Oam
@@ -32196,6 +32893,7 @@ Cost096_Pal:
   .incbin "data/snes_converted/costumes/cost_096/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 30 entries indexed by pic file number
 Cost096_ChrLo:
   .dw Cost096_Pic00_Chr
   .dw Cost096_Pic01_Chr
@@ -32210,6 +32908,8 @@ Cost096_ChrLo:
   .dw Cost096_Pic10_Chr
   .dw Cost096_Pic11_Chr
   .dw Cost096_Pic12_Chr
+  .dw Cost096_Pic00_Chr  ; gap->pic00
+  .dw Cost096_Pic00_Chr  ; gap->pic00
   .dw Cost096_Pic15_Chr
   .dw Cost096_Pic16_Chr
   .dw Cost096_Pic17_Chr
@@ -32222,6 +32922,7 @@ Cost096_ChrLo:
   .dw Cost096_Pic24_Chr
   .dw Cost096_Pic25_Chr
   .dw Cost096_Pic26_Chr
+  .dw Cost096_Pic00_Chr  ; gap->pic00
   .dw Cost096_Pic28_Chr
   .dw Cost096_Pic29_Chr
 
@@ -32239,6 +32940,8 @@ Cost096_ChrHi:
   .db :Cost096_Pic10_Chr
   .db :Cost096_Pic11_Chr
   .db :Cost096_Pic12_Chr
+  .db :Cost096_Pic00_Chr
+  .db :Cost096_Pic00_Chr
   .db :Cost096_Pic15_Chr
   .db :Cost096_Pic16_Chr
   .db :Cost096_Pic17_Chr
@@ -32251,6 +32954,7 @@ Cost096_ChrHi:
   .db :Cost096_Pic24_Chr
   .db :Cost096_Pic25_Chr
   .db :Cost096_Pic26_Chr
+  .db :Cost096_Pic00_Chr
   .db :Cost096_Pic28_Chr
   .db :Cost096_Pic29_Chr
 
@@ -32268,6 +32972,8 @@ Cost096_ChrLen:
   .dw Cost096_Pic10_ChrEnd - Cost096_Pic10_Chr
   .dw Cost096_Pic11_ChrEnd - Cost096_Pic11_Chr
   .dw Cost096_Pic12_ChrEnd - Cost096_Pic12_Chr
+  .dw Cost096_Pic00_ChrEnd - Cost096_Pic00_Chr
+  .dw Cost096_Pic00_ChrEnd - Cost096_Pic00_Chr
   .dw Cost096_Pic15_ChrEnd - Cost096_Pic15_Chr
   .dw Cost096_Pic16_ChrEnd - Cost096_Pic16_Chr
   .dw Cost096_Pic17_ChrEnd - Cost096_Pic17_Chr
@@ -32280,6 +32986,7 @@ Cost096_ChrLen:
   .dw Cost096_Pic24_ChrEnd - Cost096_Pic24_Chr
   .dw Cost096_Pic25_ChrEnd - Cost096_Pic25_Chr
   .dw Cost096_Pic26_ChrEnd - Cost096_Pic26_Chr
+  .dw Cost096_Pic00_ChrEnd - Cost096_Pic00_Chr
   .dw Cost096_Pic28_ChrEnd - Cost096_Pic28_Chr
   .dw Cost096_Pic29_ChrEnd - Cost096_Pic29_Chr
 
@@ -32298,6 +33005,8 @@ Cost096_OamLo:
   .dw Cost096_Pic10_Oam
   .dw Cost096_Pic11_Oam
   .dw Cost096_Pic12_Oam
+  .dw Cost096_Pic00_Oam
+  .dw Cost096_Pic00_Oam
   .dw Cost096_Pic15_Oam
   .dw Cost096_Pic16_Oam
   .dw Cost096_Pic17_Oam
@@ -32310,6 +33019,7 @@ Cost096_OamLo:
   .dw Cost096_Pic24_Oam
   .dw Cost096_Pic25_Oam
   .dw Cost096_Pic26_Oam
+  .dw Cost096_Pic00_Oam
   .dw Cost096_Pic28_Oam
   .dw Cost096_Pic29_Oam
 
@@ -32327,6 +33037,8 @@ Cost096_OamHi:
   .db :Cost096_Pic10_Oam
   .db :Cost096_Pic11_Oam
   .db :Cost096_Pic12_Oam
+  .db :Cost096_Pic00_Oam
+  .db :Cost096_Pic00_Oam
   .db :Cost096_Pic15_Oam
   .db :Cost096_Pic16_Oam
   .db :Cost096_Pic17_Oam
@@ -32339,6 +33051,7 @@ Cost096_OamHi:
   .db :Cost096_Pic24_Oam
   .db :Cost096_Pic25_Oam
   .db :Cost096_Pic26_Oam
+  .db :Cost096_Pic00_Oam
   .db :Cost096_Pic28_Oam
   .db :Cost096_Pic29_Oam
 
@@ -32504,7 +33217,7 @@ Cost096_Pic29_ChrEnd:
 Cost096_Pic29_Oam:
   .incbin "data/snes_converted/costumes/cost_096/pic29.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 11 entries)
 Cost096_HeadChrLo:
   .dw Cost096_HeadPic00_Chr
   .dw Cost096_HeadPic01_Chr
@@ -32514,6 +33227,7 @@ Cost096_HeadChrLo:
   .dw Cost096_HeadPic05_Chr
   .dw Cost096_HeadPic06_Chr
   .dw Cost096_HeadPic07_Chr
+  .dw Cost096_HeadPic00_Chr
   .dw Cost096_HeadPic09_Chr
   .dw Cost096_HeadPic10_Chr
 
@@ -32526,6 +33240,7 @@ Cost096_HeadChrHi:
   .db :Cost096_HeadPic05_Chr
   .db :Cost096_HeadPic06_Chr
   .db :Cost096_HeadPic07_Chr
+  .db :Cost096_HeadPic00_Chr
   .db :Cost096_HeadPic09_Chr
   .db :Cost096_HeadPic10_Chr
 
@@ -32538,6 +33253,7 @@ Cost096_HeadChrLen:
   .dw Cost096_HeadPic05_ChrEnd - Cost096_HeadPic05_Chr
   .dw Cost096_HeadPic06_ChrEnd - Cost096_HeadPic06_Chr
   .dw Cost096_HeadPic07_ChrEnd - Cost096_HeadPic07_Chr
+  .dw Cost096_HeadPic00_ChrEnd - Cost096_HeadPic00_Chr
   .dw Cost096_HeadPic09_ChrEnd - Cost096_HeadPic09_Chr
   .dw Cost096_HeadPic10_ChrEnd - Cost096_HeadPic10_Chr
 
@@ -32551,6 +33267,7 @@ Cost096_HeadOamLo:
   .dw Cost096_HeadPic05_Oam
   .dw Cost096_HeadPic06_Oam
   .dw Cost096_HeadPic07_Oam
+  .dw Cost096_HeadPic00_Oam
   .dw Cost096_HeadPic09_Oam
   .dw Cost096_HeadPic10_Oam
 
@@ -32563,6 +33280,7 @@ Cost096_HeadOamHi:
   .db :Cost096_HeadPic05_Oam
   .db :Cost096_HeadPic06_Oam
   .db :Cost096_HeadPic07_Oam
+  .db :Cost096_HeadPic00_Oam
   .db :Cost096_HeadPic09_Oam
   .db :Cost096_HeadPic10_Oam
 
@@ -32637,6 +33355,7 @@ Cost097_Pal:
   .incbin "data/snes_converted/costumes/cost_097/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 11 entries indexed by pic file number
 Cost097_ChrLo:
   .dw Cost097_Pic00_Chr
   .dw Cost097_Pic01_Chr
@@ -32645,6 +33364,7 @@ Cost097_ChrLo:
   .dw Cost097_Pic04_Chr
   .dw Cost097_Pic05_Chr
   .dw Cost097_Pic06_Chr
+  .dw Cost097_Pic00_Chr  ; gap->pic00
   .dw Cost097_Pic08_Chr
   .dw Cost097_Pic09_Chr
   .dw Cost097_Pic10_Chr
@@ -32657,6 +33377,7 @@ Cost097_ChrHi:
   .db :Cost097_Pic04_Chr
   .db :Cost097_Pic05_Chr
   .db :Cost097_Pic06_Chr
+  .db :Cost097_Pic00_Chr
   .db :Cost097_Pic08_Chr
   .db :Cost097_Pic09_Chr
   .db :Cost097_Pic10_Chr
@@ -32669,6 +33390,7 @@ Cost097_ChrLen:
   .dw Cost097_Pic04_ChrEnd - Cost097_Pic04_Chr
   .dw Cost097_Pic05_ChrEnd - Cost097_Pic05_Chr
   .dw Cost097_Pic06_ChrEnd - Cost097_Pic06_Chr
+  .dw Cost097_Pic00_ChrEnd - Cost097_Pic00_Chr
   .dw Cost097_Pic08_ChrEnd - Cost097_Pic08_Chr
   .dw Cost097_Pic09_ChrEnd - Cost097_Pic09_Chr
   .dw Cost097_Pic10_ChrEnd - Cost097_Pic10_Chr
@@ -32682,6 +33404,7 @@ Cost097_OamLo:
   .dw Cost097_Pic04_Oam
   .dw Cost097_Pic05_Oam
   .dw Cost097_Pic06_Oam
+  .dw Cost097_Pic00_Oam
   .dw Cost097_Pic08_Oam
   .dw Cost097_Pic09_Oam
   .dw Cost097_Pic10_Oam
@@ -32694,6 +33417,7 @@ Cost097_OamHi:
   .db :Cost097_Pic04_Oam
   .db :Cost097_Pic05_Oam
   .db :Cost097_Pic06_Oam
+  .db :Cost097_Pic00_Oam
   .db :Cost097_Pic08_Oam
   .db :Cost097_Pic09_Oam
   .db :Cost097_Pic10_Oam
@@ -32758,18 +33482,21 @@ Cost097_Pic10_ChrEnd:
 Cost097_Pic10_Oam:
   .incbin "data/snes_converted/costumes/cost_097/pic10.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 4 entries)
 Cost097_HeadChrLo:
+  .dw Cost097_HeadPic01_Chr
   .dw Cost097_HeadPic01_Chr
   .dw Cost097_HeadPic02_Chr
   .dw Cost097_HeadPic03_Chr
 
 Cost097_HeadChrHi:
   .db :Cost097_HeadPic01_Chr
+  .db :Cost097_HeadPic01_Chr
   .db :Cost097_HeadPic02_Chr
   .db :Cost097_HeadPic03_Chr
 
 Cost097_HeadChrLen:
+  .dw Cost097_HeadPic01_ChrEnd - Cost097_HeadPic01_Chr
   .dw Cost097_HeadPic01_ChrEnd - Cost097_HeadPic01_Chr
   .dw Cost097_HeadPic02_ChrEnd - Cost097_HeadPic02_Chr
   .dw Cost097_HeadPic03_ChrEnd - Cost097_HeadPic03_Chr
@@ -32777,10 +33504,12 @@ Cost097_HeadChrLen:
 ; Head frame OAM lookup (limb 1)
 Cost097_HeadOamLo:
   .dw Cost097_HeadPic01_Oam
+  .dw Cost097_HeadPic01_Oam
   .dw Cost097_HeadPic02_Oam
   .dw Cost097_HeadPic03_Oam
 
 Cost097_HeadOamHi:
+  .db :Cost097_HeadPic01_Oam
   .db :Cost097_HeadPic01_Oam
   .db :Cost097_HeadPic02_Oam
   .db :Cost097_HeadPic03_Oam
@@ -32814,12 +33543,14 @@ Cost098_Pal:
   .incbin "data/snes_converted/costumes/cost_098/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 37 entries indexed by pic file number
 Cost098_ChrLo:
   .dw Cost098_Pic00_Chr
   .dw Cost098_Pic01_Chr
   .dw Cost098_Pic02_Chr
   .dw Cost098_Pic03_Chr
   .dw Cost098_Pic04_Chr
+  .dw Cost098_Pic00_Chr  ; gap->pic00
   .dw Cost098_Pic06_Chr
   .dw Cost098_Pic07_Chr
   .dw Cost098_Pic08_Chr
@@ -32858,6 +33589,7 @@ Cost098_ChrHi:
   .db :Cost098_Pic02_Chr
   .db :Cost098_Pic03_Chr
   .db :Cost098_Pic04_Chr
+  .db :Cost098_Pic00_Chr
   .db :Cost098_Pic06_Chr
   .db :Cost098_Pic07_Chr
   .db :Cost098_Pic08_Chr
@@ -32896,6 +33628,7 @@ Cost098_ChrLen:
   .dw Cost098_Pic02_ChrEnd - Cost098_Pic02_Chr
   .dw Cost098_Pic03_ChrEnd - Cost098_Pic03_Chr
   .dw Cost098_Pic04_ChrEnd - Cost098_Pic04_Chr
+  .dw Cost098_Pic00_ChrEnd - Cost098_Pic00_Chr
   .dw Cost098_Pic06_ChrEnd - Cost098_Pic06_Chr
   .dw Cost098_Pic07_ChrEnd - Cost098_Pic07_Chr
   .dw Cost098_Pic08_ChrEnd - Cost098_Pic08_Chr
@@ -32935,6 +33668,7 @@ Cost098_OamLo:
   .dw Cost098_Pic02_Oam
   .dw Cost098_Pic03_Oam
   .dw Cost098_Pic04_Oam
+  .dw Cost098_Pic00_Oam
   .dw Cost098_Pic06_Oam
   .dw Cost098_Pic07_Oam
   .dw Cost098_Pic08_Oam
@@ -32973,6 +33707,7 @@ Cost098_OamHi:
   .db :Cost098_Pic02_Oam
   .db :Cost098_Pic03_Oam
   .db :Cost098_Pic04_Oam
+  .db :Cost098_Pic00_Oam
   .db :Cost098_Pic06_Oam
   .db :Cost098_Pic07_Oam
   .db :Cost098_Pic08_Oam
@@ -33221,7 +33956,7 @@ Cost098_Pic36_ChrEnd:
 Cost098_Pic36_Oam:
   .incbin "data/snes_converted/costumes/cost_098/pic36.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 5 entries)
 Cost098_HeadChrLo:
   .dw Cost098_HeadPic00_Chr
   .dw Cost098_HeadPic01_Chr
@@ -33299,13 +34034,17 @@ Cost099_Pal:
   .incbin "data/snes_converted/costumes/cost_099/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 35 entries indexed by pic file number
 Cost099_ChrLo:
+  .dw Cost099_Pic02_Chr  ; gap->pic00
+  .dw Cost099_Pic02_Chr  ; gap->pic00
   .dw Cost099_Pic02_Chr
   .dw Cost099_Pic03_Chr
   .dw Cost099_Pic04_Chr
   .dw Cost099_Pic05_Chr
   .dw Cost099_Pic06_Chr
   .dw Cost099_Pic07_Chr
+  .dw Cost099_Pic02_Chr  ; gap->pic00
   .dw Cost099_Pic09_Chr
   .dw Cost099_Pic10_Chr
   .dw Cost099_Pic11_Chr
@@ -33335,11 +34074,14 @@ Cost099_ChrLo:
 
 Cost099_ChrHi:
   .db :Cost099_Pic02_Chr
+  .db :Cost099_Pic02_Chr
+  .db :Cost099_Pic02_Chr
   .db :Cost099_Pic03_Chr
   .db :Cost099_Pic04_Chr
   .db :Cost099_Pic05_Chr
   .db :Cost099_Pic06_Chr
   .db :Cost099_Pic07_Chr
+  .db :Cost099_Pic02_Chr
   .db :Cost099_Pic09_Chr
   .db :Cost099_Pic10_Chr
   .db :Cost099_Pic11_Chr
@@ -33369,11 +34111,14 @@ Cost099_ChrHi:
 
 Cost099_ChrLen:
   .dw Cost099_Pic02_ChrEnd - Cost099_Pic02_Chr
+  .dw Cost099_Pic02_ChrEnd - Cost099_Pic02_Chr
+  .dw Cost099_Pic02_ChrEnd - Cost099_Pic02_Chr
   .dw Cost099_Pic03_ChrEnd - Cost099_Pic03_Chr
   .dw Cost099_Pic04_ChrEnd - Cost099_Pic04_Chr
   .dw Cost099_Pic05_ChrEnd - Cost099_Pic05_Chr
   .dw Cost099_Pic06_ChrEnd - Cost099_Pic06_Chr
   .dw Cost099_Pic07_ChrEnd - Cost099_Pic07_Chr
+  .dw Cost099_Pic02_ChrEnd - Cost099_Pic02_Chr
   .dw Cost099_Pic09_ChrEnd - Cost099_Pic09_Chr
   .dw Cost099_Pic10_ChrEnd - Cost099_Pic10_Chr
   .dw Cost099_Pic11_ChrEnd - Cost099_Pic11_Chr
@@ -33404,11 +34149,14 @@ Cost099_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost099_OamLo:
   .dw Cost099_Pic02_Oam
+  .dw Cost099_Pic02_Oam
+  .dw Cost099_Pic02_Oam
   .dw Cost099_Pic03_Oam
   .dw Cost099_Pic04_Oam
   .dw Cost099_Pic05_Oam
   .dw Cost099_Pic06_Oam
   .dw Cost099_Pic07_Oam
+  .dw Cost099_Pic02_Oam
   .dw Cost099_Pic09_Oam
   .dw Cost099_Pic10_Oam
   .dw Cost099_Pic11_Oam
@@ -33438,11 +34186,14 @@ Cost099_OamLo:
 
 Cost099_OamHi:
   .db :Cost099_Pic02_Oam
+  .db :Cost099_Pic02_Oam
+  .db :Cost099_Pic02_Oam
   .db :Cost099_Pic03_Oam
   .db :Cost099_Pic04_Oam
   .db :Cost099_Pic05_Oam
   .db :Cost099_Pic06_Oam
   .db :Cost099_Pic07_Oam
+  .db :Cost099_Pic02_Oam
   .db :Cost099_Pic09_Oam
   .db :Cost099_Pic10_Oam
   .db :Cost099_Pic11_Oam
@@ -33662,7 +34413,7 @@ Cost099_Pic34_ChrEnd:
 Cost099_Pic34_Oam:
   .incbin "data/snes_converted/costumes/cost_099/pic34.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 14 entries)
 Cost099_HeadChrLo:
   .dw Cost099_HeadPic00_Chr
   .dw Cost099_HeadPic01_Chr
@@ -33839,6 +34590,7 @@ Cost100_Pal:
   .incbin "data/snes_converted/costumes/cost_100/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 24 entries indexed by pic file number
 Cost100_ChrLo:
   .dw Cost100_Pic00_Chr
   .dw Cost100_Pic01_Chr
@@ -34125,6 +34877,7 @@ Cost101_Pal:
   .incbin "data/snes_converted/costumes/cost_101/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost101_ChrLo:
   .dw Cost101_Pic00_Chr
   .dw Cost101_Pic01_Chr
@@ -34686,7 +35439,7 @@ Cost101_Pic49_ChrEnd:
 Cost101_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_101/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 20 entries)
 Cost101_HeadChrLo:
   .dw Cost101_HeadPic00_Chr
   .dw Cost101_HeadPic01_Chr
@@ -34929,6 +35682,7 @@ Cost102_Pal:
   .incbin "data/snes_converted/costumes/cost_102/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 1 entries indexed by pic file number
 Cost102_ChrLo:
   .dw Cost102_Pic00_Chr
 
@@ -34962,6 +35716,7 @@ Cost103_Pal:
   .incbin "data/snes_converted/costumes/cost_103/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 22 entries indexed by pic file number
 Cost103_ChrLo:
   .dw Cost103_Pic00_Chr
   .dw Cost103_Pic01_Chr
@@ -35215,7 +35970,7 @@ Cost103_Pic21_ChrEnd:
 Cost103_Pic21_Oam:
   .incbin "data/snes_converted/costumes/cost_103/pic21.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 10 entries)
 Cost103_HeadChrLo:
   .dw Cost103_HeadPic00_Chr
   .dw Cost103_HeadPic01_Chr
@@ -35348,6 +36103,7 @@ Cost104_Pal:
   .incbin "data/snes_converted/costumes/cost_104/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 30 entries indexed by pic file number
 Cost104_ChrLo:
   .dw Cost104_Pic00_Chr
   .dw Cost104_Pic01_Chr
@@ -35358,6 +36114,7 @@ Cost104_ChrLo:
   .dw Cost104_Pic06_Chr
   .dw Cost104_Pic07_Chr
   .dw Cost104_Pic08_Chr
+  .dw Cost104_Pic00_Chr  ; gap->pic00
   .dw Cost104_Pic10_Chr
   .dw Cost104_Pic11_Chr
   .dw Cost104_Pic12_Chr
@@ -35389,6 +36146,7 @@ Cost104_ChrHi:
   .db :Cost104_Pic06_Chr
   .db :Cost104_Pic07_Chr
   .db :Cost104_Pic08_Chr
+  .db :Cost104_Pic00_Chr
   .db :Cost104_Pic10_Chr
   .db :Cost104_Pic11_Chr
   .db :Cost104_Pic12_Chr
@@ -35420,6 +36178,7 @@ Cost104_ChrLen:
   .dw Cost104_Pic06_ChrEnd - Cost104_Pic06_Chr
   .dw Cost104_Pic07_ChrEnd - Cost104_Pic07_Chr
   .dw Cost104_Pic08_ChrEnd - Cost104_Pic08_Chr
+  .dw Cost104_Pic00_ChrEnd - Cost104_Pic00_Chr
   .dw Cost104_Pic10_ChrEnd - Cost104_Pic10_Chr
   .dw Cost104_Pic11_ChrEnd - Cost104_Pic11_Chr
   .dw Cost104_Pic12_ChrEnd - Cost104_Pic12_Chr
@@ -35452,6 +36211,7 @@ Cost104_OamLo:
   .dw Cost104_Pic06_Oam
   .dw Cost104_Pic07_Oam
   .dw Cost104_Pic08_Oam
+  .dw Cost104_Pic00_Oam
   .dw Cost104_Pic10_Oam
   .dw Cost104_Pic11_Oam
   .dw Cost104_Pic12_Oam
@@ -35483,6 +36243,7 @@ Cost104_OamHi:
   .db :Cost104_Pic06_Oam
   .db :Cost104_Pic07_Oam
   .db :Cost104_Pic08_Oam
+  .db :Cost104_Pic00_Oam
   .db :Cost104_Pic10_Oam
   .db :Cost104_Pic11_Oam
   .db :Cost104_Pic12_Oam
@@ -35678,7 +36439,7 @@ Cost104_Pic29_ChrEnd:
 Cost104_Pic29_Oam:
   .incbin "data/snes_converted/costumes/cost_104/pic29.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 12 entries)
 Cost104_HeadChrLo:
   .dw Cost104_HeadPic00_Chr
   .dw Cost104_HeadPic01_Chr
@@ -35833,6 +36594,7 @@ Cost105_Pal:
   .incbin "data/snes_converted/costumes/cost_105/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 10 entries indexed by pic file number
 Cost105_ChrLo:
   .dw Cost105_Pic00_Chr
   .dw Cost105_Pic01_Chr
@@ -35965,6 +36727,7 @@ Cost106_Pal:
   .incbin "data/snes_converted/costumes/cost_106/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 9 entries indexed by pic file number
 Cost106_ChrLo:
   .dw Cost106_Pic00_Chr
   .dw Cost106_Pic01_Chr
@@ -36075,7 +36838,7 @@ Cost106_Pic08_ChrEnd:
 Cost106_Pic08_Oam:
   .incbin "data/snes_converted/costumes/cost_106/pic08.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 5 entries)
 Cost106_HeadChrLo:
   .dw Cost106_HeadPic00_Chr
   .dw Cost106_HeadPic01_Chr
@@ -36153,6 +36916,7 @@ Cost107_Pal:
   .incbin "data/snes_converted/costumes/cost_107/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost107_ChrLo:
   .dw Cost107_Pic00_Chr
   .dw Cost107_Pic01_Chr
@@ -36175,9 +36939,11 @@ Cost107_ChrLo:
   .dw Cost107_Pic18_Chr
   .dw Cost107_Pic19_Chr
   .dw Cost107_Pic20_Chr
+  .dw Cost107_Pic00_Chr  ; gap->pic00
   .dw Cost107_Pic22_Chr
   .dw Cost107_Pic23_Chr
   .dw Cost107_Pic24_Chr
+  .dw Cost107_Pic00_Chr  ; gap->pic00
   .dw Cost107_Pic26_Chr
   .dw Cost107_Pic27_Chr
   .dw Cost107_Pic28_Chr
@@ -36225,9 +36991,11 @@ Cost107_ChrHi:
   .db :Cost107_Pic18_Chr
   .db :Cost107_Pic19_Chr
   .db :Cost107_Pic20_Chr
+  .db :Cost107_Pic00_Chr
   .db :Cost107_Pic22_Chr
   .db :Cost107_Pic23_Chr
   .db :Cost107_Pic24_Chr
+  .db :Cost107_Pic00_Chr
   .db :Cost107_Pic26_Chr
   .db :Cost107_Pic27_Chr
   .db :Cost107_Pic28_Chr
@@ -36275,9 +37043,11 @@ Cost107_ChrLen:
   .dw Cost107_Pic18_ChrEnd - Cost107_Pic18_Chr
   .dw Cost107_Pic19_ChrEnd - Cost107_Pic19_Chr
   .dw Cost107_Pic20_ChrEnd - Cost107_Pic20_Chr
+  .dw Cost107_Pic00_ChrEnd - Cost107_Pic00_Chr
   .dw Cost107_Pic22_ChrEnd - Cost107_Pic22_Chr
   .dw Cost107_Pic23_ChrEnd - Cost107_Pic23_Chr
   .dw Cost107_Pic24_ChrEnd - Cost107_Pic24_Chr
+  .dw Cost107_Pic00_ChrEnd - Cost107_Pic00_Chr
   .dw Cost107_Pic26_ChrEnd - Cost107_Pic26_Chr
   .dw Cost107_Pic27_ChrEnd - Cost107_Pic27_Chr
   .dw Cost107_Pic28_ChrEnd - Cost107_Pic28_Chr
@@ -36326,9 +37096,11 @@ Cost107_OamLo:
   .dw Cost107_Pic18_Oam
   .dw Cost107_Pic19_Oam
   .dw Cost107_Pic20_Oam
+  .dw Cost107_Pic00_Oam
   .dw Cost107_Pic22_Oam
   .dw Cost107_Pic23_Oam
   .dw Cost107_Pic24_Oam
+  .dw Cost107_Pic00_Oam
   .dw Cost107_Pic26_Oam
   .dw Cost107_Pic27_Oam
   .dw Cost107_Pic28_Oam
@@ -36376,9 +37148,11 @@ Cost107_OamHi:
   .db :Cost107_Pic18_Oam
   .db :Cost107_Pic19_Oam
   .db :Cost107_Pic20_Oam
+  .db :Cost107_Pic00_Oam
   .db :Cost107_Pic22_Oam
   .db :Cost107_Pic23_Oam
   .db :Cost107_Pic24_Oam
+  .db :Cost107_Pic00_Oam
   .db :Cost107_Pic26_Oam
   .db :Cost107_Pic27_Oam
   .db :Cost107_Pic28_Oam
@@ -36692,7 +37466,7 @@ Cost107_Pic49_ChrEnd:
 Cost107_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_107/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 16 entries)
 Cost107_HeadChrLo:
   .dw Cost107_HeadPic00_Chr
   .dw Cost107_HeadPic01_Chr
@@ -36891,6 +37665,7 @@ Cost108_Pal:
   .incbin "data/snes_converted/costumes/cost_108/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost108_ChrLo:
   .dw Cost108_Pic00_Chr
   .dw Cost108_Pic01_Chr
@@ -36913,9 +37688,11 @@ Cost108_ChrLo:
   .dw Cost108_Pic18_Chr
   .dw Cost108_Pic19_Chr
   .dw Cost108_Pic20_Chr
+  .dw Cost108_Pic00_Chr  ; gap->pic00
   .dw Cost108_Pic22_Chr
   .dw Cost108_Pic23_Chr
   .dw Cost108_Pic24_Chr
+  .dw Cost108_Pic00_Chr  ; gap->pic00
   .dw Cost108_Pic26_Chr
   .dw Cost108_Pic27_Chr
   .dw Cost108_Pic28_Chr
@@ -36963,9 +37740,11 @@ Cost108_ChrHi:
   .db :Cost108_Pic18_Chr
   .db :Cost108_Pic19_Chr
   .db :Cost108_Pic20_Chr
+  .db :Cost108_Pic00_Chr
   .db :Cost108_Pic22_Chr
   .db :Cost108_Pic23_Chr
   .db :Cost108_Pic24_Chr
+  .db :Cost108_Pic00_Chr
   .db :Cost108_Pic26_Chr
   .db :Cost108_Pic27_Chr
   .db :Cost108_Pic28_Chr
@@ -37013,9 +37792,11 @@ Cost108_ChrLen:
   .dw Cost108_Pic18_ChrEnd - Cost108_Pic18_Chr
   .dw Cost108_Pic19_ChrEnd - Cost108_Pic19_Chr
   .dw Cost108_Pic20_ChrEnd - Cost108_Pic20_Chr
+  .dw Cost108_Pic00_ChrEnd - Cost108_Pic00_Chr
   .dw Cost108_Pic22_ChrEnd - Cost108_Pic22_Chr
   .dw Cost108_Pic23_ChrEnd - Cost108_Pic23_Chr
   .dw Cost108_Pic24_ChrEnd - Cost108_Pic24_Chr
+  .dw Cost108_Pic00_ChrEnd - Cost108_Pic00_Chr
   .dw Cost108_Pic26_ChrEnd - Cost108_Pic26_Chr
   .dw Cost108_Pic27_ChrEnd - Cost108_Pic27_Chr
   .dw Cost108_Pic28_ChrEnd - Cost108_Pic28_Chr
@@ -37064,9 +37845,11 @@ Cost108_OamLo:
   .dw Cost108_Pic18_Oam
   .dw Cost108_Pic19_Oam
   .dw Cost108_Pic20_Oam
+  .dw Cost108_Pic00_Oam
   .dw Cost108_Pic22_Oam
   .dw Cost108_Pic23_Oam
   .dw Cost108_Pic24_Oam
+  .dw Cost108_Pic00_Oam
   .dw Cost108_Pic26_Oam
   .dw Cost108_Pic27_Oam
   .dw Cost108_Pic28_Oam
@@ -37114,9 +37897,11 @@ Cost108_OamHi:
   .db :Cost108_Pic18_Oam
   .db :Cost108_Pic19_Oam
   .db :Cost108_Pic20_Oam
+  .db :Cost108_Pic00_Oam
   .db :Cost108_Pic22_Oam
   .db :Cost108_Pic23_Oam
   .db :Cost108_Pic24_Oam
+  .db :Cost108_Pic00_Oam
   .db :Cost108_Pic26_Oam
   .db :Cost108_Pic27_Oam
   .db :Cost108_Pic28_Oam
@@ -37430,7 +38215,7 @@ Cost108_Pic49_ChrEnd:
 Cost108_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_108/pic49.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 16 entries)
 Cost108_HeadChrLo:
   .dw Cost108_HeadPic00_Chr
   .dw Cost108_HeadPic01_Chr
@@ -37629,6 +38414,7 @@ Cost109_Pal:
   .incbin "data/snes_converted/costumes/cost_109/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 20 entries indexed by pic file number
 Cost109_ChrLo:
   .dw Cost109_Pic00_Chr
   .dw Cost109_Pic01_Chr
@@ -37640,6 +38426,7 @@ Cost109_ChrLo:
   .dw Cost109_Pic07_Chr
   .dw Cost109_Pic08_Chr
   .dw Cost109_Pic09_Chr
+  .dw Cost109_Pic00_Chr  ; gap->pic00
   .dw Cost109_Pic11_Chr
   .dw Cost109_Pic12_Chr
   .dw Cost109_Pic13_Chr
@@ -37661,6 +38448,7 @@ Cost109_ChrHi:
   .db :Cost109_Pic07_Chr
   .db :Cost109_Pic08_Chr
   .db :Cost109_Pic09_Chr
+  .db :Cost109_Pic00_Chr
   .db :Cost109_Pic11_Chr
   .db :Cost109_Pic12_Chr
   .db :Cost109_Pic13_Chr
@@ -37682,6 +38470,7 @@ Cost109_ChrLen:
   .dw Cost109_Pic07_ChrEnd - Cost109_Pic07_Chr
   .dw Cost109_Pic08_ChrEnd - Cost109_Pic08_Chr
   .dw Cost109_Pic09_ChrEnd - Cost109_Pic09_Chr
+  .dw Cost109_Pic00_ChrEnd - Cost109_Pic00_Chr
   .dw Cost109_Pic11_ChrEnd - Cost109_Pic11_Chr
   .dw Cost109_Pic12_ChrEnd - Cost109_Pic12_Chr
   .dw Cost109_Pic13_ChrEnd - Cost109_Pic13_Chr
@@ -37704,6 +38493,7 @@ Cost109_OamLo:
   .dw Cost109_Pic07_Oam
   .dw Cost109_Pic08_Oam
   .dw Cost109_Pic09_Oam
+  .dw Cost109_Pic00_Oam
   .dw Cost109_Pic11_Oam
   .dw Cost109_Pic12_Oam
   .dw Cost109_Pic13_Oam
@@ -37725,6 +38515,7 @@ Cost109_OamHi:
   .db :Cost109_Pic07_Oam
   .db :Cost109_Pic08_Oam
   .db :Cost109_Pic09_Oam
+  .db :Cost109_Pic00_Oam
   .db :Cost109_Pic11_Oam
   .db :Cost109_Pic12_Oam
   .db :Cost109_Pic13_Oam
@@ -37860,6 +38651,7 @@ Cost110_Pal:
   .incbin "data/snes_converted/costumes/cost_110/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 17 entries indexed by pic file number
 Cost110_ChrLo:
   .dw Cost110_Pic00_Chr
   .dw Cost110_Pic01_Chr
@@ -38058,7 +38850,7 @@ Cost110_Pic16_ChrEnd:
 Cost110_Pic16_Oam:
   .incbin "data/snes_converted/costumes/cost_110/pic16.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 14 entries)
 Cost110_HeadChrLo:
   .dw Cost110_HeadPic00_Chr
   .dw Cost110_HeadPic01_Chr
@@ -38235,6 +39027,7 @@ Cost111_Pal:
   .incbin "data/snes_converted/costumes/cost_111/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 13 entries indexed by pic file number
 Cost111_ChrLo:
   .dw Cost111_Pic00_Chr
   .dw Cost111_Pic01_Chr
@@ -38400,8 +39193,10 @@ Cost112_Pal:
   .incbin "data/snes_converted/costumes/cost_112/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 18 entries indexed by pic file number
 Cost112_ChrLo:
   .dw Cost112_Pic00_Chr
+  .dw Cost112_Pic00_Chr  ; gap->pic00
   .dw Cost112_Pic02_Chr
   .dw Cost112_Pic03_Chr
   .dw Cost112_Pic04_Chr
@@ -38421,6 +39216,7 @@ Cost112_ChrLo:
 
 Cost112_ChrHi:
   .db :Cost112_Pic00_Chr
+  .db :Cost112_Pic00_Chr
   .db :Cost112_Pic02_Chr
   .db :Cost112_Pic03_Chr
   .db :Cost112_Pic04_Chr
@@ -38439,6 +39235,7 @@ Cost112_ChrHi:
   .db :Cost112_Pic17_Chr
 
 Cost112_ChrLen:
+  .dw Cost112_Pic00_ChrEnd - Cost112_Pic00_Chr
   .dw Cost112_Pic00_ChrEnd - Cost112_Pic00_Chr
   .dw Cost112_Pic02_ChrEnd - Cost112_Pic02_Chr
   .dw Cost112_Pic03_ChrEnd - Cost112_Pic03_Chr
@@ -38460,6 +39257,7 @@ Cost112_ChrLen:
 ; Body frame OAM lookup (word addr, bank)
 Cost112_OamLo:
   .dw Cost112_Pic00_Oam
+  .dw Cost112_Pic00_Oam
   .dw Cost112_Pic02_Oam
   .dw Cost112_Pic03_Oam
   .dw Cost112_Pic04_Oam
@@ -38478,6 +39276,7 @@ Cost112_OamLo:
   .dw Cost112_Pic17_Oam
 
 Cost112_OamHi:
+  .db :Cost112_Pic00_Oam
   .db :Cost112_Pic00_Oam
   .db :Cost112_Pic02_Oam
   .db :Cost112_Pic03_Oam
@@ -38598,8 +39397,9 @@ Cost112_Pic17_ChrEnd:
 Cost112_Pic17_Oam:
   .incbin "data/snes_converted/costumes/cost_112/pic17.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 17 entries)
 Cost112_HeadChrLo:
+  .dw Cost112_HeadPic01_Chr
   .dw Cost112_HeadPic01_Chr
   .dw Cost112_HeadPic02_Chr
   .dw Cost112_HeadPic03_Chr
@@ -38619,6 +39419,7 @@ Cost112_HeadChrLo:
 
 Cost112_HeadChrHi:
   .db :Cost112_HeadPic01_Chr
+  .db :Cost112_HeadPic01_Chr
   .db :Cost112_HeadPic02_Chr
   .db :Cost112_HeadPic03_Chr
   .db :Cost112_HeadPic04_Chr
@@ -38636,6 +39437,7 @@ Cost112_HeadChrHi:
   .db :Cost112_HeadPic16_Chr
 
 Cost112_HeadChrLen:
+  .dw Cost112_HeadPic01_ChrEnd - Cost112_HeadPic01_Chr
   .dw Cost112_HeadPic01_ChrEnd - Cost112_HeadPic01_Chr
   .dw Cost112_HeadPic02_ChrEnd - Cost112_HeadPic02_Chr
   .dw Cost112_HeadPic03_ChrEnd - Cost112_HeadPic03_Chr
@@ -38656,6 +39458,7 @@ Cost112_HeadChrLen:
 ; Head frame OAM lookup (limb 1)
 Cost112_HeadOamLo:
   .dw Cost112_HeadPic01_Oam
+  .dw Cost112_HeadPic01_Oam
   .dw Cost112_HeadPic02_Oam
   .dw Cost112_HeadPic03_Oam
   .dw Cost112_HeadPic04_Oam
@@ -38673,6 +39476,7 @@ Cost112_HeadOamLo:
   .dw Cost112_HeadPic16_Oam
 
 Cost112_HeadOamHi:
+  .db :Cost112_HeadPic01_Oam
   .db :Cost112_HeadPic01_Oam
   .db :Cost112_HeadPic02_Oam
   .db :Cost112_HeadPic03_Oam
@@ -38797,6 +39601,7 @@ Cost113_Pal:
   .incbin "data/snes_converted/costumes/cost_113/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 3 entries indexed by pic file number
 Cost113_ChrLo:
   .dw Cost113_Pic00_Chr
   .dw Cost113_Pic01_Chr
@@ -38852,6 +39657,7 @@ Cost114_Pal:
   .incbin "data/snes_converted/costumes/cost_114/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 6 entries indexed by pic file number
 Cost114_ChrLo:
   .dw Cost114_Pic00_Chr
   .dw Cost114_Pic01_Chr
@@ -38940,6 +39746,7 @@ Cost115_Pal:
   .incbin "data/snes_converted/costumes/cost_115/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 35 entries indexed by pic file number
 Cost115_ChrLo:
   .dw Cost115_Pic00_Chr
   .dw Cost115_Pic01_Chr
@@ -38963,6 +39770,7 @@ Cost115_ChrLo:
   .dw Cost115_Pic19_Chr
   .dw Cost115_Pic20_Chr
   .dw Cost115_Pic21_Chr
+  .dw Cost115_Pic00_Chr  ; gap->pic00
   .dw Cost115_Pic23_Chr
   .dw Cost115_Pic24_Chr
   .dw Cost115_Pic25_Chr
@@ -38999,6 +39807,7 @@ Cost115_ChrHi:
   .db :Cost115_Pic19_Chr
   .db :Cost115_Pic20_Chr
   .db :Cost115_Pic21_Chr
+  .db :Cost115_Pic00_Chr
   .db :Cost115_Pic23_Chr
   .db :Cost115_Pic24_Chr
   .db :Cost115_Pic25_Chr
@@ -39035,6 +39844,7 @@ Cost115_ChrLen:
   .dw Cost115_Pic19_ChrEnd - Cost115_Pic19_Chr
   .dw Cost115_Pic20_ChrEnd - Cost115_Pic20_Chr
   .dw Cost115_Pic21_ChrEnd - Cost115_Pic21_Chr
+  .dw Cost115_Pic00_ChrEnd - Cost115_Pic00_Chr
   .dw Cost115_Pic23_ChrEnd - Cost115_Pic23_Chr
   .dw Cost115_Pic24_ChrEnd - Cost115_Pic24_Chr
   .dw Cost115_Pic25_ChrEnd - Cost115_Pic25_Chr
@@ -39072,6 +39882,7 @@ Cost115_OamLo:
   .dw Cost115_Pic19_Oam
   .dw Cost115_Pic20_Oam
   .dw Cost115_Pic21_Oam
+  .dw Cost115_Pic00_Oam
   .dw Cost115_Pic23_Oam
   .dw Cost115_Pic24_Oam
   .dw Cost115_Pic25_Oam
@@ -39108,6 +39919,7 @@ Cost115_OamHi:
   .db :Cost115_Pic19_Oam
   .db :Cost115_Pic20_Oam
   .db :Cost115_Pic21_Oam
+  .db :Cost115_Pic00_Oam
   .db :Cost115_Pic23_Oam
   .db :Cost115_Pic24_Oam
   .db :Cost115_Pic25_Oam
@@ -39325,7 +40137,7 @@ Cost115_Pic34_ChrEnd:
 Cost115_Pic34_Oam:
   .incbin "data/snes_converted/costumes/cost_115/pic34.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 10 entries)
 Cost115_HeadChrLo:
   .dw Cost115_HeadPic00_Chr
   .dw Cost115_HeadPic01_Chr
@@ -39458,6 +40270,7 @@ Cost116_Pal:
   .incbin "data/snes_converted/costumes/cost_116/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 9 entries indexed by pic file number
 Cost116_ChrLo:
   .dw Cost116_Pic00_Chr
   .dw Cost116_Pic01_Chr
@@ -39579,6 +40392,7 @@ Cost117_Pal:
   .incbin "data/snes_converted/costumes/cost_117/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 17 entries indexed by pic file number
 Cost117_ChrLo:
   .dw Cost117_Pic00_Chr
   .dw Cost117_Pic01_Chr
@@ -39788,6 +40602,7 @@ Cost118_Pal:
   .incbin "data/snes_converted/costumes/cost_118/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 6 entries indexed by pic file number
 Cost118_ChrLo:
   .dw Cost118_Pic00_Chr
   .dw Cost118_Pic01_Chr
@@ -39876,6 +40691,7 @@ Cost119_Pal:
   .incbin "data/snes_converted/costumes/cost_119/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 16 entries indexed by pic file number
 Cost119_ChrLo:
   .dw Cost119_Pic00_Chr
   .dw Cost119_Pic01_Chr
@@ -40063,7 +40879,7 @@ Cost119_Pic15_ChrEnd:
 Cost119_Pic15_Oam:
   .incbin "data/snes_converted/costumes/cost_119/pic15.oam"
 
-; Head frame CHR lookup (limb 1)
+; Head frame CHR lookup (limb 1, sparse: 2 entries)
 Cost119_HeadChrLo:
   .dw Cost119_HeadPic00_Chr
   .dw Cost119_HeadPic01_Chr
@@ -40108,6 +40924,7 @@ Cost120_Pal:
   .incbin "data/snes_converted/costumes/cost_120/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 1 entries indexed by pic file number
 Cost120_ChrLo:
   .dw Cost120_Pic00_Chr
 
@@ -40141,6 +40958,7 @@ Cost121_Pal:
   .incbin "data/snes_converted/costumes/cost_121/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 2 entries indexed by pic file number
 Cost121_ChrLo:
   .dw Cost121_Pic00_Chr
   .dw Cost121_Pic01_Chr
@@ -40185,6 +41003,7 @@ Cost122_Pal:
   .incbin "data/snes_converted/costumes/cost_122/palette.pal"
 
 ; Body frame CHR lookup (word addr, bank, length)
+; Sparse table: 50 entries indexed by pic file number
 Cost122_ChrLo:
   .dw Cost122_Pic00_Chr
   .dw Cost122_Pic01_Chr
@@ -40195,6 +41014,7 @@ Cost122_ChrLo:
   .dw Cost122_Pic06_Chr
   .dw Cost122_Pic07_Chr
   .dw Cost122_Pic08_Chr
+  .dw Cost122_Pic00_Chr  ; gap->pic00
   .dw Cost122_Pic10_Chr
   .dw Cost122_Pic11_Chr
   .dw Cost122_Pic12_Chr
@@ -40246,6 +41066,7 @@ Cost122_ChrHi:
   .db :Cost122_Pic06_Chr
   .db :Cost122_Pic07_Chr
   .db :Cost122_Pic08_Chr
+  .db :Cost122_Pic00_Chr
   .db :Cost122_Pic10_Chr
   .db :Cost122_Pic11_Chr
   .db :Cost122_Pic12_Chr
@@ -40297,6 +41118,7 @@ Cost122_ChrLen:
   .dw Cost122_Pic06_ChrEnd - Cost122_Pic06_Chr
   .dw Cost122_Pic07_ChrEnd - Cost122_Pic07_Chr
   .dw Cost122_Pic08_ChrEnd - Cost122_Pic08_Chr
+  .dw Cost122_Pic00_ChrEnd - Cost122_Pic00_Chr
   .dw Cost122_Pic10_ChrEnd - Cost122_Pic10_Chr
   .dw Cost122_Pic11_ChrEnd - Cost122_Pic11_Chr
   .dw Cost122_Pic12_ChrEnd - Cost122_Pic12_Chr
@@ -40349,6 +41171,7 @@ Cost122_OamLo:
   .dw Cost122_Pic06_Oam
   .dw Cost122_Pic07_Oam
   .dw Cost122_Pic08_Oam
+  .dw Cost122_Pic00_Oam
   .dw Cost122_Pic10_Oam
   .dw Cost122_Pic11_Oam
   .dw Cost122_Pic12_Oam
@@ -40400,6 +41223,7 @@ Cost122_OamHi:
   .db :Cost122_Pic06_Oam
   .db :Cost122_Pic07_Oam
   .db :Cost122_Pic08_Oam
+  .db :Cost122_Pic00_Oam
   .db :Cost122_Pic10_Oam
   .db :Cost122_Pic11_Oam
   .db :Cost122_Pic12_Oam
@@ -40756,7 +41580,7 @@ CostumeDirTable:
   ; costume 1
   .dw Cost058_Pal
   .db :Cost058_Pal
-  .db 46
+  .db 48
   .dw Cost058_ChrLo
   .db :Cost058_ChrLo
   .db 0
@@ -40791,7 +41615,7 @@ CostumeDirTable:
   ; costume 6
   .dw Cost028_Pal
   .db :Cost028_Pal
-  .db 46
+  .db 50
   .dw Cost028_ChrLo
   .db :Cost028_ChrLo
   .db 0
@@ -40812,21 +41636,21 @@ CostumeDirTable:
   ; costume 9
   .dw Cost033_Pal
   .db :Cost033_Pal
-  .db 49
+  .db 50
   .dw Cost033_ChrLo
   .db :Cost033_ChrLo
   .db 0
   ; costume 10
   .dw Cost088_Pal
   .db :Cost088_Pal
-  .db 35
+  .db 36
   .dw Cost088_ChrLo
   .db :Cost088_ChrLo
   .db 0
   ; costume 11 -> fallback 109
   .dw Cost109_Pal
   .db :Cost109_Pal
-  .db 19
+  .db 20
   .dw Cost109_ChrLo
   .db :Cost109_ChrLo
   .db 0
@@ -40840,21 +41664,21 @@ CostumeDirTable:
   ; costume 13
   .dw Cost044_Pal
   .db :Cost044_Pal
-  .db 46
+  .db 49
   .dw Cost044_ChrLo
   .db :Cost044_ChrLo
   .db 0
   ; costume 14
   .dw Cost048_Pal
   .db :Cost048_Pal
-  .db 33
+  .db 34
   .dw Cost048_ChrLo
   .db :Cost048_ChrLo
   .db 0
   ; costume 15
   .dw Cost040_Pal
   .db :Cost040_Pal
-  .db 36
+  .db 39
   .dw Cost040_ChrLo
   .db :Cost040_ChrLo
   .db 0
@@ -40875,63 +41699,63 @@ CostumeDirTable:
   ; costume 18
   .dw Cost047_Pal
   .db :Cost047_Pal
-  .db 47
+  .db 50
   .dw Cost047_ChrLo
   .db :Cost047_ChrLo
   .db 0
   ; costume 19
   .dw Cost052_Pal
   .db :Cost052_Pal
-  .db 49
+  .db 50
   .dw Cost052_ChrLo
   .db :Cost052_ChrLo
   .db 0
   ; costume 20
   .dw Cost085_Pal
   .db :Cost085_Pal
-  .db 46
+  .db 50
   .dw Cost085_ChrLo
   .db :Cost085_ChrLo
   .db 0
   ; costume 21
   .dw Cost087_Pal
   .db :Cost087_Pal
-  .db 48
+  .db 50
   .dw Cost087_ChrLo
   .db :Cost087_ChrLo
   .db 0
   ; costume 22
   .dw Cost067_Pal
   .db :Cost067_Pal
-  .db 41
+  .db 44
   .dw Cost067_ChrLo
   .db :Cost067_ChrLo
   .db 0
   ; costume 23
   .dw Cost046_Pal
   .db :Cost046_Pal
-  .db 47
+  .db 50
   .dw Cost046_ChrLo
   .db :Cost046_ChrLo
   .db 0
   ; costume 24
   .dw Cost037_Pal
   .db :Cost037_Pal
-  .db 22
+  .db 26
   .dw Cost037_ChrLo
   .db :Cost037_ChrLo
   .db 0
   ; costume 25
   .dw Cost096_Pal
   .db :Cost096_Pal
-  .db 27
+  .db 30
   .dw Cost096_ChrLo
   .db :Cost096_ChrLo
   .db 0
   ; costume 26
   .dw Cost038_Pal
   .db :Cost038_Pal
-  .db 33
+  .db 34
   .dw Cost038_ChrLo
   .db :Cost038_ChrLo
   .db 0
@@ -40945,7 +41769,7 @@ CostumeDirTable:
   ; costume 28
   .dw Cost043_Pal
   .db :Cost043_Pal
-  .db 46
+  .db 50
   .dw Cost043_ChrLo
   .db :Cost043_ChrLo
   .db 0
@@ -40966,7 +41790,7 @@ CostumeDirTable:
   ; costume 31
   .dw Cost061_Pal
   .db :Cost061_Pal
-  .db 12
+  .db 16
   .dw Cost061_ChrLo
   .db :Cost061_ChrLo
   .db 0
@@ -40980,7 +41804,7 @@ CostumeDirTable:
   ; costume 33
   .dw Cost059_Pal
   .db :Cost059_Pal
-  .db 27
+  .db 36
   .dw Cost059_ChrLo
   .db :Cost059_ChrLo
   .db 0
@@ -41001,14 +41825,14 @@ CostumeDirTable:
   ; costume 36
   .dw Cost074_Pal
   .db :Cost074_Pal
-  .db 10
+  .db 13
   .dw Cost074_ChrLo
   .db :Cost074_ChrLo
   .db 0
   ; costume 37
   .dw Cost039_Pal
   .db :Cost039_Pal
-  .db 45
+  .db 50
   .dw Cost039_ChrLo
   .db :Cost039_ChrLo
   .db 0
@@ -41036,7 +41860,7 @@ CostumeDirTable:
   ; costume 41
   .dw Cost049_Pal
   .db :Cost049_Pal
-  .db 36
+  .db 38
   .dw Cost049_ChrLo
   .db :Cost049_ChrLo
   .db 0
@@ -41050,21 +41874,21 @@ CostumeDirTable:
   ; costume 43
   .dw Cost097_Pal
   .db :Cost097_Pal
-  .db 10
+  .db 11
   .dw Cost097_ChrLo
   .db :Cost097_ChrLo
   .db 0
   ; costume 44
   .dw Cost122_Pal
   .db :Cost122_Pal
-  .db 49
+  .db 50
   .dw Cost122_ChrLo
   .db :Cost122_ChrLo
   .db 0
   ; costume 45
   .dw Cost068_Pal
   .db :Cost068_Pal
-  .db 39
+  .db 40
   .dw Cost068_ChrLo
   .db :Cost068_ChrLo
   .db 0
@@ -41092,7 +41916,7 @@ CostumeDirTable:
   ; costume 49
   .dw Cost112_Pal
   .db :Cost112_Pal
-  .db 17
+  .db 18
   .dw Cost112_ChrLo
   .db :Cost112_ChrLo
   .db 0
@@ -41106,14 +41930,14 @@ CostumeDirTable:
   ; costume 51
   .dw Cost099_Pal
   .db :Cost099_Pal
-  .db 32
+  .db 35
   .dw Cost099_ChrLo
   .db :Cost099_ChrLo
   .db 0
   ; costume 52
   .dw Cost104_Pal
   .db :Cost104_Pal
-  .db 29
+  .db 30
   .dw Cost104_ChrLo
   .db :Cost104_ChrLo
   .db 0
@@ -41127,7 +41951,7 @@ CostumeDirTable:
   ; costume 54
   .dw Cost108_Pal
   .db :Cost108_Pal
-  .db 48
+  .db 50
   .dw Cost108_ChrLo
   .db :Cost108_ChrLo
   .db 0
@@ -41176,7 +42000,7 @@ CostumeDirTable:
   ; costume 61
   .dw Cost064_Pal
   .db :Cost064_Pal
-  .db 8
+  .db 9
   .dw Cost064_ChrLo
   .db :Cost064_ChrLo
   .db 0
@@ -41190,14 +42014,14 @@ CostumeDirTable:
   ; costume 63
   .dw Cost014_Pal
   .db :Cost014_Pal
-  .db 11
+  .db 12
   .dw Cost014_ChrLo
   .db :Cost014_ChrLo
   .db 0
   ; costume 64
   .dw Cost064_Pal
   .db :Cost064_Pal
-  .db 8
+  .db 9
   .dw Cost064_ChrLo
   .db :Cost064_ChrLo
   .db 0
@@ -41211,7 +42035,7 @@ CostumeDirTable:
   ; costume 66 -> fallback 19
   .dw Cost019_Pal
   .db :Cost019_Pal
-  .db 5
+  .db 6
   .dw Cost019_ChrLo
   .db :Cost019_ChrLo
   .db 0
@@ -41253,7 +42077,7 @@ CostumeDirTable:
   ; costume 72
   .dw Cost030_Pal
   .db :Cost030_Pal
-  .db 11
+  .db 12
   .dw Cost030_ChrLo
   .db :Cost030_ChrLo
   .db 0
@@ -41274,7 +42098,7 @@ CostumeDirTable:
   ; costume 75
   .dw Cost031_Pal
   .db :Cost031_Pal
-  .db 46
+  .db 47
   .dw Cost031_ChrLo
   .db :Cost031_ChrLo
   .db 0
@@ -41288,14 +42112,14 @@ CostumeDirTable:
   ; costume 77
   .dw Cost078_Pal
   .db :Cost078_Pal
-  .db 27
+  .db 30
   .dw Cost078_ChrLo
   .db :Cost078_ChrLo
   .db 0
   ; costume 78
   .dw Cost098_Pal
   .db :Cost098_Pal
-  .db 36
+  .db 37
   .dw Cost098_ChrLo
   .db :Cost098_ChrLo
   .db 0
@@ -41316,7 +42140,7 @@ CostumeDirTable:
   ; costume 81
   .dw Cost026_Pal
   .db :Cost026_Pal
-  .db 24
+  .db 25
   .dw Cost026_ChrLo
   .db :Cost026_ChrLo
   .db 0
@@ -41344,7 +42168,7 @@ CostumeDirTable:
   ; costume 85
   .dw Cost107_Pal
   .db :Cost107_Pal
-  .db 48
+  .db 50
   .dw Cost107_ChrLo
   .db :Cost107_ChrLo
   .db 0
@@ -41358,7 +42182,7 @@ CostumeDirTable:
   ; costume 87
   .dw Cost075_Pal
   .db :Cost075_Pal
-  .db 49
+  .db 50
   .dw Cost075_ChrLo
   .db :Cost075_ChrLo
   .db 0
@@ -41393,14 +42217,14 @@ CostumeDirTable:
   ; costume 92
   .dw Cost035_Pal
   .db :Cost035_Pal
-  .db 48
+  .db 50
   .dw Cost035_ChrLo
   .db :Cost035_ChrLo
   .db 0
   ; costume 93
   .dw Cost089_Pal
   .db :Cost089_Pal
-  .db 11
+  .db 13
   .dw Cost089_ChrLo
   .db :Cost089_ChrLo
   .db 0
@@ -41456,14 +42280,14 @@ CostumeDirTable:
   ; costume 101
   .dw Cost036_Pal
   .db :Cost036_Pal
-  .db 27
+  .db 29
   .dw Cost036_ChrLo
   .db :Cost036_ChrLo
   .db 0
   ; costume 102
   .dw Cost091_Pal
   .db :Cost091_Pal
-  .db 12
+  .db 13
   .dw Cost091_ChrLo
   .db :Cost091_ChrLo
   .db 0
@@ -41484,7 +42308,7 @@ CostumeDirTable:
   ; costume 105
   .dw Cost115_Pal
   .db :Cost115_Pal
-  .db 34
+  .db 35
   .dw Cost115_ChrLo
   .db :Cost115_ChrLo
   .db 0
@@ -41498,7 +42322,7 @@ CostumeDirTable:
   ; costume 107
   .dw Cost095_Pal
   .db :Cost095_Pal
-  .db 33
+  .db 36
   .dw Cost095_ChrLo
   .db :Cost095_ChrLo
   .db 0
@@ -41526,7 +42350,7 @@ CostumeDirTable:
   ; costume 111
   .dw Cost005_Pal
   .db :Cost005_Pal
-  .db 7
+  .db 8
   .dw Cost005_ChrLo
   .db :Cost005_ChrLo
   .db 0
@@ -41575,35 +42399,35 @@ CostumeDirTable:
   ; costume 118
   .dw Cost093_Pal
   .db :Cost093_Pal
-  .db 7
+  .db 11
   .dw Cost093_ChrLo
   .db :Cost093_ChrLo
   .db 0
   ; costume 119
   .dw Cost055_Pal
   .db :Cost055_Pal
-  .db 3
+  .db 6
   .dw Cost055_ChrLo
   .db :Cost055_ChrLo
   .db 0
   ; costume 120
   .dw Cost056_Pal
   .db :Cost056_Pal
-  .db 4
+  .db 5
   .dw Cost056_ChrLo
   .db :Cost056_ChrLo
   .db 0
   ; costume 121
   .dw Cost081_Pal
   .db :Cost081_Pal
-  .db 24
+  .db 27
   .dw Cost081_ChrLo
   .db :Cost081_ChrLo
   .db 0
   ; costume 122
   .dw Cost082_Pal
   .db :Cost082_Pal
-  .db 9
+  .db 10
   .dw Cost082_ChrLo
   .db :Cost082_ChrLo
   .db 0
@@ -41624,21 +42448,21 @@ CostumeDirTable:
   ; costume 125 -> fallback 94
   .dw Cost094_Pal
   .db :Cost094_Pal
-  .db 3
+  .db 7
   .dw Cost094_ChrLo
   .db :Cost094_ChrLo
   .db 0
   ; costume 126 -> fallback 44
   .dw Cost044_Pal
   .db :Cost044_Pal
-  .db 46
+  .db 49
   .dw Cost044_ChrLo
   .db :Cost044_ChrLo
   .db 0
   ; costume 127 -> fallback 44
   .dw Cost044_Pal
   .db :Cost044_Pal
-  .db 46
+  .db 49
   .dw Cost044_ChrLo
   .db :Cost044_ChrLo
   .db 0
@@ -42447,7 +43271,7 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 12 - no head
   .dw Cost044_HeadChrLo          ; costume 13
-  .db :Cost044_HeadChrLo, 18
+  .db :Cost044_HeadChrLo, 19
   .dw Cost048_HeadChrLo          ; costume 14
   .db :Cost048_HeadChrLo, 20
   .dw 0
@@ -42463,21 +43287,21 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 20 - no head
   .dw Cost087_HeadChrLo          ; costume 21
-  .db :Cost087_HeadChrLo, 18
+  .db :Cost087_HeadChrLo, 20
   .dw Cost067_HeadChrLo          ; costume 22
-  .db :Cost067_HeadChrLo, 19
+  .db :Cost067_HeadChrLo, 20
   .dw 0
   .db 0, 0                          ; costume 23 - no head
   .dw Cost037_HeadChrLo          ; costume 24
-  .db :Cost037_HeadChrLo, 15
+  .db :Cost037_HeadChrLo, 17
   .dw Cost096_HeadChrLo          ; costume 25
-  .db :Cost096_HeadChrLo, 10
+  .db :Cost096_HeadChrLo, 11
   .dw 0
   .db 0, 0                          ; costume 26 - no head
   .dw Cost076_HeadChrLo          ; costume 27
   .db :Cost076_HeadChrLo, 20
   .dw Cost043_HeadChrLo          ; costume 28
-  .db :Cost043_HeadChrLo, 18
+  .db :Cost043_HeadChrLo, 19
   .dw 0
   .db 0, 0                          ; costume 29 - no head
   .dw Cost041_HeadChrLo          ; costume 30
@@ -42487,7 +43311,7 @@ CostumeHeadDirTable:
   .dw Cost101_HeadChrLo          ; costume 32
   .db :Cost101_HeadChrLo, 20
   .dw Cost059_HeadChrLo          ; costume 33
-  .db :Cost059_HeadChrLo, 10
+  .db :Cost059_HeadChrLo, 14
   .dw Cost034_HeadChrLo          ; costume 34
   .db :Cost034_HeadChrLo, 19
   .dw 0
@@ -42503,11 +43327,11 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 40 - no head
   .dw Cost049_HeadChrLo          ; costume 41
-  .db :Cost049_HeadChrLo, 18
+  .db :Cost049_HeadChrLo, 20
   .dw Cost050_HeadChrLo          ; costume 42
   .db :Cost050_HeadChrLo, 4
   .dw Cost097_HeadChrLo          ; costume 43
-  .db :Cost097_HeadChrLo, 3
+  .db :Cost097_HeadChrLo, 4
   .dw 0
   .db 0, 0                          ; costume 44 - no head
   .dw 0
@@ -42519,7 +43343,7 @@ CostumeHeadDirTable:
   .dw Cost060_HeadChrLo          ; costume 48
   .db :Cost060_HeadChrLo, 1
   .dw Cost112_HeadChrLo          ; costume 49
-  .db :Cost112_HeadChrLo, 16
+  .db :Cost112_HeadChrLo, 17
   .dw Cost103_HeadChrLo          ; costume 50
   .db :Cost103_HeadChrLo, 10
   .dw Cost099_HeadChrLo          ; costume 51
@@ -42571,11 +43395,11 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 74 - no head
   .dw Cost031_HeadChrLo          ; costume 75
-  .db :Cost031_HeadChrLo, 19
+  .db :Cost031_HeadChrLo, 20
   .dw Cost042_HeadChrLo          ; costume 76
   .db :Cost042_HeadChrLo, 20
   .dw Cost078_HeadChrLo          ; costume 77
-  .db :Cost078_HeadChrLo, 10
+  .db :Cost078_HeadChrLo, 11
   .dw Cost098_HeadChrLo          ; costume 78
   .db :Cost098_HeadChrLo, 5
   .dw Cost020_HeadChrLo          ; costume 79
@@ -42623,7 +43447,7 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 100 - no head
   .dw Cost036_HeadChrLo          ; costume 101
-  .db :Cost036_HeadChrLo, 16
+  .db :Cost036_HeadChrLo, 18
   .dw 0
   .db 0, 0                          ; costume 102 - no head
   .dw 0
@@ -42635,7 +43459,7 @@ CostumeHeadDirTable:
   .dw Cost106_HeadChrLo          ; costume 106
   .db :Cost106_HeadChrLo, 5
   .dw Cost095_HeadChrLo          ; costume 107
-  .db :Cost095_HeadChrLo, 17
+  .db :Cost095_HeadChrLo, 20
   .dw 0
   .db 0, 0                          ; costume 108 - no head
   .dw Cost069_HeadChrLo          ; costume 109

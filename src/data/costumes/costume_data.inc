@@ -40738,10 +40738,10 @@ Cost122_Pic49_Oam:
 .ends
 
 ;===================================================================
-; CostumeDirTable - indexed by costume number
+; CostumeDirTable - indexed by SCUMM resource ID (via DCOS remap)
 ; 8 bytes per entry: palLo, palHi, numPics, pad, chrLoPtr, chrLoBank
-; Entry at offset = costume_number * 8
-; Unsupported costumes point to costume 1 (standard Guybrush) as fallback
+; Entry at offset = scumm_costume_id * 8
+; Unsupported costumes point to Guybrush walking as fallback
 ;===================================================================
 .section "CostumeDirTable" superfree
 
@@ -40754,116 +40754,116 @@ CostumeDirTable:
   .db :Cost000_ChrLo
   .db 0
   ; costume 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  .dw Cost058_Pal
+  .db :Cost058_Pal
+  .db 46
+  .dw Cost058_ChrLo
+  .db :Cost058_ChrLo
   .db 0
-  ; costume 2 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 2 -> fallback 54
+  .dw Cost054_Pal
+  .db :Cost054_Pal
+  .db 47
+  .dw Cost054_ChrLo
+  .db :Cost054_ChrLo
   .db 0
   ; costume 3
-  .dw Cost003_Pal
-  .db :Cost003_Pal
-  .db 15
-  .dw Cost003_ChrLo
-  .db :Cost003_ChrLo
+  .dw Cost116_Pal
+  .db :Cost116_Pal
+  .db 9
+  .dw Cost116_ChrLo
+  .db :Cost116_ChrLo
   .db 0
   ; costume 4
-  .dw Cost004_Pal
-  .db :Cost004_Pal
-  .db 3
-  .dw Cost004_ChrLo
-  .db :Cost004_ChrLo
+  .dw Cost000_Pal
+  .db :Cost000_Pal
+  .db 20
+  .dw Cost000_ChrLo
+  .db :Cost000_ChrLo
   .db 0
   ; costume 5
-  .dw Cost005_Pal
-  .db :Cost005_Pal
-  .db 7
-  .dw Cost005_ChrLo
-  .db :Cost005_ChrLo
-  .db 0
-  ; costume 6
-  .dw Cost006_Pal
-  .db :Cost006_Pal
-  .db 28
-  .dw Cost006_ChrLo
-  .db :Cost006_ChrLo
-  .db 0
-  ; costume 7
-  .dw Cost007_Pal
-  .db :Cost007_Pal
-  .db 2
-  .dw Cost007_ChrLo
-  .db :Cost007_ChrLo
-  .db 0
-  ; costume 8
-  .dw Cost008_Pal
-  .db :Cost008_Pal
-  .db 13
-  .dw Cost008_ChrLo
-  .db :Cost008_ChrLo
-  .db 0
-  ; costume 9
-  .dw Cost009_Pal
-  .db :Cost009_Pal
-  .db 7
-  .dw Cost009_ChrLo
-  .db :Cost009_ChrLo
-  .db 0
-  ; costume 10
-  .dw Cost010_Pal
-  .db :Cost010_Pal
-  .db 34
-  .dw Cost010_ChrLo
-  .db :Cost010_ChrLo
-  .db 0
-  ; costume 11 -> fallback 1
   .dw Cost001_Pal
   .db :Cost001_Pal
   .db 48
   .dw Cost001_ChrLo
   .db :Cost001_ChrLo
   .db 0
-  ; costume 12
+  ; costume 6
+  .dw Cost028_Pal
+  .db :Cost028_Pal
+  .db 46
+  .dw Cost028_ChrLo
+  .db :Cost028_ChrLo
+  .db 0
+  ; costume 7
   .dw Cost012_Pal
   .db :Cost012_Pal
   .db 7
   .dw Cost012_ChrLo
   .db :Cost012_ChrLo
   .db 0
-  ; costume 13
+  ; costume 8
   .dw Cost013_Pal
   .db :Cost013_Pal
   .db 36
   .dw Cost013_ChrLo
   .db :Cost013_ChrLo
   .db 0
+  ; costume 9
+  .dw Cost033_Pal
+  .db :Cost033_Pal
+  .db 49
+  .dw Cost033_ChrLo
+  .db :Cost033_ChrLo
+  .db 0
+  ; costume 10
+  .dw Cost088_Pal
+  .db :Cost088_Pal
+  .db 35
+  .dw Cost088_ChrLo
+  .db :Cost088_ChrLo
+  .db 0
+  ; costume 11 -> fallback 109
+  .dw Cost109_Pal
+  .db :Cost109_Pal
+  .db 19
+  .dw Cost109_ChrLo
+  .db :Cost109_ChrLo
+  .db 0
+  ; costume 12
+  .dw Cost007_Pal
+  .db :Cost007_Pal
+  .db 2
+  .dw Cost007_ChrLo
+  .db :Cost007_ChrLo
+  .db 0
+  ; costume 13
+  .dw Cost044_Pal
+  .db :Cost044_Pal
+  .db 46
+  .dw Cost044_ChrLo
+  .db :Cost044_ChrLo
+  .db 0
   ; costume 14
-  .dw Cost014_Pal
-  .db :Cost014_Pal
-  .db 11
-  .dw Cost014_ChrLo
-  .db :Cost014_ChrLo
+  .dw Cost048_Pal
+  .db :Cost048_Pal
+  .db 33
+  .dw Cost048_ChrLo
+  .db :Cost048_ChrLo
   .db 0
   ; costume 15
-  .dw Cost015_Pal
-  .db :Cost015_Pal
-  .db 3
-  .dw Cost015_ChrLo
-  .db :Cost015_ChrLo
+  .dw Cost040_Pal
+  .db :Cost040_Pal
+  .db 36
+  .dw Cost040_ChrLo
+  .db :Cost040_ChrLo
   .db 0
   ; costume 16
-  .dw Cost016_Pal
-  .db :Cost016_Pal
-  .db 7
-  .dw Cost016_ChrLo
-  .db :Cost016_ChrLo
+  .dw Cost057_Pal
+  .db :Cost057_Pal
+  .db 6
+  .dw Cost057_ChrLo
+  .db :Cost057_ChrLo
   .db 0
   ; costume 17
   .dw Cost017_Pal
@@ -40873,116 +40873,116 @@ CostumeDirTable:
   .db :Cost017_ChrLo
   .db 0
   ; costume 18
-  .dw Cost018_Pal
-  .db :Cost018_Pal
-  .db 5
-  .dw Cost018_ChrLo
-  .db :Cost018_ChrLo
+  .dw Cost047_Pal
+  .db :Cost047_Pal
+  .db 47
+  .dw Cost047_ChrLo
+  .db :Cost047_ChrLo
   .db 0
   ; costume 19
-  .dw Cost019_Pal
-  .db :Cost019_Pal
-  .db 5
-  .dw Cost019_ChrLo
-  .db :Cost019_ChrLo
+  .dw Cost052_Pal
+  .db :Cost052_Pal
+  .db 49
+  .dw Cost052_ChrLo
+  .db :Cost052_ChrLo
   .db 0
   ; costume 20
-  .dw Cost020_Pal
-  .db :Cost020_Pal
-  .db 50
-  .dw Cost020_ChrLo
-  .db :Cost020_ChrLo
+  .dw Cost085_Pal
+  .db :Cost085_Pal
+  .db 46
+  .dw Cost085_ChrLo
+  .db :Cost085_ChrLo
   .db 0
   ; costume 21
-  .dw Cost021_Pal
-  .db :Cost021_Pal
-  .db 10
-  .dw Cost021_ChrLo
-  .db :Cost021_ChrLo
+  .dw Cost087_Pal
+  .db :Cost087_Pal
+  .db 48
+  .dw Cost087_ChrLo
+  .db :Cost087_ChrLo
   .db 0
   ; costume 22
-  .dw Cost022_Pal
-  .db :Cost022_Pal
-  .db 17
-  .dw Cost022_ChrLo
-  .db :Cost022_ChrLo
+  .dw Cost067_Pal
+  .db :Cost067_Pal
+  .db 41
+  .dw Cost067_ChrLo
+  .db :Cost067_ChrLo
   .db 0
   ; costume 23
-  .dw Cost023_Pal
-  .db :Cost023_Pal
-  .db 13
-  .dw Cost023_ChrLo
-  .db :Cost023_ChrLo
+  .dw Cost046_Pal
+  .db :Cost046_Pal
+  .db 47
+  .dw Cost046_ChrLo
+  .db :Cost046_ChrLo
   .db 0
   ; costume 24
-  .dw Cost024_Pal
-  .db :Cost024_Pal
-  .db 18
-  .dw Cost024_ChrLo
-  .db :Cost024_ChrLo
+  .dw Cost037_Pal
+  .db :Cost037_Pal
+  .db 22
+  .dw Cost037_ChrLo
+  .db :Cost037_ChrLo
   .db 0
   ; costume 25
-  .dw Cost025_Pal
-  .db :Cost025_Pal
+  .dw Cost096_Pal
+  .db :Cost096_Pal
   .db 27
-  .dw Cost025_ChrLo
-  .db :Cost025_ChrLo
+  .dw Cost096_ChrLo
+  .db :Cost096_ChrLo
   .db 0
   ; costume 26
-  .dw Cost026_Pal
-  .db :Cost026_Pal
-  .db 24
-  .dw Cost026_ChrLo
-  .db :Cost026_ChrLo
+  .dw Cost038_Pal
+  .db :Cost038_Pal
+  .db 33
+  .dw Cost038_ChrLo
+  .db :Cost038_ChrLo
   .db 0
   ; costume 27
-  .dw Cost027_Pal
-  .db :Cost027_Pal
-  .db 7
-  .dw Cost027_ChrLo
-  .db :Cost027_ChrLo
+  .dw Cost076_Pal
+  .db :Cost076_Pal
+  .db 50
+  .dw Cost076_ChrLo
+  .db :Cost076_ChrLo
   .db 0
   ; costume 28
-  .dw Cost028_Pal
-  .db :Cost028_Pal
+  .dw Cost043_Pal
+  .db :Cost043_Pal
   .db 46
-  .dw Cost028_ChrLo
-  .db :Cost028_ChrLo
+  .dw Cost043_ChrLo
+  .db :Cost043_ChrLo
   .db 0
   ; costume 29
-  .dw Cost029_Pal
-  .db :Cost029_Pal
-  .db 22
-  .dw Cost029_ChrLo
-  .db :Cost029_ChrLo
+  .dw Cost015_Pal
+  .db :Cost015_Pal
+  .db 3
+  .dw Cost015_ChrLo
+  .db :Cost015_ChrLo
   .db 0
   ; costume 30
-  .dw Cost030_Pal
-  .db :Cost030_Pal
-  .db 11
-  .dw Cost030_ChrLo
-  .db :Cost030_ChrLo
+  .dw Cost041_Pal
+  .db :Cost041_Pal
+  .db 12
+  .dw Cost041_ChrLo
+  .db :Cost041_ChrLo
   .db 0
   ; costume 31
-  .dw Cost031_Pal
-  .db :Cost031_Pal
-  .db 46
-  .dw Cost031_ChrLo
-  .db :Cost031_ChrLo
+  .dw Cost061_Pal
+  .db :Cost061_Pal
+  .db 12
+  .dw Cost061_ChrLo
+  .db :Cost061_ChrLo
   .db 0
-  ; costume 32 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 32 -> fallback 101
+  .dw Cost101_Pal
+  .db :Cost101_Pal
+  .db 50
+  .dw Cost101_ChrLo
+  .db :Cost101_ChrLo
   .db 0
   ; costume 33
-  .dw Cost033_Pal
-  .db :Cost033_Pal
-  .db 49
-  .dw Cost033_ChrLo
-  .db :Cost033_ChrLo
+  .dw Cost059_Pal
+  .db :Cost059_Pal
+  .db 27
+  .dw Cost059_ChrLo
+  .db :Cost059_ChrLo
   .db 0
   ; costume 34
   .dw Cost034_Pal
@@ -40992,207 +40992,207 @@ CostumeDirTable:
   .db :Cost034_ChrLo
   .db 0
   ; costume 35
-  .dw Cost035_Pal
-  .db :Cost035_Pal
-  .db 48
-  .dw Cost035_ChrLo
-  .db :Cost035_ChrLo
+  .dw Cost073_Pal
+  .db :Cost073_Pal
+  .db 22
+  .dw Cost073_ChrLo
+  .db :Cost073_ChrLo
   .db 0
   ; costume 36
-  .dw Cost036_Pal
-  .db :Cost036_Pal
-  .db 27
-  .dw Cost036_ChrLo
-  .db :Cost036_ChrLo
+  .dw Cost074_Pal
+  .db :Cost074_Pal
+  .db 10
+  .dw Cost074_ChrLo
+  .db :Cost074_ChrLo
   .db 0
   ; costume 37
-  .dw Cost037_Pal
-  .db :Cost037_Pal
-  .db 22
-  .dw Cost037_ChrLo
-  .db :Cost037_ChrLo
-  .db 0
-  ; costume 38
-  .dw Cost038_Pal
-  .db :Cost038_Pal
-  .db 33
-  .dw Cost038_ChrLo
-  .db :Cost038_ChrLo
-  .db 0
-  ; costume 39
   .dw Cost039_Pal
   .db :Cost039_Pal
   .db 45
   .dw Cost039_ChrLo
   .db :Cost039_ChrLo
   .db 0
-  ; costume 40
-  .dw Cost040_Pal
-  .db :Cost040_Pal
-  .db 36
-  .dw Cost040_ChrLo
-  .db :Cost040_ChrLo
-  .db 0
-  ; costume 41
-  .dw Cost041_Pal
-  .db :Cost041_Pal
-  .db 12
-  .dw Cost041_ChrLo
-  .db :Cost041_ChrLo
-  .db 0
-  ; costume 42
-  .dw Cost042_Pal
-  .db :Cost042_Pal
-  .db 34
-  .dw Cost042_ChrLo
-  .db :Cost042_ChrLo
-  .db 0
-  ; costume 43
-  .dw Cost043_Pal
-  .db :Cost043_Pal
-  .db 46
-  .dw Cost043_ChrLo
-  .db :Cost043_ChrLo
-  .db 0
-  ; costume 44
-  .dw Cost044_Pal
-  .db :Cost044_Pal
-  .db 46
-  .dw Cost044_ChrLo
-  .db :Cost044_ChrLo
-  .db 0
-  ; costume 45
-  .dw Cost045_Pal
-  .db :Cost045_Pal
-  .db 15
-  .dw Cost045_ChrLo
-  .db :Cost045_ChrLo
-  .db 0
-  ; costume 46
-  .dw Cost046_Pal
-  .db :Cost046_Pal
-  .db 47
-  .dw Cost046_ChrLo
-  .db :Cost046_ChrLo
-  .db 0
-  ; costume 47
-  .dw Cost047_Pal
-  .db :Cost047_Pal
-  .db 47
-  .dw Cost047_ChrLo
-  .db :Cost047_ChrLo
-  .db 0
-  ; costume 48
-  .dw Cost048_Pal
-  .db :Cost048_Pal
-  .db 33
-  .dw Cost048_ChrLo
-  .db :Cost048_ChrLo
-  .db 0
-  ; costume 49
-  .dw Cost049_Pal
-  .db :Cost049_Pal
-  .db 36
-  .dw Cost049_ChrLo
-  .db :Cost049_ChrLo
-  .db 0
-  ; costume 50
-  .dw Cost050_Pal
-  .db :Cost050_Pal
-  .db 14
-  .dw Cost050_ChrLo
-  .db :Cost050_ChrLo
-  .db 0
-  ; costume 51
-  .dw Cost051_Pal
-  .db :Cost051_Pal
-  .db 44
-  .dw Cost051_ChrLo
-  .db :Cost051_ChrLo
-  .db 0
-  ; costume 52
-  .dw Cost052_Pal
-  .db :Cost052_Pal
-  .db 49
-  .dw Cost052_ChrLo
-  .db :Cost052_ChrLo
-  .db 0
-  ; costume 53
-  .dw Cost053_Pal
-  .db :Cost053_Pal
-  .db 16
-  .dw Cost053_ChrLo
-  .db :Cost053_ChrLo
-  .db 0
-  ; costume 54
-  .dw Cost054_Pal
-  .db :Cost054_Pal
-  .db 47
-  .dw Cost054_ChrLo
-  .db :Cost054_ChrLo
-  .db 0
-  ; costume 55
-  .dw Cost055_Pal
-  .db :Cost055_Pal
-  .db 3
-  .dw Cost055_ChrLo
-  .db :Cost055_ChrLo
-  .db 0
-  ; costume 56
-  .dw Cost056_Pal
-  .db :Cost056_Pal
-  .db 4
-  .dw Cost056_ChrLo
-  .db :Cost056_ChrLo
-  .db 0
-  ; costume 57
-  .dw Cost057_Pal
-  .db :Cost057_Pal
-  .db 6
-  .dw Cost057_ChrLo
-  .db :Cost057_ChrLo
-  .db 0
-  ; costume 58
-  .dw Cost058_Pal
-  .db :Cost058_Pal
-  .db 46
-  .dw Cost058_ChrLo
-  .db :Cost058_ChrLo
-  .db 0
-  ; costume 59
-  .dw Cost059_Pal
-  .db :Cost059_Pal
-  .db 27
-  .dw Cost059_ChrLo
-  .db :Cost059_ChrLo
-  .db 0
-  ; costume 60
-  .dw Cost060_Pal
-  .db :Cost060_Pal
-  .db 5
-  .dw Cost060_ChrLo
-  .db :Cost060_ChrLo
-  .db 0
-  ; costume 61
-  .dw Cost061_Pal
-  .db :Cost061_Pal
-  .db 12
-  .dw Cost061_ChrLo
-  .db :Cost061_ChrLo
-  .db 0
-  ; costume 62
+  ; costume 38
   .dw Cost062_Pal
   .db :Cost062_Pal
   .db 1
   .dw Cost062_ChrLo
   .db :Cost062_ChrLo
   .db 0
-  ; costume 63
+  ; costume 39
   .dw Cost063_Pal
   .db :Cost063_Pal
   .db 8
   .dw Cost063_ChrLo
   .db :Cost063_ChrLo
+  .db 0
+  ; costume 40
+  .dw Cost077_Pal
+  .db :Cost077_Pal
+  .db 37
+  .dw Cost077_ChrLo
+  .db :Cost077_ChrLo
+  .db 0
+  ; costume 41
+  .dw Cost049_Pal
+  .db :Cost049_Pal
+  .db 36
+  .dw Cost049_ChrLo
+  .db :Cost049_ChrLo
+  .db 0
+  ; costume 42
+  .dw Cost050_Pal
+  .db :Cost050_Pal
+  .db 14
+  .dw Cost050_ChrLo
+  .db :Cost050_ChrLo
+  .db 0
+  ; costume 43
+  .dw Cost097_Pal
+  .db :Cost097_Pal
+  .db 10
+  .dw Cost097_ChrLo
+  .db :Cost097_ChrLo
+  .db 0
+  ; costume 44
+  .dw Cost122_Pal
+  .db :Cost122_Pal
+  .db 49
+  .dw Cost122_ChrLo
+  .db :Cost122_ChrLo
+  .db 0
+  ; costume 45
+  .dw Cost068_Pal
+  .db :Cost068_Pal
+  .db 39
+  .dw Cost068_ChrLo
+  .db :Cost068_ChrLo
+  .db 0
+  ; costume 46
+  .dw Cost053_Pal
+  .db :Cost053_Pal
+  .db 16
+  .dw Cost053_ChrLo
+  .db :Cost053_ChrLo
+  .db 0
+  ; costume 47
+  .dw Cost045_Pal
+  .db :Cost045_Pal
+  .db 15
+  .dw Cost045_ChrLo
+  .db :Cost045_ChrLo
+  .db 0
+  ; costume 48
+  .dw Cost060_Pal
+  .db :Cost060_Pal
+  .db 5
+  .dw Cost060_ChrLo
+  .db :Cost060_ChrLo
+  .db 0
+  ; costume 49
+  .dw Cost112_Pal
+  .db :Cost112_Pal
+  .db 17
+  .dw Cost112_ChrLo
+  .db :Cost112_ChrLo
+  .db 0
+  ; costume 50
+  .dw Cost103_Pal
+  .db :Cost103_Pal
+  .db 22
+  .dw Cost103_ChrLo
+  .db :Cost103_ChrLo
+  .db 0
+  ; costume 51
+  .dw Cost099_Pal
+  .db :Cost099_Pal
+  .db 32
+  .dw Cost099_ChrLo
+  .db :Cost099_ChrLo
+  .db 0
+  ; costume 52
+  .dw Cost104_Pal
+  .db :Cost104_Pal
+  .db 29
+  .dw Cost104_ChrLo
+  .db :Cost104_ChrLo
+  .db 0
+  ; costume 53
+  .dw Cost106_Pal
+  .db :Cost106_Pal
+  .db 9
+  .dw Cost106_ChrLo
+  .db :Cost106_ChrLo
+  .db 0
+  ; costume 54
+  .dw Cost108_Pal
+  .db :Cost108_Pal
+  .db 48
+  .dw Cost108_ChrLo
+  .db :Cost108_ChrLo
+  .db 0
+  ; costume 55
+  .dw Cost105_Pal
+  .db :Cost105_Pal
+  .db 10
+  .dw Cost105_ChrLo
+  .db :Cost105_ChrLo
+  .db 0
+  ; costume 56
+  .dw Cost102_Pal
+  .db :Cost102_Pal
+  .db 1
+  .dw Cost102_ChrLo
+  .db :Cost102_ChrLo
+  .db 0
+  ; costume 57
+  .dw Cost110_Pal
+  .db :Cost110_Pal
+  .db 17
+  .dw Cost110_ChrLo
+  .db :Cost110_ChrLo
+  .db 0
+  ; costume 58
+  .dw Cost016_Pal
+  .db :Cost016_Pal
+  .db 7
+  .dw Cost016_ChrLo
+  .db :Cost016_ChrLo
+  .db 0
+  ; costume 59
+  .dw Cost004_Pal
+  .db :Cost004_Pal
+  .db 3
+  .dw Cost004_ChrLo
+  .db :Cost004_ChrLo
+  .db 0
+  ; costume 60
+  .dw Cost111_Pal
+  .db :Cost111_Pal
+  .db 13
+  .dw Cost111_ChrLo
+  .db :Cost111_ChrLo
+  .db 0
+  ; costume 61
+  .dw Cost064_Pal
+  .db :Cost064_Pal
+  .db 8
+  .dw Cost064_ChrLo
+  .db :Cost064_ChrLo
+  .db 0
+  ; costume 62
+  .dw Cost065_Pal
+  .db :Cost065_Pal
+  .db 18
+  .dw Cost065_ChrLo
+  .db :Cost065_ChrLo
+  .db 0
+  ; costume 63
+  .dw Cost014_Pal
+  .db :Cost014_Pal
+  .db 11
+  .dw Cost014_ChrLo
+  .db :Cost014_ChrLo
   .db 0
   ; costume 64
   .dw Cost064_Pal
@@ -41202,60 +41202,60 @@ CostumeDirTable:
   .db :Cost064_ChrLo
   .db 0
   ; costume 65
-  .dw Cost065_Pal
-  .db :Cost065_Pal
-  .db 18
-  .dw Cost065_ChrLo
-  .db :Cost065_ChrLo
+  .dw Cost018_Pal
+  .db :Cost018_Pal
+  .db 5
+  .dw Cost018_ChrLo
+  .db :Cost018_ChrLo
   .db 0
-  ; costume 66 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 66 -> fallback 19
+  .dw Cost019_Pal
+  .db :Cost019_Pal
+  .db 5
+  .dw Cost019_ChrLo
+  .db :Cost019_ChrLo
   .db 0
   ; costume 67
-  .dw Cost067_Pal
-  .db :Cost067_Pal
-  .db 41
-  .dw Cost067_ChrLo
-  .db :Cost067_ChrLo
+  .dw Cost003_Pal
+  .db :Cost003_Pal
+  .db 15
+  .dw Cost003_ChrLo
+  .db :Cost003_ChrLo
   .db 0
   ; costume 68
-  .dw Cost068_Pal
-  .db :Cost068_Pal
-  .db 39
-  .dw Cost068_ChrLo
-  .db :Cost068_ChrLo
+  .dw Cost021_Pal
+  .db :Cost021_Pal
+  .db 10
+  .dw Cost021_ChrLo
+  .db :Cost021_ChrLo
   .db 0
   ; costume 69
-  .dw Cost069_Pal
-  .db :Cost069_Pal
-  .db 30
-  .dw Cost069_ChrLo
-  .db :Cost069_ChrLo
+  .dw Cost024_Pal
+  .db :Cost024_Pal
+  .db 18
+  .dw Cost024_ChrLo
+  .db :Cost024_ChrLo
   .db 0
   ; costume 70
-  .dw Cost070_Pal
-  .db :Cost070_Pal
-  .db 2
-  .dw Cost070_ChrLo
-  .db :Cost070_ChrLo
+  .dw Cost023_Pal
+  .db :Cost023_Pal
+  .db 13
+  .dw Cost023_ChrLo
+  .db :Cost023_ChrLo
   .db 0
   ; costume 71
-  .dw Cost071_Pal
-  .db :Cost071_Pal
-  .db 5
-  .dw Cost071_ChrLo
-  .db :Cost071_ChrLo
+  .dw Cost022_Pal
+  .db :Cost022_Pal
+  .db 17
+  .dw Cost022_ChrLo
+  .db :Cost022_ChrLo
   .db 0
   ; costume 72
-  .dw Cost072_Pal
-  .db :Cost072_Pal
-  .db 49
-  .dw Cost072_ChrLo
-  .db :Cost072_ChrLo
+  .dw Cost030_Pal
+  .db :Cost030_Pal
+  .db 11
+  .dw Cost030_ChrLo
+  .db :Cost030_ChrLo
   .db 0
   ; costume 73
   .dw Cost073_Pal
@@ -41265,88 +41265,88 @@ CostumeDirTable:
   .db :Cost073_ChrLo
   .db 0
   ; costume 74
-  .dw Cost074_Pal
-  .db :Cost074_Pal
-  .db 10
-  .dw Cost074_ChrLo
-  .db :Cost074_ChrLo
+  .dw Cost029_Pal
+  .db :Cost029_Pal
+  .db 22
+  .dw Cost029_ChrLo
+  .db :Cost029_ChrLo
   .db 0
   ; costume 75
-  .dw Cost075_Pal
-  .db :Cost075_Pal
-  .db 49
-  .dw Cost075_ChrLo
-  .db :Cost075_ChrLo
+  .dw Cost031_Pal
+  .db :Cost031_Pal
+  .db 46
+  .dw Cost031_ChrLo
+  .db :Cost031_ChrLo
   .db 0
   ; costume 76
-  .dw Cost076_Pal
-  .db :Cost076_Pal
-  .db 50
-  .dw Cost076_ChrLo
-  .db :Cost076_ChrLo
+  .dw Cost042_Pal
+  .db :Cost042_Pal
+  .db 34
+  .dw Cost042_ChrLo
+  .db :Cost042_ChrLo
   .db 0
   ; costume 77
-  .dw Cost077_Pal
-  .db :Cost077_Pal
-  .db 37
-  .dw Cost077_ChrLo
-  .db :Cost077_ChrLo
-  .db 0
-  ; costume 78
   .dw Cost078_Pal
   .db :Cost078_Pal
   .db 27
   .dw Cost078_ChrLo
   .db :Cost078_ChrLo
   .db 0
+  ; costume 78
+  .dw Cost098_Pal
+  .db :Cost098_Pal
+  .db 36
+  .dw Cost098_ChrLo
+  .db :Cost098_ChrLo
+  .db 0
   ; costume 79
-  .dw Cost079_Pal
-  .db :Cost079_Pal
-  .db 4
-  .dw Cost079_ChrLo
-  .db :Cost079_ChrLo
+  .dw Cost020_Pal
+  .db :Cost020_Pal
+  .db 50
+  .dw Cost020_ChrLo
+  .db :Cost020_ChrLo
   .db 0
   ; costume 80
-  .dw Cost080_Pal
-  .db :Cost080_Pal
-  .db 3
-  .dw Cost080_ChrLo
-  .db :Cost080_ChrLo
+  .dw Cost025_Pal
+  .db :Cost025_Pal
+  .db 27
+  .dw Cost025_ChrLo
+  .db :Cost025_ChrLo
   .db 0
   ; costume 81
-  .dw Cost081_Pal
-  .db :Cost081_Pal
+  .dw Cost026_Pal
+  .db :Cost026_Pal
   .db 24
-  .dw Cost081_ChrLo
-  .db :Cost081_ChrLo
+  .dw Cost026_ChrLo
+  .db :Cost026_ChrLo
   .db 0
   ; costume 82
-  .dw Cost082_Pal
-  .db :Cost082_Pal
-  .db 9
-  .dw Cost082_ChrLo
-  .db :Cost082_ChrLo
+  .dw Cost027_Pal
+  .db :Cost027_Pal
+  .db 7
+  .dw Cost027_ChrLo
+  .db :Cost027_ChrLo
   .db 0
   ; costume 83
-  .dw Cost083_Pal
-  .db :Cost083_Pal
-  .db 24
-  .dw Cost083_ChrLo
-  .db :Cost083_ChrLo
+  .dw Cost121_Pal
+  .db :Cost121_Pal
+  .db 2
+  .dw Cost121_ChrLo
+  .db :Cost121_ChrLo
   .db 0
   ; costume 84
-  .dw Cost084_Pal
-  .db :Cost084_Pal
-  .db 19
-  .dw Cost084_ChrLo
-  .db :Cost084_ChrLo
+  .dw Cost010_Pal
+  .db :Cost010_Pal
+  .db 34
+  .dw Cost010_ChrLo
+  .db :Cost010_ChrLo
   .db 0
   ; costume 85
-  .dw Cost085_Pal
-  .db :Cost085_Pal
-  .db 46
-  .dw Cost085_ChrLo
-  .db :Cost085_ChrLo
+  .dw Cost107_Pal
+  .db :Cost107_Pal
+  .db 48
+  .dw Cost107_ChrLo
+  .db :Cost107_ChrLo
   .db 0
   ; costume 86
   .dw Cost086_Pal
@@ -41356,137 +41356,137 @@ CostumeDirTable:
   .db :Cost086_ChrLo
   .db 0
   ; costume 87
-  .dw Cost087_Pal
-  .db :Cost087_Pal
-  .db 48
-  .dw Cost087_ChrLo
-  .db :Cost087_ChrLo
+  .dw Cost075_Pal
+  .db :Cost075_Pal
+  .db 49
+  .dw Cost075_ChrLo
+  .db :Cost075_ChrLo
   .db 0
   ; costume 88
-  .dw Cost088_Pal
-  .db :Cost088_Pal
-  .db 35
-  .dw Cost088_ChrLo
-  .db :Cost088_ChrLo
+  .dw Cost083_Pal
+  .db :Cost083_Pal
+  .db 24
+  .dw Cost083_ChrLo
+  .db :Cost083_ChrLo
   .db 0
   ; costume 89
+  .dw Cost084_Pal
+  .db :Cost084_Pal
+  .db 19
+  .dw Cost084_ChrLo
+  .db :Cost084_ChrLo
+  .db 0
+  ; costume 90
+  .dw Cost117_Pal
+  .db :Cost117_Pal
+  .db 17
+  .dw Cost117_ChrLo
+  .db :Cost117_ChrLo
+  .db 0
+  ; costume 91
+  .dw Cost118_Pal
+  .db :Cost118_Pal
+  .db 6
+  .dw Cost118_ChrLo
+  .db :Cost118_ChrLo
+  .db 0
+  ; costume 92
+  .dw Cost035_Pal
+  .db :Cost035_Pal
+  .db 48
+  .dw Cost035_ChrLo
+  .db :Cost035_ChrLo
+  .db 0
+  ; costume 93
   .dw Cost089_Pal
   .db :Cost089_Pal
   .db 11
   .dw Cost089_ChrLo
   .db :Cost089_ChrLo
   .db 0
-  ; costume 90
-  .dw Cost090_Pal
-  .db :Cost090_Pal
-  .db 27
-  .dw Cost090_ChrLo
-  .db :Cost090_ChrLo
-  .db 0
-  ; costume 91
-  .dw Cost091_Pal
-  .db :Cost091_Pal
-  .db 12
-  .dw Cost091_ChrLo
-  .db :Cost091_ChrLo
-  .db 0
-  ; costume 92
-  .dw Cost092_Pal
-  .db :Cost092_Pal
-  .db 32
-  .dw Cost092_ChrLo
-  .db :Cost092_ChrLo
-  .db 0
-  ; costume 93
-  .dw Cost093_Pal
-  .db :Cost093_Pal
-  .db 7
-  .dw Cost093_ChrLo
-  .db :Cost093_ChrLo
-  .db 0
   ; costume 94
-  .dw Cost094_Pal
-  .db :Cost094_Pal
-  .db 3
-  .dw Cost094_ChrLo
-  .db :Cost094_ChrLo
+  .dw Cost119_Pal
+  .db :Cost119_Pal
+  .db 16
+  .dw Cost119_ChrLo
+  .db :Cost119_ChrLo
   .db 0
   ; costume 95
-  .dw Cost095_Pal
-  .db :Cost095_Pal
-  .db 33
-  .dw Cost095_ChrLo
-  .db :Cost095_ChrLo
+  .dw Cost070_Pal
+  .db :Cost070_Pal
+  .db 2
+  .dw Cost070_ChrLo
+  .db :Cost070_ChrLo
   .db 0
   ; costume 96
-  .dw Cost096_Pal
-  .db :Cost096_Pal
-  .db 27
-  .dw Cost096_ChrLo
-  .db :Cost096_ChrLo
-  .db 0
-  ; costume 97
-  .dw Cost097_Pal
-  .db :Cost097_Pal
-  .db 10
-  .dw Cost097_ChrLo
-  .db :Cost097_ChrLo
-  .db 0
-  ; costume 98
-  .dw Cost098_Pal
-  .db :Cost098_Pal
-  .db 36
-  .dw Cost098_ChrLo
-  .db :Cost098_ChrLo
-  .db 0
-  ; costume 99
-  .dw Cost099_Pal
-  .db :Cost099_Pal
-  .db 32
-  .dw Cost099_ChrLo
-  .db :Cost099_ChrLo
-  .db 0
-  ; costume 100
   .dw Cost100_Pal
   .db :Cost100_Pal
   .db 24
   .dw Cost100_ChrLo
   .db :Cost100_ChrLo
   .db 0
+  ; costume 97
+  .dw Cost113_Pal
+  .db :Cost113_Pal
+  .db 3
+  .dw Cost113_ChrLo
+  .db :Cost113_ChrLo
+  .db 0
+  ; costume 98
+  .dw Cost114_Pal
+  .db :Cost114_Pal
+  .db 6
+  .dw Cost114_ChrLo
+  .db :Cost114_ChrLo
+  .db 0
+  ; costume 99
+  .dw Cost090_Pal
+  .db :Cost090_Pal
+  .db 27
+  .dw Cost090_ChrLo
+  .db :Cost090_ChrLo
+  .db 0
+  ; costume 100
+  .dw Cost017_Pal
+  .db :Cost017_Pal
+  .db 14
+  .dw Cost017_ChrLo
+  .db :Cost017_ChrLo
+  .db 0
   ; costume 101
-  .dw Cost101_Pal
-  .db :Cost101_Pal
-  .db 50
-  .dw Cost101_ChrLo
-  .db :Cost101_ChrLo
+  .dw Cost036_Pal
+  .db :Cost036_Pal
+  .db 27
+  .dw Cost036_ChrLo
+  .db :Cost036_ChrLo
   .db 0
   ; costume 102
-  .dw Cost102_Pal
-  .db :Cost102_Pal
-  .db 1
-  .dw Cost102_ChrLo
-  .db :Cost102_ChrLo
+  .dw Cost091_Pal
+  .db :Cost091_Pal
+  .db 12
+  .dw Cost091_ChrLo
+  .db :Cost091_ChrLo
   .db 0
   ; costume 103
-  .dw Cost103_Pal
-  .db :Cost103_Pal
-  .db 22
-  .dw Cost103_ChrLo
-  .db :Cost103_ChrLo
+  .dw Cost071_Pal
+  .db :Cost071_Pal
+  .db 5
+  .dw Cost071_ChrLo
+  .db :Cost071_ChrLo
   .db 0
   ; costume 104
-  .dw Cost104_Pal
-  .db :Cost104_Pal
-  .db 29
-  .dw Cost104_ChrLo
-  .db :Cost104_ChrLo
+  .dw Cost051_Pal
+  .db :Cost051_Pal
+  .db 44
+  .dw Cost051_ChrLo
+  .db :Cost051_ChrLo
   .db 0
   ; costume 105
-  .dw Cost105_Pal
-  .db :Cost105_Pal
-  .db 10
-  .dw Cost105_ChrLo
-  .db :Cost105_ChrLo
+  .dw Cost115_Pal
+  .db :Cost115_Pal
+  .db 34
+  .dw Cost115_ChrLo
+  .db :Cost115_ChrLo
   .db 0
   ; costume 106
   .dw Cost106_Pal
@@ -41496,25 +41496,25 @@ CostumeDirTable:
   .db :Cost106_ChrLo
   .db 0
   ; costume 107
-  .dw Cost107_Pal
-  .db :Cost107_Pal
-  .db 48
-  .dw Cost107_ChrLo
-  .db :Cost107_ChrLo
+  .dw Cost095_Pal
+  .db :Cost095_Pal
+  .db 33
+  .dw Cost095_ChrLo
+  .db :Cost095_ChrLo
   .db 0
   ; costume 108
-  .dw Cost108_Pal
-  .db :Cost108_Pal
-  .db 48
-  .dw Cost108_ChrLo
-  .db :Cost108_ChrLo
+  .dw Cost008_Pal
+  .db :Cost008_Pal
+  .db 13
+  .dw Cost008_ChrLo
+  .db :Cost008_ChrLo
   .db 0
   ; costume 109
-  .dw Cost109_Pal
-  .db :Cost109_Pal
-  .db 19
-  .dw Cost109_ChrLo
-  .db :Cost109_ChrLo
+  .dw Cost069_Pal
+  .db :Cost069_Pal
+  .db 30
+  .dw Cost069_ChrLo
+  .db :Cost069_ChrLo
   .db 0
   ; costume 110
   .dw Cost110_Pal
@@ -41524,126 +41524,150 @@ CostumeDirTable:
   .db :Cost110_ChrLo
   .db 0
   ; costume 111
-  .dw Cost111_Pal
-  .db :Cost111_Pal
-  .db 13
-  .dw Cost111_ChrLo
-  .db :Cost111_ChrLo
+  .dw Cost005_Pal
+  .db :Cost005_Pal
+  .db 7
+  .dw Cost005_ChrLo
+  .db :Cost005_ChrLo
   .db 0
   ; costume 112
-  .dw Cost112_Pal
-  .db :Cost112_Pal
-  .db 17
-  .dw Cost112_ChrLo
-  .db :Cost112_ChrLo
+  .dw Cost009_Pal
+  .db :Cost009_Pal
+  .db 7
+  .dw Cost009_ChrLo
+  .db :Cost009_ChrLo
   .db 0
   ; costume 113
-  .dw Cost113_Pal
-  .db :Cost113_Pal
-  .db 3
-  .dw Cost113_ChrLo
-  .db :Cost113_ChrLo
+  .dw Cost006_Pal
+  .db :Cost006_Pal
+  .db 28
+  .dw Cost006_ChrLo
+  .db :Cost006_ChrLo
   .db 0
   ; costume 114
-  .dw Cost114_Pal
-  .db :Cost114_Pal
-  .db 6
-  .dw Cost114_ChrLo
-  .db :Cost114_ChrLo
+  .dw Cost086_Pal
+  .db :Cost086_Pal
+  .db 1
+  .dw Cost086_ChrLo
+  .db :Cost086_ChrLo
   .db 0
   ; costume 115
-  .dw Cost115_Pal
-  .db :Cost115_Pal
-  .db 34
-  .dw Cost115_ChrLo
-  .db :Cost115_ChrLo
+  .dw Cost072_Pal
+  .db :Cost072_Pal
+  .db 49
+  .dw Cost072_ChrLo
+  .db :Cost072_ChrLo
   .db 0
   ; costume 116
-  .dw Cost116_Pal
-  .db :Cost116_Pal
-  .db 9
-  .dw Cost116_ChrLo
-  .db :Cost116_ChrLo
-  .db 0
-  ; costume 117
-  .dw Cost117_Pal
-  .db :Cost117_Pal
-  .db 17
-  .dw Cost117_ChrLo
-  .db :Cost117_ChrLo
-  .db 0
-  ; costume 118
-  .dw Cost118_Pal
-  .db :Cost118_Pal
-  .db 6
-  .dw Cost118_ChrLo
-  .db :Cost118_ChrLo
-  .db 0
-  ; costume 119
-  .dw Cost119_Pal
-  .db :Cost119_Pal
-  .db 16
-  .dw Cost119_ChrLo
-  .db :Cost119_ChrLo
-  .db 0
-  ; costume 120
   .dw Cost120_Pal
   .db :Cost120_Pal
   .db 1
   .dw Cost120_ChrLo
   .db :Cost120_ChrLo
   .db 0
+  ; costume 117
+  .dw Cost092_Pal
+  .db :Cost092_Pal
+  .db 32
+  .dw Cost092_ChrLo
+  .db :Cost092_ChrLo
+  .db 0
+  ; costume 118
+  .dw Cost093_Pal
+  .db :Cost093_Pal
+  .db 7
+  .dw Cost093_ChrLo
+  .db :Cost093_ChrLo
+  .db 0
+  ; costume 119
+  .dw Cost055_Pal
+  .db :Cost055_Pal
+  .db 3
+  .dw Cost055_ChrLo
+  .db :Cost055_ChrLo
+  .db 0
+  ; costume 120
+  .dw Cost056_Pal
+  .db :Cost056_Pal
+  .db 4
+  .dw Cost056_ChrLo
+  .db :Cost056_ChrLo
+  .db 0
   ; costume 121
-  .dw Cost121_Pal
-  .db :Cost121_Pal
-  .db 2
-  .dw Cost121_ChrLo
-  .db :Cost121_ChrLo
+  .dw Cost081_Pal
+  .db :Cost081_Pal
+  .db 24
+  .dw Cost081_ChrLo
+  .db :Cost081_ChrLo
   .db 0
   ; costume 122
-  .dw Cost122_Pal
-  .db :Cost122_Pal
-  .db 49
-  .dw Cost122_ChrLo
-  .db :Cost122_ChrLo
+  .dw Cost082_Pal
+  .db :Cost082_Pal
+  .db 9
+  .dw Cost082_ChrLo
+  .db :Cost082_ChrLo
   .db 0
-  ; costume 123 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 123 -> fallback 79
+  .dw Cost079_Pal
+  .db :Cost079_Pal
+  .db 4
+  .dw Cost079_ChrLo
+  .db :Cost079_ChrLo
   .db 0
-  ; costume 124 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 124 -> fallback 80
+  .dw Cost080_Pal
+  .db :Cost080_Pal
+  .db 3
+  .dw Cost080_ChrLo
+  .db :Cost080_ChrLo
   .db 0
-  ; costume 125 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 125 -> fallback 94
+  .dw Cost094_Pal
+  .db :Cost094_Pal
+  .db 3
+  .dw Cost094_ChrLo
+  .db :Cost094_ChrLo
   .db 0
-  ; costume 126 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 126 -> fallback 44
+  .dw Cost044_Pal
+  .db :Cost044_Pal
+  .db 46
+  .dw Cost044_ChrLo
+  .db :Cost044_ChrLo
   .db 0
-  ; costume 127 -> fallback 1
-  .dw Cost001_Pal
-  .db :Cost001_Pal
-  .db 48
-  .dw Cost001_ChrLo
-  .db :Cost001_ChrLo
+  ; costume 127 -> fallback 44
+  .dw Cost044_Pal
+  .db :Cost044_Pal
+  .db 46
+  .dw Cost044_ChrLo
+  .db :Cost044_ChrLo
   .db 0
 
 CostumeDirOamTable:
+  .dw Cost000_OamLo
+  .db :Cost000_OamLo
+  .db 0
+  .dw Cost000_OamHi
+  .db :Cost000_OamHi
+  .db 0
+  .dw Cost058_OamLo
+  .db :Cost058_OamLo
+  .db 0
+  .dw Cost058_OamHi
+  .db :Cost058_OamHi
+  .db 0
+  .dw Cost054_OamLo
+  .db :Cost054_OamLo
+  .db 0
+  .dw Cost054_OamHi
+  .db :Cost054_OamHi
+  .db 0
+  .dw Cost116_OamLo
+  .db :Cost116_OamLo
+  .db 0
+  .dw Cost116_OamHi
+  .db :Cost116_OamHi
+  .db 0
   .dw Cost000_OamLo
   .db :Cost000_OamLo
   .db 0
@@ -41656,65 +41680,11 @@ CostumeDirOamTable:
   .dw Cost001_OamHi
   .db :Cost001_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost028_OamLo
+  .db :Cost028_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
-  .db 0
-  .dw Cost003_OamLo
-  .db :Cost003_OamLo
-  .db 0
-  .dw Cost003_OamHi
-  .db :Cost003_OamHi
-  .db 0
-  .dw Cost004_OamLo
-  .db :Cost004_OamLo
-  .db 0
-  .dw Cost004_OamHi
-  .db :Cost004_OamHi
-  .db 0
-  .dw Cost005_OamLo
-  .db :Cost005_OamLo
-  .db 0
-  .dw Cost005_OamHi
-  .db :Cost005_OamHi
-  .db 0
-  .dw Cost006_OamLo
-  .db :Cost006_OamLo
-  .db 0
-  .dw Cost006_OamHi
-  .db :Cost006_OamHi
-  .db 0
-  .dw Cost007_OamLo
-  .db :Cost007_OamLo
-  .db 0
-  .dw Cost007_OamHi
-  .db :Cost007_OamHi
-  .db 0
-  .dw Cost008_OamLo
-  .db :Cost008_OamLo
-  .db 0
-  .dw Cost008_OamHi
-  .db :Cost008_OamHi
-  .db 0
-  .dw Cost009_OamLo
-  .db :Cost009_OamLo
-  .db 0
-  .dw Cost009_OamHi
-  .db :Cost009_OamHi
-  .db 0
-  .dw Cost010_OamLo
-  .db :Cost010_OamLo
-  .db 0
-  .dw Cost010_OamHi
-  .db :Cost010_OamHi
-  .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
-  .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost028_OamHi
+  .db :Cost028_OamHi
   .db 0
   .dw Cost012_OamLo
   .db :Cost012_OamLo
@@ -41728,11 +41698,125 @@ CostumeDirOamTable:
   .dw Cost013_OamHi
   .db :Cost013_OamHi
   .db 0
-  .dw Cost014_OamLo
-  .db :Cost014_OamLo
+  .dw Cost033_OamLo
+  .db :Cost033_OamLo
   .db 0
-  .dw Cost014_OamHi
-  .db :Cost014_OamHi
+  .dw Cost033_OamHi
+  .db :Cost033_OamHi
+  .db 0
+  .dw Cost088_OamLo
+  .db :Cost088_OamLo
+  .db 0
+  .dw Cost088_OamHi
+  .db :Cost088_OamHi
+  .db 0
+  .dw Cost109_OamLo
+  .db :Cost109_OamLo
+  .db 0
+  .dw Cost109_OamHi
+  .db :Cost109_OamHi
+  .db 0
+  .dw Cost007_OamLo
+  .db :Cost007_OamLo
+  .db 0
+  .dw Cost007_OamHi
+  .db :Cost007_OamHi
+  .db 0
+  .dw Cost044_OamLo
+  .db :Cost044_OamLo
+  .db 0
+  .dw Cost044_OamHi
+  .db :Cost044_OamHi
+  .db 0
+  .dw Cost048_OamLo
+  .db :Cost048_OamLo
+  .db 0
+  .dw Cost048_OamHi
+  .db :Cost048_OamHi
+  .db 0
+  .dw Cost040_OamLo
+  .db :Cost040_OamLo
+  .db 0
+  .dw Cost040_OamHi
+  .db :Cost040_OamHi
+  .db 0
+  .dw Cost057_OamLo
+  .db :Cost057_OamLo
+  .db 0
+  .dw Cost057_OamHi
+  .db :Cost057_OamHi
+  .db 0
+  .dw Cost017_OamLo
+  .db :Cost017_OamLo
+  .db 0
+  .dw Cost017_OamHi
+  .db :Cost017_OamHi
+  .db 0
+  .dw Cost047_OamLo
+  .db :Cost047_OamLo
+  .db 0
+  .dw Cost047_OamHi
+  .db :Cost047_OamHi
+  .db 0
+  .dw Cost052_OamLo
+  .db :Cost052_OamLo
+  .db 0
+  .dw Cost052_OamHi
+  .db :Cost052_OamHi
+  .db 0
+  .dw Cost085_OamLo
+  .db :Cost085_OamLo
+  .db 0
+  .dw Cost085_OamHi
+  .db :Cost085_OamHi
+  .db 0
+  .dw Cost087_OamLo
+  .db :Cost087_OamLo
+  .db 0
+  .dw Cost087_OamHi
+  .db :Cost087_OamHi
+  .db 0
+  .dw Cost067_OamLo
+  .db :Cost067_OamLo
+  .db 0
+  .dw Cost067_OamHi
+  .db :Cost067_OamHi
+  .db 0
+  .dw Cost046_OamLo
+  .db :Cost046_OamLo
+  .db 0
+  .dw Cost046_OamHi
+  .db :Cost046_OamHi
+  .db 0
+  .dw Cost037_OamLo
+  .db :Cost037_OamLo
+  .db 0
+  .dw Cost037_OamHi
+  .db :Cost037_OamHi
+  .db 0
+  .dw Cost096_OamLo
+  .db :Cost096_OamLo
+  .db 0
+  .dw Cost096_OamHi
+  .db :Cost096_OamHi
+  .db 0
+  .dw Cost038_OamLo
+  .db :Cost038_OamLo
+  .db 0
+  .dw Cost038_OamHi
+  .db :Cost038_OamHi
+  .db 0
+  .dw Cost076_OamLo
+  .db :Cost076_OamLo
+  .db 0
+  .dw Cost076_OamHi
+  .db :Cost076_OamHi
+  .db 0
+  .dw Cost043_OamLo
+  .db :Cost043_OamLo
+  .db 0
+  .dw Cost043_OamHi
+  .db :Cost043_OamHi
   .db 0
   .dw Cost015_OamLo
   .db :Cost015_OamLo
@@ -41740,17 +41824,215 @@ CostumeDirOamTable:
   .dw Cost015_OamHi
   .db :Cost015_OamHi
   .db 0
+  .dw Cost041_OamLo
+  .db :Cost041_OamLo
+  .db 0
+  .dw Cost041_OamHi
+  .db :Cost041_OamHi
+  .db 0
+  .dw Cost061_OamLo
+  .db :Cost061_OamLo
+  .db 0
+  .dw Cost061_OamHi
+  .db :Cost061_OamHi
+  .db 0
+  .dw Cost101_OamLo
+  .db :Cost101_OamLo
+  .db 0
+  .dw Cost101_OamHi
+  .db :Cost101_OamHi
+  .db 0
+  .dw Cost059_OamLo
+  .db :Cost059_OamLo
+  .db 0
+  .dw Cost059_OamHi
+  .db :Cost059_OamHi
+  .db 0
+  .dw Cost034_OamLo
+  .db :Cost034_OamLo
+  .db 0
+  .dw Cost034_OamHi
+  .db :Cost034_OamHi
+  .db 0
+  .dw Cost073_OamLo
+  .db :Cost073_OamLo
+  .db 0
+  .dw Cost073_OamHi
+  .db :Cost073_OamHi
+  .db 0
+  .dw Cost074_OamLo
+  .db :Cost074_OamLo
+  .db 0
+  .dw Cost074_OamHi
+  .db :Cost074_OamHi
+  .db 0
+  .dw Cost039_OamLo
+  .db :Cost039_OamLo
+  .db 0
+  .dw Cost039_OamHi
+  .db :Cost039_OamHi
+  .db 0
+  .dw Cost062_OamLo
+  .db :Cost062_OamLo
+  .db 0
+  .dw Cost062_OamHi
+  .db :Cost062_OamHi
+  .db 0
+  .dw Cost063_OamLo
+  .db :Cost063_OamLo
+  .db 0
+  .dw Cost063_OamHi
+  .db :Cost063_OamHi
+  .db 0
+  .dw Cost077_OamLo
+  .db :Cost077_OamLo
+  .db 0
+  .dw Cost077_OamHi
+  .db :Cost077_OamHi
+  .db 0
+  .dw Cost049_OamLo
+  .db :Cost049_OamLo
+  .db 0
+  .dw Cost049_OamHi
+  .db :Cost049_OamHi
+  .db 0
+  .dw Cost050_OamLo
+  .db :Cost050_OamLo
+  .db 0
+  .dw Cost050_OamHi
+  .db :Cost050_OamHi
+  .db 0
+  .dw Cost097_OamLo
+  .db :Cost097_OamLo
+  .db 0
+  .dw Cost097_OamHi
+  .db :Cost097_OamHi
+  .db 0
+  .dw Cost122_OamLo
+  .db :Cost122_OamLo
+  .db 0
+  .dw Cost122_OamHi
+  .db :Cost122_OamHi
+  .db 0
+  .dw Cost068_OamLo
+  .db :Cost068_OamLo
+  .db 0
+  .dw Cost068_OamHi
+  .db :Cost068_OamHi
+  .db 0
+  .dw Cost053_OamLo
+  .db :Cost053_OamLo
+  .db 0
+  .dw Cost053_OamHi
+  .db :Cost053_OamHi
+  .db 0
+  .dw Cost045_OamLo
+  .db :Cost045_OamLo
+  .db 0
+  .dw Cost045_OamHi
+  .db :Cost045_OamHi
+  .db 0
+  .dw Cost060_OamLo
+  .db :Cost060_OamLo
+  .db 0
+  .dw Cost060_OamHi
+  .db :Cost060_OamHi
+  .db 0
+  .dw Cost112_OamLo
+  .db :Cost112_OamLo
+  .db 0
+  .dw Cost112_OamHi
+  .db :Cost112_OamHi
+  .db 0
+  .dw Cost103_OamLo
+  .db :Cost103_OamLo
+  .db 0
+  .dw Cost103_OamHi
+  .db :Cost103_OamHi
+  .db 0
+  .dw Cost099_OamLo
+  .db :Cost099_OamLo
+  .db 0
+  .dw Cost099_OamHi
+  .db :Cost099_OamHi
+  .db 0
+  .dw Cost104_OamLo
+  .db :Cost104_OamLo
+  .db 0
+  .dw Cost104_OamHi
+  .db :Cost104_OamHi
+  .db 0
+  .dw Cost106_OamLo
+  .db :Cost106_OamLo
+  .db 0
+  .dw Cost106_OamHi
+  .db :Cost106_OamHi
+  .db 0
+  .dw Cost108_OamLo
+  .db :Cost108_OamLo
+  .db 0
+  .dw Cost108_OamHi
+  .db :Cost108_OamHi
+  .db 0
+  .dw Cost105_OamLo
+  .db :Cost105_OamLo
+  .db 0
+  .dw Cost105_OamHi
+  .db :Cost105_OamHi
+  .db 0
+  .dw Cost102_OamLo
+  .db :Cost102_OamLo
+  .db 0
+  .dw Cost102_OamHi
+  .db :Cost102_OamHi
+  .db 0
+  .dw Cost110_OamLo
+  .db :Cost110_OamLo
+  .db 0
+  .dw Cost110_OamHi
+  .db :Cost110_OamHi
+  .db 0
   .dw Cost016_OamLo
   .db :Cost016_OamLo
   .db 0
   .dw Cost016_OamHi
   .db :Cost016_OamHi
   .db 0
-  .dw Cost017_OamLo
-  .db :Cost017_OamLo
+  .dw Cost004_OamLo
+  .db :Cost004_OamLo
   .db 0
-  .dw Cost017_OamHi
-  .db :Cost017_OamHi
+  .dw Cost004_OamHi
+  .db :Cost004_OamHi
+  .db 0
+  .dw Cost111_OamLo
+  .db :Cost111_OamLo
+  .db 0
+  .dw Cost111_OamHi
+  .db :Cost111_OamHi
+  .db 0
+  .dw Cost064_OamLo
+  .db :Cost064_OamLo
+  .db 0
+  .dw Cost064_OamHi
+  .db :Cost064_OamHi
+  .db 0
+  .dw Cost065_OamLo
+  .db :Cost065_OamLo
+  .db 0
+  .dw Cost065_OamHi
+  .db :Cost065_OamHi
+  .db 0
+  .dw Cost014_OamLo
+  .db :Cost014_OamLo
+  .db 0
+  .dw Cost014_OamHi
+  .db :Cost014_OamHi
+  .db 0
+  .dw Cost064_OamLo
+  .db :Cost064_OamLo
+  .db 0
+  .dw Cost064_OamHi
+  .db :Cost064_OamHi
   .db 0
   .dw Cost018_OamLo
   .db :Cost018_OamLo
@@ -41764,11 +42046,11 @@ CostumeDirOamTable:
   .dw Cost019_OamHi
   .db :Cost019_OamHi
   .db 0
-  .dw Cost020_OamLo
-  .db :Cost020_OamLo
+  .dw Cost003_OamLo
+  .db :Cost003_OamLo
   .db 0
-  .dw Cost020_OamHi
-  .db :Cost020_OamHi
+  .dw Cost003_OamHi
+  .db :Cost003_OamHi
   .db 0
   .dw Cost021_OamLo
   .db :Cost021_OamLo
@@ -41776,11 +42058,11 @@ CostumeDirOamTable:
   .dw Cost021_OamHi
   .db :Cost021_OamHi
   .db 0
-  .dw Cost022_OamLo
-  .db :Cost022_OamLo
+  .dw Cost024_OamLo
+  .db :Cost024_OamLo
   .db 0
-  .dw Cost022_OamHi
-  .db :Cost022_OamHi
+  .dw Cost024_OamHi
+  .db :Cost024_OamHi
   .db 0
   .dw Cost023_OamLo
   .db :Cost023_OamLo
@@ -41788,11 +42070,59 @@ CostumeDirOamTable:
   .dw Cost023_OamHi
   .db :Cost023_OamHi
   .db 0
-  .dw Cost024_OamLo
-  .db :Cost024_OamLo
+  .dw Cost022_OamLo
+  .db :Cost022_OamLo
   .db 0
-  .dw Cost024_OamHi
-  .db :Cost024_OamHi
+  .dw Cost022_OamHi
+  .db :Cost022_OamHi
+  .db 0
+  .dw Cost030_OamLo
+  .db :Cost030_OamLo
+  .db 0
+  .dw Cost030_OamHi
+  .db :Cost030_OamHi
+  .db 0
+  .dw Cost073_OamLo
+  .db :Cost073_OamLo
+  .db 0
+  .dw Cost073_OamHi
+  .db :Cost073_OamHi
+  .db 0
+  .dw Cost029_OamLo
+  .db :Cost029_OamLo
+  .db 0
+  .dw Cost029_OamHi
+  .db :Cost029_OamHi
+  .db 0
+  .dw Cost031_OamLo
+  .db :Cost031_OamLo
+  .db 0
+  .dw Cost031_OamHi
+  .db :Cost031_OamHi
+  .db 0
+  .dw Cost042_OamLo
+  .db :Cost042_OamLo
+  .db 0
+  .dw Cost042_OamHi
+  .db :Cost042_OamHi
+  .db 0
+  .dw Cost078_OamLo
+  .db :Cost078_OamLo
+  .db 0
+  .dw Cost078_OamHi
+  .db :Cost078_OamHi
+  .db 0
+  .dw Cost098_OamLo
+  .db :Cost098_OamLo
+  .db 0
+  .dw Cost098_OamHi
+  .db :Cost098_OamHi
+  .db 0
+  .dw Cost020_OamLo
+  .db :Cost020_OamLo
+  .db 0
+  .dw Cost020_OamHi
+  .db :Cost020_OamHi
   .db 0
   .dw Cost025_OamLo
   .db :Cost025_OamLo
@@ -41812,335 +42142,35 @@ CostumeDirOamTable:
   .dw Cost027_OamHi
   .db :Cost027_OamHi
   .db 0
-  .dw Cost028_OamLo
-  .db :Cost028_OamLo
+  .dw Cost121_OamLo
+  .db :Cost121_OamLo
   .db 0
-  .dw Cost028_OamHi
-  .db :Cost028_OamHi
+  .dw Cost121_OamHi
+  .db :Cost121_OamHi
   .db 0
-  .dw Cost029_OamLo
-  .db :Cost029_OamLo
+  .dw Cost010_OamLo
+  .db :Cost010_OamLo
   .db 0
-  .dw Cost029_OamHi
-  .db :Cost029_OamHi
+  .dw Cost010_OamHi
+  .db :Cost010_OamHi
   .db 0
-  .dw Cost030_OamLo
-  .db :Cost030_OamLo
+  .dw Cost107_OamLo
+  .db :Cost107_OamLo
   .db 0
-  .dw Cost030_OamHi
-  .db :Cost030_OamHi
+  .dw Cost107_OamHi
+  .db :Cost107_OamHi
   .db 0
-  .dw Cost031_OamLo
-  .db :Cost031_OamLo
+  .dw Cost086_OamLo
+  .db :Cost086_OamLo
   .db 0
-  .dw Cost031_OamHi
-  .db :Cost031_OamHi
-  .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
-  .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
-  .db 0
-  .dw Cost033_OamLo
-  .db :Cost033_OamLo
-  .db 0
-  .dw Cost033_OamHi
-  .db :Cost033_OamHi
-  .db 0
-  .dw Cost034_OamLo
-  .db :Cost034_OamLo
-  .db 0
-  .dw Cost034_OamHi
-  .db :Cost034_OamHi
-  .db 0
-  .dw Cost035_OamLo
-  .db :Cost035_OamLo
-  .db 0
-  .dw Cost035_OamHi
-  .db :Cost035_OamHi
-  .db 0
-  .dw Cost036_OamLo
-  .db :Cost036_OamLo
-  .db 0
-  .dw Cost036_OamHi
-  .db :Cost036_OamHi
-  .db 0
-  .dw Cost037_OamLo
-  .db :Cost037_OamLo
-  .db 0
-  .dw Cost037_OamHi
-  .db :Cost037_OamHi
-  .db 0
-  .dw Cost038_OamLo
-  .db :Cost038_OamLo
-  .db 0
-  .dw Cost038_OamHi
-  .db :Cost038_OamHi
-  .db 0
-  .dw Cost039_OamLo
-  .db :Cost039_OamLo
-  .db 0
-  .dw Cost039_OamHi
-  .db :Cost039_OamHi
-  .db 0
-  .dw Cost040_OamLo
-  .db :Cost040_OamLo
-  .db 0
-  .dw Cost040_OamHi
-  .db :Cost040_OamHi
-  .db 0
-  .dw Cost041_OamLo
-  .db :Cost041_OamLo
-  .db 0
-  .dw Cost041_OamHi
-  .db :Cost041_OamHi
-  .db 0
-  .dw Cost042_OamLo
-  .db :Cost042_OamLo
-  .db 0
-  .dw Cost042_OamHi
-  .db :Cost042_OamHi
-  .db 0
-  .dw Cost043_OamLo
-  .db :Cost043_OamLo
-  .db 0
-  .dw Cost043_OamHi
-  .db :Cost043_OamHi
-  .db 0
-  .dw Cost044_OamLo
-  .db :Cost044_OamLo
-  .db 0
-  .dw Cost044_OamHi
-  .db :Cost044_OamHi
-  .db 0
-  .dw Cost045_OamLo
-  .db :Cost045_OamLo
-  .db 0
-  .dw Cost045_OamHi
-  .db :Cost045_OamHi
-  .db 0
-  .dw Cost046_OamLo
-  .db :Cost046_OamLo
-  .db 0
-  .dw Cost046_OamHi
-  .db :Cost046_OamHi
-  .db 0
-  .dw Cost047_OamLo
-  .db :Cost047_OamLo
-  .db 0
-  .dw Cost047_OamHi
-  .db :Cost047_OamHi
-  .db 0
-  .dw Cost048_OamLo
-  .db :Cost048_OamLo
-  .db 0
-  .dw Cost048_OamHi
-  .db :Cost048_OamHi
-  .db 0
-  .dw Cost049_OamLo
-  .db :Cost049_OamLo
-  .db 0
-  .dw Cost049_OamHi
-  .db :Cost049_OamHi
-  .db 0
-  .dw Cost050_OamLo
-  .db :Cost050_OamLo
-  .db 0
-  .dw Cost050_OamHi
-  .db :Cost050_OamHi
-  .db 0
-  .dw Cost051_OamLo
-  .db :Cost051_OamLo
-  .db 0
-  .dw Cost051_OamHi
-  .db :Cost051_OamHi
-  .db 0
-  .dw Cost052_OamLo
-  .db :Cost052_OamLo
-  .db 0
-  .dw Cost052_OamHi
-  .db :Cost052_OamHi
-  .db 0
-  .dw Cost053_OamLo
-  .db :Cost053_OamLo
-  .db 0
-  .dw Cost053_OamHi
-  .db :Cost053_OamHi
-  .db 0
-  .dw Cost054_OamLo
-  .db :Cost054_OamLo
-  .db 0
-  .dw Cost054_OamHi
-  .db :Cost054_OamHi
-  .db 0
-  .dw Cost055_OamLo
-  .db :Cost055_OamLo
-  .db 0
-  .dw Cost055_OamHi
-  .db :Cost055_OamHi
-  .db 0
-  .dw Cost056_OamLo
-  .db :Cost056_OamLo
-  .db 0
-  .dw Cost056_OamHi
-  .db :Cost056_OamHi
-  .db 0
-  .dw Cost057_OamLo
-  .db :Cost057_OamLo
-  .db 0
-  .dw Cost057_OamHi
-  .db :Cost057_OamHi
-  .db 0
-  .dw Cost058_OamLo
-  .db :Cost058_OamLo
-  .db 0
-  .dw Cost058_OamHi
-  .db :Cost058_OamHi
-  .db 0
-  .dw Cost059_OamLo
-  .db :Cost059_OamLo
-  .db 0
-  .dw Cost059_OamHi
-  .db :Cost059_OamHi
-  .db 0
-  .dw Cost060_OamLo
-  .db :Cost060_OamLo
-  .db 0
-  .dw Cost060_OamHi
-  .db :Cost060_OamHi
-  .db 0
-  .dw Cost061_OamLo
-  .db :Cost061_OamLo
-  .db 0
-  .dw Cost061_OamHi
-  .db :Cost061_OamHi
-  .db 0
-  .dw Cost062_OamLo
-  .db :Cost062_OamLo
-  .db 0
-  .dw Cost062_OamHi
-  .db :Cost062_OamHi
-  .db 0
-  .dw Cost063_OamLo
-  .db :Cost063_OamLo
-  .db 0
-  .dw Cost063_OamHi
-  .db :Cost063_OamHi
-  .db 0
-  .dw Cost064_OamLo
-  .db :Cost064_OamLo
-  .db 0
-  .dw Cost064_OamHi
-  .db :Cost064_OamHi
-  .db 0
-  .dw Cost065_OamLo
-  .db :Cost065_OamLo
-  .db 0
-  .dw Cost065_OamHi
-  .db :Cost065_OamHi
-  .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
-  .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
-  .db 0
-  .dw Cost067_OamLo
-  .db :Cost067_OamLo
-  .db 0
-  .dw Cost067_OamHi
-  .db :Cost067_OamHi
-  .db 0
-  .dw Cost068_OamLo
-  .db :Cost068_OamLo
-  .db 0
-  .dw Cost068_OamHi
-  .db :Cost068_OamHi
-  .db 0
-  .dw Cost069_OamLo
-  .db :Cost069_OamLo
-  .db 0
-  .dw Cost069_OamHi
-  .db :Cost069_OamHi
-  .db 0
-  .dw Cost070_OamLo
-  .db :Cost070_OamLo
-  .db 0
-  .dw Cost070_OamHi
-  .db :Cost070_OamHi
-  .db 0
-  .dw Cost071_OamLo
-  .db :Cost071_OamLo
-  .db 0
-  .dw Cost071_OamHi
-  .db :Cost071_OamHi
-  .db 0
-  .dw Cost072_OamLo
-  .db :Cost072_OamLo
-  .db 0
-  .dw Cost072_OamHi
-  .db :Cost072_OamHi
-  .db 0
-  .dw Cost073_OamLo
-  .db :Cost073_OamLo
-  .db 0
-  .dw Cost073_OamHi
-  .db :Cost073_OamHi
-  .db 0
-  .dw Cost074_OamLo
-  .db :Cost074_OamLo
-  .db 0
-  .dw Cost074_OamHi
-  .db :Cost074_OamHi
+  .dw Cost086_OamHi
+  .db :Cost086_OamHi
   .db 0
   .dw Cost075_OamLo
   .db :Cost075_OamLo
   .db 0
   .dw Cost075_OamHi
   .db :Cost075_OamHi
-  .db 0
-  .dw Cost076_OamLo
-  .db :Cost076_OamLo
-  .db 0
-  .dw Cost076_OamHi
-  .db :Cost076_OamHi
-  .db 0
-  .dw Cost077_OamLo
-  .db :Cost077_OamLo
-  .db 0
-  .dw Cost077_OamHi
-  .db :Cost077_OamHi
-  .db 0
-  .dw Cost078_OamLo
-  .db :Cost078_OamLo
-  .db 0
-  .dw Cost078_OamHi
-  .db :Cost078_OamHi
-  .db 0
-  .dw Cost079_OamLo
-  .db :Cost079_OamLo
-  .db 0
-  .dw Cost079_OamHi
-  .db :Cost079_OamHi
-  .db 0
-  .dw Cost080_OamLo
-  .db :Cost080_OamLo
-  .db 0
-  .dw Cost080_OamHi
-  .db :Cost080_OamHi
-  .db 0
-  .dw Cost081_OamLo
-  .db :Cost081_OamLo
-  .db 0
-  .dw Cost081_OamHi
-  .db :Cost081_OamHi
-  .db 0
-  .dw Cost082_OamLo
-  .db :Cost082_OamLo
-  .db 0
-  .dw Cost082_OamHi
-  .db :Cost082_OamHi
   .db 0
   .dw Cost083_OamLo
   .db :Cost083_OamLo
@@ -42154,29 +42184,23 @@ CostumeDirOamTable:
   .dw Cost084_OamHi
   .db :Cost084_OamHi
   .db 0
-  .dw Cost085_OamLo
-  .db :Cost085_OamLo
+  .dw Cost117_OamLo
+  .db :Cost117_OamLo
   .db 0
-  .dw Cost085_OamHi
-  .db :Cost085_OamHi
+  .dw Cost117_OamHi
+  .db :Cost117_OamHi
   .db 0
-  .dw Cost086_OamLo
-  .db :Cost086_OamLo
+  .dw Cost118_OamLo
+  .db :Cost118_OamLo
   .db 0
-  .dw Cost086_OamHi
-  .db :Cost086_OamHi
+  .dw Cost118_OamHi
+  .db :Cost118_OamHi
   .db 0
-  .dw Cost087_OamLo
-  .db :Cost087_OamLo
+  .dw Cost035_OamLo
+  .db :Cost035_OamLo
   .db 0
-  .dw Cost087_OamHi
-  .db :Cost087_OamHi
-  .db 0
-  .dw Cost088_OamLo
-  .db :Cost088_OamLo
-  .db 0
-  .dw Cost088_OamHi
-  .db :Cost088_OamHi
+  .dw Cost035_OamHi
+  .db :Cost035_OamHi
   .db 0
   .dw Cost089_OamLo
   .db :Cost089_OamLo
@@ -42184,143 +42208,23 @@ CostumeDirOamTable:
   .dw Cost089_OamHi
   .db :Cost089_OamHi
   .db 0
-  .dw Cost090_OamLo
-  .db :Cost090_OamLo
+  .dw Cost119_OamLo
+  .db :Cost119_OamLo
   .db 0
-  .dw Cost090_OamHi
-  .db :Cost090_OamHi
+  .dw Cost119_OamHi
+  .db :Cost119_OamHi
   .db 0
-  .dw Cost091_OamLo
-  .db :Cost091_OamLo
+  .dw Cost070_OamLo
+  .db :Cost070_OamLo
   .db 0
-  .dw Cost091_OamHi
-  .db :Cost091_OamHi
-  .db 0
-  .dw Cost092_OamLo
-  .db :Cost092_OamLo
-  .db 0
-  .dw Cost092_OamHi
-  .db :Cost092_OamHi
-  .db 0
-  .dw Cost093_OamLo
-  .db :Cost093_OamLo
-  .db 0
-  .dw Cost093_OamHi
-  .db :Cost093_OamHi
-  .db 0
-  .dw Cost094_OamLo
-  .db :Cost094_OamLo
-  .db 0
-  .dw Cost094_OamHi
-  .db :Cost094_OamHi
-  .db 0
-  .dw Cost095_OamLo
-  .db :Cost095_OamLo
-  .db 0
-  .dw Cost095_OamHi
-  .db :Cost095_OamHi
-  .db 0
-  .dw Cost096_OamLo
-  .db :Cost096_OamLo
-  .db 0
-  .dw Cost096_OamHi
-  .db :Cost096_OamHi
-  .db 0
-  .dw Cost097_OamLo
-  .db :Cost097_OamLo
-  .db 0
-  .dw Cost097_OamHi
-  .db :Cost097_OamHi
-  .db 0
-  .dw Cost098_OamLo
-  .db :Cost098_OamLo
-  .db 0
-  .dw Cost098_OamHi
-  .db :Cost098_OamHi
-  .db 0
-  .dw Cost099_OamLo
-  .db :Cost099_OamLo
-  .db 0
-  .dw Cost099_OamHi
-  .db :Cost099_OamHi
+  .dw Cost070_OamHi
+  .db :Cost070_OamHi
   .db 0
   .dw Cost100_OamLo
   .db :Cost100_OamLo
   .db 0
   .dw Cost100_OamHi
   .db :Cost100_OamHi
-  .db 0
-  .dw Cost101_OamLo
-  .db :Cost101_OamLo
-  .db 0
-  .dw Cost101_OamHi
-  .db :Cost101_OamHi
-  .db 0
-  .dw Cost102_OamLo
-  .db :Cost102_OamLo
-  .db 0
-  .dw Cost102_OamHi
-  .db :Cost102_OamHi
-  .db 0
-  .dw Cost103_OamLo
-  .db :Cost103_OamLo
-  .db 0
-  .dw Cost103_OamHi
-  .db :Cost103_OamHi
-  .db 0
-  .dw Cost104_OamLo
-  .db :Cost104_OamLo
-  .db 0
-  .dw Cost104_OamHi
-  .db :Cost104_OamHi
-  .db 0
-  .dw Cost105_OamLo
-  .db :Cost105_OamLo
-  .db 0
-  .dw Cost105_OamHi
-  .db :Cost105_OamHi
-  .db 0
-  .dw Cost106_OamLo
-  .db :Cost106_OamLo
-  .db 0
-  .dw Cost106_OamHi
-  .db :Cost106_OamHi
-  .db 0
-  .dw Cost107_OamLo
-  .db :Cost107_OamLo
-  .db 0
-  .dw Cost107_OamHi
-  .db :Cost107_OamHi
-  .db 0
-  .dw Cost108_OamLo
-  .db :Cost108_OamLo
-  .db 0
-  .dw Cost108_OamHi
-  .db :Cost108_OamHi
-  .db 0
-  .dw Cost109_OamLo
-  .db :Cost109_OamLo
-  .db 0
-  .dw Cost109_OamHi
-  .db :Cost109_OamHi
-  .db 0
-  .dw Cost110_OamLo
-  .db :Cost110_OamLo
-  .db 0
-  .dw Cost110_OamHi
-  .db :Cost110_OamHi
-  .db 0
-  .dw Cost111_OamLo
-  .db :Cost111_OamLo
-  .db 0
-  .dw Cost111_OamHi
-  .db :Cost111_OamHi
-  .db 0
-  .dw Cost112_OamLo
-  .db :Cost112_OamLo
-  .db 0
-  .dw Cost112_OamHi
-  .db :Cost112_OamHi
   .db 0
   .dw Cost113_OamLo
   .db :Cost113_OamLo
@@ -42334,35 +42238,107 @@ CostumeDirOamTable:
   .dw Cost114_OamHi
   .db :Cost114_OamHi
   .db 0
+  .dw Cost090_OamLo
+  .db :Cost090_OamLo
+  .db 0
+  .dw Cost090_OamHi
+  .db :Cost090_OamHi
+  .db 0
+  .dw Cost017_OamLo
+  .db :Cost017_OamLo
+  .db 0
+  .dw Cost017_OamHi
+  .db :Cost017_OamHi
+  .db 0
+  .dw Cost036_OamLo
+  .db :Cost036_OamLo
+  .db 0
+  .dw Cost036_OamHi
+  .db :Cost036_OamHi
+  .db 0
+  .dw Cost091_OamLo
+  .db :Cost091_OamLo
+  .db 0
+  .dw Cost091_OamHi
+  .db :Cost091_OamHi
+  .db 0
+  .dw Cost071_OamLo
+  .db :Cost071_OamLo
+  .db 0
+  .dw Cost071_OamHi
+  .db :Cost071_OamHi
+  .db 0
+  .dw Cost051_OamLo
+  .db :Cost051_OamLo
+  .db 0
+  .dw Cost051_OamHi
+  .db :Cost051_OamHi
+  .db 0
   .dw Cost115_OamLo
   .db :Cost115_OamLo
   .db 0
   .dw Cost115_OamHi
   .db :Cost115_OamHi
   .db 0
-  .dw Cost116_OamLo
-  .db :Cost116_OamLo
+  .dw Cost106_OamLo
+  .db :Cost106_OamLo
   .db 0
-  .dw Cost116_OamHi
-  .db :Cost116_OamHi
+  .dw Cost106_OamHi
+  .db :Cost106_OamHi
   .db 0
-  .dw Cost117_OamLo
-  .db :Cost117_OamLo
+  .dw Cost095_OamLo
+  .db :Cost095_OamLo
   .db 0
-  .dw Cost117_OamHi
-  .db :Cost117_OamHi
+  .dw Cost095_OamHi
+  .db :Cost095_OamHi
   .db 0
-  .dw Cost118_OamLo
-  .db :Cost118_OamLo
+  .dw Cost008_OamLo
+  .db :Cost008_OamLo
   .db 0
-  .dw Cost118_OamHi
-  .db :Cost118_OamHi
+  .dw Cost008_OamHi
+  .db :Cost008_OamHi
   .db 0
-  .dw Cost119_OamLo
-  .db :Cost119_OamLo
+  .dw Cost069_OamLo
+  .db :Cost069_OamLo
   .db 0
-  .dw Cost119_OamHi
-  .db :Cost119_OamHi
+  .dw Cost069_OamHi
+  .db :Cost069_OamHi
+  .db 0
+  .dw Cost110_OamLo
+  .db :Cost110_OamLo
+  .db 0
+  .dw Cost110_OamHi
+  .db :Cost110_OamHi
+  .db 0
+  .dw Cost005_OamLo
+  .db :Cost005_OamLo
+  .db 0
+  .dw Cost005_OamHi
+  .db :Cost005_OamHi
+  .db 0
+  .dw Cost009_OamLo
+  .db :Cost009_OamLo
+  .db 0
+  .dw Cost009_OamHi
+  .db :Cost009_OamHi
+  .db 0
+  .dw Cost006_OamLo
+  .db :Cost006_OamLo
+  .db 0
+  .dw Cost006_OamHi
+  .db :Cost006_OamHi
+  .db 0
+  .dw Cost086_OamLo
+  .db :Cost086_OamLo
+  .db 0
+  .dw Cost086_OamHi
+  .db :Cost086_OamHi
+  .db 0
+  .dw Cost072_OamLo
+  .db :Cost072_OamLo
+  .db 0
+  .dw Cost072_OamHi
+  .db :Cost072_OamHi
   .db 0
   .dw Cost120_OamLo
   .db :Cost120_OamLo
@@ -42370,47 +42346,71 @@ CostumeDirOamTable:
   .dw Cost120_OamHi
   .db :Cost120_OamHi
   .db 0
-  .dw Cost121_OamLo
-  .db :Cost121_OamLo
+  .dw Cost092_OamLo
+  .db :Cost092_OamLo
   .db 0
-  .dw Cost121_OamHi
-  .db :Cost121_OamHi
+  .dw Cost092_OamHi
+  .db :Cost092_OamHi
   .db 0
-  .dw Cost122_OamLo
-  .db :Cost122_OamLo
+  .dw Cost093_OamLo
+  .db :Cost093_OamLo
   .db 0
-  .dw Cost122_OamHi
-  .db :Cost122_OamHi
+  .dw Cost093_OamHi
+  .db :Cost093_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost055_OamLo
+  .db :Cost055_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost055_OamHi
+  .db :Cost055_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost056_OamLo
+  .db :Cost056_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost056_OamHi
+  .db :Cost056_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost081_OamLo
+  .db :Cost081_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost081_OamHi
+  .db :Cost081_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost082_OamLo
+  .db :Cost082_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost082_OamHi
+  .db :Cost082_OamHi
   .db 0
-  .dw Cost001_OamLo
-  .db :Cost001_OamLo
+  .dw Cost079_OamLo
+  .db :Cost079_OamLo
   .db 0
-  .dw Cost001_OamHi
-  .db :Cost001_OamHi
+  .dw Cost079_OamHi
+  .db :Cost079_OamHi
+  .db 0
+  .dw Cost080_OamLo
+  .db :Cost080_OamLo
+  .db 0
+  .dw Cost080_OamHi
+  .db :Cost080_OamHi
+  .db 0
+  .dw Cost094_OamLo
+  .db :Cost094_OamLo
+  .db 0
+  .dw Cost094_OamHi
+  .db :Cost094_OamHi
+  .db 0
+  .dw Cost044_OamLo
+  .db :Cost044_OamLo
+  .db 0
+  .dw Cost044_OamHi
+  .db :Cost044_OamHi
+  .db 0
+  .dw Cost044_OamLo
+  .db :Cost044_OamLo
+  .db 0
+  .dw Cost044_OamHi
+  .db :Cost044_OamHi
   .db 0
 
 ;===================================================================
@@ -42422,34 +42422,34 @@ CostumeDirOamTable:
 CostumeHeadDirTable:
   .dw Cost000_HeadChrLo          ; costume 0
   .db :Cost000_HeadChrLo, 12
-  .dw Cost001_HeadChrLo          ; costume 1
-  .db :Cost001_HeadChrLo, 16
+  .dw Cost058_HeadChrLo          ; costume 1
+  .db :Cost058_HeadChrLo, 16
   .dw 0
   .db 0, 0                          ; costume 2 - no head
   .dw 0
   .db 0, 0                          ; costume 3 - no head
-  .dw 0
-  .db 0, 0                          ; costume 4 - no head
-  .dw 0
-  .db 0, 0                          ; costume 5 - no head
-  .dw 0
-  .db 0, 0                          ; costume 6 - no head
+  .dw Cost000_HeadChrLo          ; costume 4
+  .db :Cost000_HeadChrLo, 12
+  .dw Cost001_HeadChrLo          ; costume 5
+  .db :Cost001_HeadChrLo, 16
+  .dw Cost028_HeadChrLo          ; costume 6
+  .db :Cost028_HeadChrLo, 20
   .dw 0
   .db 0, 0                          ; costume 7 - no head
   .dw 0
   .db 0, 0                          ; costume 8 - no head
   .dw 0
   .db 0, 0                          ; costume 9 - no head
-  .dw Cost010_HeadChrLo          ; costume 10
-  .db :Cost010_HeadChrLo, 20
+  .dw Cost088_HeadChrLo          ; costume 10
+  .db :Cost088_HeadChrLo, 20
   .dw 0
   .db 0, 0                          ; costume 11 - no head
   .dw 0
   .db 0, 0                          ; costume 12 - no head
-  .dw 0
-  .db 0, 0                          ; costume 13 - no head
-  .dw 0
-  .db 0, 0                          ; costume 14 - no head
+  .dw Cost044_HeadChrLo          ; costume 13
+  .db :Cost044_HeadChrLo, 18
+  .dw Cost048_HeadChrLo          ; costume 14
+  .db :Cost048_HeadChrLo, 20
   .dw 0
   .db 0, 0                          ; costume 15 - no head
   .dw 0
@@ -42460,218 +42460,218 @@ CostumeHeadDirTable:
   .db 0, 0                          ; costume 18 - no head
   .dw 0
   .db 0, 0                          ; costume 19 - no head
-  .dw Cost020_HeadChrLo          ; costume 20
-  .db :Cost020_HeadChrLo, 8
-  .dw Cost021_HeadChrLo          ; costume 21
-  .db :Cost021_HeadChrLo, 4
   .dw 0
-  .db 0, 0                          ; costume 22 - no head
+  .db 0, 0                          ; costume 20 - no head
+  .dw Cost087_HeadChrLo          ; costume 21
+  .db :Cost087_HeadChrLo, 18
+  .dw Cost067_HeadChrLo          ; costume 22
+  .db :Cost067_HeadChrLo, 19
   .dw 0
   .db 0, 0                          ; costume 23 - no head
-  .dw 0
-  .db 0, 0                          ; costume 24 - no head
-  .dw 0
-  .db 0, 0                          ; costume 25 - no head
+  .dw Cost037_HeadChrLo          ; costume 24
+  .db :Cost037_HeadChrLo, 15
+  .dw Cost096_HeadChrLo          ; costume 25
+  .db :Cost096_HeadChrLo, 10
   .dw 0
   .db 0, 0                          ; costume 26 - no head
-  .dw 0
-  .db 0, 0                          ; costume 27 - no head
-  .dw Cost028_HeadChrLo          ; costume 28
-  .db :Cost028_HeadChrLo, 20
+  .dw Cost076_HeadChrLo          ; costume 27
+  .db :Cost076_HeadChrLo, 20
+  .dw Cost043_HeadChrLo          ; costume 28
+  .db :Cost043_HeadChrLo, 18
   .dw 0
   .db 0, 0                          ; costume 29 - no head
-  .dw Cost030_HeadChrLo          ; costume 30
-  .db :Cost030_HeadChrLo, 5
-  .dw Cost031_HeadChrLo          ; costume 31
-  .db :Cost031_HeadChrLo, 19
+  .dw Cost041_HeadChrLo          ; costume 30
+  .db :Cost041_HeadChrLo, 10
   .dw 0
-  .db 0, 0                          ; costume 32 - no head
-  .dw 0
-  .db 0, 0                          ; costume 33 - no head
+  .db 0, 0                          ; costume 31 - no head
+  .dw Cost101_HeadChrLo          ; costume 32
+  .db :Cost101_HeadChrLo, 20
+  .dw Cost059_HeadChrLo          ; costume 33
+  .db :Cost059_HeadChrLo, 10
   .dw Cost034_HeadChrLo          ; costume 34
   .db :Cost034_HeadChrLo, 19
-  .dw Cost035_HeadChrLo          ; costume 35
-  .db :Cost035_HeadChrLo, 20
-  .dw Cost036_HeadChrLo          ; costume 36
-  .db :Cost036_HeadChrLo, 16
-  .dw Cost037_HeadChrLo          ; costume 37
-  .db :Cost037_HeadChrLo, 15
+  .dw 0
+  .db 0, 0                          ; costume 35 - no head
+  .dw 0
+  .db 0, 0                          ; costume 36 - no head
+  .dw 0
+  .db 0, 0                          ; costume 37 - no head
   .dw 0
   .db 0, 0                          ; costume 38 - no head
   .dw 0
   .db 0, 0                          ; costume 39 - no head
   .dw 0
   .db 0, 0                          ; costume 40 - no head
-  .dw Cost041_HeadChrLo          ; costume 41
-  .db :Cost041_HeadChrLo, 10
-  .dw Cost042_HeadChrLo          ; costume 42
-  .db :Cost042_HeadChrLo, 20
-  .dw Cost043_HeadChrLo          ; costume 43
-  .db :Cost043_HeadChrLo, 18
-  .dw Cost044_HeadChrLo          ; costume 44
-  .db :Cost044_HeadChrLo, 18
+  .dw Cost049_HeadChrLo          ; costume 41
+  .db :Cost049_HeadChrLo, 18
+  .dw Cost050_HeadChrLo          ; costume 42
+  .db :Cost050_HeadChrLo, 4
+  .dw Cost097_HeadChrLo          ; costume 43
+  .db :Cost097_HeadChrLo, 3
+  .dw 0
+  .db 0, 0                          ; costume 44 - no head
   .dw 0
   .db 0, 0                          ; costume 45 - no head
   .dw 0
   .db 0, 0                          ; costume 46 - no head
   .dw 0
   .db 0, 0                          ; costume 47 - no head
-  .dw Cost048_HeadChrLo          ; costume 48
-  .db :Cost048_HeadChrLo, 20
-  .dw Cost049_HeadChrLo          ; costume 49
-  .db :Cost049_HeadChrLo, 18
-  .dw Cost050_HeadChrLo          ; costume 50
-  .db :Cost050_HeadChrLo, 4
-  .dw Cost051_HeadChrLo          ; costume 51
-  .db :Cost051_HeadChrLo, 15
-  .dw 0
-  .db 0, 0                          ; costume 52 - no head
-  .dw 0
-  .db 0, 0                          ; costume 53 - no head
-  .dw 0
-  .db 0, 0                          ; costume 54 - no head
+  .dw Cost060_HeadChrLo          ; costume 48
+  .db :Cost060_HeadChrLo, 1
+  .dw Cost112_HeadChrLo          ; costume 49
+  .db :Cost112_HeadChrLo, 16
+  .dw Cost103_HeadChrLo          ; costume 50
+  .db :Cost103_HeadChrLo, 10
+  .dw Cost099_HeadChrLo          ; costume 51
+  .db :Cost099_HeadChrLo, 14
+  .dw Cost104_HeadChrLo          ; costume 52
+  .db :Cost104_HeadChrLo, 12
+  .dw Cost106_HeadChrLo          ; costume 53
+  .db :Cost106_HeadChrLo, 5
+  .dw Cost108_HeadChrLo          ; costume 54
+  .db :Cost108_HeadChrLo, 16
   .dw 0
   .db 0, 0                          ; costume 55 - no head
   .dw 0
   .db 0, 0                          ; costume 56 - no head
+  .dw Cost110_HeadChrLo          ; costume 57
+  .db :Cost110_HeadChrLo, 14
   .dw 0
-  .db 0, 0                          ; costume 57 - no head
-  .dw Cost058_HeadChrLo          ; costume 58
-  .db :Cost058_HeadChrLo, 16
-  .dw Cost059_HeadChrLo          ; costume 59
-  .db :Cost059_HeadChrLo, 10
-  .dw Cost060_HeadChrLo          ; costume 60
-  .db :Cost060_HeadChrLo, 1
+  .db 0, 0                          ; costume 58 - no head
+  .dw 0
+  .db 0, 0                          ; costume 59 - no head
+  .dw 0
+  .db 0, 0                          ; costume 60 - no head
   .dw 0
   .db 0, 0                          ; costume 61 - no head
-  .dw 0
-  .db 0, 0                          ; costume 62 - no head
+  .dw Cost065_HeadChrLo          ; costume 62
+  .db :Cost065_HeadChrLo, 15
   .dw 0
   .db 0, 0                          ; costume 63 - no head
   .dw 0
   .db 0, 0                          ; costume 64 - no head
-  .dw Cost065_HeadChrLo          ; costume 65
-  .db :Cost065_HeadChrLo, 15
+  .dw 0
+  .db 0, 0                          ; costume 65 - no head
   .dw 0
   .db 0, 0                          ; costume 66 - no head
-  .dw Cost067_HeadChrLo          ; costume 67
-  .db :Cost067_HeadChrLo, 19
   .dw 0
-  .db 0, 0                          ; costume 68 - no head
-  .dw Cost069_HeadChrLo          ; costume 69
-  .db :Cost069_HeadChrLo, 16
+  .db 0, 0                          ; costume 67 - no head
+  .dw Cost021_HeadChrLo          ; costume 68
+  .db :Cost021_HeadChrLo, 4
+  .dw 0
+  .db 0, 0                          ; costume 69 - no head
   .dw 0
   .db 0, 0                          ; costume 70 - no head
   .dw 0
   .db 0, 0                          ; costume 71 - no head
-  .dw Cost072_HeadChrLo          ; costume 72
-  .db :Cost072_HeadChrLo, 14
+  .dw Cost030_HeadChrLo          ; costume 72
+  .db :Cost030_HeadChrLo, 5
   .dw 0
   .db 0, 0                          ; costume 73 - no head
   .dw 0
   .db 0, 0                          ; costume 74 - no head
-  .dw 0
-  .db 0, 0                          ; costume 75 - no head
-  .dw Cost076_HeadChrLo          ; costume 76
-  .db :Cost076_HeadChrLo, 20
-  .dw 0
-  .db 0, 0                          ; costume 77 - no head
-  .dw Cost078_HeadChrLo          ; costume 78
+  .dw Cost031_HeadChrLo          ; costume 75
+  .db :Cost031_HeadChrLo, 19
+  .dw Cost042_HeadChrLo          ; costume 76
+  .db :Cost042_HeadChrLo, 20
+  .dw Cost078_HeadChrLo          ; costume 77
   .db :Cost078_HeadChrLo, 10
-  .dw Cost079_HeadChrLo          ; costume 79
-  .db :Cost079_HeadChrLo, 3
+  .dw Cost098_HeadChrLo          ; costume 78
+  .db :Cost098_HeadChrLo, 5
+  .dw Cost020_HeadChrLo          ; costume 79
+  .db :Cost020_HeadChrLo, 8
   .dw 0
   .db 0, 0                          ; costume 80 - no head
   .dw 0
   .db 0, 0                          ; costume 81 - no head
-  .dw Cost082_HeadChrLo          ; costume 82
-  .db :Cost082_HeadChrLo, 4
+  .dw 0
+  .db 0, 0                          ; costume 82 - no head
   .dw 0
   .db 0, 0                          ; costume 83 - no head
-  .dw Cost084_HeadChrLo          ; costume 84
-  .db :Cost084_HeadChrLo, 2
-  .dw 0
-  .db 0, 0                          ; costume 85 - no head
+  .dw Cost010_HeadChrLo          ; costume 84
+  .db :Cost010_HeadChrLo, 20
+  .dw Cost107_HeadChrLo          ; costume 85
+  .db :Cost107_HeadChrLo, 16
   .dw 0
   .db 0, 0                          ; costume 86 - no head
-  .dw Cost087_HeadChrLo          ; costume 87
-  .db :Cost087_HeadChrLo, 18
-  .dw Cost088_HeadChrLo          ; costume 88
-  .db :Cost088_HeadChrLo, 20
-  .dw Cost089_HeadChrLo          ; costume 89
-  .db :Cost089_HeadChrLo, 5
+  .dw 0
+  .db 0, 0                          ; costume 87 - no head
+  .dw 0
+  .db 0, 0                          ; costume 88 - no head
+  .dw Cost084_HeadChrLo          ; costume 89
+  .db :Cost084_HeadChrLo, 2
   .dw 0
   .db 0, 0                          ; costume 90 - no head
   .dw 0
   .db 0, 0                          ; costume 91 - no head
-  .dw Cost092_HeadChrLo          ; costume 92
-  .db :Cost092_HeadChrLo, 20
-  .dw Cost093_HeadChrLo          ; costume 93
-  .db :Cost093_HeadChrLo, 2
-  .dw Cost094_HeadChrLo          ; costume 94
-  .db :Cost094_HeadChrLo, 1
-  .dw Cost095_HeadChrLo          ; costume 95
-  .db :Cost095_HeadChrLo, 17
-  .dw Cost096_HeadChrLo          ; costume 96
-  .db :Cost096_HeadChrLo, 10
-  .dw Cost097_HeadChrLo          ; costume 97
-  .db :Cost097_HeadChrLo, 3
-  .dw Cost098_HeadChrLo          ; costume 98
-  .db :Cost098_HeadChrLo, 5
-  .dw Cost099_HeadChrLo          ; costume 99
-  .db :Cost099_HeadChrLo, 14
+  .dw Cost035_HeadChrLo          ; costume 92
+  .db :Cost035_HeadChrLo, 20
+  .dw Cost089_HeadChrLo          ; costume 93
+  .db :Cost089_HeadChrLo, 5
+  .dw Cost119_HeadChrLo          ; costume 94
+  .db :Cost119_HeadChrLo, 2
+  .dw 0
+  .db 0, 0                          ; costume 95 - no head
+  .dw 0
+  .db 0, 0                          ; costume 96 - no head
+  .dw 0
+  .db 0, 0                          ; costume 97 - no head
+  .dw 0
+  .db 0, 0                          ; costume 98 - no head
+  .dw 0
+  .db 0, 0                          ; costume 99 - no head
   .dw 0
   .db 0, 0                          ; costume 100 - no head
-  .dw Cost101_HeadChrLo          ; costume 101
-  .db :Cost101_HeadChrLo, 20
+  .dw Cost036_HeadChrLo          ; costume 101
+  .db :Cost036_HeadChrLo, 16
   .dw 0
   .db 0, 0                          ; costume 102 - no head
-  .dw Cost103_HeadChrLo          ; costume 103
-  .db :Cost103_HeadChrLo, 10
-  .dw Cost104_HeadChrLo          ; costume 104
-  .db :Cost104_HeadChrLo, 12
   .dw 0
-  .db 0, 0                          ; costume 105 - no head
+  .db 0, 0                          ; costume 103 - no head
+  .dw Cost051_HeadChrLo          ; costume 104
+  .db :Cost051_HeadChrLo, 15
+  .dw Cost115_HeadChrLo          ; costume 105
+  .db :Cost115_HeadChrLo, 10
   .dw Cost106_HeadChrLo          ; costume 106
   .db :Cost106_HeadChrLo, 5
-  .dw Cost107_HeadChrLo          ; costume 107
-  .db :Cost107_HeadChrLo, 16
-  .dw Cost108_HeadChrLo          ; costume 108
-  .db :Cost108_HeadChrLo, 16
+  .dw Cost095_HeadChrLo          ; costume 107
+  .db :Cost095_HeadChrLo, 17
   .dw 0
-  .db 0, 0                          ; costume 109 - no head
+  .db 0, 0                          ; costume 108 - no head
+  .dw Cost069_HeadChrLo          ; costume 109
+  .db :Cost069_HeadChrLo, 16
   .dw Cost110_HeadChrLo          ; costume 110
   .db :Cost110_HeadChrLo, 14
   .dw 0
   .db 0, 0                          ; costume 111 - no head
-  .dw Cost112_HeadChrLo          ; costume 112
-  .db :Cost112_HeadChrLo, 16
+  .dw 0
+  .db 0, 0                          ; costume 112 - no head
   .dw 0
   .db 0, 0                          ; costume 113 - no head
   .dw 0
   .db 0, 0                          ; costume 114 - no head
-  .dw Cost115_HeadChrLo          ; costume 115
-  .db :Cost115_HeadChrLo, 10
+  .dw Cost072_HeadChrLo          ; costume 115
+  .db :Cost072_HeadChrLo, 14
   .dw 0
   .db 0, 0                          ; costume 116 - no head
+  .dw Cost092_HeadChrLo          ; costume 117
+  .db :Cost092_HeadChrLo, 20
+  .dw Cost093_HeadChrLo          ; costume 118
+  .db :Cost093_HeadChrLo, 2
   .dw 0
-  .db 0, 0                          ; costume 117 - no head
-  .dw 0
-  .db 0, 0                          ; costume 118 - no head
-  .dw Cost119_HeadChrLo          ; costume 119
-  .db :Cost119_HeadChrLo, 2
+  .db 0, 0                          ; costume 119 - no head
   .dw 0
   .db 0, 0                          ; costume 120 - no head
   .dw 0
   .db 0, 0                          ; costume 121 - no head
-  .dw 0
-  .db 0, 0                          ; costume 122 - no head
-  .dw 0
-  .db 0, 0                          ; costume 123 - no head
+  .dw Cost082_HeadChrLo          ; costume 122
+  .db :Cost082_HeadChrLo, 4
+  .dw Cost079_HeadChrLo          ; costume 123
+  .db :Cost079_HeadChrLo, 3
   .dw 0
   .db 0, 0                          ; costume 124 - no head
-  .dw 0
-  .db 0, 0                          ; costume 125 - no head
+  .dw Cost094_HeadChrLo          ; costume 125
+  .db :Cost094_HeadChrLo, 1
   .dw 0
   .db 0, 0                          ; costume 126 - no head
   .dw 0

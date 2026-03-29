@@ -188,6 +188,9 @@ SCUMM.hdmaCgramChannel    db      ;allocated HDMA channel id for CGRAM palette s
 SCUMM.cgramHdmaTable      ds 88   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal + sentence)
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
 SCUMM.argCount            dw      ;byte count of args in argBuffer
+SCUMM.cutScenePtr         ds 10   ;5 nesting levels x 2B: saved script PC offset
+SCUMM.cutSceneScript      ds 5    ;5 nesting levels x 1B: slot index running the cutscene
+SCUMM.cutSceneData        ds 10   ;5 nesting levels x 2B: associated data word
 .ends
 
 ; Room script tracking (ENCD/EXCD/LSCR)

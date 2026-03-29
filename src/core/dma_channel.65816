@@ -16,6 +16,8 @@
 core.dma_channel.init:
   php
   sep #$20
+  .ACCU 8
+  .INDEX 16
   lda #0
   ldy.w #GLOBAL.DMA_CHANNELS.END - GLOBAL.DMA_CHANNELS.START
   ldx.w #GLOBAL.DMA_CHANNELS.START

@@ -558,6 +558,33 @@ _play.noRoomChange:
   ; Update cursor (joypad input, position, SCUMM vars, OAM)
   jsl scummvm.updateCursor
 
+  ; --- Start button → abortCutscene ---
+  ; If Start pressed and an override is active, set VAR_OVERRIDE=1
+  ; so the script's beginOverride jump fires on next opcode fetch.
+  lda.w inputDevice.trigger
+  bit.w #JOY_BUTTON_START
+  beq _play.noAbort
+
+  ; Check cutsceneNest > 0
+  lda.w SCUMM.cutsceneNest
+  beq _play.noAbort
+
+  ; Check cutScenePtr[nest-1] != 0 (an override target is stored)
+  dec a                               ; level index
+  asl a
+  tax
+  lda.w SCUMM.cutScenePtr,x
+  beq _play.noAbort
+
+  ; Set VAR_OVERRIDE (var 6) = 1
+  ldx #6*2
+  lda #1
+  sta.w SCUMM.globalVars,x
+
+_play.noAbort:
+  .ACCU 16
+  .INDEX 16
+
   ; Iterate slots 0..24
   stz.w SCUMM.currentSlot
   stz.w SCUMM.currentSlotPtr
@@ -1110,6 +1137,17 @@ _scummvm.assignActorWalkboxes:
   rep #$31
   .ACCU 16
   .INDEX 16
+
+  ; Zero all actorWalkBox entries so actors without a valid box default to 0
+  sep #$20
+  .ACCU 8
+  ldx #SCUMM_WALK_ACTORS - 1
+- stz.w SCUMM.actorWalkBox,x
+  dex
+  bpl -
+  rep #$20
+  .ACCU 16
+
   lda #1                             ; start at actor 1 (skip actor 0 sentinel)
 _aaw.loop:
   .ACCU 16
@@ -4405,6 +4443,22 @@ op_cutscene:
   lda.w SCUMM.cutsceneNest
   inc a
   sta.w SCUMM.cutsceneNest
+
+  ; Zero the cutscene stack for this new nesting level
+  dec a                               ; level index = nest-1
+  pha
+  asl a
+  tax
+  stz.w SCUMM.cutScenePtr,x
+  stz.w SCUMM.cutSceneData,x
+  pla
+  tax
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.cutSceneScript,x
+  rep #$20
+  .ACCU 16
+
   ldx.w SCUMM.currentSlotPtr
   sep #$20
   lda.w SCUMM.slots.cutsceneOverride,x
@@ -4418,20 +4472,48 @@ op_cutscene:
 op_endCutscene:
   .ACCU 16
   .INDEX 16
+
+  ; Clear VAR_OVERRIDE (var 6) = 0
+  ldx #6*2
+  stz.w SCUMM.globalVars,x
+
+  ; Decrement cutsceneNest, clamp at 0
   lda.w SCUMM.cutsceneNest
-  beq +
+  beq _ec.nestOk
   dec a
   sta.w SCUMM.cutsceneNest
-+
+_ec.nestOk:
+  .ACCU 16
+  .INDEX 16
+
+  ; Decrement slot cutsceneOverride, clamp at 0
   ldx.w SCUMM.currentSlotPtr
   lda.w SCUMM.slots.cutsceneOverride,x
   and #$00FF
-  beq +
+  beq _ec.overOk
   dec a
   sep #$20
+  .ACCU 8
   sta.w SCUMM.slots.cutsceneOverride,x
   rep #$20
-+
+_ec.overOk:
+  .ACCU 16
+  .INDEX 16
+
+  ; Clean up cutScenePtr/Script/Data for the old level
+  lda.w SCUMM.cutsceneNest             ; now decremented = old level index
+  asl a
+  tax
+  stz.w SCUMM.cutScenePtr,x
+  stz.w SCUMM.cutSceneData,x
+  lda.w SCUMM.cutsceneNest
+  tax
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.cutSceneScript,x
+  rep #$20
+  .ACCU 16
+
   clc
   rts
 
@@ -4441,11 +4523,75 @@ op_override:
   .INDEX 16
   jsr _scummvm.fetchByte             ; flag byte (0=endOverride, nonzero=beginOverride)
   and #$00FF
-  beq _override.done
-  ; beginOverride: skip jump opcode byte + 2-byte offset
+  beq _override.endOverride
+
+  ; --- beginOverride ---
+  ; Read the jump opcode + 2-byte target offset
   jsr _scummvm.fetchByte             ; jump opcode byte (0x18)
-  jsr _scummvm.fetchWord             ; jump offset (2 bytes)
-_override.done:
+  jsr _scummvm.fetchWord             ; jump offset (2 bytes) — this is the skip target
+  pha                                ; save jump offset
+
+  ; Store into cutScenePtr[nest-1]
+  lda.w SCUMM.cutsceneNest
+  dec a                              ; level index
+  bmi _override.popDone              ; safety: no active cutscene
+  asl a
+  tax
+  pla
+  sta.w SCUMM.cutScenePtr,x         ; save the override jump target
+
+  ; Store current slot index into cutSceneScript[nest-1]
+  lda.w SCUMM.cutsceneNest
+  dec a
+  tax
+  lda.w SCUMM.currentSlot
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.cutSceneScript,x
+  rep #$20
+  .ACCU 16
+
+  ; Set VAR_OVERRIDE (var 6) = 0
+  ldx #6*2
+  stz.w SCUMM.globalVars,x
+
+  clc
+  rts
+
+_override.popDone:
+  .ACCU 16
+  .INDEX 16
+  pla                                ; discard saved offset
+  clc
+  rts
+
+_override.endOverride:
+  .ACCU 16
+  .INDEX 16
+  ; endOverride: clear the stored override pointer
+  lda.w SCUMM.cutsceneNest
+  beq _override.endDone              ; no active cutscene
+  dec a
+  asl a
+  tax
+  stz.w SCUMM.cutScenePtr,x         ; clear override target
+
+  lda.w SCUMM.cutsceneNest
+  dec a
+  tax
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.cutSceneScript,x
+  rep #$20
+  .ACCU 16
+
+  ; Clear VAR_OVERRIDE (var 6) = 0
+  ldx #6*2
+  stz.w SCUMM.globalVars,x
+
+_override.endDone:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 
@@ -9941,8 +10087,11 @@ _ri.posReady:
   rep #$20
   .ACCU 16
   and #$00FF
+  beq _ri.scaleInvalid
+  cmp #$00FF
   bne +
-  jmp _ri.scaleDone                   ; box 0 = invalid, keep scale 255
+_ri.scaleInvalid:
+  jmp _ri.scaleDone                   ; box 0 or $FF = invalid, keep scale 255
 +
 
   ; Read box.scale from BOXD: $7F:5002 + box*20 + $12
@@ -13102,6 +13251,22 @@ _uc.posOk:
   .ACCU 16
   .INDEX 16
 
+  ; --- runInputScript(clickArea=2, verb, code=0) for scene click ---
+  ldx #0
+  lda #2
+  sta.w SCUMM.argBuffer,x               ; arg[0] = clickArea 2 (scene click)
+  lda.w SCUMM.sentenceVerb
+  bne _uc.hasVerb2
+  lda #$0B                              ; default "Walk to"
+_uc.hasVerb2:
+  ldx #2
+  sta.w SCUMM.argBuffer,x               ; arg[1] = verb ID
+  ldx #4
+  stz.w SCUMM.argBuffer,x               ; arg[2] = button code 0
+  lda #6
+  sta.w SCUMM.argCount
+  jsl scummvm.runInputScript_impl
+
   ;--- Resolve click target (object walk-to or cursor room pos) ---
   jsl scummvm.resolveClickTarget      ;A = targetX, scratch = targetY
   pha                                  ;save target X
@@ -13221,32 +13386,46 @@ _uc.verbHitLoop:
   .INDEX 16
   sep #$20
   lda.w SCUMM.verbs.1.id,x
-  beq _uc.verbHitNext
+  bne _uc.vhIdOk
+  jmp _uc.verbHitNext
+_uc.vhIdOk:
   lda.w SCUMM.verbs.1.flags,x
   and #SCUMM_VERB_FLAG_ON
-  beq _uc.verbHitNext
+  bne _uc.vhFlagOk
+  jmp _uc.verbHitNext
+_uc.vhFlagOk:
   rep #$20
 
   ; Check Y: verb.y <= cursorY < verb.y + 8
   lda.w SCUMM.verbs.1.y,x
   and #$00FF
   cmp.w SCUMM.actorScreenY
-  beq +
-  bcs _uc.verbHitNext                 ; verb.y > cursorY
-+
+  beq _uc.vhYge
+  bcc _uc.vhYge
+  jmp _uc.verbHitNext                 ; verb.y > cursorY
+_uc.vhYge:
+  .ACCU 16
   clc
   adc #8
   cmp.w SCUMM.actorScreenY
-  bcc _uc.verbHitNext                 ; verb.y + 8 <= cursorY
-  beq _uc.verbHitNext
+  bcs _uc.vhYok
+  jmp _uc.verbHitNext                 ; verb.y + 8 <= cursorY
+_uc.vhYok:
+  .ACCU 16
+  cmp.w SCUMM.actorScreenY
+  bne _uc.vhYnotEq
+  jmp _uc.verbHitNext
+_uc.vhYnotEq:
 
   ; Check X: verb.x <= cursorX < verb.x + nameLen*8
   lda.w SCUMM.verbs.1.x,x
   and #$00FF
   cmp.w SCUMM.actorScreenX
-  beq +
-  bcs _uc.verbHitNext                 ; verb.x > cursorX
-+
+  beq _uc.vhXge
+  bcc _uc.vhXge
+  jmp _uc.verbHitNext                 ; verb.x > cursorX
+_uc.vhXge:
+  .ACCU 16
   pha
   lda.w SCUMM.verbs.1.nameLen,x
   and #$00FF
@@ -13258,8 +13437,14 @@ _uc.verbHitLoop:
   sta 1,s
   pla
   cmp.w SCUMM.actorScreenX
-  bcc _uc.verbHitNext                 ; right edge <= cursorX
-  beq _uc.verbHitNext
+  bcs _uc.vhXhit
+  jmp _uc.verbHitNext                 ; right edge <= cursorX
+_uc.vhXhit:
+  .ACCU 16
+  cmp.w SCUMM.actorScreenX
+  bne _uc.vhXnotEq
+  jmp _uc.verbHitNext
+_uc.vhXnotEq:
 
   ; Hit! Store verb ID as sentenceVerb
   sep #$20
@@ -13271,6 +13456,20 @@ _uc.verbHitLoop:
   stz.w SCUMM.sentenceObjectB
   lda #1
   sta.w SCUMM.sentenceDirty
+
+  ; --- runInputScript(clickArea=1, verb, code=0) ---
+  ldx #0
+  lda #1
+  sta.w SCUMM.argBuffer,x               ; arg[0] = clickArea 1 (verb click)
+  lda.w SCUMM.sentenceVerb
+  ldx #2
+  sta.w SCUMM.argBuffer,x               ; arg[1] = verb ID
+  ldx #4
+  stz.w SCUMM.argBuffer,x               ; arg[2] = button code 0
+  lda #6
+  sta.w SCUMM.argCount
+  jsl scummvm.runInputScript_impl
+
   jmp _uc.noClick
 
 _uc.verbHitNext:
@@ -16475,6 +16674,60 @@ scummvm.setPalColor_impl:
   .ACCU 16
 
   plp
+  rtl
+
+.ends
+
+
+;===================================================================
+; runInputScript — start VAR_VERB_SCRIPT with clickArea/verb/button args
+;
+; Called from bank 0 via JSL.  Reads VAR(7) = verb script number,
+; fills argBuffer[0..2], calls startScriptSlot_long, copies args.
+;
+; Input (pre-filled by caller):
+;   SCUMM.argBuffer+0 = clickArea (word)
+;   SCUMM.argBuffer+2 = verb/code (word)
+;   SCUMM.argBuffer+4 = button code (word)
+;   SCUMM.argCount = 6
+;===================================================================
+.section "ScummVM runInputScript" superfree
+.ACCU 16
+.INDEX 16
+
+scummvm.runInputScript_impl:
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; Read VAR_VERB_SCRIPT (globalVar[7])
+  ldx #7*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  beq _ris.done                       ; no verb script configured
+
+  ; A = script number; argBuffer already filled by caller
+  jsl scummvm.startScriptSlot_long
+  bcc _ris.done                       ; slot creation failed
+
+  ; X = new slot byte offset; copy 3 args (6 bytes) to localVars
+  ldy #0
+_ris.copyArgs:
+  .ACCU 16
+  .INDEX 16
+  cpy.w SCUMM.argCount
+  bcs _ris.done
+  lda.w SCUMM.argBuffer,y
+  sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  iny
+  bra _ris.copyArgs
+
+_ris.done:
+  .ACCU 16
+  .INDEX 16
   rtl
 
 .ends

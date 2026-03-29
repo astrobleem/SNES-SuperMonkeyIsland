@@ -233,17 +233,17 @@ This is the same streaming pattern proven by the Dragon's Lair engine, adapted f
 ```
 ┌─────────────────────────────────────────────────┐
 │               MSU-1 Data Pack                    │
-│  ┌────────┐ ┌────────┐ ┌───────┐ ┌───────────┐ │
-│  │ Rooms  │ │Costumes│ │Scripts│ │   Audio   │ │
-│  │(tiles, │ │(sprite │ │ (v5   │ │(voice PCM │ │
-│  │ maps,  │ │ tiles) │ │ byte- │ │ tracks)   │ │
-│  │ z-data)│ │        │ │ code) │ │           │ │
-│  └───┬────┘ └───┬────┘ └───┬───┘ └─────┬─────┘ │
-└──────┼──────────┼──────────┼────────────┼───────┘
-       │          │          │            │
-       ▼          ▼          ▼            ▼
+│  ┌────────┐              ┌───────┐ ┌───────────┐ │
+│  │ Rooms  │              │Scripts│ │   Audio   │ │
+│  │(tiles, │              │ (v5   │ │(voice PCM │ │
+│  │ maps,  │              │ byte- │ │ tracks)   │ │
+│  │ z-data)│              │ code) │ │           │ │
+│  └───┬────┘              └───┬───┘ └─────┬─────┘ │
+└──────┼──────────────────────┼────────────┼───────┘
+       │                     │            │
+       ▼                     ▼            ▼
 ┌──────────────────────────────────┐  ┌──────────┐
-│        65816 Engine (~24KB ROM)  │  │ SPC700   │
+│   65816 Engine + Costumes (4MB)  │  │ SPC700   │
 │                                  │  │ TAD v0.2 │
 │  ┌──────────┐  ┌──────────────┐  │  │          │
 │  │  MI1 VM  │  │  Resource    │  │  │ - 8ch MML│
@@ -350,7 +350,7 @@ The heart of the engine. Interprets MI1's script bytecode. **105 dispatch entrie
 
 11. **System** (~8 opcodes): wait (waitForActor, waitForMessage, waitForCamera, waitForSentence), delay, delayVariable, saveRestoreVerbs, cutscene/endCutscene, saveLoadGame.
 
-**Current engine ROM**: Interpreter + dispatch table + 105 opcode handlers (256 dispatch entries, 0 stubs) in bank $01. Room loader + scroll system in bank $00. Total ROM usage well within 1MB HiROM allocation.
+**Current engine ROM**: Interpreter + dispatch table + 105 opcode handlers (256 dispatch entries, 0 stubs) in bank $01. Room loader + scroll system in bank $00. 119 costume data sections in banks $06-$1A. Total ROM: 4MB HiROM (64 banks, SA-1 directly addressable).
 
 **Multi-room status**: MI1 boots end-to-end. Room 1 (beach) loads and renders correctly. All 105 base opcodes implemented — every opcode byte in the 256-entry dispatch table points to a real handler. Multi-room smoke test (`distribution/test_multiroom.lua`) verifies 9/9 rooms pass: 1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20. Room transitions work reliably — global script cache is reloaded after each room change to prevent stale pointer crashes. Room 15 has a separate E_Brk crash under investigation. Next milestone: actor placement.
 
@@ -445,7 +445,9 @@ MI1 costumes are stored in a custom compressed format. The pipeline:
 5. Pack frames sequentially, store offset table for each animation/direction/frame
 
 **Runtime:**
-- On actor costume change or new actor entering room: load costume tiles from MSU-1 → WRAM decode buffer → DMA to sprite VRAM area
+- Costume tile data stored in ROM (4MB HiROM, superfree sections). 119 costumes converted, 1.7MB total.
+- On actor costume change: DMA costume CHR tiles from ROM to sprite VRAM area, load palette to CGRAM
+- SA-1 composite-first scaler: compose body+head → nearest-neighbor scale → CC Type 2 → I-RAM → VRAM
 - Each frame: for each visible actor, set OAM entries with correct screen position, tile index, palette, priority
 - Guybrush typically occupies ~6-8 OAM entries (16×16 sprites composed into a ~32×48 character)
 - Max 5-6 visible actors × ~6-8 sprites = 30-48 OAM entries. Within limits.
@@ -692,7 +694,12 @@ Input: monkey.000, monkey.001
 | `msu1_pack_scripts.py` | ✅ Complete — 748 scripts, 380KB bytecode |
 | `scumm_opcode_audit.py` + `scumm/opcodes_v5.py` | ✅ Complete — 103/105 opcodes cataloged |
 | `gen_dispatch_table.py` | ✅ Complete — 256-entry 65816 dispatch table |
+| `scumm_costume_decoder.py` | ✅ Complete — decodes SCUMM v5 costume RLE to pixel arrays |
+| `snes_costume_converter.py` | ✅ Complete — converts to 4bpp SNES tiles + OAM layout |
+| `gen_costume_rom.py` | ✅ Complete — generates costume_data.inc for assembly |
+| `convert_all_costumes.py` | ✅ Complete — batch-converts all 123 costumes (119 with valid frames) |
 | `fxpak_push.py` / `fxpak_debug.py` / `fxpak_crash_dump.py` | ✅ Complete — real hardware tools |
+| `mesen_mcp_server.py` | ✅ Complete — build, validate, screenshot, test, symbol lookup |
 
 We're not starting from zero on understanding the data format. ScummVM has been reverse-engineering this for 20+ years.
 
@@ -990,67 +997,101 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 
 **Goal:** Complete the game start to finish.
 
-**Phase 3 Audit — COMPLETE** (2026-03-27):
-- [x] roomFade — real impl (brightness + effect flags, commit cb5a38a)
-- [x] getStringWidth — real impl (commit cb5a38a)
-- [x] getClosestObjActor — real impl (commit cb5a38a)
-- [x] darkenPalette / rgbRoomIntensity (roomOps $0B) — real impl via BW-RAM CGRAM shadow (commit 6437307)
-- [x] setPalColor (roomOps $04) — real impl, VGA→BGR555 conversion (commit 6437307)
-- [x] BW-RAM infrastructure — save header, volatile clear, composite migration, CGRAM shadow (commit 6437307)
-- [x] LoROM BRK/COP/ABORT vector trampolines — pre-existing bug fixed (commit 6437307)
+**Status:** Beach scene renders and Guybrush walks. Cannot yet leave the beach or reach the Scumm Bar. All 105 opcodes implemented but several subsystems need real implementations before game progression is possible.
 
-**Object State Rendering — COMPLETE** (2026-03-28, commits aa3ba40..e6cb503):
-- [x] op_setState triggers OCHR tile apply/remove via drawObjectSetStateN — script pointer (tmp+0..2, Y) saved/restored around JSL (commit aa3ba40)
-- [x] Dirty column tracking merges ranges for multi-object state changes per frame (commit aa3ba40)
-- [x] NMI tile transfer upgraded to DMA channel 7 — 4x faster (~80 cycles/tile vs ~320), fits VBlank budget (commit c2a3deb)
-- [x] Staging buffer accumulation — two stageColumnForNmi calls per frame append instead of overwrite (commit c2a3deb)
-- [x] Viewport dirty expansion + two-pass processing (objDirtyFlag=2→1→0) for cache eviction coverage (commit c2a3deb)
-- [x] bgRefresh skip during dirty processing prevents cache slot competition (commit c2a3deb)
-- [x] Instant forced-blank OCHR redraw — refreshObjectColumns processes ALL dirty columns in one frame via forced blank + DMA, not one-per-frame staging (commit f57b97b)
-- [x] Deferred INIDSP write — screen stays dark through entire room load + processRoomChange, brightness restored in play loop after ENCD + OCHR redraw. Zero new WRAM variables (WLA-DX ramsection growth causes section reshuffling crashes) (commit e6cb503)
-- [x] Column tilemap DMA bank byte fix: $7E (WRAM) not WLA-DX bank operator (commit c2a3deb)
-- [x] DMA channel 7 reserved in channel allocator to prevent HDMA conflicts (commit c2a3deb)
+---
 
-**Bugs discovered during object state work (5 layered bugs):**
-1. op_setState bypassed OCHR — wrote state byte but never called apply/removeObjectPatch
-2. Staging buffer overwrite — stageColumnForNmi zeroed counters at entry, second call per frame overwrote first. OCHR tiles were phantom-cached (present in lookup, never DMA'd to VRAM). This was the root debugging difficulty.
-3. NMI VBlank overrun — CPU register tile writes exceeded VBlank, column tilemap write got cut off
-4. WLA-DX `:label` bank operator — returned assembler bank $00 instead of SNES bank $7E for WRAM DMA source
-5. Cache eviction during dirty passes — OCHR tiles evicted background tiles from ring buffer
+#### Beach → Scumm Bar Critical Path
 
-**Costume Pipeline (NEXT PRIORITY):**
-- [ ] Process all 123 costumes through converter pipeline
-  - Only costume 1 (Guybrush walk) is converted. All other actors fall back to it.
-  - Pipeline: `scumm_costume_decoder.py` → `snes_costume_converter.py` → `gen_costume_rom.py`
-  - Blocking: every NPC, cutscene character, and object animation needs its costume
+This is the near-term roadmap — the minimum work to walk from the beach into the Scumm Bar and talk to the pirates.
+
+| # | Blocker | Status | Why It's Blocking |
+|---|---------|--------|-------------------|
+| 1 | ROM expansion (1MB → 4MB) | **DONE** (2026-03-29) | Costumes didn't fit in 1MB ROM |
+| 2 | Bulk costume conversion (123 costumes) | **DONE** (2026-03-29) | NPCs rendered as Guybrush without their costumes |
+| 3 | Room navigation (door/exit interactions) | NOT STARTED | Can't leave beach without loadRoomWithEgo working on exits |
+| 4 | Dialog choice selection (d-pad + A) | NOT STARTED | Can't talk to pirates — choices display but can't be selected |
+| 5 | beginOverride/endOverride | NOT STARTED | Opening cutscene plays but can't be skipped, may block progression |
+| 6 | freezeScripts | NOT STARTED | Background scripts interfere with cutscene timing (8 MI1 occurrences) |
+| 7 | cursorCommand sub-opcodes | NOT STARTED | User interaction enable/disable during cutscenes |
+
+Items 3-4 are the critical ones — without room navigation and dialog selection, the game cannot progress at all.
+
+---
+
+#### Completed Work
+
+**Phase 3 Audit (2026-03-27):**
+- [x] roomFade — real impl (brightness + effect flags)
+- [x] getStringWidth — real impl
+- [x] getClosestObjActor — real impl
+- [x] darkenPalette / rgbRoomIntensity (roomOps $0B) — BW-RAM CGRAM shadow scaling
+- [x] setPalColor (roomOps $04) — VGA→BGR555 conversion
+- [x] BW-RAM infrastructure — save header, volatile clear, composite migration, CGRAM shadow
+- [x] LoROM BRK/COP/ABORT vector trampolines
+
+**Object State Rendering (2026-03-28, 5 layered bugs fixed):**
+- [x] op_setState triggers OCHR tile apply/remove — script pointer save/restore around JSL
+- [x] Dirty column tracking, NMI DMA channel 7, staging buffer accumulation
+- [x] Instant forced-blank OCHR redraw (all dirty columns in one frame)
+- [x] Deferred INIDSP write — brightness restored after ENCD + OCHR redraw
+
+**Cutscene Rendering (2026-03-29):**
+- [x] $FF escape codes in extractAndRenderString, skipPrintString, putCode/putCodeDrain
+- [x] DMA window restore after forced-blank costume load (W12SEL/TMW/WOBJSEL)
+- [x] NMI brightness guard (runs before plb, while DBR=$7E)
+- [x] Brightness fade transition around processRoomChange
+
+**refreshObjectColumns Blackout Fix (2026-03-29):**
+- [x] Narrow dirty range (per-object col_min/col_max), not full viewport
+- [x] Batch processing with NMI re-enable between batches
+
+**ROM Expansion + Costume Pipeline (2026-03-29):**
+- [x] ROM expanded from 1MB (16 banks) to 4MB (64 banks) — SA-1 HiROM directly addressable
+- [x] All 123 costumes converted: 119 with valid frames, 4 empty (fallback to costume 1)
+- [x] 1.7MB total costume data (1.5MB CHR + 208KB OAM) in ROM superfree sections
+- [x] Corrupt/sentinel frame detection added to converter (oversized or matching-coordinate frames skipped)
+- [x] `tools/convert_all_costumes.py` — batch converter script
+
+---
+
+#### Remaining Work
+
+**Costume Pipeline (follow-up):**
+- [ ] Walk cycle table generalization — extract animation data from COST chunks instead of hardcoding costume 1's cycle
+- [ ] DCOS mapping — verify extractor costume numbering matches SCUMM resource IDs (see `tools/dcos_mapping.py`)
+- [ ] Costume palette per-room — some costumes may look wrong with their source room's palette when used in a different room
 
 **Cutscene System:**
 - [ ] beginOverride/endOverride opcodes — cutscene stack, ESC-to-skip
 - [ ] freezeScripts — pause non-current scripts during cutscenes (8 MI1 occurrences)
+- [ ] cursorCommand sub-opcodes — user interaction enable/disable
+
+**Dialog:**
+- [ ] Dialog choice selection — cursor highlights choices, d-pad+A to select
+- [ ] Return selected choice index to VM
 
 **Game Logic:**
-- [x] Implement all remaining MI1-used opcodes — 105/105 done (completed in Phase 1)
+- [x] All 105 base opcodes implemented (Phase 1)
+- [ ] Room-by-room gameplay verification (86 rooms)
 - [ ] All puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion, etc.)
-- [ ] Process all 86 rooms through the pipeline (rooms already converted, need gameplay verification per-room)
 
 **Audio:**
 - [ ] SPC700 music — MI1 tracks arranged as MML, compiled via TAD (SCUMM opcodes already wired)
-- [ ] SPC700 sound effects — MI1 SFX as BRR samples in TAD project (SCUMM opcodes already wired)
+- [ ] SPC700 sound effects — MI1 SFX as BRR samples in TAD project
 - [ ] SCUMM-to-TAD ID mapping table (SCUMM sound numbers → TAD song/SFX IDs)
-- [ ] MSU-1 voice acting — CD Talkie voice lines extracted and packed as PCM tracks (stretch goal)
+- [ ] MSU-1 voice acting — CD Talkie voice lines extracted as PCM tracks (stretch goal)
 
 **Save System:**
-- [x] BW-RAM memory map defined — persistent region ($40:0000-$40:7FFF), 3 save slots
-- [x] Boot-time init — first-boot detection, volatile clear, save header
+- [x] BW-RAM memory map + boot-time init (DONE)
 - [ ] Save/load game — serialize SCUMM VM state to BW-RAM save slot
 - [ ] Save UI — save/load menu triggered by roomOps saveGame sub-op
 
 **Room Transitions:**
-- [x] Room transitions — processRoomChange, room.load, MSU-1 streaming
-- [x] roomFade — brightness control, deferred screen effects
-- [x] Palette ops — darkenPalette (room intensity), setPalColor (individual color)
-- [ ] palManipulate — gradual palette transition (used for sunsets, etc.)
-- [ ] Screen effect animations (iris, dissolve, etc.) — currently instant-cut only
+- [x] processRoomChange, room.load, MSU-1 streaming (DONE)
+- [x] roomFade, darkenPalette, setPalColor (DONE)
+- [ ] palManipulate — gradual palette transition (sunsets, etc.)
+- [ ] Screen effect animations (iris, dissolve) — currently instant-cut only
 
 **Success Criteria:** Complete playthrough from the dock to LeChuck's ghost ship. All puzzles solvable. No blocking bugs.
 

@@ -474,6 +474,12 @@ def main():
             if pic is None:
                 log.debug("Skipping NULL pic %d", i)
                 continue
+            # Skip corrupt/sentinel frames (dimensions or offsets out of SNES range)
+            if pic.width > 128 or pic.height > 128 or pic.width <= 0 or pic.height <= 0 or \
+               pic.rel_x > 127 or pic.rel_y > 127:
+                log.warning("Skipping corrupt body pic %d: %dx%d rel=(%d,%d)",
+                            i, pic.width, pic.height, pic.rel_x, pic.rel_y)
+                continue
             frame = convert_frame(pic.pixels, pic.width, pic.height,
                                   pic.rel_x, pic.rel_y, snes_pal)
             prefix = f'pic{i:02d}'
@@ -509,6 +515,12 @@ def main():
             for i, pic in enumerate(head_pictures):
                 if pic is None:
                     log.debug("Skipping NULL head pic %d", i)
+                    continue
+                # Skip corrupt/sentinel frames (dimensions or offsets out of SNES range)
+                if pic.width > 128 or pic.height > 128 or pic.width <= 0 or pic.height <= 0 or \
+                   pic.rel_x > 127 or pic.rel_y > 127:
+                    log.warning("Skipping corrupt head pic %d: %dx%d rel=(%d,%d)",
+                                i, pic.width, pic.height, pic.rel_x, pic.rel_y)
                     continue
                 frame = convert_frame(pic.pixels, pic.width, pic.height,
                                       pic.rel_x, pic.rel_y, snes_pal)

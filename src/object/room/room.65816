@@ -1814,7 +1814,10 @@ _roc.noTiles:
   beq _roc.colNext
   bra _roc.passDone
 _roc.colNext:
+  .ACCU 16
+  .INDEX 16
   jmp _roc.colLoop
+
 _roc.passDone:
 
   ;pass complete — check if another pass needed

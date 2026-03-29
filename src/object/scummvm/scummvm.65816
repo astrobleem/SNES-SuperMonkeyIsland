@@ -884,6 +884,28 @@ _prc.bgReady:
   ; Save resolved room number
   pha
 
+  ; --- Fade out before room change ---
+  ; Step brightness down by 3 per frame (~5 frames from $0F to $00).
+  ; HDMA stays enabled so current room renders normally while dimming.
+_prc.fadeOut:
+  sep #$20
+  .ACCU 8
+  lda.w ScreenBrightness
+  beq _prc.fadeOutDone
+  sec
+  sbc #3
+  bcs +
+    lda #0
++
+  sta.w ScreenBrightness
+  rep #$20
+  .ACCU 16
+  jsr core.nmi.waitFrame
+  bra _prc.fadeOut
+_prc.fadeOutDone:
+  rep #$20
+  .ACCU 16
+
   ; Disable HDMA and zero ScreenBrightness before room.load.
   ; HDMA runs during forced blanking and corrupts CGRAM entries that
   ; buildCgramHdmaTable needs to read. Zeroing GLOBAL.HDMA.CHANNEL.ENABLE
@@ -1051,8 +1073,27 @@ _prc.noEntryScript2:
   ; Clear any stale BG3 text from boot scripts before making screen visible
   jsl scummvm.clearDialogTilemap
 
-  ; ScreenBrightness stays 0 here — play loop deferred write sets $0F
+  ; --- Fade in (no ENCD case) ---
+_prc.fadeInNoEncd:
+  sep #$20
+  .ACCU 8
+  lda.w ScreenBrightness
+  cmp #$0F
+  bcs _prc.fadeInNoEncdDone
+  clc
+  adc #3
+  cmp #$0F
+  bcc +
+    lda #$0F
++
+  sta.w ScreenBrightness
   rep #$20
+  .ACCU 16
+  jsr core.nmi.waitFrame
+  bra _prc.fadeInNoEncd
+_prc.fadeInNoEncdDone:
+  rep #$20
+  .ACCU 16
 
 _prc.failed:
   .ACCU 16
@@ -1990,12 +2031,28 @@ _rei.found:
   stz.w GLOBAL.room.nmiTileStageLen
   jsr room.refreshObjectColumns
 
-  ; Restore brightness — objects are in correct state
+  ; --- Fade in after ENCD + tile patches ---
+  ; Step brightness up by 3 per frame (~5 frames from $00 to $0F).
+_rei.fadeIn:
   sep #$20
-  lda #$0F
+  .ACCU 8
+  lda.w ScreenBrightness
+  cmp #$0F
+  bcs _rei.fadeInDone
+  clc
+  adc #3
+  cmp #$0F
+  bcc +
+    lda #$0F
++
   sta.w ScreenBrightness
-  sta.l INIDSP
   rep #$20
+  .ACCU 16
+  jsr core.nmi.waitFrame
+  bra _rei.fadeIn
+_rei.fadeInDone:
+  rep #$20
+  .ACCU 16
 
 _rei.done:
   .ACCU 16
@@ -3616,6 +3673,8 @@ _scummvm.skipPrintString:
   jsr _scummvm.fetchByte
   cmp #0
   beq +                            ; $00 = end of string
+  cmp #$00FF
+  beq _sps.escape                  ; $FF = escape code
   cmp #$0009
   bcs -                            ; >= $09 = normal char, loop
   ; $01-$08: embedded var ref, consume 2 extra bytes
@@ -3623,6 +3682,24 @@ _scummvm.skipPrintString:
   bra -
 +
   rts
+
+_sps.escape:
+  .ACCU 16
+  .INDEX 16
+  ; $FF escape: read sub-code byte
+  jsr _scummvm.fetchByte
+  ; sub-codes 1, 2, 3, 8: no extra args
+  cmp #1
+  beq -
+  cmp #2
+  beq -
+  cmp #3
+  beq -
+  cmp #8
+  beq -
+  ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
+  jsr _scummvm.fetchWord
+  bra -
 
 
 ;===================================================================
@@ -7540,7 +7617,13 @@ _stringOps.putCodeLoop:
   jsr _scummvm.fetchByte             ; read byte from script stream
   plx                                ; restore write offset
   and #$00FF
-  beq _stringOps.putCodeDone         ; $00 terminator — done
+  bne +                              ; not $00 — continue
+  jmp _stringOps.putCodeDone         ; $00 terminator — done
++
+  cmp #$00FF
+  bne +                              ; not $FF — continue
+  jmp _stringOps.putCodeFF           ; $FF escape — handle specially
++
   cpx #SCUMM_STRING_MAX_LEN
   bcs _stringOps.putCodeDrain        ; slot full — drain remaining bytes
   ; Store char at slot[X]: compute dest = scratch3 + X
@@ -7558,6 +7641,62 @@ _stringOps.putCodeLoop:
   inx                                ; advance write offset
   bra _stringOps.putCodeLoop
 
+_stringOps.putCodeFF:
+  .ACCU 16
+  .INDEX 16
+  ; Store $FF in slot, then read sub-code
+  lda #$00FF
+  jsr _stringOps.putCodeStoreByte    ; store $FF at slot[X], inc X
+  phx
+  jsr _scummvm.fetchByte             ; read sub-code
+  plx
+  and #$00FF
+  pha                                ; save sub-code
+  jsr _stringOps.putCodeStoreByte    ; store sub-code at slot[X], inc X
+  pla                                ; restore sub-code
+  ; sub-codes 1, 2, 3, 8: no extra args
+  cmp #1
+  beq _stringOps.putCodeLoop
+  cmp #2
+  beq _stringOps.putCodeLoop
+  cmp #3
+  beq _stringOps.putCodeLoop
+  cmp #8
+  beq _stringOps.putCodeLoop
+  ; all other sub-codes: 2 extra arg bytes
+  phx
+  jsr _scummvm.fetchByte
+  plx
+  and #$00FF
+  jsr _stringOps.putCodeStoreByte
+  phx
+  jsr _scummvm.fetchByte
+  plx
+  and #$00FF
+  jsr _stringOps.putCodeStoreByte
+  bra _stringOps.putCodeLoop
+
+_stringOps.putCodeStoreByte:
+  .ACCU 16
+  .INDEX 16
+  ; A = byte to store (16-bit, only low byte used), X = write offset
+  cpx #SCUMM_STRING_MAX_LEN
+  bcs +                              ; slot full, skip store
+  pha
+  txa
+  clc
+  adc.w SCUMM.scratch3
+  tay
+  pla
+  sep #$20
+  .ACCU 8
+  sta.w $0000,y
+  rep #$20
+  .ACCU 16
+  inx
++
+  rts
+
 _stringOps.putCodeDrain:
   .ACCU 16
   .INDEX 16
@@ -7566,8 +7705,27 @@ _stringOps.putCodeDrain:
   jsr _scummvm.fetchByte
   plx
   and #$00FF
-  bne _stringOps.putCodeDrain
-  ; fall through to write terminator
+  beq _stringOps.putCodeDone         ; $00 = done, fall through to terminator
+  cmp #$00FF
+  bne _stringOps.putCodeDrain        ; normal byte, keep draining
+  ; $FF escape in drain mode: skip sub-code + args
+  phx
+  jsr _scummvm.fetchByte             ; sub-code
+  plx
+  and #$00FF
+  cmp #1
+  beq _stringOps.putCodeDrain
+  cmp #2
+  beq _stringOps.putCodeDrain
+  cmp #3
+  beq _stringOps.putCodeDrain
+  cmp #8
+  beq _stringOps.putCodeDrain
+  ; 2 extra arg bytes
+  phx
+  jsr _scummvm.fetchWord
+  plx
+  bra _stringOps.putCodeDrain
 
 _stringOps.putCodeDone:
   .ACCU 16
@@ -14538,7 +14696,6 @@ scummvm.drawObjectSetState1:
 .ACCU 16
   lda.w SCUMM.scratch           ;obj_id
   jsl room.applyObjectPatch
-  jsr _expandDirtyViewport
   rtl
 
 _dos1.alreadyVisible:
@@ -14581,7 +14738,6 @@ scummvm.drawObjectSetStateN:
 .ACCU 16
   lda.w SCUMM.scratch
   jsl room.removeObjectPatch
-  jsr _expandDirtyViewport
   rtl
 
 _dosN.wasHidden:
@@ -14593,7 +14749,6 @@ _dosN.wasHidden:
 .ACCU 16
   lda.w SCUMM.scratch
   jsl room.applyObjectPatch
-  jsr _expandDirtyViewport
   rtl
 
 _dosN.done:
@@ -14601,20 +14756,6 @@ _dosN.done:
   rep #$20
 .ACCU 16
   rtl
-
-_expandDirtyViewport:
-.ACCU 16
-  lda.w SCUMM.objDirtyFlag
-  beq _edv.skip
-  stz.w SCUMM.objDirtyColMin
-  stz.w SCUMM.objDirtyNext
-  lda.w GLOBAL.room.roomWidthTiles
-  dec a
-  sta.w SCUMM.objDirtyColMax
-  lda #2
-  sta.w SCUMM.objDirtyFlag
-_edv.skip:
-  rts
 
 .ends
 

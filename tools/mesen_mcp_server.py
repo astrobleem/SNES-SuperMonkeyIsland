@@ -1038,8 +1038,10 @@ emu.addEventCallback(function()
   frameCount = emu.getState()["ppu.frameCount"]
 end, emu.eventType.endFrame)
 
--- User-supplied Lua code
+-- User-supplied Lua code (runs each frame in endFrame callback)
+emu.addEventCallback(function()
 {user_lua}
+end, emu.eventType.endFrame)
 
 -- Screenshot + stop logic
 local _screenshotDone = false

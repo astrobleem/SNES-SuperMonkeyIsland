@@ -592,6 +592,19 @@ _play.runSlot:
   .INDEX 16
   jsl scummvm.executeSlot
 
+  ; After each slot execution, check if brightness needs restoring.
+  ; processRoomChange zeros ScreenBrightness for force-blank DMA. Once the
+  ; first slot runs (typically ENCD, which sets correct object states), restore
+  ; brightness so the screen becomes visible mid-slot-loop via NMI guard.
+  sep #$20
+  lda.w ScreenBrightness
+  bne _play.brightOk
+  lda #$0F
+  sta.w ScreenBrightness               ; NMI guard writes INIDSP next VBlank
+_play.brightOk:
+  .ACCU 8
+  rep #$20
+
 _play.nextSlot:
   .ACCU 16
   .INDEX 16
@@ -671,15 +684,6 @@ _play.noPendingVerb:
   jsr room.syncScroll
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
-
-  ; Commit screen brightness to hardware. Deferred from processRoomChange so
-  ; that ENCD scripts + refreshObjectColumns run first, preventing a one-frame
-  ; flash of incorrect object states on room entry.
-  sep #$20
-  lda #$0F
-  sta.w ScreenBrightness
-  sta.l INIDSP
-  rep #$20
 
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors

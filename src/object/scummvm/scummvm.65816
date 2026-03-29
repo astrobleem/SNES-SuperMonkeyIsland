@@ -943,12 +943,10 @@ _prc.bgReady:
   sep #$20
   pla                                   ; pop saved hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE      ; NMI will enable at next VBlank
-  pla                                   ; pop saved brightness (stack balance only)
+  pla                                   ; pop saved brightness (discard)
   ; ScreenBrightness stays 0 — screen dark until play loop deferred restore
-  ; NOTE: Do NOT write INIDSP here. Screen stays dark until the play loop
-  ; has executed ENCD scripts + refreshObjectColumns, ensuring correct object
-  ; states are visible on the first displayed frame. INIDSP is written after
-  ; refreshObjectColumns in the play loop.
+  ; after ENCD + refreshObjectColumns. Prevents 1-frame flash of incorrect
+  ; object states (e.g., rowboat visible before ENCD hides it).
   rep #$20
   pla
 
@@ -3495,9 +3493,20 @@ _scummvm.readWordVararg:
   sta.w SCUMM.argBuffer,x
   inx
   inx
-  bra -
+  cpx #50                              ; argBuffer bounds check (50 bytes / 25 words)
+  bcc -                                ; keep going if X < 50
+  ; overflow — drain remaining args without storing
+_rwv.drain:
+  jsr _scummvm.fetchByte
+  cmp #$00FF
+  beq +
+  phx
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord      ; consume the word arg (result discarded)
+  plx
+  bra _rwv.drain
 +
-  stx.w SCUMM.argCount                 ; store byte count
+  stx.w SCUMM.argCount                 ; store byte count (clamped at 50)
   rts
 
 
@@ -7223,7 +7232,7 @@ _print.text:
   .ACCU 16
   .INDEX 16
   jsl scummvm.extractAndRenderString
-  jmp _print.subLoop                  ; return to loop — it reads the $FF terminator and exits
+  jmp _print.done                      ; SO_TEXTSTRING is terminal — ScummVM returns, no $FF follows
 
 _print.done:
   .ACCU 16
@@ -13712,9 +13721,31 @@ _ears.scanLoop:
   and #$00FF
   beq _ears.scanDone                   ; $00 = end
   iny
+  cmp #$00FF
+  beq _ears.scanFF                     ; $FF = escape prefix (CD talkie)
   cmp #$0009
   bcs _ears.scanPrintable              ; >= $09 = printable char
   ; $01-$08: escape code, skip 2-byte arg
+  iny
+  iny
+  bra _ears.scanLoop
+_ears.scanFF:
+  .ACCU 16
+  .INDEX 16
+  ; $FF escape: read sub-code byte
+  lda [tmp],y
+  and #$00FF
+  iny                                  ; skip sub-code
+  ; sub-codes 1, 2, 3, 8: no extra args
+  cmp #1
+  beq _ears.scanLoop
+  cmp #2
+  beq _ears.scanLoop
+  cmp #3
+  beq _ears.scanLoop
+  cmp #8
+  beq _ears.scanLoop
+  ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
   bra _ears.scanLoop
@@ -13805,6 +13836,27 @@ _ears.center:
   bcc +
   lda #0                               ; if > 31, reset to 0
 +
+  ; --- Right-edge clamp: ensure start + charCount <= 32 ---
+  pha                                    ; save start_col
+  clc
+  adc.w SCUMM.dialogCharCount           ; start + count
+  cmp #33                               ; > 32?
+  bcc _ears.noOverflow                   ; fits — use saved start
+  ; Overflow: compute new start = max(0, 32 - count)
+  pla                                    ; discard saved start
+  lda #32
+  sec
+  sbc.w SCUMM.dialogCharCount           ; 32 - count
+  bpl _ears.startReady
+  lda #0                               ; text wider than 32: start at 0
+  bra _ears.startReady
+_ears.noOverflow:
+  .ACCU 16
+  .INDEX 16
+  pla                                    ; restore original start
+_ears.startReady:
+  .ACCU 16
+  .INDEX 16
   sta.w SCUMM.scratch                  ; scratch = current column
 
   ; --- Compute tilemap base offset for current row ---
@@ -13829,9 +13881,31 @@ _ears.renderLoop:
   and #$00FF
   beq _ears.renderEnd                  ; $00 = end of string
   iny
+  cmp #$00FF
+  beq _ears.renderFF                   ; $FF = escape prefix (CD talkie)
   cmp #$0009
   bcs _ears.renderChar                 ; >= $09 = printable
   ; $01-$08: escape, skip 2-byte arg
+  iny
+  iny
+  bra _ears.renderLoop
+_ears.renderFF:
+  .ACCU 16
+  .INDEX 16
+  ; $FF escape: read sub-code byte
+  lda [tmp],y
+  and #$00FF
+  iny                                  ; skip sub-code
+  ; sub-codes 1, 2, 3, 8: no extra args
+  cmp #1
+  beq _ears.renderLoop
+  cmp #2
+  beq _ears.renderLoop
+  cmp #3
+  beq _ears.renderLoop
+  cmp #8
+  beq _ears.renderLoop
+  ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
   bra _ears.renderLoop
@@ -13848,6 +13922,12 @@ _ears.renderChar:
   bcs _ears.renderLoop                 ; bounds check: skip if past tilemap end
   sta.w SCUMM.dialogTilemap,x
   inx
+  inx
+  ; Right margin wrap: if column wrapped to 0, indent by 1 tile
+  txa
+  and #$003F                           ; mod 64 = byte offset within row
+  bne _ears.renderLoop                 ; not at start of row — continue
+  inx                                  ; skip column 0
   inx
   bra _ears.renderLoop
 

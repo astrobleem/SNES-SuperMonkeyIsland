@@ -255,6 +255,18 @@ _nmi.noColWrite:
     lda.w GLOBAL.interruptFlags
     sta.l NMITIMEN
 
+	;--- guarded brightness restore ---
+	;Write ScreenBrightness to INIDSP every frame so the display recovers
+	;even when the main loop stalls (heavy cutscene scripts).
+	;Guard: skip when ScreenBrightness==0 to preserve force blank during
+	;boot and room loading (writing 0 would EXIT force blank, not enter it).
+	;Must run BEFORE plb restores interrupted DBR (which could be $C0 ROM).
+	lda.w ScreenBrightness
+	beq +
+	  sta.l INIDSP
++
+	;--- end guarded brightness restore ---
+
 	rep #$39
 
 	ply

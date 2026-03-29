@@ -427,6 +427,15 @@ dmaQueueSetDmap0:
 
   lda.w ScreenBrightness
   sta.l INIDSP
+
+  ;restore window registers so masking doesn't persist when NMI is starved
+  lda.w window12Sel
+  sta.l W12SEL
+  lda.w windowMainscreen
+  sta.l TMW
+  lda #0
+  sta.l WOBJSEL
+
   plp
   rts
 

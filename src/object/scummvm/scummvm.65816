@@ -1267,7 +1267,7 @@ _loadGlobal.exists:
   ; Retry space check after GC
   lda.w SCUMM.cacheWritePtr
   clc
-  adc.w SCUMM.scratch
+  adc 1,s
   cmp #SCUMM_CACHE_SIZE
   bcc _loadGlobal.cacheOk
 
@@ -1284,7 +1284,7 @@ _loadGlobal.cacheOk:
   jsr room.msu1Seek
 
   ; Copy bytecode from MSU-1 into cache via helper
-  lda.w SCUMM.scratch
+  lda 1,s
   jsr _scummvm.copyMsuToCache
   ; A = cachePtr, X = byte count
 
@@ -7112,7 +7112,17 @@ op_drawObject:
   cmp #$02
   beq _drawObj.setState
   ; $1F or default: set state=1 (make visible)
+  phy
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
   jsl scummvm.drawObjectSetState1
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
+  ply
   clc
   rts
 
@@ -7128,7 +7138,17 @@ _drawObj.setState:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchWord             ; state value
+  phy
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
   jsl scummvm.drawObjectSetStateN
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
+  ply
   clc
   rts
 
@@ -7203,7 +7223,7 @@ _print.text:
   .ACCU 16
   .INDEX 16
   jsl scummvm.extractAndRenderString
-  jmp _print.done                     ; ScummVM: case 15 returns WITHOUT consuming $FF
+  jmp _print.subLoop                  ; return to loop — it reads the $FF terminator and exits
 
 _print.done:
   .ACCU 16

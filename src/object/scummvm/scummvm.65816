@@ -672,15 +672,6 @@ _play.noPendingVerb:
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
 
-  ; Commit screen brightness to hardware. Deferred from processRoomChange so
-  ; that ENCD scripts + refreshObjectColumns run first, preventing a one-frame
-  ; flash of incorrect object states on room entry.
-  sep #$20
-  lda #$0F
-  sta.w ScreenBrightness
-  sta.l INIDSP
-  rep #$20
-
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
@@ -1034,6 +1025,9 @@ _prc.noEntryScript:
   lda.w SCUMM.roomEncdLen
   beq _prc.noEncd
   jsr _scummvm.startEncdSlot
+  ; Run ENCD synchronously so object states are correct before brightness
+  ; restore. ScummVM does this in startScene(). Eliminates 5-frame blackout.
+  jsr _scummvm.runEncdInline
 _prc.noEncd:
   .ACCU 16
   .INDEX 16
@@ -1940,6 +1934,78 @@ _startEncd.found:
   lda #0
   ldy #SCUMM_WHERE_ROOM
   jmp _startScript.initSlot
+
+
+;-------------------------------------------------------------------
+; _scummvm.runEncdInline -- run ENCD synchronously + restore brightness
+; Called from processRoomChange after startEncdSlot.
+; Finds the ENCD slot, executes it, applies tile patches, then
+; restores screen brightness. Eliminates the 5-frame blackout.
+;-------------------------------------------------------------------
+_scummvm.runEncdInline:
+  rep #$31
+  ; Save current slot context
+  lda.w SCUMM.currentSlot
+  pha
+  lda.w SCUMM.currentSlotPtr
+  pha
+
+  ; Find ENCD slot (WHERE_ROOM + status=RUNNING)
+  ldx #0
+  ldy #0
+_rei.find:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_RUNNING
+  bne _rei.next
+  lda.w SCUMM.slots.where,x
+  and #$00FF
+  cmp #SCUMM_WHERE_ROOM
+  beq _rei.found
+_rei.next:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _rei.find
+  bra _rei.done                   ; no ENCD slot found
+
+_rei.found:
+  .ACCU 16
+  .INDEX 16
+  ; Set current slot to ENCD slot
+  sty.w SCUMM.currentSlot
+  stx.w SCUMM.currentSlotPtr
+
+  ; Execute ENCD (runs to first breakHere or completion)
+  jsl scummvm.executeSlot
+
+  ; ENCD set object states. Apply tile patches so VRAM matches.
+  rep #$31
+  stz.w GLOBAL.room.nmiTileCount
+  stz.w GLOBAL.room.nmiTileStageLen
+  jsr room.refreshObjectColumns
+
+  ; Restore brightness — objects are in correct state
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+
+_rei.done:
+  .ACCU 16
+  .INDEX 16
+  ; Restore original slot context
+  pla
+  sta.w SCUMM.currentSlotPtr
+  pla
+  sta.w SCUMM.currentSlot
+  rts
 
 
 ;-------------------------------------------------------------------

@@ -549,10 +549,10 @@ _init.lastScale:
   ; Check for pending room change (sanitize to 8-bit room numbers)
   lda.w SCUMM.newRoom
   and #$00FF
-  sta.w SCUMM.newRoom                ; clean upper byte
+  sta.w SCUMM.newRoom
   lda.w SCUMM.currentRoom
   and #$00FF
-  sta.w SCUMM.currentRoom            ; clean upper byte
+  sta.w SCUMM.currentRoom
   lda.w SCUMM.newRoom
   cmp.w SCUMM.currentRoom
   beq _play.noRoomChange
@@ -1102,6 +1102,20 @@ _prc.noExitScript2:
 
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
+
+  ; --- Reload viewport at corrected camera position ---
+  ; snapCameraToRoom updated cameraX from ego actor. Reload tile cache
+  ; so tiles match the actual camera position, not room.load's default.
+  ; We're still in force blank (ScreenBrightness=0), VRAM writes are safe.
+  ; IMPORTANT: INIDSP must be set to force blank ($80) for direct VRAM access.
+  sep #$20
+  lda.b #$80
+  sta.l INIDSP                         ; ensure force blank for VRAM writes
+  rep #$20
+  jsr room.initTileCache               ; reset cache (slots from first load are stale)
+  jsr room.loadInitialViewport         ; reload at correct cameraX
+  lda.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld         ; sync so syncScroll doesn't see stale delta
 
   ; --- Run entry scripts in ScummVM order ---
   ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1
@@ -5380,6 +5394,9 @@ op_loadRoom:
   ldx #4*2                            ; VAR_ROOM
   stz.w SCUMM.globalVars,x
   stz.w SCUMM.newRoom                 ; clear any stale pending change
+  sep #$20
+  stz.w ScreenBrightness              ; blank screen (hides stale tiles)
+  rep #$20
   clc
   rts
 

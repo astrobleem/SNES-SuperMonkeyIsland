@@ -96,6 +96,7 @@ GLOBAL.room.nmiTileFlag    db                 ;nonzero = NMI should write tile d
 GLOBAL.room.nmiTileCount   dw                 ;number of new tiles for NMI
 GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buffer
 GLOBAL.room.refreshIdx     dw                 ;background refresh column offset (0-31)
+GLOBAL.room.viewportDirty  db                 ;nonzero = remap VRAM tilemap before next syncScroll
 .ends
 
 ;room object metadata limits (must match scummvm.h defines)

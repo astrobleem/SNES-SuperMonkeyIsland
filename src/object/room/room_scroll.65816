@@ -36,6 +36,7 @@ room.initScroll:
   sep #$20
   stz.w GLOBAL.room.nmiColFlag
   stz.w GLOBAL.room.nmiTileFlag
+  stz.w GLOBAL.room.viewportDirty
   rep #$20
 
   stz.w GLOBAL.room.refreshIdx
@@ -182,9 +183,56 @@ room.loadInitialViewport:
 +
   sta.b tmp                     ;columns remaining
 
-  stz.b tmp+2                   ;WRAM tilemap byte offset
+  ;--- Compute start column from camera position ---
+  ;startCol = cameraX >> 3 (tile column of left screen edge)
+  lda.w GLOBAL.room.cameraX
+  lsr a
+  lsr a
+  lsr a
+  sta.b tmp+22                  ;startCol (saved for VRAM addr calc)
 
-  lda.w #ROOM_TILEMAP_VRAM_WORD
+  ;clamp columns: if startCol + viewport > widthTiles, reduce count
+  clc
+  adc.b tmp                     ;startCol + columns
+  cmp.w GLOBAL.room.roomWidthTiles
+  bcc +
+  beq +
+    ;reduce columns = widthTiles - startCol
+    lda.w GLOBAL.room.roomWidthTiles
+    sec
+    sbc.b tmp+22
+    sta.b tmp                   ;clamped columns remaining
++
+
+  ;compute WRAM offset = startCol * roomHeightTiles * 2
+  lda #0
+  ldy.b tmp+22
+  beq _initVP.mulDone
+_initVP.mulLoop:
+  clc
+  adc.w GLOBAL.room.roomHeightTiles
+  dey
+  bne _initVP.mulLoop
+_initVP.mulDone:
+  asl a
+  sta.b tmp+2                   ;WRAM tilemap byte offset
+
+  ;compute VRAM start address from startCol
+  ;VRAM = ROOM_TILEMAP_VRAM_WORD + (startCol & 31) + ((startCol & 32) ? $0400 : 0)
+  lda.b tmp+22
+  and.w #$001F                  ;col & 31
+  sta.b tmp+4
+  lda.b tmp+22
+  and.w #$0020                  ;bit 5 = nametable 1
+  beq +
+    lda.b tmp+4
+    clc
+    adc.w #$0400
+    sta.b tmp+4
++
+  lda.b tmp+4
+  clc
+  adc.w #ROOM_TILEMAP_VRAM_WORD
   sta.b tmp+4                   ;VRAM tilemap column address
 
 _initVP.colLoop:
@@ -320,13 +368,21 @@ _initVP.p1End:
   stx.b tmp+2
 
   ;=== Pass 2: write remapped tilemap column to VRAM ===
-  ;handle nametable boundary: column 32 jumps to NT1
+  ;handle nametable wrapping: NT0→NT1 or NT1→NT0
   lda.b tmp+4
+  cmp.w #ROOM_TILEMAP_VRAM_WORD + $0400 + 32
+  bcc _initVP.noWrapNT1
+    ;past end of NT1 → wrap to NT0
+    lda.w #ROOM_TILEMAP_VRAM_WORD
+    sta.b tmp+4
+    bra _initVP.ntOk
+_initVP.noWrapNT1:
   cmp.w #ROOM_TILEMAP_VRAM_WORD + 32
-  bne +
+  bne _initVP.ntOk
+    ;end of NT0 → jump to NT1
     lda.w #ROOM_TILEMAP_VRAM_WORD + $0400
     sta.b tmp+4
-+
+_initVP.ntOk:
 
   ;set VMAIN increment-by-32 for vertical tilemap column
   sep #$20
@@ -374,6 +430,117 @@ _initVP.done:
   lda.b #VMAIN_INCREMENT_MODE
   sta.l VMAIN
   rep #$20
+
+  plp
+  rts
+
+
+/**
+* Force-blank viewport reload for large camera jumps.
+* Called from syncScroll when camera moved by >4 tile columns in one frame.
+* Enters force blank, reinits tile cache, reloads all visible columns,
+* then exits force blank. Safe to call during gameplay.
+*/
+room.reloadViewport:
+  php
+  rep #$31
+
+  ;block all interrupts for safe VRAM access
+  sei
+  jsr core.nmi.stop
+
+  ;save HDMA + brightness state
+  sep #$20
+  lda.w ScreenBrightness
+  pha                             ;save brightness
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha                             ;save HDMA
+
+  ;enter force blank, kill HDMA
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN                    ;HDMA runs during force blank — must disable
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+
+  ;clear pending NMI staging (we will overwrite VRAM directly)
+  stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiTileFlag
+  rep #$20
+  stz.w GLOBAL.room.nmiTileCount
+  stz.w GLOBAL.room.nmiTileStageLen
+
+  ;reinit tile cache + reload all visible columns at current cameraX
+  jsr room.initTileCache
+  jsr room.loadInitialViewport
+
+  ;restore HDMA + brightness
+  sep #$20
+  pla                             ;saved HDMA
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE ;NMI will re-enable at next VBlank
+  pla                             ;saved brightness
+  sta.w ScreenBrightness
+  sta.l INIDSP                    ;exit force blank with original brightness
+
+  ;re-enable interrupts
+  rep #$20
+  jsr core.nmi.start
+  cli
+
+  plp
+  rts
+
+
+/**
+* Remap viewport tilemap in VRAM for a camera snap.
+* Rewrites all 32 viewport tilemap columns using existing cache slots.
+* Tiles not yet in cache are loaded from MSU-1 on the spot.
+* Must be called in force blank (caller handles blank entry/exit).
+*/
+room.remapViewport:
+  php
+  rep #$31
+
+  ;block interrupts for safe VRAM writes
+  sei
+  jsr core.nmi.stop
+
+  ;save HDMA state and disable
+  sep #$20
+  lda.w ScreenBrightness
+  pha
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  lda.b #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+
+  ;clear pending NMI staging
+  stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiTileFlag
+  rep #$20
+  stz.w GLOBAL.room.nmiTileCount
+  stz.w GLOBAL.room.nmiTileStageLen
+
+  ;just call loadInitialViewport — it handles cache hits (fast path)
+  ;and cache misses (MSU seek + VRAM write). Tile data already cached
+  ;for most tiles, so this is fast.
+  jsr room.loadInitialViewport
+
+  ;restore HDMA + brightness
+  sep #$20
+  pla
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pla
+  sta.w ScreenBrightness
+  sta.l INIDSP
+
+  ;re-enable interrupts
+  rep #$20
+  jsr core.nmi.start
+  cli
 
   plp
   rts
@@ -496,6 +663,33 @@ _syncScroll.updateOld:
   .ACCU 16
   .INDEX 16
   lda.w GLOBAL.room.cameraX
+  cmp.w GLOBAL.room.cameraXOld
+  beq _syncScroll.done              ;already synced
+  bcc _syncScroll.advanceLeft
+
+  ;camera moved right: old = min(old + 8, cameraX)
+  lda.w GLOBAL.room.cameraXOld
+  clc
+  adc #8
+  cmp.w GLOBAL.room.cameraX
+  bcc +
+  beq +
+    lda.w GLOBAL.room.cameraX       ;clamp to target
++
+  sta.w GLOBAL.room.cameraXOld
+  bra _syncScroll.done
+
+_syncScroll.advanceLeft:
+  ;camera moved left: old = max(old - 8, cameraX)
+  lda.w GLOBAL.room.cameraXOld
+  sec
+  sbc #8
+  bcc _syncScroll.clampLeft         ;underflow — clamp to cameraX
+  cmp.w GLOBAL.room.cameraX
+  bcs +                             ;old-8 >= cameraX — use old-8
+_syncScroll.clampLeft:
+    lda.w GLOBAL.room.cameraX       ;clamp to target
++
   sta.w GLOBAL.room.cameraXOld
 
 _syncScroll.done:

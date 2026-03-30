@@ -556,9 +556,6 @@ _init.lastScale:
   lda.w SCUMM.newRoom
   cmp.w SCUMM.currentRoom
   beq _play.noRoomChange
-  ; Room 0 = no room (unload only) — cancel the change
-  lda.w SCUMM.newRoom
-  beq _play.noRoomChange
   jsr _scummvm.processRoomChange
 _play.noRoomChange:
   .ACCU 16
@@ -958,6 +955,34 @@ _prc.fadeOutDone:
   stz.w ScreenBrightness
   rep #$20
 
+  ; --- Room 0 fast path: just set currentRoom=0 and return ---
+  ; This allows scripts to "clear" the current room so a subsequent
+  ; loadRoom(N) triggers a fresh room load even if N==old currentRoom.
+  lda.w SCUMM.newRoom
+  and #$00FF
+  bne _prc.doRoomLoad
+
+  ; Room 0: set currentRoom=0, zero room state, return
+  stz.w SCUMM.currentRoom
+  ldx #4*2                              ; VAR_ROOM
+  stz.w SCUMM.globalVars,x
+  stz.w SCUMM.roomEncdLen
+  stz.w SCUMM.roomExcdLen
+  stz.w SCUMM.roomObjCount
+
+  ; Restore stack: hdmaEnable[8], brightness[8], roomNum[16]
+  sep #$20
+  pla                                   ; pop saved hdmaEnable
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  pla                                   ; pop saved brightness
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+  pla                                   ; pop saved roomNum
+  jmp _prc.failed                       ; skip everything else
+
+_prc.doRoomLoad:
   ; Restore room number and load via Phase 0 room loader
   lda 3,s
   jsr room.load
@@ -5312,21 +5337,16 @@ op_panCameraTo:
   clc
   rts
 
-; setCameraAt ($32, $B2) -- p16[7] — snap camera instantly
+; setCameraAt ($32, $B2) -- p16[7] — snap camera to target
+; On SNES, treated as a fast pan (same as panCameraTo) to avoid
+; outrunning the tile scroll streamer. moveCamera will smoothly
+; bring cameraX to the destination at CAMERA_FAST_X pixels/frame.
 op_setCameraAt:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
   sta.w SCUMM.cameraDest
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  sta.w SCUMM.globalVars,x           ; VAR(2) = cameraPosX
-  sec
-  sbc #128
-  bcs +
-    lda #0
-+
-  sta.w GLOBAL.room.cameraX
   clc
   rts
 
@@ -5343,16 +5363,28 @@ op_lights:
   clc
   rts
 
-; loadRoom ($72, $F2) -- p8[7], no-op for now
+; loadRoom ($72, $F2) -- p8[7]=room
+; Room 0 is applied IMMEDIATELY (ScummVM: startScene(0) is synchronous).
+; Non-zero rooms are deferred to the scheduler via SCUMM.newRoom.
 op_loadRoom:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; room number
   and #$00FF
-  beq +                              ; room 0 = no-op (ScummVM: skip startScene)
-  sta.w SCUMM.newRoom                ; request room change (processed in play loop)
-+
+  bne _loadRoom.nonZero
+
+  ; Room 0: apply immediately so consecutive loadRoom(0)+loadRoom(N)
+  ; works correctly (credits script 152: loadRoom(0) then loadRoom(10))
+  stz.w SCUMM.currentRoom
+  ldx #4*2                            ; VAR_ROOM
+  stz.w SCUMM.globalVars,x
+  stz.w SCUMM.newRoom                 ; clear any stale pending change
+  clc
+  rts
+
+_loadRoom.nonZero:
+  sta.w SCUMM.newRoom                  ; request room change (deferred)
   clc
   rts
 
@@ -15331,7 +15363,7 @@ _mc.checkPan:
   beq _mc.updateRoom                ; already at destination
   bcc _mc.moveRight
 
-  ; Move left: step = min(cur - dest, fast_x)
+  ; Move left: step = min(cur - dest, fast_x, 7)
   sec
   sbc.w SCUMM.cameraDest
   sta.w SCUMM.scratch3              ; delta
@@ -15339,6 +15371,13 @@ _mc.checkPan:
   cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
   bcc +
     lda.w SCUMM.globalVars,x
+    sta.w SCUMM.scratch3
++
+  ; Cap step to 7px to keep tile streamer in sync
+  lda.w SCUMM.scratch3
+  cmp #8
+  bcc +
+    lda #7
     sta.w SCUMM.scratch3
 +
   ldx #SCUMM_VAR_CAMERA_POS_X*2
@@ -15351,7 +15390,7 @@ _mc.checkPan:
 _mc.moveRight:
   .ACCU 16
   .INDEX 16
-  ; step = min(dest - cur, fast_x)
+  ; step = min(dest - cur, fast_x, 7)
   lda.w SCUMM.cameraDest
   ldx #SCUMM_VAR_CAMERA_POS_X*2
   sec
@@ -15361,6 +15400,13 @@ _mc.moveRight:
   cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
   bcc +
     lda.w SCUMM.globalVars,x
+    sta.w SCUMM.scratch3
++
+  ; Cap step to 7px to keep tile streamer in sync
+  lda.w SCUMM.scratch3
+  cmp #8
+  bcc +
+    lda #7
     sta.w SCUMM.scratch3
 +
   ldx #SCUMM_VAR_CAMERA_POS_X*2

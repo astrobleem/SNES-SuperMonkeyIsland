@@ -546,9 +546,18 @@ _init.lastScale:
   .ACCU 16
   .INDEX 16
 
-  ; Check for pending room change
+  ; Check for pending room change (sanitize to 8-bit room numbers)
+  lda.w SCUMM.newRoom
+  and #$00FF
+  sta.w SCUMM.newRoom                ; clean upper byte
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  sta.w SCUMM.currentRoom            ; clean upper byte
   lda.w SCUMM.newRoom
   cmp.w SCUMM.currentRoom
+  beq _play.noRoomChange
+  ; Room 0 = no room (unload only) — cancel the change
+  lda.w SCUMM.newRoom
   beq _play.noRoomChange
   jsr _scummvm.processRoomChange
 _play.noRoomChange:
@@ -964,6 +973,9 @@ _prc.fadeOutDone:
   sta.l INIDSP
   rep #$20
   pla
+  ; Cancel room change on failure: sync newRoom = currentRoom
+  lda.w SCUMM.currentRoom
+  sta.w SCUMM.newRoom
   jmp _prc.failed
 +
   .ACCU 16
@@ -5120,6 +5132,7 @@ op_putActorInRoom:
   bne +
   lda.w SCUMM.scratch3              ; room number
   and #$00FF
+  beq +                              ; room 0 = remove actor, not room change
   sta.w SCUMM.newRoom
 +
   clc
@@ -5337,7 +5350,9 @@ op_loadRoom:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; room number
   and #$00FF
+  beq +                              ; room 0 = no-op (ScummVM: skip startScene)
   sta.w SCUMM.newRoom                ; request room change (processed in play loop)
++
   clc
   rts
 
@@ -6609,6 +6624,10 @@ op_roomOps:
   bne +
   jmp _roomOps.saveString            ; saveString: p8[7] + null-terminated string
 +
+  cmp #$0E
+  bne +
+  jmp _roomOps.saveString            ; loadString: same format (p8[7] + null-terminated)
++
   cmp #$0F
   bne +
   jmp _roomOps.palManipulate         ; palManipulate: complex params
@@ -6988,7 +7007,9 @@ op_loadRoomWithEgo:
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; room number
   and #$00FF
+  beq +                              ; room 0 = no-op (ScummVM: skip startScene)
   sta.w SCUMM.newRoom                ; request room change
++
   ; Place ego actor at (x, y) from bytecode (ScummVM: a->putActor(x, y, room))
   jsr _scummvm.fetchWord             ; x
   sta.w SCUMM.scratch                ; save x
@@ -7743,6 +7764,7 @@ _stringOps.createString:
   adc #SCUMM.stringTable             ; A = slot base WRAM address
   tax                                ; X = slot address
   lda #$0000
+  phy                                ; save script PC (Y = bytecode offset)
   ldy #0
 _stringOps.createLoop:
   .ACCU 16
@@ -7754,6 +7776,7 @@ _stringOps.createLoop:
   iny
   cpy #128
   bcc _stringOps.createLoop
+  ply                                ; restore script PC
   clc
   rts
 
@@ -7943,11 +7966,11 @@ _stringOps.setCharOk:
   .INDEX 16
   clc
   adc.w SCUMM.scratch3               ; A = slot base + index
-  tay                                ; Y = target WRAM address
+  tax                                ; X = target WRAM address (preserve Y = script PC)
   lda 1,s                            ; char
   sep #$20
   .ACCU 8
-  sta.w $0000,y                      ; store byte
+  sta.w $0000,x                      ; store byte
   rep #$20
   .ACCU 16
   pla                                ; discard char
@@ -7986,9 +8009,9 @@ _stringOps.getCharOk:
   .INDEX 16
   clc
   adc.w SCUMM.scratch3               ; A = slot base + index
-  tay                                ; Y = source WRAM address
+  tax                                ; X = source WRAM address (preserve Y = script PC)
   pla                                ; discard stringId from stack
-  lda.w $0000,y                      ; load 16-bit
+  lda.w $0000,x                      ; load 16-bit
   and #$00FF                         ; byte only
   jsr _scummvm.writeVariable         ; write A to SCUMM.resultVar
   clc
@@ -8018,6 +8041,7 @@ _stringOps.copyString:
   clc
   adc #SCUMM.stringTable             ; A = dest slot base
   tax                                ; X = dest base address
+  phy                                ; save script PC (Y = bytecode offset)
   ldy #0                             ; Y = byte counter (0, 2, 4, ... 126)
 _stringOps.copyLoop:
   .ACCU 16
@@ -8037,6 +8061,7 @@ _stringOps.copyLoop:
   iny
   cpy #128
   bcc _stringOps.copyLoop
+  ply                                ; restore script PC
   clc
   rts
 
@@ -10575,6 +10600,12 @@ _ri.usePerEntry:
 
   ; --- OAM render loop ---
   ldx.w GLOBAL.currentOamSlot
+  cpx #$0200
+  bcc _ri.entryOamOk
+  ldx #$0200
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.headRender
+_ri.entryOamOk:
   ; Read OAM entry count from header
   ldy #0
   lda [_oamSrcPtr],y
@@ -10583,6 +10614,11 @@ _ri.usePerEntry:
   ldy #6                              ; skip 6-byte OAM header
 
 _ri.entryLoop:
+  cpx #$0200
+  bcc _ri.entryInBounds
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.headRender
+_ri.entryInBounds:
   rep #$20
   .ACCU 16
   lda [_oamSrcPtr],y                  ; dx byte
@@ -10820,6 +10856,12 @@ _ri.buildGridOam:
 
   ; Now switch X to OAM slot for the rest of the grid builder
   ldx.w GLOBAL.currentOamSlot
+  cpx #$0200
+  bcc _ri.gridOamOk
+  ldx #$0200
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.noHead
+_ri.gridOamOk:
   pha                                  ; save outTilesTall on stack
 
   ; Compute screen anchor for scaled sprite:
@@ -10912,6 +10954,18 @@ _ri.gridRowLoop:
   ; Stack: SP+1=tileCol, SP+2=tileIdx, SP+3=tileRow, SP+4..5=gridBaseY, SP+6=outTilesTall
 
 _ri.gridColLoop:
+  cpx #$0200
+  bcc _ri.gridColInBounds
+  ; OAM full — bail out, clean up tileCol then let gridDone handle rest
+  sep #$20
+  .ACCU 8
+  pla                                  ; discard tileCol (1 byte)
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.gridDone
+_ri.gridColInBounds:
   sep #$20
   .ACCU 8
   lda 1,s                             ; tileCol
@@ -11286,9 +11340,20 @@ _ri.headChrReady:
 
   ; --- Head OAM entry loop ---
   ldx.w GLOBAL.currentOamSlot
+  cpx #$0200
+  bcc _ri.headOamOk
+  ldx #$0200
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.noHead
+_ri.headOamOk:
   ldy #6                              ; skip 6-byte OAM header
 
 _ri.headEntryLoop:
+  cpx #$0200
+  bcc _ri.headEntryInBounds
+  stx.w GLOBAL.currentOamSlot
+  jmp _ri.noHead
+_ri.headEntryInBounds:
   rep #$20
   .ACCU 16
   lda [_oamSrcPtr],y                  ; dx byte
@@ -11514,6 +11579,8 @@ _ri.skipActors:
   beq _ri.noCursor
 
   ldx.w GLOBAL.currentOamSlot
+  cpx #$0200
+  bcs _ri.noCursor
   sep #$20
   .ACCU 8
   lda.w SCUMM.cursorX

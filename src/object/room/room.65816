@@ -112,8 +112,18 @@ room.loadIndex:
 _room.loadIndex.missing:
   .ACCU 16
   .INDEX 16
+  ;Virtual room (no MSU-1 data) — zero out header struct so downstream
+  ;code sees zero dimensions/sizes and skips DMA transfers gracefully.
+  ldx #0
+  lda #0
+- sta.w GLOBAL.room.hdr,x
+  inx
+  inx
+  cpx #ROOM_HEADER_SIZE
+  bne -
+
   plp
-  clc
+  sec               ;return success — room is valid but empty
   rts
 
 
@@ -586,6 +596,12 @@ room.load:
     rts
 
 +
+  ;check for virtual room (null index entry = no MSU-1 data)
+  ;loadIndex already zeroed the header struct for us
+  lda.w GLOBAL.room.idx.offset_lo
+  ora.w GLOBAL.room.idx.offset_hi
+  beq _rl.virtualRoom
+
   ;read 32-byte header (seeks to dataOffset internally)
   jsr room.loadHeader
 
@@ -610,6 +626,43 @@ room.load:
   ;load walkbox data by seeking directly to box_data offset in MSU
   jsl room.loadWalkboxData
 
+  bra _rl.afterMsu
+
+_rl.virtualRoom:
+  .ACCU 16
+  .INDEX 16
+  ;Virtual room — no MSU-1 data. Header is already zeroed.
+  ;Clear BG palette (CGRAM 0-255) to black so no stale colors bleed through.
+  ;We're in force blank so direct CGRAM writes are safe.
+  sep #$20
+  lda #0
+  sta.l CGADD                     ;CGRAM address = 0
+  ldy.w #512                      ;512 bytes = 256 colors (full CGRAM)
+- sta.l CGDATA                    ;write $00 to CGRAM (auto-increments)
+  dey
+  bne -
+  rep #$20
+  ;Zero walkbox state (no box data to load).
+  stz.w SCUMM.boxCount
+  stz.w SCUMM.boxDataSize
+  stz.w SCUMM.boxMatrixPtr
+  stz.w SCUMM.boxOrigMatrixPtr
+  stz.w SCUMM.scalSlot0_s1
+  stz.w SCUMM.scalSlot0_y1
+  stz.w SCUMM.scalSlot0_s2
+  stz.w SCUMM.scalSlot0_y2
+  ;Zero object/OCHR state
+  stz.w SCUMM.roomObjCount
+  stz.w SCUMM.roomObjNameSize
+  stz.w SCUMM.roomObjVerbSize
+  stz.w SCUMM.ochrDataSize
+  stz.w SCUMM.ochrObjCount
+  stz.w SCUMM.objDirtyFlag
+  jmp _rl.objDone
+
+_rl.afterMsu:
+  .ACCU 16
+  .INDEX 16
   ;--- Read room object data from MSU (positioned after box data) ---
   lda.w SCUMM.boxDataSize
   bne +

@@ -990,6 +990,13 @@ _prc.fadeOutDone:
   rep #$20
   pla
 
+  ; --- Set VAR_NEW_ROOM before any scripts run ---
+  ; ScummVM: VAR(VAR_NEW_ROOM) = room  (before runExitScript)
+  ; VAR_NEW_ROOM = var 59 in SCUMM v5. Scripts read this to know destination.
+  lda.w SCUMM.newRoom
+  ldx #59*2
+  sta.w SCUMM.globalVars,x
+
   ; --- Run exit scripts BEFORE tearing down old room ---
   ; ScummVM order: VAR_EXIT_SCRIPT (var[30]), EXCD, VAR_EXIT_SCRIPT2 (var[31])
 
@@ -1048,7 +1055,7 @@ _prc.noExitScript2:
   sta.w SCUMM.currentRoom
   ldx #4*2                          ; VAR(4) = VAR_ROOM (SCUMM v5)
   sta.w SCUMM.globalVars,x
-  ; var[143] NOT set here — ENCD needs previous room's value for first-visit check
+  ; VAR_NEW_ROOM (var 59) already set above before exit scripts
 
   ; Set camera to follow ego actor (ScummVM: startScene sets camera._follows)
   ldx #1*2                           ; VAR_EGO = globalVar[1]

@@ -277,43 +277,49 @@ FIXED THIS SESSION:
      - Result: boot script now survives credits, reaches room 38 at ~frame
        8300. Game reaches the lookout point for the first time.
 
-STILL BROKEN — Room 38 Tile Corruption
+FIXED — Room 38 Tile Corruption (commit d8e6a7b)
 =========================================================================
 
-Room 38 (lookout point) renders but has heavy tile corruption visible in
-the screenshot at frame 8500. The background art (moonlit harbor, rocky
-cliff) is partially visible but many tiles are garbled/wrong.
+Room 38 (lookout point) now renders correctly — moonlit sky, stars, stone
+arch, rocky cliff path all visible. Five bugs combined to cause the heavy
+tile corruption:
 
-LIKELY CAUSES:
+1. putActor room overwrite: op_putActor unconditionally set actors.room
+   to currentRoom, overwriting the room=38 set by putActorInRoom. In the
+   deferred model, currentRoom was still 0 at that point.
+   Fix: removed room/visible writes from op_putActor (ScummVM's putActor
+   does not change the actor's room field).
 
-1. TILE CACHE POPULATED FROM WRONG ROOM
-   The boot script does loadRoom(0) → loadRoom(38) via putActorInRoom.
-   The room 0 immediate handler clears currentRoom but does NOT flush
-   the tile cache. When room 38 loads, the tile cache may contain stale
-   entries from the credits room (10). loadInitialViewport would reuse
-   cached tile IDs that map to room 10 tile data, not room 38.
+2. snapCameraToRoom unclamped: ego X (320) stored directly as cameraPosX
+   without clamping to [MIN_X=128, MAX_X=192]. This created a 128px
+   phantom leftward pan after viewport load.
+   Fix: clamp to [MIN_X, MAX_X] before storing, matching setCameraAtImpl.
 
-   Fix: flush tile cache (stz cacheNextSlot + clear tileIdToSlot/
-   slotToTileId maps) during processRoomChange before loadInitialViewport.
-   This already happens inside room.initTileCache (called from room.load)
-   but verify it actually resets all state.
+3. Double loadInitialViewport: room.load called loadInitialViewport with
+   stale camera (from room 10), then processRoomChange called it again
+   after camera correction. First call wrote stale VRAM data.
+   Fix: removed loadInitialViewport from room.load; processRoomChange
+   handles it after camera setup.
 
-2. CAMERA POSITION MISMATCH AT VIEWPORT LOAD
-   putActorInRoom(ego, 38) + putActor(ego, 320, 72) sets the ego at
-   x=320 in room 38. setCameraAt or actorFollowCamera should snap the
-   camera to x=320. But if loadInitialViewport runs with camera at x=0
-   (default), the wrong tile columns get loaded. The viewport shows
-   tiles for the left edge of the room, not the area around x=320.
+4. NMI interference during VRAM writes (ROOT CAUSE of heavy garbling):
+   room.load re-enables NMI before returning. The second loadInitialViewport
+   in processRoomChange ran with NMI enabled. NMI's tile staging code
+   clobbered VMAIN and VMADDL registers mid-write, corrupting tile data.
+   Fix: sei + NMITIMEN=0 around the viewport reload block.
 
-   Fix: ensure camera position is set BEFORE loadInitialViewport runs
-   inside room.load. Check the ordering in processRoomChange.
+5. xScrollBG1 not synced: BG1 scroll register was not updated after
+   loadInitialViewport, causing scroll/tile position mismatch.
+   Fix: sta.w xScrollBG1 after viewport load.
 
-3. PINK COLUMN ARTIFACT (still present)
-   8px-wide magenta column at viewport center. Likely nametable boundary
-   issue in loadInitialViewport's camera-aware column computation.
-   The column appears where the 32-tile nametable 0 wraps to nametable 1.
+REMAINING MINOR ARTIFACTS:
+  - Small green tile in upper-left corner (1 tile, likely stale VRAM)
+  - Cyan/green artifact at nametable boundary (column ~16)
+  - These are cosmetic; the scene is fully recognizable
 
-4. getResultPos ARRAY INDEX NOT WRITTEN BACK
+STILL NEEDS WORK:
+=========================================================================
+
+1. getResultPos ARRAY INDEX NOT WRITTEN BACK
    The fix only SKIPS the array index bytes to prevent PC desync. It does
    NOT actually write to the indexed array slot. Any script that writes
    to Var[base+index] silently writes to Var[base] instead. This won't
@@ -322,9 +328,24 @@ LIKELY CAUSES:
    Full fix needed: compute effective address = globalVars[base + index]
    and store in resultVar. Requires index × 2 offset calculation.
 
+2. NAMETABLE BOUNDARY ARTIFACT (pink/cyan column)
+   8px-wide artifact at the nametable 0→1 boundary. Likely off-by-one
+   in loadInitialViewport's column address computation or wrap logic.
+
+3. VERB BAR VISIBLE DURING CREDITS (item 2 from original list)
+   cursorCommand sub-ops for hiding verb bar not implemented.
+
+4. BANK 0 USAGE AT 84.5% (up from 82.6%)
+   The NMI guard code in processRoomChange added ~600 bytes. Monitor
+   for overflow as more features are added.
+
+5. MISSING SCUMM OPCODES
+   Continue implementing opcodes as gameplay progresses past the
+   lookout point. Next: room navigation, dialog, inventory.
+
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Fix tile cache state during room transitions (likely cause #1)
-  B. Fix camera position at viewport load time (likely cause #2)
-  C. Implement full array variable read/write (getResultPos + setResult)
-  D. Fix pink column artifact (nametable boundary)
-  E. Continue implementing missing SCUMM opcodes as gameplay progresses
+  A. Implement full array variable read/write (getResultPos + setResult)
+  B. Fix nametable boundary artifact
+  C. Implement missing SCUMM opcodes for gameplay progression
+  D. Hide verb bar during cutscenes (cursorCommand sub-ops)
+  E. Monitor bank 0 usage

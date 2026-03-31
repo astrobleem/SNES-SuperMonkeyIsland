@@ -400,7 +400,11 @@ _init.zeroCache:
   stz.w SCUMM.dialogY
   stz.w SCUMM.dialogColor
   stz.w SCUMM.dialogActor
-  stz.w SCUMM.dialogFontDone
+  sep #$20
+  stz.w SCUMM.dialogFontNmiPending
+  nop
+  nop
+  rep #$20
   stz.w SCUMM.dialogCharCount
 
   ;zero dialog tilemap (2048 bytes) + set DMA pending to clear VRAM
@@ -827,6 +831,8 @@ _scummvm.processRoomChange:
   jsr core.dma.registerTransfer
   txs
 
+  ; Dialog font DMA now handled by NMI (SCUMM.dialogFontNmiPending set during init)
+
   ; Set up HDMA to disable BG1 below scanline 144 (verb area)
   sep #$20
   jsr core.dma_channel.allocate
@@ -975,8 +981,8 @@ _prc.fadeOutDone:
 
   ; Room 0: clear room state + BG1 VRAM tilemap via superfree thunk
   jsl scummvm.clearRoom0
-  .db $EA, $EA, $EA, $EA, $EA, $EA, $EA
-  .db $EA, $EA, $EA, $EA, $EA, $EA, $EA
+  .db $EA, $EA, $EA, $EA, $EA
+  .db $EA, $EA, $EA, $EA, $EA
 
   ; Restore stack: hdmaEnable[8], brightness[8], roomNum[16]
   sep #$20
@@ -1013,6 +1019,10 @@ _prc.doRoomLoad:
 +
   .ACCU 16
   .INDEX 16
+
+  ; Reload dialog font tiles into VRAM $A000 (word $5000)
+  ; room.load overwrites the font DMA'd during init; force blank is still active
+  jsl scummvm.loadDialogFont
 
   ; Build CGRAM HDMA table with room's palette 7 colors
   ; (HDMA disabled, force blank active — CGRAM reads are safe)
@@ -14121,26 +14131,7 @@ _rpd.noVerb:
   .ACCU 16
   .INDEX 16
 
-  ;--- Dialog font DMA (one-time: ExcFontTiles -> VRAM $A000) ---
-  rep #$20
-  lda.w SCUMM.dialogFontDone
-  bne _rpd.fontReady
-  lda #1
-  sta.w SCUMM.dialogFontDone
-  jsr _rpd.findSlot
-  bcc _rpd.fontReady
-  lda #ExcFontTiles.LEN
-  sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #DIALOG_TILES_VRAM
-  sta.w GLOBAL.dmaQueue.1.targetAdress,x
-  lda.w #ExcFontTiles
-  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
-  sep #$20
-  lda.b #:ExcFontTiles
-  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
-  lda #$40                           ; VRAM | ACTIVE
-  sta.w GLOBAL.dmaQueue.1.transferType,x
-_rpd.fontReady:
+  ;--- Dialog font DMA now handled by NMI (SCUMM.dialogFontNmiPending) ---
   .ACCU 16
   .INDEX 16
 
@@ -17005,11 +16996,35 @@ scummvm.clearRoom0:
   dey
   bne -
 
+  ; DMA dialog font to VRAM — room 0 fast path skips room.load,
+  ; so processRoomChange's loadDialogFont JSL never fires
+  jsl scummvm.loadDialogFont
+  sep #$20          ; loadDialogFont returns 16-bit, restore 8-bit for NMI write
+
   ; Restore NMI + auto-joypad read
   lda #$81
   sta.l NMITIMEN
   cli
 
+  rep #$20
+  .ACCU 16
+  rtl
+
+.ends
+
+
+;===================================================================
+; Dialog font DMA — called from processRoomChange after room.load
+; Force blank is guaranteed active by the caller.
+;===================================================================
+.section "scummvm loadDialogFont impl" superfree
+.base BSL
+
+scummvm.loadDialogFont:
+  ; Just set the NMI pending flag — actual DMA happens in VBlank
+  sep #$20
+  lda #1
+  sta.w SCUMM.dialogFontNmiPending
   rep #$20
   .ACCU 16
   rtl

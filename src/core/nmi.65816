@@ -197,6 +197,41 @@ _nmi.noTileWrite:
 	.ACCU 8
 	.INDEX 16
 
+	;--- One-shot dialog font DMA (ExcFontTiles -> VRAM $A000) ---
+	;Gated by SCUMM.dialogFontNmiPending flag; clears flag after DMA.
+	;Uses DMA channel 7 — tile staging loop above is already finished.
+	lda.w SCUMM.dialogFontNmiPending
+	beq _nmi.noFontDma
+	lda.w GLOBAL.room.nmiTileFlag
+	bne _nmi.noFontDma
+
+	stz.w SCUMM.dialogFontNmiPending
+
+	lda.b #VMAIN_INCREMENT_MODE
+	sta.l VMAIN
+	rep #$20
+	lda #$5000                        ;DIALOG_TILES_VRAM / 2 = word addr
+	sta.l VMADDL
+	sep #$20
+	lda #DMAP_2_REG_WRITE_ONCE
+	sta.l DMAP7
+	lda #VMDATAL & $ff
+	sta.l DMADEST7
+	lda.b #:ExcFontTiles
+	sta.l DMASRC7B
+	rep #$20
+	lda.w #ExcFontTiles
+	sta.l DMASRC7L
+	lda #ExcFontTiles.LEN
+	sta.l DMALEN7L
+	sep #$20
+	lda #$80                          ;trigger DMA channel 7
+	sta.l MDMAEN
+
+_nmi.noFontDma:
+	.ACCU 8
+	.INDEX 16
+
 	;--- room scroll: write staged tilemap column to VRAM via DMA ch7 ---
 	lda.w GLOBAL.room.nmiColFlag
 	beq _nmi.noColWrite

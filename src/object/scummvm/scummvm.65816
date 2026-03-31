@@ -656,10 +656,16 @@ _play.nextSlot:
   lda #1
   sta.w SCUMM.renderSlotDirty,x
   rep #$20
-  ; Re-enable cursor + userput (boot script disables via cursorCommand sub-ops)
-  lda #1
-  sta.w SCUMM.cursorEnabled
-  sta.w SCUMM.userPut
+  ; (removed forced cursor/userput re-enable — scripts own this state)
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
 _play.noEgoFixup:
   .ACCU 16
   .INDEX 16
@@ -708,12 +714,17 @@ _play.noPendingVerb:
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
-  ; Render verb bar if dirty (must run before DMA registration)
+  ; Render verb bar if dirty + user input enabled (must run before DMA registration)
   rep #$31
-  lda.w SCUMM.verbDirty
-  beq _play.verbClean
-  sta.w SCUMM.sentenceDirty      ; verb bar clear wipes row 0; re-render sentence
-  jsl scummvm.renderVerbBar
+  jsl scummvm.renderVerbBarChecked
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
 _play.verbClean:
   .ACCU 16
   .INDEX 16
@@ -962,13 +973,10 @@ _prc.fadeOutDone:
   and #$00FF
   bne _prc.doRoomLoad
 
-  ; Room 0: set currentRoom=0, zero room state, return
-  stz.w SCUMM.currentRoom
-  ldx #4*2                              ; VAR_ROOM
-  stz.w SCUMM.globalVars,x
-  stz.w SCUMM.roomEncdLen
-  stz.w SCUMM.roomExcdLen
-  stz.w SCUMM.roomObjCount
+  ; Room 0: clear room state + BG1 VRAM tilemap via superfree thunk
+  jsl scummvm.clearRoom0
+  .db $EA, $EA, $EA, $EA, $EA, $EA, $EA
+  .db $EA, $EA, $EA, $EA, $EA, $EA, $EA
 
   ; Restore stack: hdmaEnable[8], brightness[8], roomNum[16]
   sep #$20
@@ -5360,8 +5368,7 @@ op_setCameraAt:
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
-  sta.w SCUMM.cameraDest
-  clc
+  jsl scummvm.setCameraAtImpl        ; snap camera instantly
   rts
 
 ; lights ($70, $F0) -- p8[7]=value + byte + byte → store to VAR_CURRENT_LIGHTS (var 9)
@@ -12632,6 +12639,35 @@ _idv.n9: .db "Pull"
 ;===================================================================
 .bank 5 slot 0
 .base BSL
+.section "ScummVMVerbBarChecked" free
+
+;-------------------------------------------------------------------
+; scummvm.renderVerbBarChecked — guard verb rendering with userPut
+; If userPut <= 0, clear verbDirty instead of rendering.
+; Otherwise render normally when verbDirty is set.
+; JSL/RTL.
+;-------------------------------------------------------------------
+scummvm.renderVerbBarChecked:
+  rep #$31
+  lda.w SCUMM.userPut
+  beq _rvbc.skip
+  bmi _rvbc.skip
+  lda.w SCUMM.cutsceneNest
+  bne _rvbc.skip
+  lda.w SCUMM.verbDirty
+  beq _rvbc.done
+  sta.w SCUMM.sentenceDirty
+  jsl scummvm.renderVerbBar
+  bra _rvbc.done
+_rvbc.skip:
+  stz.w SCUMM.verbDirty
+_rvbc.done:
+  rtl
+
+.ends
+
+.bank 5 slot 0
+.base BSL
 .section "ScummVMVerbRenderer" free
 
 scummvm.renderVerbBar:
@@ -15540,6 +15576,43 @@ _snap.done:
   .INDEX 16
   rtl
 
+;-------------------------------------------------------------------
+; scummvm.setCameraAtImpl — instant camera snap (JSL/RTL)
+; Input:  A = target X center position
+; Clamps to [MIN_X, MAX_X], writes cameraDest + cameraPosX,
+; exits follow mode, computes cameraX/cameraXOld left edge.
+;-------------------------------------------------------------------
+scummvm.setCameraAtImpl:
+  rep #$31
+  ; Clamp to [MIN_X, MAX_X]
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  cmp.w SCUMM.globalVars,x
+  bcs +
+    lda.w SCUMM.globalVars,x
++
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  cmp.w SCUMM.globalVars,x
+  bcc +
+  beq +
+    lda.w SCUMM.globalVars,x
++
+  ; Write VAR_CAMERA_POS_X and cameraDest
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x
+  sta.w SCUMM.cameraDest
+  ; Exit follow mode
+  stz.w SCUMM.cameraFollows
+  ; cameraX = cameraPosX - 128
+  sec
+  sbc #128
+  bcs +
+    lda #0
++
+  sta.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+  clc
+  rtl
+
 .ends
 
 ;===================================================================
@@ -16879,6 +16952,66 @@ _ris.copyArgs:
 _ris.done:
   .ACCU 16
   .INDEX 16
+  rtl
+
+.ends
+
+
+;===================================================================
+; Room 0 clear: zero room state + wipe BG1 VRAM tilemap
+;===================================================================
+.section "scummvm clearRoom0 impl" superfree
+.base BSL
+
+scummvm.clearRoom0:
+  .ACCU 16
+  .INDEX 16
+
+  ; Replicate the 6 original stz operations (16-bit A context)
+  stz.w SCUMM.currentRoom
+  ldx #4*2                              ; VAR_ROOM
+  stz.w SCUMM.globalVars,x
+  stz.w SCUMM.roomEncdLen
+  stz.w SCUMM.roomExcdLen
+  stz.w SCUMM.roomObjCount
+
+  ; Disable NMI + IRQ to prevent VRAM address corruption during writes
+  sei
+  sep #$20
+  lda #0
+  sta.l NMITIMEN                        ; disable NMI (non-maskable, sei alone won't block it)
+
+  ; Enter force blank for safe VRAM access
+  lda #INIDSP_FORCE_BLANK
+  sta.l INIDSP
+
+  ; Set VMAIN: increment on high byte write, step +1
+  lda #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+
+  ; Set VRAM address to BG1 tilemap base ($3800 word addr = $7000 byte addr)
+  rep #$20
+  lda #$3800
+  sta.l VMADDL
+
+  ; Zero $800 words (64x32 tilemap = $1000 bytes)
+  ; Must use 8-bit writes: 16-bit sta to VMDATAL spills into VMDATAH,
+  ; causing double auto-increment
+  sep #$20
+  lda #0
+  ldy.w #$0800
+- sta.l VMDATAL
+  sta.l VMDATAH
+  dey
+  bne -
+
+  ; Restore NMI + auto-joypad read
+  lda #$81
+  sta.l NMITIMEN
+  cli
+
+  rep #$20
+  .ACCU 16
   rtl
 
 .ends

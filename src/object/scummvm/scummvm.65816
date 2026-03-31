@@ -3692,6 +3692,10 @@ _scummvm.getResultPos:
   .INDEX 16
   jsr _scummvm.fetchWord
   sta.w SCUMM.resultVar
+  bit #$2000                   ; array-indexed variable? (SCUMM v5 bit 0x2000)
+  beq +
+  jsr _scummvm.fetchWord       ; read & discard 2-byte array index (advances PC past it)
++
   rts
 
 

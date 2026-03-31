@@ -743,8 +743,8 @@ _rl.objDone:
   ;are in SCROLL_TILEMAP_WRAM when loadInitialViewport caches tiles
   jsl room.applyVisibleObjectPatches
 
-  ;cache-aware initial viewport load (still in force blank)
-  jsr room.loadInitialViewport
+  ;viewport load deferred to processRoomChange (after camera correction)
+  ;jsr room.loadInitialViewport
 
   ;keep INIDSP in forced blank ($80) — the play loop restores
   ;brightness after ENCD scripts + OCHR redraw complete

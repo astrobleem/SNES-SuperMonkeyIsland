@@ -1124,16 +1124,29 @@ _prc.noExitScript2:
   ; --- Reload viewport at corrected camera position ---
   ; snapCameraToRoom updated cameraX from ego actor. Reload tile cache
   ; so tiles match the actual camera position, not room.load's default.
-  ; We're still in force blank (ScreenBrightness=0), VRAM writes are safe.
-  ; IMPORTANT: INIDSP must be set to force blank ($80) for direct VRAM access.
+  ; CRITICAL: Disable NMI during VRAM writes — NMI tile staging clobbers VMAIN/VMADDL.
+  sei
   sep #$20
+  lda.w GLOBAL.interruptFlags
+  pha                                  ; save NMI state
+  lda #0
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN                       ; disable NMI
   lda.b #$80
-  sta.l INIDSP                         ; ensure force blank for VRAM writes
+  sta.l INIDSP                         ; force blank for VRAM writes
   rep #$20
   jsr room.initTileCache               ; reset cache (slots from first load are stale)
   jsr room.loadInitialViewport         ; reload at correct cameraX
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld         ; sync so syncScroll doesn't see stale delta
+  sta.w xScrollBG1                     ; sync BG1 scroll to camera for first visible frame
+  ; Restore NMI
+  sep #$20
+  pla
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+  cli
 
   ; --- Run entry scripts in ScummVM order ---
   ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1
@@ -5314,12 +5327,9 @@ op_putActor:
   ldx.w SCUMM.scratch2
   sta.w SCUMM.actors.y,x
 
-  ; putActor defaults to current room (like ScummVM)
+  ; ScummVM: putActor(x,y) does NOT change actor's room or visible flag.
+  ; Only clears moving. Room is set by putActorInRoom, not putActor.
   sep #$20
-  lda.w SCUMM.currentRoom
-  sta.w SCUMM.actors.room,x
-  lda #1
-  sta.w SCUMM.actors.visible,x
   stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
   rep #$20
 
@@ -15555,10 +15565,24 @@ scummvm.snapCameraToRoom:
   clc
   adc #2
   tax
-  lda.w SCUMM.actors,x
+  lda.w SCUMM.actors,x              ; actor X (e.g. 320)
+  ; Clamp to [VAR_CAMERA_MIN_X, VAR_CAMERA_MAX_X]
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  cmp.w SCUMM.globalVars,x
+  bcs +
+    lda.w SCUMM.globalVars,x
++
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  cmp.w SCUMM.globalVars,x
+  bcc +
+  beq +
+    lda.w SCUMM.globalVars,x
++
+  ; A = clamped camera center (e.g. 192 for room 38)
   sta.w SCUMM.cameraDest
   ldx #SCUMM_VAR_CAMERA_POS_X*2
   sta.w SCUMM.globalVars,x
+  ; cameraX = clamped center - 128 (left edge of viewport)
   sec
   sbc #128
   bcs +

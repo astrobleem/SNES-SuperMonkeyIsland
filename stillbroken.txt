@@ -1,0 +1,330 @@
+STILL BROKEN — Post-Session Notes (2026-03-31)
+================================================
+
+STATUS UPDATE (2026-03-31, commits c9d31a4, 6f351c9):
+  - Font DMA FIXED: dialog font tiles now load via NMI vblank DMA
+  - Post-credits deadlock FIXED: getResultPos now handles array-indexed
+    variables (bit 0x2000). Game reaches room 38 (lookout point) at ~frame 8300.
+  - Credits text renders correctly with proper character mapping
+  - Room 38 (lookout point) LOADS and renders — first time reaching gameplay!
+  - BUT: lookout point has heavy tile corruption — see new diagnosis below
+
+PREVIOUS STATUS (2026-03-30, commits 18abd87, ebd591a):
+  - Boot test PASS, bank 0 at 82.7%, no hard crash
+  - Credits text IS rendering (producer names scroll through)
+  - BUT the overall result is still very broken — see diagnosis below
+
+=========================================================================
+
+FULL DIAGNOSTIC — What the game actually looks like (2026-03-30 end of session)
+=========================================================================
+
+Screenshot survey of boot sequence (all from current HEAD ebd591a):
+
+  Frame  200: Black screen (boot init — expected)
+  Frame  500: LUCASFILM GAMES logo on BG1 with blue tile garbage on
+              left half + verb bar visible below. Scroll transition
+              mid-pan, tiles partially loaded.
+  Frame 1000: LUCASFILM GAMES text rendered on dark background.
+              Verb bar visible. Pink/magenta pixel artifact in "M".
+              Some tile noise in "GAMES" lettering.
+  Frame 2000: Credits text appearing: "Produced by0res Hammond"
+              (note: "0" instead of "G" — character mapping bug).
+              LUCASFILM GAMES logo STILL visible underneath.
+              Verb bar STILL visible.
+  Frame 4000: More credits: "Barney Jones and Andy Nevellof
+              earwax productions". Logo + verb bar persist.
+  Frame 6000: More credits: "Testers: Bret Barrett, Mark Cartwright..."
+              Logo + verb bar persist. All rendered on same screen.
+  Frame 8500: TIMEOUT — emulator takes >60s to reach this frame.
+              The game may be stuck in a loop or running very slowly.
+  Frame10000: LUCASFILM GAMES logo still showing. Verb bar text is
+              now garbled/clipped ("Pick u", "Look a", "Talk t").
+              Dark background. Game never reached the beach.
+
+BROKEN THINGS — Itemized
+=========================================================================
+
+1. LUCASFILM GAMES LOGO NEVER CLEARS
+   The BG1 tiles for the logo persist through the ENTIRE credits
+   sequence. In the real game, the logo appears briefly, then the
+   screen clears for the credits text. Our room 0 handler sets
+   currentRoom=0 and blanks brightness but does NOT clear VRAM tile
+   data or the BG1 tilemap. When room 10 reloads, loadInitialViewport
+   loads the lookout point tiles over the logo tiles, but the logo
+   tiles in the un-scrolled columns persist. The logo is essentially
+   burned into VRAM.
+
+2. VERB BAR VISIBLE DURING CREDITS (CUTSCENE)
+   The verb bar (Walk to, Pick up, Use, etc.) should NOT be visible
+   during the credits. ScummVM hides the cursor and verb interface
+   when a cutscene is active (cutscene opcode / cursorCommand).
+   Our interpreter either doesn't implement cursorCommand sub-ops
+   for hiding the verb bar, or the HDMA table that clips BG1 at
+   scanline 144 (verb area boundary) isn't being properly managed
+   during virtual room / credits display.
+
+3. CHARACTER MAPPING BUG IN DRAWSTRING
+   "Produced by0res Hammond" — the "G" in "Gres" renders as "0".
+   This is a font tile index offset issue. The SCUMM drawString
+   converts ASCII characters to font tile indices. If the offset
+   is wrong by a fixed amount, letters map to the wrong tiles.
+   Visible throughout the credits text.
+
+4. CREDITS NEVER FINISH / GAME NEVER REACHES BEACH
+   The blocker doc says the beach should appear at ~frame 8500.
+   At frame 10000, the game is still on the credits screen. Either:
+   a. The credits script (152) is stuck in a loop
+   b. A waitForMessage / delay timer is broken
+   c. var[143] never reaches the termination value
+   d. The credits sequence takes much longer than expected due to
+      the smooth camera pan (setCameraAt → cameraDest) slowing
+      down room transitions
+
+5. setCameraAt SEMANTICS CHANGED (REGRESSION)
+   Porthos changed op_setCameraAt from an instant snap (writing
+   cameraPosX + cameraX directly) to a smooth pan (setting only
+   cameraDest, identical to panCameraTo). This is semantically
+   wrong — ScummVM's setCameraAt is an INSTANT snap. The smooth
+   pan causes:
+   - Credits room transitions are slower (camera pans instead of
+     jumping to destination)
+   - Gameplay camera behavior will be wrong when we reach gameplay
+   - Scripts that depend on setCameraAt being instant will break
+   This change was made to work around the tile cache's inability
+   to handle instant camera jumps, but it masks the real problem
+   rather than fixing it.
+
+6. CAMERA SPEED CAP (7px/frame) — ARTIFICIAL LIMIT
+   moveCamera was capped at 7px/frame to prevent outrunning the
+   tile cache. This changes VAR_CAMERA_FAST_X behavior and will
+   affect gameplay panning speed. The cap should be removed once
+   the tile cache can handle large camera jumps (via proper
+   viewport reload during force blank).
+
+7. VIRTUAL ROOM SUPPORT NEVER IMPLEMENTED
+   The room.65816 virtual room changes were abandoned because
+   adding code to the "room loader" section triggered a WLA-DX
+   section reshuffling issue. Virtual rooms (like room 46, used
+   by the credits) still fail at loadIndex (returns clc = failure).
+   processRoomChange hits the failure path for these rooms. The
+   credits sequence needs virtual rooms to display properly.
+
+8. PINK COLUMN ARTIFACT
+   An 8px-wide magenta column persists at the viewport center
+   during lookout point rendering. Likely a nametable boundary
+   issue in loadInitialViewport's camera-aware column computation.
+
+9. VERB BAR TEXT GARBLING AT LATE FRAMES
+   At frame 10000, verb text is clipped/shifted. "Pick up" shows
+   as "Pick u", "Look at" as "Look a", "Talk to" as "Talk t".
+   Suggests a BG3 tilemap or verb rendering corruption over time.
+
+10. THE "SECTION SIZE" ISSUE IS REAL BUT UNADDRESSED
+    Adding ANY code to room.65816's "room loader" section causes
+    tile garbling. This was proven empirically: even 12 bytes of
+    NOPs triggered it. The garbling appears to correlate with
+    bank 0 section reshuffling, but the sym file comparison showed
+    room addresses don't actually change. The root cause is still
+    unknown and blocks virtual room support in room.65816.
+
+WHAT NEEDS TO HAPPEN NEXT
+=========================================================================
+
+Priority order:
+
+A. REVERT setCameraAt to instant snap + implement proper viewport
+   reload during force blank. The tile cache workarounds (smooth pan,
+   speed cap, gradual cameraXOld) are band-aids that change game
+   semantics. The real fix: when the camera jumps >8px, enter force
+   blank, reinit tile cache, reload viewport at new position, exit
+   force blank. This was attempted (Porthos9) but crashed due to
+   NMI/VRAM state issues. Needs careful implementation.
+
+B. Implement virtual room support WITHOUT growing the room loader
+   section. Options:
+   - JSL trampoline from loadIndex.missing to a bank-5 subroutine
+   - Put the virtual room check+path in a separate bank-5 section
+   - Or: find and fix the actual cause of the section size sensitivity
+
+C. Fix drawString character mapping (the "0" for "G" bug).
+
+D. Hide verb bar during cutscenes (cursorCommand sub-ops).
+
+E. Debug why credits don't finish (script 152 loop, var[143],
+   timing, or some other blocker preventing beach from loading).
+
+F. Investigate the room loader section size sensitivity root cause.
+   The sym file comparison showed room code doesn't move, yet
+   rendering breaks. Something address-dependent is happening
+   that the sym diff didn't reveal.
+
+=========================================================================
+
+BIGGEST PAIN POINTS — LESSONS FOR FUTURE SESSIONS
+=========================================================================
+
+1. MISDIAGNOSIS: "SECTION SIZE STABILITY" RED HERRING
+   -------------------------------------------------------
+   Wasted ~2 hours believing that adding code to room.65816's "room
+   loader" section caused WLA-DX to reshuffle bank 0, breaking tile
+   rendering. Built multiple test ROMs, compared sym files, added
+   padding — all to prove a section layout theory.
+
+   REALITY: The garbled tiles appeared whenever the SCUMM interpreter
+   fixes were applied (regardless of room.65816 changes), because the
+   fixes made the credits script ACTUALLY RUN for the first time.
+   The credits triggered camera jumps the tile cache couldn't handle.
+
+   LESSON: When a change "breaks" rendering, check whether the change
+   enabled NEW CODE PATHS (scripts, room transitions) before assuming
+   the build system shuffled addresses. Correlation (code change →
+   garbled tiles) is not causation (section layout broke rendering).
+
+2. DEFERRED vs SYNCHRONOUS SEMANTICS
+   -------------------------------------------------------
+   Wasted ~1 hour because loadRoom(0) + loadRoom(10) called in the
+   same script frame meant newRoom=10 overwrote newRoom=0. Room 0
+   never fired. This is a fundamental SNES vs ScummVM difference:
+
+   ScummVM: loadRoom → startScene() runs IMMEDIATELY (synchronous)
+   SNES:    loadRoom → sets newRoom, processed NEXT play loop (deferred)
+
+   LESSON: Any SCUMM opcode that has side effects in ScummVM
+   (startScene, putActor, etc.) needs careful analysis of whether
+   the deferred model breaks sequential opcode semantics. When two
+   opcodes run back-to-back and the second depends on the first's
+   side effects, deferred processing silently drops the first.
+
+3. VIEWPORT LOADED AT WRONG CAMERA POSITION
+   -------------------------------------------------------
+   The actual root cause took 5+ iterations to find. processRoomChange
+   called room.load (which runs loadInitialViewport at a default camera
+   position), then snapCameraToRoom changed the camera. The viewport
+   tiles didn't match the final camera — a 1-line ordering bug.
+
+   LESSON: When debugging tile rendering, check the CAMERA POSITION
+   at the moment loadInitialViewport runs vs the camera position when
+   the screen becomes visible. If they differ, tiles will be wrong.
+
+4. TOO MANY PORTHOS ITERATIONS
+   -------------------------------------------------------
+   Spawned 13 Porthos agents (Porthos through Porthos13). Each one
+   made changes, built, tested — but several introduced regressions
+   that required the next Porthos to fix. The viewport reload before
+   fade-in crashed (Porthos9), had to be reverted (Porthos10). The
+   play loop reorder crashed (Porthos12), had to be reverted (Porthos13).
+
+   LESSON: Before delegating assembly changes, have a COMPLETE spec
+   that accounts for:
+   - Stack state (what's pushed, in what order)
+   - NMI/interrupt safety (is force blank active? is NMI enabled?)
+   - Section size impact (will this grow a fragile section?)
+   - Register state assumptions (.ACCU 16 vs 8, .INDEX 16 vs 8)
+
+   Two well-specified Porthos calls > thirteen exploratory ones.
+
+5. TRUSTED AGENT CLAIMS WITHOUT VERIFICATION
+   -------------------------------------------------------
+   Multiple times, Porthos reported "frame 700 renders correctly"
+   or "no garbled tiles" when my own verification showed the opposite.
+   The agent was testing a different build or interpreting screenshots
+   differently.
+
+   LESSON: ALWAYS take your own screenshots after an agent claims
+   success. Never commit based on agent claims alone. The main agent
+   owns validation (this is already in feedback_validation_ownership.md
+   but was violated repeatedly).
+
+6. NOT READING THE BLOCKER DOCUMENT CAREFULLY ENOUGH
+   -------------------------------------------------------
+   The newblocker.txt file contained the correct root cause analysis
+   ("Group B: room 0 guards") and the correct fix approach. But I
+   spent hours on the section layout theory before re-reading the
+   document and following its recommendations.
+
+   LESSON: When a detailed bug report exists, follow its recommended
+   fix approach FIRST. Only deviate if the recommended approach fails
+   for a documented reason. The blocker author (previous session) had
+   already done the analysis.
+
+
+=========================================================================
+
+UPDATE: 2026-03-31 SESSION RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+  1. Dialog font DMA (commit c9d31a4)
+     - Root cause: core.dma.registerTransfer queue entries never processed
+       by IRQ handler. Font tiles never reached VRAM.
+     - Fix: NMI vblank one-shot DMA (dialogFontNmiPending flag in WRAM,
+       NMI checks flag after tile staging, defers if nmiTileFlag set for
+       bandwidth guard). Called from processRoomChange + clearRoom0.
+     - Also found: Mesen emu.memType.videoRam is WRONG for SA-1 mode.
+       Must use emu.memType.snesVideoRam. Wasted hours thinking VRAM was
+       corrupted when it was actually fine.
+
+  2. Post-credits deadlock (commit 6f351c9)
+     - Root cause: _scummvm.getResultPos didn't handle SCUMM v5 bit 0x2000
+       (array-indexed variables). The boot script's `move Var[184+8]=0` at
+       offset $0981 is a 7-byte instruction (2 opcode+ref, 2 array index,
+       2 value). getResultPos only consumed 2 bytes for the ref, leaving PC
+       off by 2. Script executed garbage and died at ~frame 8240.
+     - Fix: 4-line addition to getResultPos — check bit $2000, fetchWord
+       to skip array index if set. Index value discarded (full array
+       write-back is a separate task).
+     - Result: boot script now survives credits, reaches room 38 at ~frame
+       8300. Game reaches the lookout point for the first time.
+
+STILL BROKEN — Room 38 Tile Corruption
+=========================================================================
+
+Room 38 (lookout point) renders but has heavy tile corruption visible in
+the screenshot at frame 8500. The background art (moonlit harbor, rocky
+cliff) is partially visible but many tiles are garbled/wrong.
+
+LIKELY CAUSES:
+
+1. TILE CACHE POPULATED FROM WRONG ROOM
+   The boot script does loadRoom(0) → loadRoom(38) via putActorInRoom.
+   The room 0 immediate handler clears currentRoom but does NOT flush
+   the tile cache. When room 38 loads, the tile cache may contain stale
+   entries from the credits room (10). loadInitialViewport would reuse
+   cached tile IDs that map to room 10 tile data, not room 38.
+
+   Fix: flush tile cache (stz cacheNextSlot + clear tileIdToSlot/
+   slotToTileId maps) during processRoomChange before loadInitialViewport.
+   This already happens inside room.initTileCache (called from room.load)
+   but verify it actually resets all state.
+
+2. CAMERA POSITION MISMATCH AT VIEWPORT LOAD
+   putActorInRoom(ego, 38) + putActor(ego, 320, 72) sets the ego at
+   x=320 in room 38. setCameraAt or actorFollowCamera should snap the
+   camera to x=320. But if loadInitialViewport runs with camera at x=0
+   (default), the wrong tile columns get loaded. The viewport shows
+   tiles for the left edge of the room, not the area around x=320.
+
+   Fix: ensure camera position is set BEFORE loadInitialViewport runs
+   inside room.load. Check the ordering in processRoomChange.
+
+3. PINK COLUMN ARTIFACT (still present)
+   8px-wide magenta column at viewport center. Likely nametable boundary
+   issue in loadInitialViewport's camera-aware column computation.
+   The column appears where the 32-tile nametable 0 wraps to nametable 1.
+
+4. getResultPos ARRAY INDEX NOT WRITTEN BACK
+   The fix only SKIPS the array index bytes to prevent PC desync. It does
+   NOT actually write to the indexed array slot. Any script that writes
+   to Var[base+index] silently writes to Var[base] instead. This won't
+   crash but will cause wrong game state for scripts using arrays.
+
+   Full fix needed: compute effective address = globalVars[base + index]
+   and store in resultVar. Requires index × 2 offset calculation.
+
+WHAT NEEDS TO HAPPEN NEXT (priority order):
+  A. Fix tile cache state during room transitions (likely cause #1)
+  B. Fix camera position at viewport load time (likely cause #2)
+  C. Implement full array variable read/write (getResultPos + setResult)
+  D. Fix pink column artifact (nametable boundary)
+  E. Continue implementing missing SCUMM opcodes as gameplay progresses

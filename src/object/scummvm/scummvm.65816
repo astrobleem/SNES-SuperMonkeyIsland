@@ -3704,11 +3704,28 @@ _scummvm.getResultPos:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchWord
-  sta.w SCUMM.resultVar
   bit #$2000                   ; array-indexed variable? (SCUMM v5 bit 0x2000)
-  beq +
-  jsr _scummvm.fetchWord       ; read & discard 2-byte array index (advances PC past it)
-+
+  beq _getResultPos.done
+  pha                          ; push base var
+  jsr _scummvm.fetchWord       ; read index word
+  bit #$2000                   ; index is itself a variable ref?
+  beq _getResultPos.literal
+  and #$DFFF                   ; ~$2000: clear array bit
+  jsr _scummvm.readVariable    ; resolve variable → A = index value
+  bra _getResultPos.add
+_getResultPos.literal:
+  .ACCU 16
+  and #$0FFF                   ; 12-bit literal index
+_getResultPos.add:
+  .ACCU 16
+  clc
+  adc 1,s                     ; add base from stack
+  and #$DFFF                  ; clear bit 0x2000
+  sta 1,s                     ; store result on stack
+  pla                         ; pull final result
+_getResultPos.done:
+  .ACCU 16
+  sta.w SCUMM.resultVar
   rts
 
 
@@ -3851,6 +3868,27 @@ _sps.escape:
 _scummvm.readVariable:
   .ACCU 16
   .INDEX 16
+  bit #$2000                   ; array-indexed? (SCUMM v5 bit 0x2000)
+  beq _readVar.dispatch
+  pha                          ; push base var
+  jsr _scummvm.fetchWord       ; read index word from script stream
+  bit #$2000                   ; index is itself a variable ref?
+  beq _readVar.idxLiteral
+  and #$DFFF                   ; ~$2000: clear array bit
+  jsr _scummvm.readVariable    ; resolve variable → A = index value
+  bra _readVar.idxAdd
+_readVar.idxLiteral:
+  .ACCU 16
+  and #$0FFF                   ; 12-bit literal index
+_readVar.idxAdd:
+  .ACCU 16
+  clc
+  adc 1,s                     ; add base from stack
+  and #$DFFF                  ; clear bit 0x2000
+  sta 1,s
+  pla                         ; A = effective var number
+_readVar.dispatch:
+  .ACCU 16
   sta.w SCUMM.scratch
   and #SCUMM_VAR_TYPE_MASK
   beq _readVar.global
@@ -5334,11 +5372,26 @@ op_putActor:
   rep #$20
 
   ; Assign walkbox from position (ScummVM: adjustActorPos)
+  ; Save fetchLoop bytecode pointer (tmp+0/+1/+2) — findBox clobbers it
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
+  ; Set findBox args
   lda.w SCUMM.actors.x,x
   sta.b tmp
   lda.w SCUMM.actors.y,x
   sta.b tmp+2
   jsr scummvm.findBox                ; A = boxIdx or $FF
+  ; Restore fetchLoop bytecode pointer
+  pha                                ; save findBox result
+  lda 3,s                            ; saved tmp+2 (stack: result, tmp+2, tmp)
+  sta.b tmp+2
+  lda 5,s                            ; saved tmp
+  sta.b tmp
+  pla                                ; A = findBox result
+  plx                                ; discard saved tmp+2
+  plx                                ; discard saved tmp
   cmp #$00FF
   beq +
   pha                                ; save boxIdx
@@ -7415,6 +7468,12 @@ op_isActorInBox:
   sta.w SCUMM.scratch2
 
   ; Get actor position
+  ; Save fetchLoop bytecode pointer (tmp+0/+1/+2) — findBox clobbers it
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
+  ; Set findBox args
   ldx.w SCUMM.scratch3
   lda.w SCUMM.actors.x,x
   sta.b tmp
@@ -7425,17 +7484,23 @@ op_isActorInBox:
 
   ; Check if walkboxes loaded
   lda.w SCUMM.boxCount
-  beq _isActorInBox.no              ; no boxes → not in any box
+  beq _isActorInBox.restore         ; no boxes → not in any box
 
   jsl scummvm.findBox_long           ; tmp+0/+2 = point, returns A=boxIdx
   cmp.w SCUMM.scratch               ; found box == requested box?
-  bne _isActorInBox.no
+  bne _isActorInBox.restore
 
   ; IN box → take jump (ScummVM: jumpRelative(true) when in box)
   jsr _scummvm.takeRelJump
-_isActorInBox.no:
+
+_isActorInBox.restore:
   .ACCU 16
   .INDEX 16
+  ; Restore fetchLoop bytecode pointer
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
   clc
   rts
 

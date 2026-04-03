@@ -316,17 +316,32 @@ REMAINING MINOR ARTIFACTS:
   - Cyan/green artifact at nametable boundary (column ~16)
   - These are cosmetic; the scene is fully recognizable
 
+FIXED — putActor/isActorInBox bytecode pointer clobber (commit 4df131b)
+=========================================================================
+
+op_putActor and op_isActorInBox overwrote `tmp` (the fetchLoop's ZP
+bytecode base pointer) when storing actor coordinates for findBox.
+After either handler returned, fetchLoop read opcodes from a garbage
+address ([actor.x, actor.y] + scriptPC), hitting stopObjectCode.
+
+This killed LSCR 200 in room 38 after only 6 opcodes — it never reached
+startScript(203) at offset $0062. The LSCR 203→202 chain never fired,
+deadlocking the credits sequence at the lookout point.
+
+Fix: save/restore tmp+0/+1/+2 on the stack around findBox calls.
+
+Also expanded getResultPos and readVariable to fully resolve array-indexed
+variables (bit 0x2000) instead of just skipping the index bytes. Scripts
+using Var[base+index] now compute the correct effective variable number.
+
+Result: credits sequence now progresses through room 38 — at frame 9500,
+the "The Secret of Monkey Island" title screen renders. The post-credits
+deadlock is FULLY RESOLVED.
+
 STILL NEEDS WORK:
 =========================================================================
 
-1. getResultPos ARRAY INDEX NOT WRITTEN BACK
-   The fix only SKIPS the array index bytes to prevent PC desync. It does
-   NOT actually write to the indexed array slot. Any script that writes
-   to Var[base+index] silently writes to Var[base] instead. This won't
-   crash but will cause wrong game state for scripts using arrays.
-
-   Full fix needed: compute effective address = globalVars[base + index]
-   and store in resultVar. Requires index × 2 offset calculation.
+1. [FIXED] getResultPos ARRAY INDEX — now fully resolved (commit 4df131b)
 
 2. NAMETABLE BOUNDARY ARTIFACT (pink/cyan column)
    8px-wide artifact at the nametable 0→1 boundary. Likely off-by-one
@@ -343,8 +358,14 @@ STILL NEEDS WORK:
    Continue implementing opcodes as gameplay progresses past the
    lookout point. Next: room navigation, dialog, inventory.
 
+6. ROOM 38 VISUAL CORRUPTION ON FIRST LOAD
+   Frame ~8600 shows heavy tile corruption when room 38 first loads.
+   By frame ~9500 the title screen renders correctly (room transition
+   to a new room). The initial room 38 corruption may be related to
+   the existing camera/viewport issues (stale VRAM from prior room).
+
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Implement full array variable read/write (getResultPos + setResult)
+  A. Investigate room 38 initial corruption (frame ~8600 garbled tiles)
   B. Fix nametable boundary artifact
   C. Implement missing SCUMM opcodes for gameplay progression
   D. Hide verb bar during cutscenes (cursorCommand sub-ops)

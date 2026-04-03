@@ -12746,10 +12746,22 @@ scummvm.renderVerbBarChecked:
   lda.w SCUMM.verbDirty
   beq _rvbc.done
   sta.w SCUMM.sentenceDirty
+  ; Ensure BG2 is enabled for verb bar display
+  sep #$20
+  lda.w MainScreen
+  ora #T_BG2_ENABLE
+  sta.w MainScreen
+  rep #$20
   jsl scummvm.renderVerbBar
   bra _rvbc.done
 _rvbc.skip:
   stz.w SCUMM.verbDirty
+  ; Hide verb bar by disabling BG2 on main screen
+  sep #$20
+  lda.w MainScreen
+  and #T_BG2_ENABLE ~$ff
+  sta.w MainScreen
+  rep #$20
 _rvbc.done:
   rtl
 

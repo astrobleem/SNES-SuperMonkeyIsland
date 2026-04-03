@@ -13036,7 +13036,7 @@ _rvb.noInventory:
   .ACCU 16
   .INDEX 16
 
-  ; Clear dirty flag, set DMA pending flag
+  ; Clear dirty flag, set DMA pending flag, mark bar visible
   stz.w SCUMM.verbDirty
   stz.w SCUMM.inventoryDirty
   lda #1
@@ -14404,13 +14404,13 @@ _ears.scanFF:
   iny                                  ; skip sub-code
   ; sub-codes 1, 2, 3, 8: no extra args
   cmp #1
-  beq _ears.scanLoop
+  beq _ears.scanDone                   ; newline — stop counting (first line only)
   cmp #2
   beq _ears.scanLoop
   cmp #3
   beq _ears.scanLoop
   cmp #8
-  beq _ears.scanLoop
+  beq _ears.scanDone                   ; newline — stop counting (first line only)
   ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
@@ -14562,18 +14562,31 @@ _ears.renderFF:
   lda [tmp],y
   and #$00FF
   iny                                  ; skip sub-code
-  ; sub-codes 1, 2, 3, 8: no extra args
+  ; sub-codes 1, 8: newline; 2, 3: no-op
   cmp #1
-  beq _ears.renderLoop
+  beq _ears.renderNewline
   cmp #2
   beq _ears.renderLoop
   cmp #3
   beq _ears.renderLoop
   cmp #8
-  beq _ears.renderLoop
+  beq _ears.renderNewline
   ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
+  bra _ears.renderLoop
+
+_ears.renderNewline:
+  .ACCU 16
+  .INDEX 16
+  ; Advance X to start of next 32-tile tilemap row (64 bytes per row)
+  txa
+  clc
+  adc #$003F                             ; round up...
+  and #$FFC0                             ; ...to next 64-byte boundary
+  tax
+  cpx #DIALOG_TILEMAP_SIZE
+  bcs _ears.renderEnd                    ; past tilemap → stop
   bra _ears.renderLoop
 
 _ears.renderChar:

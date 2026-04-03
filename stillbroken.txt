@@ -338,35 +338,64 @@ Result: credits sequence now progresses through room 38 — at frame 9500,
 the "The Secret of Monkey Island" title screen renders. The post-credits
 deadlock is FULLY RESOLVED.
 
+FIXED — $FF 01 newline in print strings (commit 45d2091)
+=========================================================================
+Credits text "byTim Schafer" was actually "by" FF01 "Tim Schafer" — the
+$FF 01 newline marker was treated as a no-op. Now advances to next
+tilemap row. Scan loop stops at first newline for centering calculation.
+
+FIXED — Verb bar hidden during cutscenes (commit d2aac58)
+=========================================================================
+renderVerbBarChecked now toggles T_BG2_ENABLE in the MainScreen TM
+shadow register. When userPut <= 0 or cutsceneNest != 0, BG2 is
+disabled, hiding the verb bar. BG2 is exclusively used for verbs.
+The verb bar disappears once the game's cutscene scripts fire
+cursorCommand to set userPut=0 (around frame ~7000 in credits).
+
 STILL NEEDS WORK:
 =========================================================================
 
-1. [FIXED] getResultPos ARRAY INDEX — now fully resolved (commit 4df131b)
+1. [FIXED] getResultPos ARRAY INDEX — commit 4df131b
+2. [FIXED] $FF 01 newline — commit 45d2091
+3. [FIXED] Verb bar during cutscenes — commit d2aac58
 
-2. NAMETABLE BOUNDARY ARTIFACT (pink/cyan column)
-   8px-wide artifact at the nametable 0→1 boundary. Likely off-by-one
-   in loadInitialViewport's column address computation or wrap logic.
+4. NAMETABLE BOUNDARY ARTIFACT (pink/magenta column)
+   8px-wide (1 tile) bright magenta column at ~x=120 on screen,
+   visible from frame 500 onward. Likely a tile column in the
+   BG1 nametable that loadInitialViewport doesn't load. The tile
+   data is all-zeros, showing through as palette 0 magenta.
 
-3. VERB BAR VISIBLE DURING CREDITS (item 2 from original list)
-   cursorCommand sub-ops for hiding verb bar not implemented.
-
-4. BANK 0 USAGE AT 84.5% (up from 82.6%)
-   The NMI guard code in processRoomChange added ~600 bytes. Monitor
-   for overflow as more features are added.
-
-5. MISSING SCUMM OPCODES
-   Continue implementing opcodes as gameplay progresses past the
-   lookout point. Next: room navigation, dialog, inventory.
+5. BANK 0 USAGE AT 84.5% (up from 82.6%)
+   Monitor for overflow as more features are added.
 
 6. ROOM 38 VISUAL CORRUPTION ON FIRST LOAD
-   Frame ~8600 shows heavy tile corruption when room 38 first loads.
-   By frame ~9500 the title screen renders correctly (room transition
-   to a new room). The initial room 38 corruption may be related to
-   the existing camera/viewport issues (stale VRAM from prior room).
+   Frame ~8500 shows heavy tile corruption when room 38 first loads.
+   Clears by frame ~9500 (next room transition). Related to the
+   camera/viewport/tile cache issues during room change.
+
+7. setCameraAt SEMANTICS REGRESSION (item 5 from original list)
+   setCameraAt does smooth pan instead of instant snap. This is a
+   workaround for the tile cache not handling instant camera jumps.
+   Fixing properly requires viewport reload during force blank.
+
+8. CAMERA SPEED CAP (7px/frame, item 6 from original list)
+   Artificial limit to prevent outrunning the tile cache. Should be
+   removed when tile cache handles large camera jumps.
+
+9. VIRTUAL ROOM SUPPORT (item 7 from original list)
+   Virtual rooms (room 0 for Lucasfilm logo, room 46 for credits)
+   not implemented. Credits render on room 10's background instead
+   of a dedicated screen. Blocked by section size sensitivity.
+
+10. CREDITS TEXT NOT PER-LINE CENTERED
+    Newline fix advances to next row, but all lines start at the
+    centering position of the first line. Each line should be
+    independently centered based on its character count.
 
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Investigate room 38 initial corruption (frame ~8600 garbled tiles)
-  B. Fix nametable boundary artifact
-  C. Implement missing SCUMM opcodes for gameplay progression
-  D. Hide verb bar during cutscenes (cursorCommand sub-ops)
-  E. Monitor bank 0 usage
+  A. Fix pink column artifact (nametable/viewport loading)
+  B. Investigate room 38 transition corruption
+  C. Revert setCameraAt to instant snap (requires tile cache fix)
+  D. Implement virtual room support
+  E. Per-line centering for multi-line print strings
+  F. Monitor bank 0 usage

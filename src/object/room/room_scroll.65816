@@ -377,9 +377,11 @@ _initVP.p1End:
     sta.b tmp+4
     bra _initVP.ntOk
 _initVP.noWrapNT1:
-  cmp.w #ROOM_TILEMAP_VRAM_WORD + 32
-  bne _initVP.ntOk
-    ;end of NT0 → jump to NT1
+  cmp.w #ROOM_TILEMAP_VRAM_WORD + $0020  ;$3820 — past end of NT0?
+  bcc _initVP.ntOk                       ;below boundary → no wrap
+  cmp.w #ROOM_TILEMAP_VRAM_WORD + $0400  ;$3C00 — already in NT1?
+  bcs _initVP.ntOk                       ;already NT1+ → no wrap
+    ;at or past end of NT0, not yet NT1 → wrap to NT1
     lda.w #ROOM_TILEMAP_VRAM_WORD + $0400
     sta.b tmp+4
 _initVP.ntOk:

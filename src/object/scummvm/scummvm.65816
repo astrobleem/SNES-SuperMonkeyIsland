@@ -10973,6 +10973,13 @@ _ri.dyDone:
   pla
   pha
   bmi _ri.hideEntry
+  cmp #144                      ; during cutscenes, clip sprites at verb bar boundary
+  bcc +
+  lda.w SCUMM.cutsceneNest
+  bne _ri.hideEntry             ; cutscene active + Y >= 144 → hide
+  pla
+  pha
++
   cmp #$00E0
   bcs _ri.hideEntry
 
@@ -11206,6 +11213,16 @@ _ri.gridColInBounds:
   adc 6,s                             ; + gridBaseY (shifted)
   ; Bounds check Y
   bmi _ri.gridHidePopX
+  cmp #144                      ; during cutscenes, clip crowd sprites at verb bar boundary
+  bcc +
+  pha
+  lda.w SCUMM.cutsceneNest
+  beq _ri.gridRestoreY
+  pla
+  bra _ri.gridHidePopX
+_ri.gridRestoreY:
+  pla
++
   cmp #$00E0
   bcs _ri.gridHidePopX
 
@@ -11701,6 +11718,13 @@ _ri.headDyAdd:
   pla
   pha
   bmi _ri.headHide
+  cmp #144                      ; during cutscenes, clip head sprites at verb bar boundary
+  bcc +
+  lda.w SCUMM.cutsceneNest
+  bne _ri.headHide              ; cutscene active + Y >= 144 → hide
+  pla
+  pha
++
   cmp #$00E0
   bcs _ri.headHide
 
@@ -14491,6 +14515,10 @@ _ears.scanDone:
   lsr a
   lsr a
   lsr a                                ; /8 = tile row
+  cmp #17                              ; clamp below verb bar boundary (row 18 = pixel Y 144)
+  bcc +
+  lda #16
++
   sta.w SCUMM.dialogY
   bra _ears.center
 
@@ -14519,6 +14547,10 @@ _ears.div10done:
   lsr a
   lsr a
   lsr a
+  cmp #17                              ; clamp below verb bar boundary (row 18 = pixel Y 144)
+  bcc +
+  lda #16
++
   sta.w SCUMM.dialogY                 ; tile row
 
 _ears.center:
@@ -14629,9 +14661,9 @@ _ears.renderNewline:
   adc #$003F                             ; round up...
   and #$FFC0                             ; ...to next 64-byte boundary
   tax
-  cpx #DIALOG_TILEMAP_SIZE
-  bcc +                                  ; within tilemap — continue
-  jmp _ears.renderEnd                    ; past tilemap → stop
+  cpx #1152                              ; verb area starts at row 18 (18*64=$0480, pixel Y 144)
+  bcc +                                  ; within gameplay area — continue
+  jmp _ears.renderEnd                    ; at/past verb area → stop
 +
 
   ; Per-line centering: scan ahead to count chars in the new line

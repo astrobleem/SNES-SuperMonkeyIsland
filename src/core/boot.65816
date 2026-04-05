@@ -169,6 +169,22 @@ sa1.init:
   sta.l SIWP              ; $2229 — enable SNES CPU I-RAM writes
   sta.l CIWP              ; $222A — enable SA-1 CPU I-RAM writes
 
+  ; Zero all 2KB of I-RAM ($3000-$37FF) to eliminate uninitialized-read warnings.
+  ; The SA-1 will later overwrite mailbox/scratch ($3000-$30FF) and tile output
+  ; buffer ($3100-$37FF) as needed. SIWP must be $FF before any writes.
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  lda #0
+  ldx #$07FE
+- sta.l $3000,x
+  dex
+  dex
+  bpl -
+  sep #$30
+  .ACCU 8
+  .INDEX 8
+
   ; Enable BW-RAM writes for both CPUs
   lda #SBWE_SNES_BWRAM_WRITE_ENABLE
   sta.l SBWE              ; $2226

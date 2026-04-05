@@ -531,3 +531,64 @@ WHAT NEEDS TO HAPPEN NEXT (priority order):
   B. Monitor bank 0 usage (item 5) — currently 83.0%
   C. Reach controllable gameplay (intro sequence plays correctly after
      title screen override; need to verify room 1 beach is reached)
+
+=========================================================================
+UPDATE: 2026-04-05 (session 5) RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+A. [FIXED] GARBLED BOTTOM ROWS DURING INTRO CUTSCENES
+   Root cause: two separate sources of verb-area corruption during
+   cutscenes (cutsceneNest > 0):
+
+   Source 1 — OAM sprites at Y ≥ 144:
+   All three actor rendering paths (body, grid, head) clipped sprites
+   at Y < 224 only. During cutscenes, actors near the bottom of the
+   room produced OAM entries at Y ≥ 144 (into the verb bar area).
+   Fix: Added cutscene Y-clip at 144 to all three paths in
+   scummvm.65816. When cutsceneNest > 0 and Y ≥ 144, OAM entry is
+   hidden. Verified: at frame 12000 with START, all OAM entries
+   Y = 0xF0 (hidden). (+~30 bytes across three paths)
+
+   Source 2 — BG3 dialog tiles at rows 18+ (pixel Y 144+):
+   dialogY (tile row) computed from actor Y or explicit SCUMM coords
+   could yield rows ≥ 18 (verb area). _ears.renderNewline advanced
+   past row 18 on newlines. Both paths wrote dialog tiles into the
+   verb area's BG3 tilemap region (rows 18–27).
+   Fix A: Clamp dialogY to max 16 in both actor-based path (line
+   ~14518) and explicit path (line ~14546) of extractAndRenderString.
+   Fix B: _ears.renderNewline now stops rendering when next row
+   reaches 18*64=$0480 (replacing old DIALOG_TILEMAP_SIZE check).
+   Verified: dialogY=16 at frames 9000 and 11000 (both with START
+   pressed and in demo mode). (+~10 bytes)
+
+C. [VERIFIED] CONTROLLABLE GAMEPLAY REACHED
+   Pressing START at frame 100 → cutscene override fires at ~frame
+   4801: nest=0, room=10 (Melee Island lookout), userPut=1 (verb bar
+   active, player has control). Engine accepts D-pad input normally.
+   The override fires within ~234 frames of START press. After that,
+   the proper MI1 opening cutscene begins (csNest=1 again) — this is
+   correct behavior.
+
+BONUS FIX: SA-1 I-RAM uninitialized read flood
+   boot.65816 sa1.init now zeroes all 2KB of SA-1 I-RAM ($3000–$37FF)
+   at boot using a 16-bit CPU loop (rep #$30 to ensure both A and X
+   are 16-bit, sep #$30 to restore). This eliminates the ~74 per-frame
+   uninitialized read warnings at $0037B6–$0037FF that flooded Mesen
+   output and prevented diagnostic runs from completing. Previously
+   only $3000–$303F was zeroed (mailbox). The tile output buffer
+   ($3100–$37FF) was left uninitialized.
+   Remaining ~10 one-time reads: render slot CHR (init on first room
+   load) + bank $7F scroll buffers (init on first scroll) — unchanged
+   from prior sessions.
+   Boot test: PASS (500 frames).
+
+WHAT NEEDS TO HAPPEN NEXT (priority order):
+  1. Room 10 verb bar area: Aramis noted "heavy tile corruption" in
+     the verb area at frame ~4801. Investigate: is this BG2 verb bar
+     rendering before the first cursorCommand sets userPut=0, or is it
+     stale tilemap data? May already be fixed by items A above.
+  2. Monitor bank 0 usage (item 5) — currently 83.0%
+  3. Progress MI1 intro cutscene to reach room 1 (Melee Island beach)
+     — the proper starting area. Verify walk/talk/look/use controls.

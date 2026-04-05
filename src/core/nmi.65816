@@ -232,6 +232,40 @@ _nmi.noFontDma:
 	.ACCU 8
 	.INDEX 16
 
+	;--- One-shot verb font DMA (VerbFontTiles → VRAM word $4000 = byte $8000) ---
+	;Gated by SCUMM.verbFontNmiPending flag; fires once after first processRoomChange.
+	lda.w SCUMM.verbFontNmiPending
+	beq _nmi.noVerbFontDma
+	lda.w GLOBAL.room.nmiTileFlag
+	bne _nmi.noVerbFontDma
+
+	stz.w SCUMM.verbFontNmiPending
+
+	lda.b #VMAIN_INCREMENT_MODE
+	sta.l VMAIN
+	rep #$20
+	lda #$4000                        ;BG2 CHR base: word $4000 = byte $8000
+	sta.l VMADDL
+	sep #$20
+	lda #DMAP_2_REG_WRITE_ONCE
+	sta.l DMAP7
+	lda #VMDATAL & $ff
+	sta.l DMADEST7
+	lda.b #:VerbFontTiles
+	sta.l DMASRC7B
+	rep #$20
+	lda.w #VerbFontTiles
+	sta.l DMASRC7L
+	lda #VerbFontTiles.LEN
+	sta.l DMALEN7L
+	sep #$20
+	lda #$80                          ;trigger DMA channel 7
+	sta.l MDMAEN
+
+_nmi.noVerbFontDma:
+	.ACCU 8
+	.INDEX 16
+
 	;--- room scroll: write staged tilemap column to VRAM via DMA ch7 ---
 	lda.w GLOBAL.room.nmiColFlag
 	beq _nmi.noColWrite
@@ -340,6 +374,36 @@ _nmi.noOamDma:
 	sta.l MDMAEN
 
 _nmi.noDialogTilemap:
+
+	;--- Verb tilemap NMI DMA: WRAM verbTilemap → VRAM $4800 ---
+	;Gated by SCUMM.verbTilemapNmiPending; set each time verb bar changes.
+	lda.w SCUMM.verbTilemapNmiPending
+	beq _nmi.noVerbTilemap
+
+	stz.w SCUMM.verbTilemapNmiPending
+
+	lda.b #VMAIN_INCREMENT_MODE
+	sta.l VMAIN
+	rep #$20
+	lda #$4800                        ;BG2 tilemap word address (byte $9000)
+	sta.l VMADDL
+	sep #$20
+	lda #$01                          ;2-reg write ($2118/$2119)
+	sta.l DMAP7
+	lda #$18                          ;VMDATAL
+	sta.l DMADEST7
+	lda #$7E                          ;source bank: WRAM
+	sta.l DMASRC7B
+	rep #$20
+	lda #SCUMM.verbTilemap & $ffff
+	sta.l DMASRC7L
+	lda #2048                         ;VERB_TILEMAP_SIZE
+	sta.l DMALEN7L
+	sep #$20
+	lda #$80                          ;trigger DMA channel 7
+	sta.l MDMAEN
+
+_nmi.noVerbTilemap:
 
 	lda.w ObjSel
 	sta.l OBJSEL

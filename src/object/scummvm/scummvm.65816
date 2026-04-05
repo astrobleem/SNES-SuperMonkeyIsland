@@ -817,19 +817,10 @@ _scummvm.processRoomChange:
   stz.w xScrollBG3
   stz.w yScrollBG3
 
-  ; DMA verb font tiles to VRAM $8000 (word $4000)
+  ; Verb font tiles DMA: set NMI pending flag (same pattern as dialogFontNmiPending)
   sep #$20
-  tsx
-  lda #DMA_TRANSFER.VRAM
-  pha
-  pea VerbFontTiles
-  lda.b #:VerbFontTiles
-  pha
-  rep #$31
-  pea VERB_FONT_VRAM_ADDR
-  pea VerbFontTiles.LEN
-  jsr core.dma.registerTransfer
-  txs
+  lda #1
+  sta.w SCUMM.verbFontNmiPending
 
   ; Dialog font DMA now handled by NMI (SCUMM.dialogFontNmiPending set during init)
 
@@ -14179,24 +14170,15 @@ _rpd.noCursor:
   .ACCU 16
   .INDEX 16
 
-  ;--- Verb tilemap DMA → VRAM ---
+  ;--- Verb tilemap DMA → VRAM $4800 (NMI pending flag, same pattern as dialog tilemap) ---
   rep #$20
   lda.w SCUMM.verbDmaPending
   beq _rpd.noVerb
   stz.w SCUMM.verbDmaPending
-  jsr _rpd.findSlot
-  bcc _rpd.noVerb
-  lda #VERB_TILEMAP_SIZE
-  sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #VERB_TILEMAP_VRAM_ADDR
-  sta.w GLOBAL.dmaQueue.1.targetAdress,x
-  lda.w #SCUMM.verbTilemap & $FFFF
-  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
   sep #$20
-  lda #$7E
-  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
-  lda #$40                           ; VRAM | ACTIVE
-  sta.w GLOBAL.dmaQueue.1.transferType,x
+  lda #1
+  sta.w SCUMM.verbTilemapNmiPending  ; hand off to NMI direct DMA
+  rep #$20
 _rpd.noVerb:
   .ACCU 16
   .INDEX 16

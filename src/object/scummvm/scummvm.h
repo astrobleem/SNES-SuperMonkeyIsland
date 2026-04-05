@@ -486,9 +486,10 @@ SCUMM.pendingObject   dw      ; object for pending verb execution
 SCUMM.verbs          INSTANCEOF scummVerb SCUMM_MAX_VERBS  ; 320 bytes
 SCUMM.verbNames      ds SCUMM_VERB_NAMES_SIZE              ; packed name strings
 SCUMM.verbNamesPtr   dw      ; next free offset in name buffer
-SCUMM.verbDirty      dw      ; nonzero = redraw BG2
-SCUMM.verbDmaPending dw      ; nonzero = DMA tilemap to VRAM next frame
-SCUMM.verbTilemap    ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
+SCUMM.verbDirty          dw      ; nonzero = redraw BG2
+SCUMM.verbDmaPending     dw      ; nonzero = DMA tilemap to VRAM next frame
+SCUMM.verbTilemapNmiPending db   ; nonzero = NMI should DMA verb tilemap to VRAM $4800
+SCUMM.verbTilemap        ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .ends
 
 ; Verb save buffer for saveRestoreVerbs opcode ($AB sub-op $01/$02)
@@ -510,6 +511,7 @@ SCUMM.dialogDmaPending   dw      ; nonzero = DMA tilemap to VRAM next VBlank
 SCUMM.dialogBootSuppress dw      ; nonzero = suppress boot dialog DMA (countdown)
 SCUMM.dialogFontNmiPending db    ; nonzero = NMI should DMA font tiles to VRAM
 SCUMM.dialogTilemapNmiPending db ; nonzero = NMI should DMA dialog tilemap to VRAM
+SCUMM.verbFontNmiPending db      ; nonzero = NMI should DMA verb font tiles to VRAM word $4000
 SCUMM.dialogCharCount    dw      ; number of printable chars (for timer calc)
 SCUMM.dialogTilemap      ds 2048 ; BG3 WRAM tilemap buffer (32x32 x 2B)
 SCUMM.dialogPalTrans     dw      ; dynamic palette color 0 (always $0000 = transparent)

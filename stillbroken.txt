@@ -442,20 +442,40 @@ STILL NEEDS WORK:
     SCUMM.dialogTilemapNmiPending flag. Text visible at frames
     1500-5000 as small characters at bottom of moonlit scene.
 
-12. VERB BAR TILE GARBLING IN EARLY CREDITS FRAMES
-    At frames ~1500-2500, verb bar area (BG2 bottom section) shows
-    garbled/random tile data. VerbFontTiles DMA is registered via
-    core.dma.registerTransfer (known-broken IRQ queue) during the
-    first processRoomChange call. Tiles appear to load eventually
-    (clean by frame ~3500) but the delay means the verb bar is
-    visually corrupted during the early credits sequence.
-    Fix: replace registerTransfer with NMI direct DMA or inline DMA
-    for VerbFontTiles (same pattern used for dialog font/tilemap).
-    Location: scummvm.65816 processRoomChange bgInitDone block,
-    lines ~820-832.
+12. [FIXED] VERB BAR TILE GARBLING — this session
+    Root cause: VerbFontTiles DMA used core.dma.registerTransfer
+    (known-broken IRQ queue — never delivers). verbTilemap DMA used
+    GLOBAL.dmaQueue.1 (also broken). Both channels silently dropped,
+    so verb font tiles and tilemap entries never reached VRAM.
+    Fix: Added SCUMM.verbFontNmiPending db and SCUMM.verbTilemapNmiPending
+    db to scummvm.h. Two NMI ch7 DMA blocks in nmi.65816:
+      - verbFontNmiPending: one-shot DMA, VerbFontTiles → VRAM word $4000
+        (BG2 CHR base). Set by bgInitDone each room change.
+      - verbTilemapNmiPending: per-update DMA, WRAM verbTilemap →
+        VRAM word $4800 (BG2 tilemap). Set by registerPendingDma when
+        verbDmaPending is set.
+    Verb bar now shows "Walk to" etc. in early gameplay (confirmed at
+    frame ~2350 in boot sequence). Bank 0 DOWN to 82.9% (removed old
+    dmaQueue.1 code that took more space than the new NMI blocks).
+    NOTE: Room 10 (1256 tiles, $9D00 bytes) has a pre-existing VRAM
+    overflow (tiles extend past word $3800 into BG2/BG3 area). This
+    is NOT a regression from this fix — confirmed by testing with
+    DMAs suppressed. Needs separate architectural fix (tile cap or
+    VRAM layout restructure) when room 10 is fully playable.
+
+=========================================================================
+UPDATE: 2026-04-04 (session 3) RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+12. [FIXED] VERB BAR TILE GARBLING
+    See item 12 description above. Both VerbFontTiles and verbTilemap
+    DMA delivery fixed via NMI pending flags. Verb bar functional.
 
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Fix verb bar tile garbling (item 12) — replace registerTransfer
-     with NMI direct DMA for VerbFontTiles in processRoomChange
-  B. Exercise in-game NPC dialog to verify per-line centering (item 10)
-  C. Monitor bank 0 usage (item 5)
+  A. Exercise in-game NPC dialog to verify per-line centering (item 10)
+  B. Fix room 10 VRAM tile overflow (pre-existing: 1256 tiles overflow
+     past word $3800 into BG2/BG3 area — either cap initial tile DMA
+     at $3800 words, or redesign VRAM layout)
+  C. Monitor bank 0 usage (item 5) — currently 82.9%

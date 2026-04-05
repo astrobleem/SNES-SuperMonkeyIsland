@@ -579,17 +579,28 @@ _play.noRoomChange:
   lda.w SCUMM.cutsceneNest
   beq _play.noAbort
 
-  ; Check cutScenePtr[nest-1] != 0 (an override target is stored)
-  dec a                               ; level index
+  ; Scan cutScenePtr[0..nest-1] downward for any non-zero override target.
+  ; The title screen registers beginOverride at level 0 but csNest grows to
+  ; the cap (5) via repeated cutscene() calls in the attract loop.
+  ; Scanning from top downward finds the target even when nest > 1.
+_play.scanOverride:
+  dec a
+  bmi _play.noAbort                   ; scanned all levels — no target found
+  pha
   asl a
   tax
   lda.w SCUMM.cutScenePtr,x
-  beq _play.noAbort
-
-  ; Set VAR_OVERRIDE (var 6) = 1
+  beq _play.scanPop                   ; this level has no target — try lower
+  pla                                 ; A = found level index
+  inc a
+  sta.w SCUMM.cutsceneNest            ; collapse nest to found_level + 1
   ldx #6*2
   lda #1
-  sta.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x            ; VAR_OVERRIDE = 1
+  bra _play.noAbort
+_play.scanPop:
+  pla
+  bra _play.scanOverride
 
 _play.noAbort:
   .ACCU 16
@@ -3547,6 +3558,74 @@ scummvm.executeSlot:
 _scummvm.fetchLoop:
   .ACCU 16
   .INDEX 16
+  ; --- override check: VAR_OVERRIDE + cutScenePtr[nest-1] → update OWNER slot's PC ---
+  ; The owner slot (cutSceneScript[nest-1]) registered the override, not the current slot.
+  ; We update its pc to the target and yield; it runs correctly next iteration.
+  ldx #6*2
+  lda.w SCUMM.globalVars,x           ; VAR_OVERRIDE (var 6)
+  beq _floop.noOverride
+  lda.w SCUMM.cutsceneNest
+  beq _floop.noOverride
+  dec a
+  asl a
+  tax
+  lda.w SCUMM.cutScenePtr,x          ; override target PC offset for nest-1
+  beq _floop.noOverride              ; no target stored
+  pha                                 ; save target PC offset
+  ; Get owner slot index from cutSceneScript[nest-1]
+  lda.w SCUMM.cutsceneNest
+  dec a
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.cutSceneScript,x       ; owner slot index (0-24)
+  rep #$20
+  .ACCU 16
+  and #$00FF                          ; zero-extend
+  ; ownerSlotPtr = ownerSlotIndex × sizeof(scummSlot) = ownerSlotIndex × 64
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                               ; × 64
+  tax                                 ; X = owner slot struct offset
+  pla                                 ; A = override target PC offset
+  sta.w SCUMM.slots.pc,x             ; redirect owner slot to override target
+  ; Decrement owner slot.cutsceneOverride (clamp at 0)
+  lda.w SCUMM.slots.cutsceneOverride,x
+  and #$00FF
+  beq _floop.overOk
+    dec a
+    sep #$20
+    .ACCU 8
+    sta.w SCUMM.slots.cutsceneOverride,x
+    rep #$20
+    .ACCU 16
+_floop.overOk:
+  .ACCU 16
+  .INDEX 16
+  ; Unwind one cutscene level
+  lda.w SCUMM.cutsceneNest
+  dec a
+  sta.w SCUMM.cutsceneNest
+  asl a
+  tax
+  stz.w SCUMM.cutScenePtr,x
+  stz.w SCUMM.cutSceneData,x
+  lda.w SCUMM.cutsceneNest
+  tax
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.cutSceneScript,x
+  rep #$20
+  .ACCU 16
+  ; Clear VAR_OVERRIDE, yield current slot — owner runs with new PC next frame
+  ldx #6*2
+  stz.w SCUMM.globalVars,x
+  sec
+  bra _scummvm.fetchYield             ; yield; owner slot gets new PC on next iteration
+_floop.noOverride:
   ; Read opcode byte (16-bit load, mask to 8-bit)
   lda [tmp],y
   and #$00FF
@@ -4549,6 +4628,8 @@ op_cutscene:
   .INDEX 16
   jsr _scummvm.skipWordVararg
   lda.w SCUMM.cutsceneNest
+  cmp #5                              ; max 5 levels (cutScenePtr/Script/Data arrays are 5 entries)
+  bcs _op_cutscene.nestFull           ; at cap — skip to avoid WRAM overflow
   inc a
   sta.w SCUMM.cutsceneNest
 
@@ -4573,6 +4654,10 @@ op_cutscene:
   inc a
   sta.w SCUMM.slots.cutsceneOverride,x
   rep #$20
+  clc
+  rts
+
+_op_cutscene.nestFull:
   clc
   rts
 

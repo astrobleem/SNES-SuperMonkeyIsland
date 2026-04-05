@@ -481,3 +481,53 @@ WHAT NEEDS TO HAPPEN NEXT (priority order):
   B. Monitor bank 0 usage (item 5) — currently 82.9%
   C. Reach actual gameplay (title screen intro loop prevents normal START
      navigation; requires WRAM surgery to kill cutsceneNest and set newRoom=1)
+
+=========================================================================
+UPDATE: 2026-04-05 (session 4) RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+13. [FIXED] TITLE SCREEN START BUTTON — cutscene override system
+    Root cause: three bugs combined to prevent START from skipping
+    the attract demo and reaching gameplay.
+
+    Bug A: op_cutscene had no depth cap. csNest grew past 5 levels
+    into adjacent WRAM (cutSceneScript/cutSceneData arrays only hold
+    5 entries). Caused silent WRAM corruption on every attract loop.
+    Fix: cmp #5; bcs _op_cutscene.nestFull — skip at max depth.
+
+    Bug B: Input handler (START press → beginOverride trigger) checked
+    only cutScenePtr[nest-1]. When csNest=5 (cap hit), cutScenePtr[4]=0
+    (only level 0 had the registered target). Override never fired.
+    Fix: scan all levels 0..nest-1 downward; when non-zero target found
+    at level L, collapse csNest to L+1, set VAR_OVERRIDE=1.
+
+    Bug C: _scummvm.fetchLoop never read VAR_OVERRIDE. The override
+    target stored by beginOverride was never executed.
+    Fix: at top of fetchLoop, if VAR_OVERRIDE set, look up owner slot
+    (cutSceneScript[nest-1]), set owner's slots.pc to cutScenePtr[nest-1],
+    unwind nest, clear VAR_OVERRIDE, yield. Owner runs with new PC next
+    frame.
+
+    Verified: pressing START at frame 5500 transitions to game intro
+    sequence. Guybrush visible at Melee Island ruins at frame 6500.
+    Bank 0: 83.0% after all changes.
+
+ALSO RESOLVED THIS SESSION:
+
+"Room 10 VRAM tile overflow" item re-evaluated via code analysis:
+    room.load calls drainFullTileset (NOT loadTileset) — tiles are
+    loaded on-demand by the tile cache, not via bulk DMA. No VRAM
+    overflow occurs. The earlier diagnosis was based on chr_size >
+    ROOM_MAX_CHR_SIZE, but the actual DMA is per-tile on-demand.
+    Room 10 with 1256 tiles works correctly — cache evicts as needed.
+    The visual garble previously observed was verb bar DMA corruption
+    (item 12, now fixed). CLOSED.
+
+WHAT NEEDS TO HAPPEN NEXT (priority order):
+  A. Fix garbled bottom rows during intro cutscenes (verb bar or
+     crowd sprite rendering; visible in intro sequence at frames 6500+)
+  B. Monitor bank 0 usage (item 5) — currently 83.0%
+  C. Reach controllable gameplay (intro sequence plays correctly after
+     title screen override; need to verify room 1 beach is reached)

@@ -1122,31 +1122,13 @@ _prc.noExitScript2:
   jsl scummvm.snapCameraToRoom
 
   ; --- Reload viewport at corrected camera position ---
-  ; snapCameraToRoom updated cameraX from ego actor. Reload tile cache
-  ; so tiles match the actual camera position, not room.load's default.
-  ; CRITICAL: Disable NMI during VRAM writes — NMI tile staging clobbers VMAIN/VMADDL.
-  sei
-  sep #$20
-  lda.w GLOBAL.interruptFlags
-  pha                                  ; save NMI state
-  lda #0
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN                       ; disable NMI
-  lda.b #$80
-  sta.l INIDSP                         ; force blank for VRAM writes
-  rep #$20
-  jsr room.initTileCache               ; reset cache (slots from first load are stale)
-  jsr room.loadInitialViewport         ; reload at correct cameraX
+  ; Use room.reloadViewport which properly handles NMI stop, force blank,
+  ; HDMA disable, NMI staging flag clearing, tile cache reinit, and cleanup.
+  jsr room.reloadViewport
+  ; Sync scroll state so syncScroll doesn't see stale delta on next frame
   lda.w GLOBAL.room.cameraX
-  sta.w GLOBAL.room.cameraXOld         ; sync so syncScroll doesn't see stale delta
-  sta.w xScrollBG1                     ; sync BG1 scroll to camera for first visible frame
-  ; Restore NMI
-  sep #$20
-  pla
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
-  rep #$20
-  cli
+  sta.w GLOBAL.room.cameraXOld
+  sta.w xScrollBG1
 
   ; --- Run entry scripts in ScummVM order ---
   ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1
@@ -5436,10 +5418,9 @@ op_panCameraTo:
   clc
   rts
 
-; setCameraAt ($32, $B2) -- p16[7] — snap camera to target
-; On SNES, treated as a fast pan (same as panCameraTo) to avoid
-; outrunning the tile scroll streamer. moveCamera will smoothly
-; bring cameraX to the destination at CAMERA_FAST_X pixels/frame.
+; setCameraAt ($32, $B2) -- p16[7] — instant camera snap
+; Snaps camera to target position. If jump > 8px, calls
+; room.reloadViewport to refresh all visible tile columns.
 op_setCameraAt:
   .ACCU 16
   .INDEX 16
@@ -14552,17 +14533,25 @@ _ears.startReady:
 
   ; --- Render: read chars from bytecode, write tilemap entries ---
   ; Reads until $00 terminator (like skipPrintString). Renders printable chars.
+_ears.renderEndTrap:
+  .ACCU 16
+  .INDEX 16
+  jmp _ears.renderEnd                  ; trampoline (scan code pushes renderEnd out of branch range)
+_ears.renderCharTrap:
+  .ACCU 16
+  .INDEX 16
+  jmp _ears.renderChar                 ; trampoline (scan code pushes renderChar out of branch range)
 _ears.renderLoop:
   .ACCU 16
   .INDEX 16
   lda [tmp],y
   and #$00FF
-  beq _ears.renderEnd                  ; $00 = end of string
+  beq _ears.renderEndTrap              ; $00 = end of string
   iny
   cmp #$00FF
   beq _ears.renderFF                   ; $FF = escape prefix (CD talkie)
   cmp #$0009
-  bcs _ears.renderChar                 ; >= $09 = printable
+  bcs _ears.renderCharTrap             ; >= $09 = printable
   ; $01-$08: escape, skip 2-byte arg
   iny
   iny
@@ -14598,9 +14587,101 @@ _ears.renderNewline:
   and #$FFC0                             ; ...to next 64-byte boundary
   tax
   cpx #DIALOG_TILEMAP_SIZE
-  bcs _ears.renderEnd                    ; past tilemap → stop
-  bra _ears.renderLoop
+  bcc +                                  ; within tilemap — continue
+  jmp _ears.renderEnd                    ; past tilemap → stop
++
 
+  ; Per-line centering: scan ahead to count chars in the new line
+  phy                                    ; save Y (bytecode position)
+  phx                                    ; save X (row_base byte offset)
+  lda #0
+  sta.w SCUMM.scratch2                   ; line char count = 0
+_ears.nlScanLoop:
+  .ACCU 16
+  .INDEX 16
+  lda [tmp],y
+  and #$00FF
+  beq _ears.nlScanDone
+  iny
+  cmp #$00FF
+  beq _ears.nlScanFF
+  cmp #$0009
+  bcs _ears.nlScanChar
+  iny
+  iny
+  bra _ears.nlScanLoop
+_ears.nlScanFF:
+  .ACCU 16
+  .INDEX 16
+  lda [tmp],y
+  and #$00FF
+  iny
+  cmp #1
+  beq _ears.nlScanDone
+  cmp #2
+  beq _ears.nlScanLoop
+  cmp #3
+  beq _ears.nlScanLoop
+  cmp #8
+  beq _ears.nlScanDone
+  iny
+  iny
+  bra _ears.nlScanLoop
+_ears.nlScanChar:
+  .ACCU 16
+  .INDEX 16
+  inc.w SCUMM.scratch2
+  bra _ears.nlScanLoop
+_ears.nlScanDone:
+  .ACCU 16
+  .INDEX 16
+  plx                                    ; restore row_base into X
+  ply                                    ; restore bytecode position into Y
+  ; Compute start_col = clamp(dialogX - count/2, 0, 32 - count)
+  lda.w SCUMM.scratch2                   ; line char count
+  lsr a                                  ; count / 2
+  sta.w SCUMM.scratch                    ; scratch = half-width
+  lda.w SCUMM.dialogX                    ; center column (0-31)
+  sec
+  sbc.w SCUMM.scratch                    ; start_col = center - half
+  bpl +
+    lda #0
++
+  cmp #32
+  bcc +
+    lda #0
++
+  pha                                    ; save start_col
+  clc
+  adc.w SCUMM.scratch2                   ; start + count
+  cmp #33
+  bcc _ears.nlNoOverflow
+    pla
+    lda #32
+    sec
+    sbc.w SCUMM.scratch2
+    bpl _ears.nlStartOk
+    lda #0
+    bra _ears.nlStartOk
+_ears.nlNoOverflow:
+  .ACCU 16
+  .INDEX 16
+  pla
+_ears.nlStartOk:
+  .ACCU 16
+  .INDEX 16
+  asl a                                  ; start_col * 2 = byte offset
+  sta.w SCUMM.scratch                    ; save byte offset
+  txa                                    ; A = row_base
+  clc
+  adc.w SCUMM.scratch                    ; A = row_base + start_offset
+  tax                                    ; X = new tilemap position
+  jmp _ears.renderLoop                   ; bra out of range — use jmp
+
+_ears.renderLoopTrap:
+  .ACCU 16
+  .INDEX 16
+  jmp _ears.renderLoop                 ; trampoline (renderChar branches too far back)
 _ears.renderChar:
   .ACCU 16
   .INDEX 16
@@ -14610,17 +14691,17 @@ _ears.renderChar:
   ; tilemap word: priority 1 + palette 7 + tile index
   ora #$3C00
   cpx #DIALOG_TILEMAP_SIZE
-  bcs _ears.renderLoop                 ; bounds check: skip if past tilemap end
+  bcs _ears.renderLoopTrap             ; bounds check: skip if past tilemap end
   sta.w SCUMM.dialogTilemap,x
   inx
   inx
   ; Right margin wrap: if column wrapped to 0, indent by 1 tile
   txa
   and #$003F                           ; mod 64 = byte offset within row
-  bne _ears.renderLoop                 ; not at start of row — continue
+  bne _ears.renderLoopTrap             ; not at start of row — continue
   inx                                  ; skip column 0
   inx
-  bra _ears.renderLoop
+  bra _ears.renderLoopTrap
 
 _ears.renderEnd:
   .ACCU 16
@@ -15511,7 +15592,7 @@ _mc.checkPan:
   beq _mc.updateRoom                ; already at destination
   bcc _mc.moveRight
 
-  ; Move left: step = min(cur - dest, fast_x, 7)
+  ; Move left: step = min(cur - dest, fast_x)
   sec
   sbc.w SCUMM.cameraDest
   sta.w SCUMM.scratch3              ; delta
@@ -15519,13 +15600,6 @@ _mc.checkPan:
   cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
   bcc +
     lda.w SCUMM.globalVars,x
-    sta.w SCUMM.scratch3
-+
-  ; Cap step to 7px to keep tile streamer in sync
-  lda.w SCUMM.scratch3
-  cmp #8
-  bcc +
-    lda #7
     sta.w SCUMM.scratch3
 +
   ldx #SCUMM_VAR_CAMERA_POS_X*2
@@ -15538,7 +15612,7 @@ _mc.checkPan:
 _mc.moveRight:
   .ACCU 16
   .INDEX 16
-  ; step = min(dest - cur, fast_x, 7)
+  ; step = min(dest - cur, fast_x)
   lda.w SCUMM.cameraDest
   ldx #SCUMM_VAR_CAMERA_POS_X*2
   sec
@@ -15548,13 +15622,6 @@ _mc.moveRight:
   cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
   bcc +
     lda.w SCUMM.globalVars,x
-    sta.w SCUMM.scratch3
-+
-  ; Cap step to 7px to keep tile streamer in sync
-  lda.w SCUMM.scratch3
-  cmp #8
-  bcc +
-    lda #7
     sta.w SCUMM.scratch3
 +
   ldx #SCUMM_VAR_CAMERA_POS_X*2
@@ -15693,6 +15760,11 @@ _snap.done:
 ;-------------------------------------------------------------------
 scummvm.setCameraAtImpl:
   rep #$31
+
+  ; Save old cameraX for snap detection
+  lda.w GLOBAL.room.cameraX
+  sta.w SCUMM.scratch3
+
   ; Clamp to [MIN_X, MAX_X]
   ldx #SCUMM_VAR_CAMERA_MIN_X*2
   cmp.w SCUMM.globalVars,x
@@ -15719,6 +15791,20 @@ scummvm.setCameraAtImpl:
 +
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
+
+  ; If snap >= 9px, mark viewport dirty for syncScroll to handle
+  sec
+  sbc.w SCUMM.scratch3            ; A = new - old (may underflow)
+  bcs _setCamAt.posDelta
+    lda.w SCUMM.scratch3
+    sec
+    sbc.w GLOBAL.room.cameraX     ; A = old - new
+_setCamAt.posDelta:
+  cmp #9
+  bcc _setCamAt.noSnap
+    inc.w GLOBAL.room.viewportDirty  ; request reload in syncScroll
+_setCamAt.noSnap:
+
   clc
   rtl
 

@@ -54,35 +54,15 @@ core.oam.clearAll:
 * clear oam table buffer in ram & initate upload
 */
 core.oam.play:
+  ; Clear WRAM oam buffer and reset slot counter each frame.
+  ; OAM upload to hardware is handled by NMI (core.nmi.play) via direct DMA ch7,
+  ; gated on GLOBAL.oamUploadFlag (set by sprite/actor renderers, cleared by NMI).
   php
-  sep #$20
-  lda.w GLOBAL.oamUploadFlag
-  beq +
-	rep #$31
-	lda.w #WRAM.CLEAR_PATTERN.OAM
-	ldy.w #GLOBAL.oamBuffer.end - GLOBAL.oamBuffer
-	ldx.w #GLOBAL.oamBuffer
-	jsr ClearWRAM
-
-	sep #$20
-	tsx
-	lda #DMA_TRANSFER.OAM		;transfer type
-	pha
-	pea GLOBAL.oamBuffer	;source adress
-
-	lda #RAM	;@fixme, this is a hack. must find out why above returns $00 instead of $7e
-	pha
-	pea OAM.TABLE.0.START	;target
-	pea OAM.TABLE.0.LENGTH + OAM.TABLE.1.LENGTH	;length (Table 0 + Table 1)
-
-	jsr core.dma.registerTransfer
-
-	txs
-
-+
-  .ACCU 8
-  .INDEX 16
-  stz.w GLOBAL.oamUploadFlag
+  rep #$31
+  lda.w #WRAM.CLEAR_PATTERN.OAM
+  ldy.w #GLOBAL.oamBuffer.end - GLOBAL.oamBuffer
+  ldx.w #GLOBAL.oamBuffer
+  jsr ClearWRAM
   rep #$31
   stz.w GLOBAL.currentOamSlot
   plp
@@ -91,19 +71,17 @@ core.oam.play:
 core.oam.clearTable:
   php
   sep #$20
-  jsr core.oam.clearAll
-  ;clear oam table
-  tsx
-  lda #DMA_TRANSFER.OAM | DMA_TRANSFER.OPTION.FIXED_SOURCE		;transfer type
-  pha
-  pea oamClearWord	;source adress
-  lda #:oamClearWord		;source bank
-  pha
-  pea OAM.TABLE.0.START	;target
-  pea OAM.TABLE.0.LENGTH + OAM.TABLE.1.LENGTH	;length
+  jsr core.oam.clearAll          ; fill WRAM oamBuffer+oamTable1 with $F8
 
-  jsr core.dma.registerTransfer
-  txs
+  ; Write $F8 to all 544 hardware OAM bytes via CPU (no DMA — OAMDATA
+  ; accepts CPU writes unconditionally; DMA requires force-blank to be active)
+  stz.w OAMADDL                  ; reset OAM address to table 0 start
+  stz.w OAMADDH
+  lda #$F8                       ; Y=$F8 hides sprites (>= 224 = off-screen)
+  ldy #OAM.TABLE.0.LENGTH + OAM.TABLE.1.LENGTH  ; = $220 = 544 iterations
+- sta.w OAMDATA
+  dey
+  bne -
 
   plp
   rts  

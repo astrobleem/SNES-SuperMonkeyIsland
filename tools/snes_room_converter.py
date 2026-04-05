@@ -353,8 +353,10 @@ def _rgb_to_bgr555_array(rgb_array):
     ).astype(np.uint16)
 
 
-# Magic pink transparent color in SCUMM MI1 (palette index 5)
-SCUMM_TRANS_RGB = (171, 0, 171)
+# Magic pink transparent colors in SCUMM MI1 object images.
+# (171,0,171) = VGA palette index 5 in most rooms.
+# (252,84,252) = alternate transparency marker used by some extractors.
+SCUMM_TRANS_COLORS = {(171, 0, 171), (252, 84, 252)}
 
 
 def _load_room_objects(room_dir, bg_width, bg_height):
@@ -466,7 +468,7 @@ def _composite_object_tiles(bg_rgb, obj_info, width_tiles, height_tiles):
                     ly = ry - oy
                     if 0 <= lx < ow and 0 <= ly < oh:
                         r, g, b = int(obj_rgb[ly, lx, 0]), int(obj_rgb[ly, lx, 1]), int(obj_rgb[ly, lx, 2])
-                        if (r, g, b) != SCUMM_TRANS_RGB:
+                        if (r, g, b) not in SCUMM_TRANS_COLORS:
                             bg_tile[py, px] = obj_rgb[ly, lx]
                             has_obj_pixel = True
 

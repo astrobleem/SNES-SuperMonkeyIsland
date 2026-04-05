@@ -306,19 +306,35 @@ _initVP.p1Loop:
   asl a
   sta.l VMADDL
 
-  ;read 32 bytes (16 words) from MSU, write to VRAM
-  ldy #16
-_initVP.tileRead:
+  ;phase A: read 32 bytes from MSU into bank $7E staging buffer
+  ldx #0
+_initVP.tileStage:
   .ACCU 16
   .INDEX 16
   sep #$20
   lda.l MSU_DATA
+  sta.w GLOBAL.room.vpTileStaging,x
+  rep #$20
+  inx
+  cpx #32
+  bne _initVP.tileStage
+
+  ;phase B: write 16 words from staging to VRAM (same pattern as Pass 2)
+  ldx #0
+  ldy #16
+_initVP.tileWrite:
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.room.vpTileStaging,x
+  sep #$20
   sta.l VMDATAL
-  lda.l MSU_DATA
+  xba
   sta.l VMDATAH
   rep #$20
+  inx
+  inx
   dey
-  bne _initVP.tileRead
+  bne _initVP.tileWrite
 
   lda.b tmp+14                  ;slot
   bra _initVP.p1Remap
@@ -492,6 +508,10 @@ room.reloadViewport:
   plp
   rts
 
+room.reloadViewport_long:
+  jsr room.reloadViewport
+  rtl
+
 
 /**
 * Remap viewport tilemap in VRAM for a camera snap.
@@ -584,6 +604,19 @@ _syncScroll.canScroll:
   ;apply to PPU scroll register
   lda.w GLOBAL.room.cameraX
   sta.w xScrollBG1
+
+  ;setCameraAt snap pending? reload viewport now (safe: currentRoom is stable here)
+  sep #$20                              ; 8-bit for byte read
+  lda.w GLOBAL.room.viewportDirty
+  rep #$20                              ; restore 16-bit
+  beq _syncScroll.noDirty
+    sep #$20
+    stz.w GLOBAL.room.viewportDirty     ; clear flag (8-bit stz = 1 byte only)
+    rep #$20
+    jsr room.reloadViewport
+    lda.w GLOBAL.room.cameraX
+    sta.w GLOBAL.room.cameraXOld        ; sync so boundary-detection sees delta=0
+_syncScroll.noDirty:
 
   ;boundary detection (old tile col vs new)
   lda.w GLOBAL.room.cameraXOld

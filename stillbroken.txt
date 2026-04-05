@@ -311,10 +311,9 @@ tile corruption:
    loadInitialViewport, causing scroll/tile position mismatch.
    Fix: sta.w xScrollBG1 after viewport load.
 
-REMAINING MINOR ARTIFACTS:
-  - Small green tile in upper-left corner (1 tile, likely stale VRAM)
-  - Cyan/green artifact at nametable boundary (column ~16)
-  - These are cosmetic; the scene is fully recognizable
+REMAINING MINOR ARTIFACTS (2026-03-31):
+  - Small green tile in upper-left corner (1 tile, likely stale VRAM) — gone as of 2026-04-04
+  - Cyan/green artifact at nametable boundary (column ~16) — FIXED commit 9c3cd4d
 
 FIXED — putActor/isActorInBox bytecode pointer clobber (commit 4df131b)
 =========================================================================
@@ -352,50 +351,75 @@ disabled, hiding the verb bar. BG2 is exclusively used for verbs.
 The verb bar disappears once the game's cutscene scripts fire
 cursorCommand to set userPut=0 (around frame ~7000 in credits).
 
+=========================================================================
+UPDATE: 2026-04-04 SESSION RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+4. [FIXED] NAMETABLE BOUNDARY ARTIFACT — commit 9c3cd4d (prior session)
+   loadInitialViewport now correctly handles NT0→NT1 wrap at column 32.
+   Pink column gone.
+
+6. [FIXED] ROOM 38 VISUAL CORRUPTION ON FIRST LOAD
+   Root cause: setCameraAtImpl did instant snap but tile cache held stale
+   viewport data. Fix: setCameraAtImpl sets GLOBAL.room.viewportDirty flag
+   when delta >= 9px; syncScroll checks and consumes the flag, calling
+   room.reloadViewport during force blank with NMI safe. Room 38 now loads
+   clean on first visit.
+
+7. [FIXED] setCameraAt SEMANTICS REGRESSION
+   setCameraAtImpl restored to instant snap (saves old cameraX to scratch3,
+   clamps new cameraX, writes cameraX + cameraXOld, then sets viewportDirty
+   if jump >= 9px). syncScroll handles the deferred reload. Viewport stays
+   valid through all camera operations.
+
+8. [FIXED] CAMERA SPEED CAP REMOVED
+   Both 7px/frame cap blocks removed from moveCamera (left-movement and
+   right-movement). Camera now pans at full VAR_CAMERA_FAST_X speed.
+
+10. [FIXED IN CODE] PER-LINE CENTERING for _ears dialog renderer
+    _ears.renderNewline now scans ahead to count chars in next line,
+    computes start_col = clamp(dialogX - count/2, 0, 32-count), and
+    positions X to row_base + start_col*2. Applies to in-game NPC dialog.
+    NOTE: Credits sequence (frames 0-12000) does NOT use op_printEgo or
+    _printStringToScreen — credits text is rendered via a different path
+    (likely direct tile writes from script). Per-line centering will be
+    exercised when in-game NPC dialog fires.
+
 STILL NEEDS WORK:
 =========================================================================
 
 1. [FIXED] getResultPos ARRAY INDEX — commit 4df131b
 2. [FIXED] $FF 01 newline — commit 45d2091
 3. [FIXED] Verb bar during cutscenes — commit d2aac58
+4. [FIXED] Nametable boundary artifact — commit 9c3cd4d
+6. [FIXED] Room 38 visual corruption on first load — this session
+7. [FIXED] setCameraAt semantics regression — this session
+8. [FIXED] Camera speed cap — this session
+10. [FIXED IN CODE] Per-line centering — this session (_ears.renderNewline)
 
-4. NAMETABLE BOUNDARY ARTIFACT (pink/magenta column)
-   8px-wide (1 tile) bright magenta column at ~x=120 on screen,
-   visible from frame 500 onward. Likely a tile column in the
-   BG1 nametable that loadInitialViewport doesn't load. The tile
-   data is all-zeros, showing through as palette 0 magenta.
+5. BANK 0 USAGE AT 84.5%
+   Stable at 84.5% after this session's changes. Still within budget.
+   Monitor; WLA-DX silently reshuffles at overflow.
 
-5. BANK 0 USAGE AT 84.5% (up from 82.6%)
-   Monitor for overflow as more features are added.
-
-6. ROOM 38 VISUAL CORRUPTION ON FIRST LOAD
-   Frame ~8500 shows heavy tile corruption when room 38 first loads.
-   Clears by frame ~9500 (next room transition). Related to the
-   camera/viewport/tile cache issues during room change.
-
-7. setCameraAt SEMANTICS REGRESSION (item 5 from original list)
-   setCameraAt does smooth pan instead of instant snap. This is a
-   workaround for the tile cache not handling instant camera jumps.
-   Fixing properly requires viewport reload during force blank.
-
-8. CAMERA SPEED CAP (7px/frame, item 6 from original list)
-   Artificial limit to prevent outrunning the tile cache. Should be
-   removed when tile cache handles large camera jumps.
-
-9. VIRTUAL ROOM SUPPORT (item 7 from original list)
+9. VIRTUAL ROOM SUPPORT
    Virtual rooms (room 0 for Lucasfilm logo, room 46 for credits)
    not implemented. Credits render on room 10's background instead
-   of a dedicated screen. Blocked by section size sensitivity.
+   of a dedicated screen. Game does NOT crash without virtual room
+   support — the credits sequence completes and room 38 loads
+   correctly. Deferred; lower priority now that game is functional.
 
-10. CREDITS TEXT NOT PER-LINE CENTERED
-    Newline fix advances to next row, but all lines start at the
-    centering position of the first line. Each line should be
-    independently centered based on its character count.
+11. CREDITS TEXT RENDERING PATH UNKNOWN
+    During the credits sequence (0-12000 frames), neither op_printEgo
+    nor _printStringToScreen is ever called. Credits text appears via
+    a mechanism not yet identified — possibly direct VRAM tile writes
+    from a dedicated credits script, or BG3 tilemap manipulation outside
+    the SCUMM dialog renderer. The per-line centering fix (#10) does NOT
+    apply to this path. Investigate when game-complete polishing begins.
 
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Fix pink column artifact (nametable/viewport loading)
-  B. Investigate room 38 transition corruption
-  C. Revert setCameraAt to instant snap (requires tile cache fix)
-  D. Implement virtual room support
-  E. Per-line centering for multi-line print strings
-  F. Monitor bank 0 usage
+  A. Identify credits text rendering path (item 11)
+  B. Implement virtual room support cleanly (item 9)
+  C. Monitor bank 0 usage (item 5)
+  D. Exercise in-game NPC dialog to verify per-line centering (item 10)

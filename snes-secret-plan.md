@@ -1058,8 +1058,9 @@ Items 3-4 are the critical ones — without room navigation and dialog selection
 #### Remaining Work
 
 **Costume Pipeline (follow-up):**
+- [x] DCOS mapping — gen_costume_rom.py now indexes CostumeDirTable by SCUMM resource ID (2026-03-29)
+- [x] Sparse lookup tables — pic file number indexing with gap fallback, fixes frame alignment (2026-03-29)
 - [ ] Walk cycle table generalization — extract animation data from COST chunks instead of hardcoding costume 1's cycle
-- [ ] DCOS mapping — verify extractor costume numbering matches SCUMM resource IDs (see `tools/dcos_mapping.py`)
 - [ ] Costume palette per-room — some costumes may look wrong with their source room's palette when used in a different room
 
 **Cutscene System:**

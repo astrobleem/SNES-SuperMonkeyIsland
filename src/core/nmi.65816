@@ -281,6 +281,36 @@ _nmi.noColWrite:
 	.INDEX 16
 	sep #$20
 
+	;--- OAM DMA: upload WRAM oamBuffer → hardware OAM during VBlank ---
+	; Runs at NMI (VBlank start) so hardware OAM is current before scanline 0.
+	; Eliminates stale 8-scanline window that caused corner sprite artifacts.
+	lda.w GLOBAL.oamUploadFlag
+	beq _nmi.noOamDma
+
+	  stz.w OAMADDL              ; reset OAM address pointer to table 0 start
+	  stz.w OAMADDH
+	  lda.b #$00                 ; DMA type: 1-register, auto-increment source
+	  sta.l DMAP7
+	  lda.b #OAMDATA & $ff       ; B-bus target: OAMDATA ($2104)
+	  sta.l DMADEST7
+	  lda.b #$7E                 ; source bank: WRAM
+	  sta.l DMASRC7B
+	  rep #$20
+	  .ACCU 16
+	  lda.w #GLOBAL.oamBuffer & $ffff
+	  sta.l DMASRC7L
+	  lda.w #$0220               ; OAM table 0 ($200) + table 1 ($20) = 544 bytes
+	  sta.l DMALEN7L
+	  sep #$20
+	  .ACCU 8
+	  lda.b #$80                 ; trigger DMA channel 7
+	  sta.l MDMAEN
+	  stz.w GLOBAL.oamUploadFlag
+
+_nmi.noOamDma:
+	.ACCU 8
+	.INDEX 16
+
 	lda.w ObjSel
 	sta.l OBJSEL
 

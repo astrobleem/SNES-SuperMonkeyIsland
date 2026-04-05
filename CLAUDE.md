@@ -6,17 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Monkey Island on the Super Nintendo, targeting real NTSC SNES hardware with MSU-1 on SD2SNES/FXPAK Pro. Written in 65816 assembly with a custom OOP framework. Engine forked from SuperDragonsLairArcade.
 
-## Assembly Delegation
+## Assembly
 
-**Never write 65816 assembly directly — always delegate to the snes-65816-dev agent (Porthos).** Use the Agent tool with the `.claude/agents/snes-65816-dev.md` agent for all 65816 assembly work including writing, reviewing, debugging, and optimizing assembly code. Assembly pitfalls and hardware details live in Porthos's agent file, not here.
+Write 65816 assembly directly. The `snes-65816-dev` and `scumm-reference` agents no longer exist.
 
-## Agent Team — The Three Musketeers
+## Agent
 
-| Agent | File | Role |
-|-------|------|------|
-| **Athos** | `.claude/agents/scumm-reference.md` | SCUMM v5 research — produces specs from ScummVM C++ source |
-| **Porthos** | `.claude/agents/snes-65816-dev.md` | 65816 assembly implementation — writes, reviews, debugs code |
-| **Aramis** | `.claude/agents/mesen-debugger.md` | Mesen 2 debugging — Lua tests, WRAM inspection, frame analysis |
+**Aramis** (`.claude/agents/mesen-debugger.md`) — Mesen 2 debugging: Lua tests, WRAM inspection, frame analysis. Use the Agent tool with `subagent_type: "mesen-debugger"` for complex runtime diagnostics. You can write simple Lua snippets directly via `run_lua_snippet`, but delegate thorough debugging sessions to Aramis.
 
 ## Build Commands
 
@@ -65,7 +61,7 @@ cmd.exe /c "cd /d E:\gh\SNES-SuperMonkeyIsland\distribution && E:\gh\SNES-SuperM
 wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && python3 tools/rom_usage.py build/SuperMonkeyIsland.sym build/SuperMonkeyIsland.sfc"
 ```
 
-Bank 0 overflow is silent — WLA-DX reshuffles sections without error. Porthos handles the details.
+Bank 0 overflow is silent — WLA-DX reshuffles sections without error.
 
 ## Architecture (High-Level)
 

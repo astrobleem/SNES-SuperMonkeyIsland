@@ -97,6 +97,7 @@ GLOBAL.room.nmiTileCount   dw                 ;number of new tiles for NMI
 GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buffer
 GLOBAL.room.refreshIdx     dw                 ;background refresh column offset (0-31)
 GLOBAL.room.viewportDirty  db                 ;nonzero = remap VRAM tilemap before next syncScroll
+GLOBAL.room.vpTileStaging  ds 32              ;loadInitialViewport tile staging (32B, one 4bpp tile)
 .ends
 
 ;room object metadata limits (must match scummvm.h defines)

@@ -592,3 +592,68 @@ WHAT NEEDS TO HAPPEN NEXT (priority order):
   2. Monitor bank 0 usage (item 5) — currently 83.0%
   3. Progress MI1 intro cutscene to reach room 1 (Melee Island beach)
      — the proper starting area. Verify walk/talk/look/use controls.
+
+=========================================================================
+HONEST STATE AUDIT — 2026-04-05 (end of session 5)
+=========================================================================
+
+This section corrects optimistic claims from prior session notes.
+
+WHAT ACTUALLY WORKS RIGHT NOW:
+  - Boot test: PASS (500 frames, no crash handler hit)
+  - Frame 800: game is in room 10 intro cutscene (mountain scene)
+  - With START pressed at frame 5500: game transitions to room 38
+    (Melee Island lookout), nest=0, userPut=1 at frame ~4801.
+    Player technically has control for ~234 frames before the proper
+    MI1 opening cutscene begins (csNest=1 again).
+  - Bank 0: 83.0% (stable)
+  - SA-1 I-RAM flood fixed: no longer 74 uninitialized reads/frame
+
+WHAT IS BROKEN RIGHT NOW:
+  1. CRASH AT FRAME ~13000-15000 (demo mode, no START)
+     The game hits a BRK with "Last called method: abstract_iterator:init()".
+     This crash is PRE-EXISTING (confirmed present on commit 9117997,
+     before session 5 changes). It fires ~13000 frames into the demo
+     loop, crashing the attract mode. This is what the user sees when
+     loading in Mesen without pressing anything.
+     Root cause: UNKNOWN — needs investigation. Likely a SCUMM script
+     reaching an object initialization that hits an unhandled case.
+
+  2. INTRO CUTSCENE NEVER COMPLETES (room 10, frames 800-12000+)
+     After START is pressed, the game loops through room 10 (mountain
+     intro cutscene) indefinitely. At frames 6000-12000 with START,
+     room=10, nest=1. The intro sequence does not reach room 1 (beach).
+     The game appears stuck in the intro loop.
+
+  3. BG3 DIALOG TILES SCATTERED ACROSS INTRO SCENE (frame 800)
+     At frame 800, BG3 shows scattered dialog font characters overlaid
+     on the mountain background. This could be:
+     a) The actual SCUMM opening credits text rendering correctly but
+        appearing garbled due to BG3 scroll/tilemap issues
+     b) Stale dialog tilemap data from the boot sequence not being
+        cleared before room 10 renders
+     The dialogNmi flag is 0 at frame 800 (no pending DMA), so whatever
+     is in VRAM $9800 is from a previous DMA. Needs investigation.
+
+  4. NO PATH TO BEACH (ROOM 1)
+     The early session notes about "beach with Guybrush walking and
+     scaling" referred to sessions before the full intro sequence was
+     implemented. The game was launched directly into room 1 then.
+     Currently, the intro sequence must complete first, but it crashes
+     at frame ~13000 before ever reaching room 1.
+
+  5. THE $201FC5-$201FF5 WRAM UNINITIALIZED READS
+     50 bytes at WRAM $7E:1FC5-$7E:1FF5 (bank $20 mirror) are read
+     uninitialized once per boot. Origin unknown — not in any zeroed
+     region. May affect a data structure that produces the BG3 garbling
+     or the abstract_iterator crash.
+
+WHAT NEEDS TO HAPPEN NEXT (actual priority):
+  P1. Find and fix abstract_iterator:init() crash (~frame 13000-15000)
+      This is the gate. Without fixing it, the demo loops and crashes.
+  P2. Investigate BG3 scattered tiles at frame 800 — are they the
+      correct intro credits text, or stale/mispositioned BG3 data?
+  P3. Figure out why the intro doesn't progress past room 10 after
+      START is pressed (room=10, nest=1 at frames 6000-12000 with START)
+  P4. Once intro completes, verify room 1 (beach) loads correctly with
+      Guybrush visible and walking/interaction working.

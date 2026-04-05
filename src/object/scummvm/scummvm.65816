@@ -1001,7 +1001,7 @@ _prc.doRoomLoad:
   lda 3,s
   jsr room.load
   bcs +
-  ; Restore HDMA + ScreenBrightness on failure
+  ; room.load failed — virtual room (no MSU data): clear BG1 + proceed
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
   sep #$20
   pla
@@ -1011,10 +1011,8 @@ _prc.doRoomLoad:
   sta.w ScreenBrightness
   sta.l INIDSP
   rep #$20
-  pla
-  ; Cancel room change on failure: sync newRoom = currentRoom
-  lda.w SCUMM.currentRoom
-  sta.w SCUMM.newRoom
+  pla                                ; discard roomNum (do NOT cancel room change)
+  jsl scummvm.clearRoom0             ; blank BG1 so virtual room has black background
   jmp _prc.failed
 +
   .ACCU 16
@@ -14221,19 +14219,10 @@ _rpd.bootOk:
   lda.w SCUMM.dialogDmaPending
   beq _rpd.noDialog
   stz.w SCUMM.dialogDmaPending
-  jsr _rpd.findSlot
-  bcc _rpd.noDialog
-  lda #DIALOG_TILEMAP_SIZE
-  sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #DIALOG_TILEMAP_VRAM
-  sta.w GLOBAL.dmaQueue.1.targetAdress,x
-  lda.w #SCUMM.dialogTilemap & $FFFF
-  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
   sep #$20
-  lda #$7E
-  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
-  lda #$40                           ; VRAM | ACTIVE
-  sta.w GLOBAL.dmaQueue.1.transferType,x
+  lda #1
+  sta.w SCUMM.dialogTilemapNmiPending  ; hand off to NMI direct DMA
+  rep #$20
 _rpd.noDialog:
   .ACCU 16
   .INDEX 16
@@ -14260,20 +14249,7 @@ _rpd.palLookup:
   lda.l _scummTalkColorLUT,x
   sta.w SCUMM.dialogPalColor         ; color 1 = talk color
   stz.w SCUMM.dialogPalTrans         ; color 0 = transparent
-  ; DMA from WRAM palette buffer
-  jsr _rpd.findSlot
-  bcc _rpd.noDialogPal
-  lda #4                             ; 2 colors x 2 bytes
-  sta.w GLOBAL.dmaQueue.1.transferLength,x
-  lda #$0038                         ; CGRAM byte addr $38 (2bpp pal7 color0)
-  sta.w GLOBAL.dmaQueue.1.targetAdress,x
-  lda.w #SCUMM.dialogPalTrans & $FFFF
-  sta.w GLOBAL.dmaQueue.1.sourceAdress,x
-  sep #$20
-  lda #$7E
-  sta.w (GLOBAL.dmaQueue.1.sourceAdress & $FFFF) + 2,x
-  lda #$42                           ; CGRAM | ACTIVE
-  sta.w GLOBAL.dmaQueue.1.transferType,x
+  ; Palette written to SCUMM.dialogPalColor above; NMI writes CGRAM directly.
 _rpd.noDialogPal:
   .ACCU 16
   .INDEX 16

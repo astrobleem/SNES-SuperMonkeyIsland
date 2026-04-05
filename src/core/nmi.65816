@@ -311,6 +311,36 @@ _nmi.noOamDma:
 	.ACCU 8
 	.INDEX 16
 
+	;--- Dialog tilemap NMI DMA: WRAM dialogTilemap → VRAM $9800 ---
+	;Gated by SCUMM.dialogTilemapNmiPending; cleared after DMA.
+	lda.w SCUMM.dialogTilemapNmiPending
+	beq _nmi.noDialogTilemap
+
+	stz.w SCUMM.dialogTilemapNmiPending
+
+	lda.b #VMAIN_INCREMENT_MODE
+	sta.l VMAIN
+	rep #$20
+	lda #$4C00
+	sta.l VMADDL
+	sep #$20
+	lda #$01                          ;2-reg write ($2118/$2119)
+	sta.l DMAP7
+	lda #$18                          ;VMDATAL
+	sta.l DMADEST7
+	lda #$7E                          ;source bank: WRAM
+	sta.l DMASRC7B
+	rep #$20
+	lda #SCUMM.dialogTilemap & $ffff
+	sta.l DMASRC7L
+	lda #2048                         ;DIALOG_TILEMAP_SIZE
+	sta.l DMALEN7L
+	sep #$20
+	lda #$80                          ;trigger DMA channel 7
+	sta.l MDMAEN
+
+_nmi.noDialogTilemap:
+
 	lda.w ObjSel
 	sta.l OBJSEL
 

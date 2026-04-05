@@ -352,6 +352,31 @@ The verb bar disappears once the game's cutscene scripts fire
 cursorCommand to set userPut=0 (around frame ~7000 in credits).
 
 =========================================================================
+UPDATE: 2026-04-04 (session 2) RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+9. [FIXED] VIRTUAL ROOM SUPPORT
+   Credits correctly show on room 38's moonlit background (the intended
+   credits backdrop). Virtual room failure path (room 46, no MSU data)
+   now calls scummvm.clearRoom0 via jsl (corrected jsr→jsl mismatch
+   that would have corrupted PBR via rtl stack over-pop). The old
+   "cancel room change" behavior that left room 10 tiles in VRAM is gone.
+
+11. [FIXED] CREDITS TEXT RENDERING PATH
+   Root cause: dialog tilemap DMA was using GLOBAL.dmaQueue.1 (IRQ-based
+   registerTransfer queue — known broken). VRAM $9800 never received the
+   tilemap updates, so BG3 dialog text never appeared.
+   Fix: Added SCUMM.dialogTilemapNmiPending flag to scummvm.h; NMI ch7
+   DMA block in nmi.65816 now writes WRAM dialogTilemap → VRAM $9800
+   each frame when flag is set; registerPendingDma sets flag instead of
+   queuing dmaQueue.1. Credits text now visible as small characters over
+   the moonlit mountain background.
+
+NEW FINDING: Item 12 (verb bar tile garbling) added above.
+
+=========================================================================
 UPDATE: 2026-04-04 SESSION RESULTS
 =========================================================================
 
@@ -399,27 +424,38 @@ STILL NEEDS WORK:
 8. [FIXED] Camera speed cap — this session
 10. [FIXED IN CODE] Per-line centering — this session (_ears.renderNewline)
 
-5. BANK 0 USAGE AT 84.5%
-   Stable at 84.5% after this session's changes. Still within budget.
+5. BANK 0 USAGE AT 84.3%
+   Stable at 84.3% after this session's changes. Still within budget.
    Monitor; WLA-DX silently reshuffles at overflow.
 
-9. VIRTUAL ROOM SUPPORT
-   Virtual rooms (room 0 for Lucasfilm logo, room 46 for credits)
-   not implemented. Credits render on room 10's background instead
-   of a dedicated screen. Game does NOT crash without virtual room
-   support — the credits sequence completes and room 38 loads
-   correctly. Deferred; lower priority now that game is functional.
+9. [FIXED] VIRTUAL ROOM SUPPORT
+   Credits now correctly render on room 38's moonlit mountain background.
+   Virtual room failure path (room 46 has no MSU data) now calls
+   scummvm.clearRoom0 via jsl (fixed jsr→jsl mismatch) instead of
+   cancelling the room change. The "room 10 background" issue is gone.
+   Game does not crash and credits sequence completes normally.
 
-11. CREDITS TEXT RENDERING PATH UNKNOWN
-    During the credits sequence (0-12000 frames), neither op_printEgo
-    nor _printStringToScreen is ever called. Credits text appears via
-    a mechanism not yet identified — possibly direct VRAM tile writes
-    from a dedicated credits script, or BG3 tilemap manipulation outside
-    the SCUMM dialog renderer. The per-line centering fix (#10) does NOT
-    apply to this path. Investigate when game-complete polishing begins.
+11. [FIXED] CREDITS TEXT RENDERING PATH
+    Credits text renders via op_print ($14) → _print.subLoop →
+    jsl scummvm.extractAndRenderString. Dialog tilemap is DMA'd
+    to VRAM $9800 (word $4C00) via NMI direct DMA ch7 gated on
+    SCUMM.dialogTilemapNmiPending flag. Text visible at frames
+    1500-5000 as small characters at bottom of moonlit scene.
+
+12. VERB BAR TILE GARBLING IN EARLY CREDITS FRAMES
+    At frames ~1500-2500, verb bar area (BG2 bottom section) shows
+    garbled/random tile data. VerbFontTiles DMA is registered via
+    core.dma.registerTransfer (known-broken IRQ queue) during the
+    first processRoomChange call. Tiles appear to load eventually
+    (clean by frame ~3500) but the delay means the verb bar is
+    visually corrupted during the early credits sequence.
+    Fix: replace registerTransfer with NMI direct DMA or inline DMA
+    for VerbFontTiles (same pattern used for dialog font/tilemap).
+    Location: scummvm.65816 processRoomChange bgInitDone block,
+    lines ~820-832.
 
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Identify credits text rendering path (item 11)
-  B. Implement virtual room support cleanly (item 9)
+  A. Fix verb bar tile garbling (item 12) — replace registerTransfer
+     with NMI direct DMA for VerbFontTiles in processRoomChange
+  B. Exercise in-game NPC dialog to verify per-line centering (item 10)
   C. Monitor bank 0 usage (item 5)
-  D. Exercise in-game NPC dialog to verify per-line centering (item 10)

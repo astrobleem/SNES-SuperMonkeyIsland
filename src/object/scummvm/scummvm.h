@@ -509,6 +509,7 @@ SCUMM.dialogActor        dw      ; actor ID (for positioning)
 SCUMM.dialogDmaPending   dw      ; nonzero = DMA tilemap to VRAM next VBlank
 SCUMM.dialogBootSuppress dw      ; nonzero = suppress boot dialog DMA (countdown)
 SCUMM.dialogFontNmiPending db    ; nonzero = NMI should DMA font tiles to VRAM
+SCUMM.dialogTilemapNmiPending db ; nonzero = NMI should DMA dialog tilemap to VRAM
 SCUMM.dialogCharCount    dw      ; number of printable chars (for timer calc)
 SCUMM.dialogTilemap      ds 2048 ; BG3 WRAM tilemap buffer (32x32 x 2B)
 SCUMM.dialogPalTrans     dw      ; dynamic palette color 0 (always $0000 = transparent)

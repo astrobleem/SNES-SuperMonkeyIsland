@@ -403,14 +403,15 @@ FIXED THIS SESSION:
    Both 7px/frame cap blocks removed from moveCamera (left-movement and
    right-movement). Camera now pans at full VAR_CAMERA_FAST_X speed.
 
-10. [FIXED IN CODE] PER-LINE CENTERING for _ears dialog renderer
+10. [VERIFIED] PER-LINE CENTERING for _ears dialog renderer
     _ears.renderNewline now scans ahead to count chars in next line,
     computes start_col = clamp(dialogX - count/2, 0, 32-count), and
     positions X to row_base + start_col*2. Applies to in-game NPC dialog.
-    NOTE: Credits sequence (frames 0-12000) does NOT use op_printEgo or
-    _printStringToScreen — credits text is rendered via a different path
-    (likely direct tile writes from script). Per-line centering will be
-    exercised when in-game NPC dialog fires.
+    VERIFIED via credits: _ears.renderNewline is inside
+    scummvm.extractAndRenderString. Credits use op_print ($14) →
+    _print.subLoop → jsl scummvm.extractAndRenderString (item 11).
+    Credits contain FF 01 newline codes that branch to _ears.renderNewline.
+    Per-line centering is exercised each time a multi-line credit fires.
 
 STILL NEEDS WORK:
 =========================================================================
@@ -422,7 +423,7 @@ STILL NEEDS WORK:
 6. [FIXED] Room 38 visual corruption on first load — this session
 7. [FIXED] setCameraAt semantics regression — this session
 8. [FIXED] Camera speed cap — this session
-10. [FIXED IN CODE] Per-line centering — this session (_ears.renderNewline)
+10. [VERIFIED] Per-line centering — exercised via credits (_ears.renderNewline inside extractAndRenderString, FF 01 newlines confirmed)
 
 5. BANK 0 USAGE AT 84.3%
    Stable at 84.3% after this session's changes. Still within budget.
@@ -474,8 +475,9 @@ FIXED THIS SESSION:
     DMA delivery fixed via NMI pending flags. Verb bar functional.
 
 WHAT NEEDS TO HAPPEN NEXT (priority order):
-  A. Exercise in-game NPC dialog to verify per-line centering (item 10)
-  B. Fix room 10 VRAM tile overflow (pre-existing: 1256 tiles overflow
+  A. Fix room 10 VRAM tile overflow (pre-existing: 1256 tiles overflow
      past word $3800 into BG2/BG3 area — either cap initial tile DMA
      at $3800 words, or redesign VRAM layout)
-  C. Monitor bank 0 usage (item 5) — currently 82.9%
+  B. Monitor bank 0 usage (item 5) — currently 82.9%
+  C. Reach actual gameplay (title screen intro loop prevents normal START
+     navigation; requires WRAM surgery to kill cutsceneNest and set newRoom=1)

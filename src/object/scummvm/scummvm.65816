@@ -176,6 +176,13 @@ _init.zeroVerbTilemap:
   cpx #VERB_TILEMAP_SIZE
   bcc _init.zeroVerbTilemap
 
+  ; Kick NMI DMA so VRAM $4800 gets zeroed immediately (prevents stale
+  ; title-screen verb data showing during the first intro cutscene).
+  sep #$20
+  lda #1
+  sta.w SCUMM.verbTilemapNmiPending
+  rep #$31
+
   ;zero walk state arrays (16 actors × 2B targets + 16B anim)
   ldx #0
   lda #0
@@ -923,6 +930,9 @@ _prc.bgReady:
   ; Clear BG3 dialog tilemap on every room change so stale text
   ; (e.g. "CD tracks detected." from global script 176) doesn't persist.
   jsl scummvm.clearDialogTilemap
+  ; Clear BG2 verb tilemap so stale verb text (from title screen or previous
+  ; scene) doesn't show in scanlines 144-223 during intro cutscenes.
+  jsl scummvm.clearVerbTilemap
 
   ; Resolve pseudo-room → real room via resourceMapper for loading
   lda.w SCUMM.newRoom
@@ -14840,6 +14850,39 @@ _cdt.clearLoop:
   ; Re-dirty sentence so it re-renders on BG2 after dialog clears
   lda #1
   sta.w SCUMM.sentenceDirty
+
+  plb
+  plx
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; scummvm.clearVerbTilemap -- fill verb tilemap with $0000, flag DMA
+;-------------------------------------------------------------------
+scummvm.clearVerbTilemap:
+  php
+  phx
+  phb
+  sep #$20
+  lda #$7E
+  pha
+  plb
+  rep #$31
+
+  ldx #0
+  lda #0
+_cvt.clearLoop:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.verbTilemap,x
+  inx
+  inx
+  cpx #VERB_TILEMAP_SIZE
+  bcc _cvt.clearLoop
+
+  lda #1
+  sta.w SCUMM.verbTilemapNmiPending
 
   plb
   plx

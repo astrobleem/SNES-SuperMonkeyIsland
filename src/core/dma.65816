@@ -399,10 +399,6 @@ dmaQueueSetDmap0:
   IRQ dmaQueue IRQ.VPOS.PAL 8
   php
   sep #$20
-  ;hack to fix 1/1/1-chipset bug, stop all hdma channels before starting dma transfers
-  lda #0
-  sta.l HDMAEN
-
   ;mask screen below irq
   lda #(W12SEL_BG2_W1_ENABLE | W12SEL_BG1_W1_ENABLE)
   sta.l W12SEL

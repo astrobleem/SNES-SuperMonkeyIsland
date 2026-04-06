@@ -236,16 +236,18 @@ def run_lua_snippet(lua_code: str, timeout: int = 60) -> str:
 
 
 @mcp.tool()
-def read_test_output(file: str = "out.txt") -> str:
+def read_test_output(file: str = "out.txt", head: int | None = None) -> str:
     """Read previous test output from the distribution directory.
 
     Args:
         file: Output filename to read (default: out.txt).
+        head: If specified, return only the first N characters.
     """
     path = SFC_DIR / file
     if not path.exists():
         return f"ERROR: {path} not found"
-    return path.read_text()[-3000:]
+    text = path.read_text()
+    return text[:head] if head is not None else text
 
 
 def _argb_to_png(width: int, height: int, argb_lines: list[str]) -> bytes:
@@ -776,10 +778,11 @@ def visual_regression_check(
     )
 
 
-def _read_out_file(path: Path) -> str:
-    """Safely read an output file, returning last 3000 chars."""
+def _read_out_file(path: Path, head: int | None = None) -> str:
+    """Safely read an output file. Returns full contents, or first `head` chars if specified."""
     try:
-        return path.read_text()[-3000:]
+        text = path.read_text()
+        return text[:head] if head is not None else text
     except Exception:
         return "(could not read output file)"
 

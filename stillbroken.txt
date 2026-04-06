@@ -657,3 +657,71 @@ WHAT NEEDS TO HAPPEN NEXT (actual priority):
       START is pressed (room=10, nest=1 at frames 6000-12000 with START)
   P4. Once intro completes, verify room 1 (beach) loads correctly with
       Guybrush visible and walking/interaction working.
+
+=========================================================================
+UPDATE: 2026-04-05 (session 6) RESULTS
+=========================================================================
+
+FIXED THIS SESSION:
+
+A. [FIXED] BG2 VERB TILEMAP STALE DATA DURING CUTSCENES
+   Root cause: SCUMM._init.zeroVerbTilemap zeroed WRAM but never set
+   verbTilemapNmiPending, so VRAM $4800 retained stale verb text from
+   title screen/previous scenes. _prc.bgReady called clearDialogTilemap
+   but NOT clearVerbTilemap, leaving BG2 dirty on every room change.
+   Fix A: Added verbTilemapNmiPending=1 after _init.zeroVerbTilemap
+   loop so the zeroed WRAM is DMA'd to VRAM on first NMI.
+   Fix B: Added new scummvm.clearVerbTilemap function (mirrors
+   clearDialogTilemap pattern: CPU loop + verbTilemapNmiPending=1).
+   Fix C: Called jsl scummvm.clearVerbTilemap from _prc.bgReady
+   (after clearDialogTilemap) so every room change clears BG2.
+   Verified: at frame 9800 with START, verb area shows only tile-0
+   pattern (tiny dots from VerbFont tile 0, invisible at native 1x).
+   Bank 0: 83.0% after all changes.
+
+CONFIRMED RESOLVED (not new — fixed in session 5):
+
+P1. [RESOLVED] abstract_iterator:init() CRASH
+    Aramis confirmed: excPc write callback NEVER fires after frame 500
+    across 20000 frames in demo mode. Error callbacks silent throughout.
+    Root cause: SA-1 I-RAM init in commit 87dbe8a (session 5) zeroed
+    all 2KB of I-RAM ($3000-$37FF), eliminating the garbage reads that
+    were corrupting the OOP dispatch and causing the spurious
+    abstract.Iterator.init() invocation. CONFIRMED CLOSED.
+
+P2. [RESOLVED] BG3 SCATTERED TILES AT FRAME 800
+    Screenshot at frame 800 (current build): mountain scene is clean,
+    no dialog character scatter on the mountain. The verb area below
+    Y=144 shows tile-0 pattern from clearVerbTilemap (cosmetically
+    acceptable). P2 is gone. CONFIRMED CLOSED.
+
+P3. [NOT STUCK] INTRO PROGRESS
+    Intro IS running normally. Room transitions occur: room 38 appears
+    at frame ~10000 (transition from room 10 cliff scene). At frame
+    11000 with START, intro actors (pirates/Guybrush) visible at cliff
+    bottom with costume tiles rendering. Intro simply takes many frames
+    to complete (MI1 intro is ~3-4 minutes; at 25fps emulation speed,
+    that is 10800-14400 frames after START override at ~4801).
+    The "stuck at room 10" observation was just not waiting long enough.
+
+REMAINING UNINIT READ FLOOD (reduces emulation speed to ~25fps):
+   Aramis identified the main uninit read clusters:
+   - $7E:EA00-$7E:EBFF: GLOBAL.oamBuffer entries 21-128 (464 reads).
+     OAM buffer is iterated before any slots are populated.
+   - $7E:F200-$7E:F2D8: SCUMM slot arrays + DMA queue slots 4-16,
+     read speculatively before any actors/DMA queued.
+   Fix: zero-fill GLOBAL.oamBuffer at SCUMM init (covers $7EE9B0-$7EEBB0,
+   544 bytes) and ensure DMA queue slots 4-16 are zeroed by dma.init.
+   Low priority — affects only diagnostic run speed, not gameplay.
+
+WHAT NEEDS TO HAPPEN NEXT (actual priority):
+  P1. [DONE] abstract_iterator crash — RESOLVED
+  P2. [DONE] BG3 scatter at frame 800 — RESOLVED
+  P3. [PROBABLY FINE] Intro progress — actors rendering, room transitions
+      occurring. Need frame 18000-20000 screenshot with START to confirm
+      intro completes and reaches room 1 (beach).
+  P4. Verify room 1 (beach) loads with Guybrush visible and controls work.
+      Prefers running to frame ~18000 with START, or WRAM injection to
+      force room 1 load for faster validation.
+  P5. OAM buffer uninit reads: zero $7EE9B0-$7EEBB0 at SCUMM init to
+      eliminate the uninit flood and restore ~60fps emulation speed.

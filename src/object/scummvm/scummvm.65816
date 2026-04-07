@@ -224,17 +224,18 @@ _init.fillMapper:
   bcc _init.fillMapper
   rep #$20
 
-  ;zero script cache in $7F
+  ;zero entire bank $7F ($0000-$FFFF): walkbox area + script cache.
+  ;Eliminates stale WRAM in $7F:0000-$7F:63FF that causes wild jumps
+  ;when walkbox/room data is read before the first room.load.
   ldx #0
   lda #0
 _init.zeroCache:
   .ACCU 16
   .INDEX 16
-  sta.l SCUMM_CACHE_WRAM,x
+  sta.l $7F0000,x
   inx
   inx
-  cpx #SCUMM_CACHE_SIZE
-  bcc _init.zeroCache
+  bne _init.zeroCache
 
   ;--- Read script section offset from MSU-1 header ---
   ; MSU header at offset $0024 has 32-bit script section offset
@@ -557,6 +558,10 @@ _init.lastScale:
   .ACCU 16
   .INDEX 16
 
+  ; Reset slot iterator — must precede processRoomChange so currentSlot=0 during ENCD
+  stz.w SCUMM.currentSlot
+  stz.w SCUMM.currentSlotPtr
+
   ; Check for pending room change (sanitize to 8-bit room numbers)
   lda.w SCUMM.newRoom
   and #$00FF
@@ -613,9 +618,6 @@ _play.noAbort:
   .ACCU 16
   .INDEX 16
 
-  ; Iterate slots 0..24
-  stz.w SCUMM.currentSlot
-  stz.w SCUMM.currentSlotPtr
 
 _play.slotLoop:
   .ACCU 16
@@ -1024,7 +1026,7 @@ _prc.doRoomLoad:
   sta.l INIDSP
   rep #$20
   pla                                ; discard roomNum (do NOT cancel room change)
-  jsl scummvm.clearRoom0             ; blank BG1 so virtual room has black background
+  jsl scummvm.clearRoom0             ; blank BG1 + zero currentRoom/ENCD/EXCD
   jmp _prc.failed
 +
   .ACCU 16
@@ -1135,6 +1137,16 @@ _prc.noExitScript2:
   ; Use room.reloadViewport which properly handles NMI stop, force blank,
   ; HDMA disable, NMI staging flag clearing, tile cache reinit, and cleanup.
   jsr room.reloadViewport
+
+  ; Force brightness to $0F to ensure tiles are visible.
+  ; room.reloadViewport exits force blank but restores original ScreenBrightness=0.
+  ; Explicitly set full brightness so tiles render while ENCD runs.
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+
   ; Sync scroll state so syncScroll doesn't see stale delta on next frame
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
@@ -1174,6 +1186,11 @@ _prc.noEntryScript2:
 
   ; Load actor costume tiles + palette to VRAM/CGRAM
   jsr _scummvm.loadActorCostumes
+
+  ; Build walkbox routing matrix from freshly-loaded box data.
+  ; Must precede assignActorWalkboxes — pathfinding reads the matrix
+  ; and will jump to garbage if it is uninitialised (stale WRAM crash).
+  jsl scummvm.createBoxMatrix_long
 
   ; Assign walkboxes for all visible actors in this room
   jsr _scummvm.assignActorWalkboxes
@@ -4223,6 +4240,7 @@ op_startScript:
   jsr _scummvm.readWordVararg     ; read args into argBuffer/argCount
   pla                             ; A = script number
   phy                             ; save SCUMM PC
+  and #$00FF
   jsl scummvm.startScriptSlot_long
   bcc _startScript.noArgs         ; slot creation failed
   ; X = new slot byte offset; copy args to slot's localVars
@@ -4729,10 +4747,14 @@ op_override:
   beq _override.endOverride
 
   ; --- beginOverride ---
-  ; Read the jump opcode + 2-byte target offset
-  jsr _scummvm.fetchByte             ; jump opcode byte (0x18)
-  jsr _scummvm.fetchWord             ; jump offset (2 bytes) — this is the skip target
-  pha                                ; save jump offset
+  ; Read the jump opcode + 2-byte target offset, resolve absolute PC
+  jsr _scummvm.fetchByte             ; jump opcode byte (0x18) — consume, discard
+  jsr _scummvm.fetchWord             ; A = raw signed relative offset, Y now past word
+  sta.w SCUMM.scratch
+  tya
+  clc
+  adc.w SCUMM.scratch                ; A = absolute PC target (Y + raw offset)
+  pha                                ; save absolute jump target
 
   ; Store into cutScenePtr[nest-1]
   lda.w SCUMM.cutsceneNest
@@ -6401,7 +6423,9 @@ op_isSoundRunning:
   clc
   rts
 
-; soundKludge ($4C, $CC) -- iMUSE vararg, consume params (stub)
+; soundKludge ($4C, $CC) -- iMUSE vararg, consume params
+; Consumes all args up to 0xFF terminator; does not set VAR_SOUNDRESULT.
+; (iMUSE timing loops use VAR_SOUNDRESULT for sync; handled externally.)
 op_soundKludge:
   .ACCU 16
   .INDEX 16
@@ -9627,6 +9651,93 @@ _zew.invNames:
   inx
   cpx #512
   bcc _zew.invNames
+
+  ;zero render slot arrays — dirty flags + all fields (50 bytes)
+  ;Safe: dirty=0 prevents DMA triggers; loadActorCostumes reinitializes on first room load.
+  lda #0
+  ldx #0
+_zew.renderSlots:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.renderSlotActor,x
+  inx
+  inx
+  cpx #50
+  bcc _zew.renderSlots
+
+  ;zero slot CHR DMA parameter arrays including slotChrLen (116 bytes)
+  lda #0
+  ldx #0
+_zew.slotChrDma:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.slotChrSrcLo,x
+  inx
+  inx
+  cpx #116
+  bcc _zew.slotChrDma
+
+  ;zero OAM sprite buffer + high-bit table (512 + 32 = 544 bytes)
+  ;Eliminates uninit-read flood when actors are first rendered.
+  lda #0
+  ldx #0
+_zew.oamBuf:
+  .ACCU 16
+  .INDEX 16
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  inx
+  cpx #GLOBAL.oamTable1.end - GLOBAL.oamBuffer
+  bcc _zew.oamBuf
+
+  ;zero all SCUMM WRAM from ochrDataSize through all globals (~$992C bytes)
+  ;Extended to cover ochrData+roomObjVerbs (below actors) as well as actors..$7EF92C.
+  ;Eliminates all remaining uninit-read floods that throttle Mesen diagnostics.
+  lda #0
+  ldx #0
+_zew.scummMain:
+  .ACCU 16
+  .INDEX 16
+  sta.w SCUMM.ochrDataSize,x
+  inx
+  inx
+  cpx #SCUMM.actors - SCUMM.ochrDataSize + $7020
+  bcc _zew.scummMain
+
+  ;NOTE: $7F0000-$7F63FE (room tilemap + walkbox routing matrix) is NOT zeroed here.
+  ;The routing matrix lives at boxMatrixPtr/boxOrigMatrixPtr inside $7F0000, and is
+  ;written fresh by the room loader for each room change.  Pre-zeroing this buffer
+  ;corrupts pathfinding (all-zero matrix → walkActorTo completes instantly → intro
+  ;races through in ~221 frames instead of the expected ~10000 frames).
+  ;The Mesen uninit reads at $7F00FC-$7F23DC are benign — they read valid box data
+  ;after the first room load and are tolerable as one-time startup noise.
+
+  ;zero script cache bank $7F (SCUMM_CACHE_SIZE bytes) — CPU-write to suppress uninit-read flood
+  ;MSU-1 DMA does not mark bytes initialized; without this every byte in the 39KB cache
+  ;generates a Mesen log line, flooding the output pipe and throttling emulation to ~0fps.
+  lda #0
+  ldx #0
+_zew.scriptCache:
+  .ACCU 16
+  .INDEX 16
+  sta.l SCUMM_CACHE_WRAM,x
+  inx
+  inx
+  cpx #SCUMM_CACHE_SIZE
+  bcc _zew.scriptCache
+
+  ;zero OopStack area ($001FC0-$001FFF, 64 bytes) — suppresses uninit-read flood
+  ;boot ClearWRAM stops at $1FC0 (stack at $1FFF). Use long addressing from DBR=$7E.
+  lda #0
+  ldx #0
+_zew.oopStack:
+  .ACCU 16
+  .INDEX 16
+  sta.l $001FC0,x
+  inx
+  inx
+  cpx #64
+  bcc _zew.oopStack
 
   plp
   rtl

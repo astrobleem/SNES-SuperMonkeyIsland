@@ -177,7 +177,7 @@ def run_test(script_name: str, timeout: int = 120) -> str:
     out_file = SFC_DIR / "out.txt"
     cmd = (
         f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc {script_name} > out.txt 2>&1'
+        f'SuperMonkeyIsland.sfc {script_name} > out.txt 2>NUL'
     )
 
     try:
@@ -219,7 +219,7 @@ def run_lua_snippet(lua_code: str, timeout: int = 60) -> str:
     out_file = SFC_DIR / "out.txt"
     cmd = (
         f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc _mcp_snippet.lua > out.txt 2>&1'
+        f'SuperMonkeyIsland.sfc _mcp_snippet.lua > out.txt 2>NUL'
     )
 
     try:
@@ -320,7 +320,7 @@ def _capture_frame(
     out_file = SFC_DIR / "out.txt"
     cmd = (
         f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc _mcp_screenshot.lua > out.txt 2>&1'
+        f'SuperMonkeyIsland.sfc _mcp_screenshot.lua > out.txt 2>NUL'
     )
 
     try:
@@ -331,7 +331,7 @@ def _capture_frame(
     except Exception as e:
         raise RuntimeError(f"MESEN ERROR: {e}")
 
-    output = out_file.read_text()
+    output = _strip_uninit_lines(out_file.read_text())
 
     if "SCREENSHOT_ARGB_START" not in output or "SCREENSHOT_ARGB_END" not in output:
         if "SCREENSHOT_ERROR" in output:
@@ -778,10 +778,18 @@ def visual_regression_check(
     )
 
 
+def _strip_uninit_lines(text: str) -> str:
+    """Remove Mesen '[CPU] Uninitialized memory read' noise from output."""
+    return "\n".join(
+        line for line in text.split("\n")
+        if not line.startswith("[CPU] Uninitialized memory read")
+    )
+
+
 def _read_out_file(path: Path, head: int | None = None) -> str:
     """Safely read an output file. Returns full contents, or first `head` chars if specified."""
     try:
-        text = path.read_text()
+        text = _strip_uninit_lines(path.read_text())
         return text[:head] if head is not None else text
     except Exception:
         return "(could not read output file)"
@@ -886,7 +894,7 @@ def _run_boot_test(sym_path: Path) -> str:
     out_file = SFC_DIR / "out.txt"
     cmd = (
         f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc _mcp_boot_test.lua > out.txt 2>&1'
+        f'SuperMonkeyIsland.sfc _mcp_boot_test.lua > out.txt 2>NUL'
     )
 
     try:
@@ -1174,7 +1182,7 @@ def run_with_input(
     out_file = SFC_DIR / "out.txt"
     cmd = (
         f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
-        f'SuperMonkeyIsland.sfc _mcp_run_with_input.lua > out.txt 2>&1'
+        f'SuperMonkeyIsland.sfc _mcp_run_with_input.lua > out.txt 2>NUL'
     )
 
     try:
@@ -1191,7 +1199,7 @@ def run_with_input(
     # truncated read otherwise to keep MCP responses small.
     if screenshot_frame > 0:
         try:
-            output = out_file.read_text()
+            output = _strip_uninit_lines(out_file.read_text())
         except Exception:
             output = ""
     else:

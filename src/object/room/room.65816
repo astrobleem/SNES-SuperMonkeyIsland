@@ -23,7 +23,7 @@ room.msu1Seek:
   pha
   phx
 
-  ;drain any pending seek (non-fatal timeout)
+  ;drain any pending seek: spin while DATA_BUSY (bit 7 = 1), exit when ready (0)
   sep #$20
   ldx.w #ROOM_MSU1_SEEK_TIMEOUT
 -   dex
@@ -48,7 +48,7 @@ room.msu1Seek:
   nop
   nop
 
-  ;wait for seek complete
+  ;wait for seek complete: spin while DATA_BUSY (bit 7 = 1), exit when ready (0)
   sep #$20
   ldx.w #ROOM_MSU1_SEEK_TIMEOUT
 -   dex
@@ -65,7 +65,13 @@ room.msu1Seek:
 _room.seekTimeout:
   .ACCU 8
   .INDEX 16
-  TRIGGER_ERROR E_Msu1SeekTimeout
+  plx             ; pop saved X (16-bit)
+  rep #$20
+  .ACCU 16
+  pla             ; pop saved A (16-bit)
+  plp             ; restore caller's P
+  clc             ; carry clear = seek timed out (graceful, not fatal)
+  rts
 
 
 /**
@@ -88,6 +94,7 @@ room.loadIndex:
   ;A = low 16 bits of seek address, X = high 16 bits (0)
   ldx #0
   jsr room.msu1Seek
+  bcc _room.loadIndex.missing   ; seek timed out = treat as missing room
 
   ;read 8 bytes from MSU_DATA into index entry struct
   ;MSU_DATA auto-advances on each byte read
@@ -129,6 +136,7 @@ room.loadHeader:
   lda.w GLOBAL.room.idx.offset_lo
   ldx.w GLOBAL.room.idx.offset_hi
   jsr room.msu1Seek
+  bcc _room.loadHeader.seekFail  ; seek timed out
 
   ;read 32 bytes of header from MSU_DATA into WRAM struct
   ;use indexed loop with struct base address
@@ -141,6 +149,14 @@ room.loadHeader:
   bne -
 
   plp
+  sec
+  rts
+
+_room.loadHeader.seekFail:
+  .ACCU 16
+  .INDEX 16
+  plp
+  clc
   rts
 
 
@@ -547,6 +563,17 @@ room.load:
   ;save room ID
   sta.w GLOBAL.room.currentId
 
+  ;look up room in MSU index BEFORE disabling NMI/force-blank.
+  ;MSU-1 data reads return zeros under Mesen when NMI is disabled,
+  ;but loadIndex only reads 8 bytes into WRAM — no VRAM access needed.
+  jsr room.loadIndex
+  bcs +
+    ;room doesn't exist — nothing to restore yet
+    plp
+    clc
+    rts
++
+
   ;disable ALL interrupts (NMI + V-IRQ) to prevent the dmaQueue
   ;IRQ handler from toggling INIDSP mid-write, which kills VRAM writes.
   ;sei alone doesn't block NMI, and nmi.stop doesn't block V-IRQ.
@@ -568,11 +595,21 @@ room.load:
   ;clear tilemap area
   jsr room.clearTilemap
 
-  ;look up room in index
-  lda.w GLOBAL.room.currentId
-  jsr room.loadIndex
+  ;re-enable NMI for MSU-1 data reads.
+  ;Mesen returns zeros from MSU_DATA when NMITIMEN NMI bit is cleared.
+  ;Must set both GLOBAL.interruptFlags and NMITIMEN because the NMI
+  ;handler writes interruptFlags → NMITIMEN every frame (nmi.65816:414).
+  ;ScreenBrightness=0 keeps force blank active (NMI handler guards INIDSP).
+  sep #$20
+  lda #$80
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+
+  ;read 32-byte header (seeks to dataOffset internally)
+  jsr room.loadHeader
   bcs +
-    ;room doesn't exist — restore display, re-enable interrupts, return failure
+    ;header seek timed out — restore display, re-enable interrupts, return failure
     sep #$20
     lda.w ScreenBrightness
     sta.l INIDSP
@@ -584,10 +621,7 @@ room.load:
     plp
     clc
     rts
-
 +
-  ;read 32-byte header (seeks to dataOffset internally)
-  jsr room.loadHeader
 
   ;MSU_DATA stream now positioned after header = palette data
   ;register CGRAM DMA (256 bytes)
@@ -936,7 +970,7 @@ _box.hasData:
   sta.b tmp+2
 
   ;--- Inline MSU seek to box data offset ---
-  ;wait for any pending seek to complete
+  ;drain pending seek: spin while DATA_BUSY (bit 7 = 1), exit when ready (0)
   sep #$20
   ldx.w #ROOM_MSU1_SEEK_TIMEOUT
 - dex
@@ -961,7 +995,7 @@ _box.hasData:
   nop
   nop
 
-  ;wait for seek complete
+  ;wait for seek complete: spin while DATA_BUSY (bit 7 = 1), exit when ready (0)
   sep #$20
   ldx.w #ROOM_MSU1_SEEK_TIMEOUT
 - dex

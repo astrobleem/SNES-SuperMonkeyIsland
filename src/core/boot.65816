@@ -39,11 +39,6 @@ core.boot.init:
 	lda.w #STACK
 	tcs
 
-	;CPU-zero SCUMM WRAM areas before any init reads them — Mesen uninit-read suppression.
-	;Must precede all core init calls because core.oam.init and core.object.init
-	;read GLOBAL.oamBuffer and OopStack before writing them, generating flood.
-	jsl scummvm.zeroExtraWram
-
 	jsr core.wram.init
 	jsr core.vram.init
 	jsr core.cgram.init
@@ -62,6 +57,8 @@ core.boot.init:
 	sep #$20
 	jsl Tad_Init
 	rep #$31
+
+	jsl scummvm.zeroExtraWram
 
 	; sa1.ccTest removed — CC Type 2 test now runs during SA-1 boot
 	; (no cross-CPU communication needed)

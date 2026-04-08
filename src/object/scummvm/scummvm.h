@@ -642,6 +642,15 @@ VerbHdmaTable:
   .db 80                                ; scanlines 144-223: verb area
   .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
+
+CutsceneHdmaTable:
+  .db 128                               ; scanlines 0-127: room area
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
+  .db 16                                ; scanlines 128-143: room area continued
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
+  .db 80                                ; scanlines 144-223: verb area (all disabled)
+  .db 0
+  .db 0                                 ; end of table
 .ends
 
 ;---------------------------------------------------------------------------

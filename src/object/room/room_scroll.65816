@@ -490,17 +490,6 @@ room.reloadViewport:
 
   ;reinit tile cache + reload all visible columns at current cameraX
   jsr room.initTileCache
-
-  ;re-enable NMI for MSU-1 tile reads in loadInitialViewport.
-  ;Mesen returns zeros from MSU_DATA when NMITIMEN NMI bit is cleared.
-  ;Must set both interruptFlags and NMITIMEN (NMI handler syncs them).
-  ;ScreenBrightness=0 keeps force blank active (NMI handler guards INIDSP).
-  sep #$20
-  lda #$80
-  sta.w GLOBAL.interruptFlags
-  sta.l NMITIMEN
-  rep #$20
-
   jsr room.loadInitialViewport
 
   ;restore HDMA + brightness
@@ -798,8 +787,7 @@ _stageCol.mulDone:
 
   ldx.b tmp+12                  ;X = WRAM source offset
   lda.w GLOBAL.room.roomHeightTiles
-  sta.w tmp+14                  ;row counter (must zero high byte — dec.b is 16-bit in .ACCU 16)
-  beq _stageCol.p1Done          ;skip if height = 0 (dec would wrap to $FFFF)
+  sta.b tmp+14                  ;row counter
 
 _stageCol.p1Loop:
   .ACCU 16
@@ -889,8 +877,7 @@ _stageCol.p1Done:
   ldx.b tmp+12                  ;WRAM source offset (restart)
   ldy #0                        ;staging buffer offset
   lda.w GLOBAL.room.roomHeightTiles
-  sta.w tmp+14                  ;row counter (must zero high byte — dec.b is 16-bit in .ACCU 16)
-  beq _stageCol.p2Done          ;skip if height = 0 (dec would wrap to $FFFF)
+  sta.b tmp+14                  ;row counter
 
 _stageCol.p2Loop:
   .ACCU 16
@@ -922,7 +909,6 @@ _stageCol.p2Loop:
   iny
   dec.b tmp+14
   bne _stageCol.p2Loop
-_stageCol.p2Done:
 
   ;--- compute VRAM tilemap address ---
   lda.b tmp+10                  ;column index

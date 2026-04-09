@@ -4922,6 +4922,7 @@ op_freezeScripts:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
   sta.w SCUMM.scratch
+  phy                                ; save SCUMM PC
   ldx #0
   ldy #0
 _freeze.loop:
@@ -4964,6 +4965,7 @@ _freeze.next:
   iny
   cpy #SCUMM_MAX_SLOTS
   bcc _freeze.loop
+  ply                                ; restore SCUMM PC
   clc
   rts
 
@@ -7904,9 +7906,7 @@ _print.clipping:
 _print.text:
   .ACCU 16
   .INDEX 16
-  phy                                    ; save SCUMM PC
-  jsl scummvm.extractAndRenderString
-  ply                                    ; restore SCUMM PC
+  jsl scummvm.extractAndRenderString     ; advances Y past string + null terminator
   jmp _print.done                      ; SO_TEXTSTRING is terminal — ScummVM returns, no $FF follows
 
 _print.done:

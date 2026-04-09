@@ -89,6 +89,23 @@ _init.zeroBits:
   stz.w SCUMM.scratch2
   stz.w SCUMM.cacheWritePtr
   stz.w SCUMM.cutsceneNest
+  ; Zero cutscene arrays (5 levels: Ptr 10B, Script 5B, Data 10B)
+  ldx #0
+- stz.w SCUMM.cutScenePtr,x
+  stz.w SCUMM.cutSceneData,x
+  inx
+  inx
+  cpx #10
+  bcc -
+  ldx #0
+  sep #$20
+  .ACCU 8
+- stz.w SCUMM.cutSceneScript,x
+  inx
+  cpx #5
+  bcc -
+  rep #$20
+  .ACCU 16
   stz.w SCUMM.currentRoom
   stz.w SCUMM.newRoom
   stz.w SCUMM.bgInitDone
@@ -575,21 +592,23 @@ _play.noRoomChange:
   ; Update cursor (joypad input, position, SCUMM vars, OAM)
   jsl scummvm.updateCursor
 
-  ; --- Start button → abortCutscene ---
-  ; If Start pressed and an override is active, set VAR_OVERRIDE=1
-  ; so the script's beginOverride jump fires on next opcode fetch.
-  lda.w inputDevice.trigger
+  ; --- Start button → skip attract loop ---
+  ; The boot script checks var 39 each iteration to decide whether to
+  ; exit the attract loop and start gameplay. Set var 39 = 1 when START
+  ; is held so the boot script's equalZero test falls through to the
+  ; unconditional jump that reaches gameplay initialization.
+  ; NOTE: Use .press (held) not .trigger (rising-edge) because _play
+  ; only runs every ~130 real frames; a 1-frame trigger is always missed.
+  lda.w inputDevice.press
   bit.w #JOY_BUTTON_START
   beq _play.noAbort
-
-  ; Check cutsceneNest > 0
+  ; Set var 39 = 1 (boot script attract-exit flag)
+  ldx #39*2
+  lda #1
+  sta.w SCUMM.globalVars,x
+  ; Also set VAR_OVERRIDE if a cutscene is active (original abort logic)
   lda.w SCUMM.cutsceneNest
   beq _play.noAbort
-
-  ; Scan cutScenePtr[0..nest-1] downward for any non-zero override target.
-  ; The title screen registers beginOverride at level 0 but csNest grows to
-  ; the cap (5) via repeated cutscene() calls in the attract loop.
-  ; Scanning from top downward finds the target even when nest > 1.
 _play.scanOverride:
   dec a
   bmi _play.noAbort                   ; scanned all levels — no target found
@@ -601,7 +620,7 @@ _play.scanOverride:
   pla                                 ; A = found level index
   inc a
   sta.w SCUMM.cutsceneNest            ; collapse nest to found_level + 1
-  ldx #6*2
+  ldx #5*2                            ; VAR_OVERRIDE (var 5)
   lda #1
   sta.w SCUMM.globalVars,x            ; VAR_OVERRIDE = 1
   bra _play.noAbort
@@ -1474,10 +1493,7 @@ _startScript.stopLoop:
   and #$00FF
   cmp 1,s                      ; compare with saved script number on stack
   bne _startScript.stopNext
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
+  jsr scummvm.killSlotCleanup
   bra _startScript.stopDone     ; only one instance possible
 _startScript.stopNext:
   .ACCU 16
@@ -3571,8 +3587,8 @@ _scummvm.fetchLoop:
   ; --- override check: VAR_OVERRIDE + cutScenePtr[nest-1] → update OWNER slot's PC ---
   ; The owner slot (cutSceneScript[nest-1]) registered the override, not the current slot.
   ; We update its pc to the target and yield; it runs correctly next iteration.
-  ldx #6*2
-  lda.w SCUMM.globalVars,x           ; VAR_OVERRIDE (var 6)
+  ldx #5*2
+  lda.w SCUMM.globalVars,x           ; VAR_OVERRIDE (var 5)
   beq _floop.noOverride
   lda.w SCUMM.cutsceneNest
   beq _floop.noOverride
@@ -3636,7 +3652,7 @@ _floop.overOk:
   rep #$20
   .ACCU 16
   ; Clear VAR_OVERRIDE, yield current slot — owner runs with new PC next frame
-  ldx #6*2
+  ldx #5*2
   stz.w SCUMM.globalVars,x
   sec
   bra _scummvm.fetchYield             ; yield; owner slot gets new PC on next iteration
@@ -4175,15 +4191,42 @@ op_stub:
 ; Tier 1 -- Boot critical opcodes
 ;-------------------------------------------------------------------
 
+; scummvm.killSlotCleanup — kill slot at X with cutscene nest cleanup
+; Input: X = slot struct pointer
+; ScummVM errors if a script with active cutsceneOverride is stopped.
+; We gracefully unwind: decrement global cutsceneNest by the slot's count.
+scummvm.killSlotCleanup:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.slots.cutsceneOverride,x
+  and #$00FF
+  beq _killSlot.noCutscene
+    sta.w SCUMM.scratch            ; scratch = slot's cutscene count
+    lda.w SCUMM.cutsceneNest
+    sec
+    sbc.w SCUMM.scratch            ; nest -= override count
+    bpl _killSlot.noClamp
+      lda #0                       ; clamp at 0
+_killSlot.noClamp:
+    sta.w SCUMM.cutsceneNest
+    sep #$20
+    stz.w SCUMM.slots.cutsceneOverride,x
+    rep #$20
+_killSlot.noCutscene:
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  rts
+
 ; stopObjectCode ($00, $A0)
 op_stopObjectCode:
   .ACCU 16
   .INDEX 16
   ldx.w SCUMM.currentSlotPtr
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
+  jsr scummvm.killSlotCleanup
   sec
   rts
 
@@ -4274,10 +4317,7 @@ op_stopScript:
   jsr _scummvm.findSlotByNumber
   ply                           ; restore SCUMM PC
   bcc _stopScript.done
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
+  jsr scummvm.killSlotCleanup
 _stopScript.done:
   .ACCU 16
   .INDEX 16
@@ -4287,10 +4327,7 @@ _stopScript.self:
   .ACCU 16
   .INDEX 16
   ldx.w SCUMM.currentSlotPtr
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
+  jsr scummvm.killSlotCleanup
   sec
   rts
 
@@ -4315,7 +4352,7 @@ _scummvm.takeRelJump:
   rts
 
 ; isEqual ($48, $C8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b == a) → jump when NOT equal (cond FALSE)
+; ScummVM: jumpRelative(b == a) → jump when equal (cond TRUE)
 op_isEqual:
   .ACCU 16
   .INDEX 16
@@ -4330,14 +4367,14 @@ op_isEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; equal → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not equal → cond FALSE → take jump
+  bne +                          ; not equal → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; equal → cond TRUE → take jump
 +
   clc
   rts
 
 ; isNotEqual ($08, $88) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b != a) → jump when equal (cond FALSE)
+; ScummVM: jumpRelative(b != a) → jump when not equal (cond TRUE)
 op_isNotEqual:
   .ACCU 16
   .INDEX 16
@@ -4352,14 +4389,14 @@ op_isNotEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bne +                          ; not equal → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; equal → cond FALSE → take jump
+  beq +                          ; equal → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; not equal → cond TRUE → take jump
 +
   clc
   rts
 
 ; notEqualZero ($A8) -- getVar + jump
-; ScummVM: jumpRelative(a != 0) → jump when zero (cond FALSE)
+; ScummVM: jumpRelative(a != 0) → jump when not zero (cond TRUE)
 op_notEqualZero:
   .ACCU 16
   .INDEX 16
@@ -4370,14 +4407,14 @@ op_notEqualZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  bne +                          ; not zero → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; zero → cond FALSE → take jump
+  beq +                          ; zero → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; not zero → cond TRUE → take jump
 +
   clc
   rts
 
 ; equalZero ($28) -- getVar + jump
-; ScummVM: jumpRelative(a == 0) → jump when not zero (cond FALSE)
+; ScummVM: jumpRelative(a == 0) → jump when zero (cond TRUE)
 op_equalZero:
   .ACCU 16
   .INDEX 16
@@ -4388,14 +4425,14 @@ op_equalZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  beq +                          ; zero → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not zero → cond FALSE → take jump
+  bne +                          ; not zero → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; zero → cond TRUE → take jump
 +
   clc
   rts
 
 ; isGreater ($78, $F8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b > a) → jump when b <= a (cond FALSE)
+; ScummVM: jumpRelative(b > a) → jump when a < b (cond TRUE)
 op_isGreater:
   .ACCU 16
   .INDEX 16
@@ -4410,14 +4447,14 @@ op_isGreater:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → b > a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond FALSE → jump
+  bcs +                          ; A >= scratch → b <= a → cond FALSE → skip
+    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond TRUE → jump
 +
   clc
   rts
 
 ; isLess ($44, $C4) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b < a) → jump when b >= a (cond FALSE)
+; ScummVM: jumpRelative(b < a) → jump when a > b (cond TRUE)
 op_isLess:
   .ACCU 16
   .INDEX 16
@@ -4432,18 +4469,15 @@ op_isLess:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq _isL.doJump                ; A == scratch → b == a → b >= a → jump
-  bcs +                          ; A > scratch → b < a → cond TRUE → skip
-_isL.doJump:
-  .ACCU 16
-  .INDEX 16
-    jsr _scummvm.takeRelJump     ; A <= scratch → b >= a → cond FALSE → jump
+  beq +                          ; A == scratch → b == a → b < a FALSE → skip
+  bcc +                          ; A < scratch → b > a → b < a FALSE → skip
+    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond TRUE → jump
 +
   clc
   rts
 
 ; isLessEqual ($38, $B8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b <= a) → jump when b > a (cond FALSE)
+; ScummVM: jumpRelative(b <= a) → jump when a >= b (cond TRUE)
 op_isLessEqual:
   .ACCU 16
   .INDEX 16
@@ -4458,14 +4492,14 @@ op_isLessEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcs +                          ; A >= scratch → b <= a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond FALSE → jump
+  bcc +                          ; A < scratch → b > a → cond FALSE → skip
+    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond TRUE → jump
 +
   clc
   rts
 
 ; isGreaterEqual ($04, $84) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b >= a) → jump when b < a (cond FALSE)
+; ScummVM: jumpRelative(b >= a) → jump when a <= b (cond TRUE)
 op_isGreaterEqual:
   .ACCU 16
   .INDEX 16
@@ -4480,9 +4514,10 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; A == scratch → b >= a → cond TRUE → skip
-  bcc +                          ; A < scratch → b > a → b >= a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond FALSE → jump
+  beq _isGE.doJump               ; A == scratch → b == a → b >= a TRUE → jump
+  bcs +                          ; A > scratch → b < a → cond FALSE → skip
+_isGE.doJump:
+    jsr _scummvm.takeRelJump     ; A < scratch or equal → b >= a → cond TRUE → jump
 +
   clc
   rts
@@ -4658,9 +4693,10 @@ op_cutscene:
   inc a
   sta.w SCUMM.cutsceneNest
 
-  ; Zero the cutscene stack for this new nesting level
-  dec a                               ; level index = nest-1
-  pha
+  ; Zero the cutscene stack at the NEW nesting level (not old).
+  ; This preserves any override target pre-registered at the old level
+  ; (MI1 intro calls override before cutscene in separate scripts).
+  pha                                 ; save nest (already incremented)
   asl a
   tax
   stz.w SCUMM.cutScenePtr,x
@@ -4679,6 +4715,25 @@ op_cutscene:
   inc a
   sta.w SCUMM.slots.cutsceneOverride,x
   rep #$20
+  .ACCU 16
+
+  ; --- START abort at cutscene open ---
+  ; _play() runs too infrequently to catch cutscenes that open+close within
+  ; one iteration. Check here so the override fires immediately.
+  lda.w inputDevice.press
+  bit.w #JOY_BUTTON_START
+  beq _op_cutscene.noAbort
+  lda.w SCUMM.cutsceneNest
+  beq _op_cutscene.noAbort
+  dec a
+  asl a
+  tax
+  lda.w SCUMM.cutScenePtr,x          ; target at nest-1
+  beq _op_cutscene.noAbort
+  ldx #5*2
+  lda #1
+  sta.w SCUMM.globalVars,x           ; VAR_OVERRIDE = 1
+_op_cutscene.noAbort:
   clc
   rts
 
@@ -4691,8 +4746,8 @@ op_endCutscene:
   .ACCU 16
   .INDEX 16
 
-  ; Clear VAR_OVERRIDE (var 6) = 0
-  ldx #6*2
+  ; Clear VAR_OVERRIDE (var 5) = 0
+  ldx #5*2
   stz.w SCUMM.globalVars,x
 
   ; Decrement cutsceneNest, clamp at 0
@@ -4718,6 +4773,22 @@ _ec.overOk:
   .ACCU 16
   .INDEX 16
 
+  ; --- START abort: intercept before clearing the override target ---
+  ; _play() runs too infrequently to catch cutscenes that open+close in
+  ; one iteration. Check here, right before endCutscene destroys the ptr.
+  lda.w inputDevice.press
+  bit.w #JOY_BUTTON_START
+  beq _ec.noAbort
+  lda.w SCUMM.cutsceneNest             ; already decremented
+  asl a
+  tax
+  lda.w SCUMM.cutScenePtr,x            ; target at old level
+  beq _ec.noAbort
+  ; Valid target + START held → set VAR_OVERRIDE (fetchLoop fires next opcode)
+  ldx #5*2
+  lda #1
+  sta.w SCUMM.globalVars,x
+_ec.noAbort:
   ; Clean up cutScenePtr/Script/Data for the old level
   lda.w SCUMM.cutsceneNest             ; now decremented = old level index
   asl a
@@ -4754,18 +4825,24 @@ op_override:
   adc.w SCUMM.scratch                ; A = absolute bytecode target
   pha                                ; save absolute target
 
-  ; Store into cutScenePtr[nest-1]
+  ; Store into cutScenePtr[max(nest-1, 0)]
+  ; MI1 intro calls override before cutscene (nest=0); clamp index to 0.
   lda.w SCUMM.cutsceneNest
-  dec a                              ; level index
-  bmi _override.popDone              ; safety: no active cutscene
+  dec a                              ; level index (may be -1 if nest=0)
+  bpl _override.indexOk
+  lda #0                             ; clamp: nest=0 → store at index 0
+_override.indexOk:
   asl a
   tax
   pla
   sta.w SCUMM.cutScenePtr,x         ; save the override jump target
 
-  ; Store current slot index into cutSceneScript[nest-1]
+  ; Store current slot index into cutSceneScript[max(nest-1, 0)]
   lda.w SCUMM.cutsceneNest
   dec a
+  bpl _override.scriptOk
+  lda #0
+_override.scriptOk:
   tax
   lda.w SCUMM.currentSlot
   sep #$20
@@ -4774,8 +4851,8 @@ op_override:
   rep #$20
   .ACCU 16
 
-  ; Set VAR_OVERRIDE (var 6) = 0
-  ldx #6*2
+  ; Set VAR_OVERRIDE (var 5) = 0
+  ldx #5*2
   stz.w SCUMM.globalVars,x
 
   clc
@@ -4808,8 +4885,8 @@ _override.endOverride:
   rep #$20
   .ACCU 16
 
-  ; Clear VAR_OVERRIDE (var 6) = 0
-  ldx #6*2
+  ; Clear VAR_OVERRIDE (var 5) = 0
+  ldx #5*2
   stz.w SCUMM.globalVars,x
 
 _override.endDone:

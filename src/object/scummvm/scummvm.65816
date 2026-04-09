@@ -5629,7 +5629,9 @@ op_setCameraAt:
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
+  phy                                ; save SCUMM PC
   jsl scummvm.setCameraAtImpl        ; snap camera instantly
+  ply                                ; restore SCUMM PC
   rts
 
 ; lights ($70, $F0) -- p8[7]=value + byte + byte → store to VAR_CURRENT_LIGHTS (var 9)
@@ -6872,7 +6874,9 @@ _matrixOps.create:
   .ACCU 16
   .INDEX 16
   pla                                ; pop sub-opcode
+  phy                                ; save SCUMM PC
   jsl scummvm.createBoxMatrix_long
+  ply                                ; restore SCUMM PC
   bra _matrixOps.done
 
 _matrixOps.done:
@@ -7008,7 +7012,9 @@ _roomOps.palColor:
   jsr _scummvm.fetchByte
 ++
   sta.l BWRAM_PALETTE_SCRATCH+6      ; +6 = palette index
+  phy                                ; save SCUMM PC
   jsl scummvm.setPalColor_impl
+  ply                                ; restore SCUMM PC
   clc
   rts
 
@@ -7217,7 +7223,9 @@ _roomOps.intensity:
   jsr _scummvm.fetchByte
 ++
   sta.l BWRAM_PALETTE_SCRATCH+8      ; +8 = endColor
+  phy                                ; save SCUMM PC
   jsl scummvm.darkenPalette_impl
+  ply                                ; restore SCUMM PC
   clc
   rts
 
@@ -7896,7 +7904,9 @@ _print.clipping:
 _print.text:
   .ACCU 16
   .INDEX 16
+  phy                                    ; save SCUMM PC
   jsl scummvm.extractAndRenderString
+  ply                                    ; restore SCUMM PC
   jmp _print.done                      ; SO_TEXTSTRING is terminal — ScummVM returns, no $FF follows
 
 _print.done:
@@ -7931,7 +7941,9 @@ op_verbOps:
   jsr _scummvm.getVarOrDirectByte    ; A = verb ID, Y = advanced PC
   and #$00FF
   sta.w SCUMM.resultVar              ; save verb ID
+  phy                                ; save SCUMM PC
   jsl scummvm.verbOps_impl
+  ply                                ; restore SCUMM PC
   clc
   rts
 
@@ -8461,7 +8473,9 @@ op_saveRestoreVerbs:
   pha                                 ; push mode (unused, but consume param)
   ; Stack: mode (top), end_verb, begin_verb
   ; Pass sub-opcode in scratch, params on stack
+  phy                                 ; save SCUMM PC
   jsl saveRestoreVerbs_impl
+  ply                                 ; restore SCUMM PC
   pla                                 ; clean mode
   pla                                 ; clean end_verb
   pla                                 ; clean begin_verb
@@ -8608,7 +8622,9 @@ op_getStringWidth:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; A = string slot ID
   and #$000F                         ; clamp to 0-15
+  phy                                ; save SCUMM PC
   jsl scummvm.getStringWidth_impl    ; A = pixel width
+  ply                                ; restore SCUMM PC
   jsr _scummvm.writeVariable
   clc
   rts
@@ -8675,7 +8691,9 @@ op_getClosestObjActor:
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; A = reference actor/object ID
+  phy                                ; save SCUMM PC
   jsl scummvm.getClosestObjActor_impl ; A = closest actor/obj ID
+  ply                                ; restore SCUMM PC
   jsr _scummvm.writeVariable
   clc
   rts
@@ -8737,7 +8755,9 @@ op_findObject:
   jsr _scummvm.getVarOrDirectByte        ;param2 = screenY
   sta.w SCUMM.scratch                    ;scratch = screenY
   pla                                    ;A = screenX
-  jsl room.findObject                    ;camera+AABB → A=objId
+  phy                                    ;save SCUMM PC (Y)
+  jsl room.findObject                    ;camera+AABB → A=objId (clobbers Y)
+  ply                                    ;restore SCUMM PC
   jsr _scummvm.writeVariable
   clc
   rts
@@ -8878,17 +8898,19 @@ op_pickupObject:
   pha
   phx                                ; save obj_id on stack
   txa                                ; A = obj_id
+  phy                                ; save SCUMM PC
   jsl room.removeObjectPatch
+  ply                                ; restore SCUMM PC
   plx                                ; restore obj_id
   pla
   sta.b tmp                          ; restore bytecode pointer low word
   pla
   sta.b tmp+2                        ; restore bytecode pointer bank byte
   txa                                ; A = obj_id
-  phy
+  phy                                ; save SCUMM PC
   jsl scummvm.cacheInventoryName
   jsl scummvm.rebuildInventory
-  ply
+  ply                                ; restore SCUMM PC
 _pickupObj.done:
   .ACCU 16
   .INDEX 16
@@ -8921,17 +8943,19 @@ op_pickupObjectOld:
   pha
   phx                                ; save obj_id on stack
   txa                                ; A = obj_id
+  phy                                ; save SCUMM PC
   jsl room.removeObjectPatch
+  ply                                ; restore SCUMM PC
   plx                                ; restore obj_id
   pla
   sta.b tmp                          ; restore bytecode pointer low word
   pla
   sta.b tmp+2                        ; restore bytecode pointer bank byte
   txa                                ; A = obj_id
-  phy
+  phy                                ; save SCUMM PC
   jsl scummvm.cacheInventoryName
   jsl scummvm.rebuildInventory
-  ply
+  ply                                ; restore SCUMM PC
 _pickupObjOld.done:
   .ACCU 16
   .INDEX 16

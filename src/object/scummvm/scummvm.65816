@@ -3602,6 +3602,11 @@ _scummvm.fetchLoop:
   tax                                 ; X = owner slot struct offset
   pla                                 ; A = override target PC offset
   sta.w SCUMM.slots.pc,x             ; redirect owner slot to override target
+  ; If owner IS the current slot, update Y so fetchYield saves the correct PC
+  cpx.w SCUMM.currentSlotPtr
+  bne _floop.overNotSelf
+  tay                                  ; Y = override target (live SCUMM PC)
+_floop.overNotSelf:
   ; Decrement owner slot.cutsceneOverride (clamp at 0)
   lda.w SCUMM.slots.cutsceneOverride,x
   and #$00FF
@@ -4244,6 +4249,16 @@ _startScript.noArgs:
   .ACCU 16
   .INDEX 16
   ply                             ; restore SCUMM PC
+  ; Refresh tmp — cacheGC during startScriptSlot may have moved our script
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.cachePtr,x
+  clc
+  adc #SCUMM_CACHE_BASE
+  sta.b tmp
+  sep #$20
+  lda #$7F
+  sta.b tmp+2
+  rep #$20
   clc
   rts
 
@@ -4729,10 +4744,15 @@ op_override:
   beq _override.endOverride
 
   ; --- beginOverride ---
-  ; Read the jump opcode + 2-byte target offset
+  ; Read the jump opcode + 2-byte relative offset, compute absolute target
   jsr _scummvm.fetchByte             ; jump opcode byte (0x18)
-  jsr _scummvm.fetchWord             ; jump offset (2 bytes) — this is the skip target
-  pha                                ; save jump offset
+  jsr _scummvm.fetchWord             ; A = signed offset, Y = PC past offset
+  ; Absolute target = current PC (Y) + offset (A)
+  sta.w SCUMM.scratch
+  tya
+  clc
+  adc.w SCUMM.scratch                ; A = absolute bytecode target
+  pha                                ; save absolute target
 
   ; Store into cutScenePtr[nest-1]
   lda.w SCUMM.cutsceneNest

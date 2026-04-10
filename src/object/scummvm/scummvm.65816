@@ -7949,9 +7949,7 @@ op_verbOps:
   jsr _scummvm.getVarOrDirectByte    ; A = verb ID, Y = advanced PC
   and #$00FF
   sta.w SCUMM.resultVar              ; save verb ID
-  phy                                ; save SCUMM PC
-  jsl scummvm.verbOps_impl
-  ply                                ; restore SCUMM PC
+  jsl scummvm.verbOps_impl           ; advances Y past all sub-opcodes + $FF terminator
   clc
   rts
 

@@ -4339,13 +4339,18 @@ _stopScript.self:
 ; Jump targets are signed relative offsets from the byte AFTER the target word.
 
 ; Helper: apply relative jump from SCUMM.scratch2 to Y
+; Suppressed when SCUMM.inExpression is set (comparison opcodes inside
+; expressions must not branch — only the VAR_RESULT value matters).
 _scummvm.takeRelJump:
   .ACCU 16
   .INDEX 16
+  lda.w SCUMM.inExpression
+  bne +                           ; inside expression — skip the jump
   tya
   clc
   adc.w SCUMM.scratch2
   tay
++
   rts
 
 ; isEqual ($48, $C8) -- getVar + p16[7] + jump
@@ -5150,12 +5155,15 @@ _expression.execOpcode:
   ; Sub-op 6: fetch next byte as opcode, execute it, push VAR_RESULT
   lda.w SCUMM.currentOpcode
   pha                              ; save expression's outer opcode
+  lda #1
+  sta.w SCUMM.inExpression         ; flag: comparison opcodes must not branch
   jsr _scummvm.fetchByte           ; fetch embedded opcode byte
   sta.w SCUMM.currentOpcode        ; set for embedded opcode's flag checks
   asl a
   tax
   jsr (_scummvm.dispatchTable,x)   ; execute the embedded opcode
   ; ignore carry (don't yield mid-expression)
+  stz.w SCUMM.inExpression         ; clear expression flag
   pla
   sta.w SCUMM.currentOpcode        ; restore outer opcode
   lda.w SCUMM.globalVars           ; var[0] = VAR_RESULT

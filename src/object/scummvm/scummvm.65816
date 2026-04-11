@@ -7587,6 +7587,11 @@ _walkActorTo.checkBoxes:
   lda.w SCUMM.boxCount
   beq _walkActorTo.direct           ; no boxes, straight-line
 
+  ; Save fetchLoop bytecode pointer — buildWalkPath clobbers tmp
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
   ; Set up buildWalkPath params
   ldx.w SCUMM.scratch2              ; actor struct offset
   lda.w SCUMM.actors.x,x           ; startX
@@ -7610,6 +7615,11 @@ _walkActorTo.checkBoxes:
   sta.w SCUMM.scratch3
   pla
   sta.w SCUMM.scratch2
+  ; Restore fetchLoop bytecode pointer
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
   bra _walkActorTo.anim
 
 _walkActorTo.direct:

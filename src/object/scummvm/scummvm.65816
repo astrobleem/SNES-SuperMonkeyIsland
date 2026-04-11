@@ -7532,13 +7532,13 @@ op_walkActorTo:
 
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectWord    ; x
-  pha                                ; save target x
+  sta.w SCUMM.argBuffer              ; save target x (argBuffer unused during walkActorTo)
 
   lda #SCUMM_FLAG_BIT5
   jsr _scummvm.getVarOrDirectWord    ; y
   sta.w SCUMM.scratch               ; target y
 
-  ; Save SCUMM PC (Y) — walkActorTo body destroys Y via buildWalkPath/direct path
+  ; Save SCUMM PC (Y) — buildWalkPath/direct path clobber Y
   phy
 
   ; Derive actor number from struct offset (offset / 16)
@@ -7552,7 +7552,7 @@ op_walkActorTo:
   ; Store walk targets in parallel arrays (word index = actor * 2)
   asl a                              ; × 2 for word index
   tax
-  pla                                ; target x
+  lda.w SCUMM.argBuffer              ; target x
   sta.w SCUMM.actorTargetX,x
   lda.w SCUMM.scratch               ; target y
   sta.w SCUMM.actorTargetY,x

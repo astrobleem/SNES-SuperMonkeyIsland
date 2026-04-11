@@ -1028,21 +1028,26 @@ _prc.doRoomLoad:
   ; Restore room number and load via Phase 0 room loader
   lda 3,s
   jsr room.load
-  bcs +
+  bcs _prc.roomLoadOk
   ; room.load failed — virtual room (no MSU data): clear BG1 + proceed
-  ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
+  ; Stack remains intact: roomNum[16], brightness[8], hdmaEnable[8]
+  jsl scummvm.clearRoom0             ; blank BG1 for black background
+  ; Mark as virtual room: zero the room index offset so downstream
+  ; code can detect no tile data is available
+  lda #0
+  sta.l GLOBAL.room.idx
+  sta.l GLOBAL.room.idx+2
+  ; Skip loadDialogFont + buildCgramHdmaTable (need valid room data)
+  ; Pop stack (same order as successful path)
   sep #$20
-  pla
+  pla                                ; pop hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  sta.l HDMAEN
-  pla
-  sta.w ScreenBrightness
-  sta.l INIDSP
+  pla                                ; pop brightness (discard, stays 0)
   rep #$20
-  pla                                ; discard roomNum (do NOT cancel room change)
-  jsl scummvm.clearRoom0             ; blank BG1 so virtual room has black background
-  jmp _prc.failed
-+
+  pla                                ; pop roomNum
+  ; Jump past tile-dependent code to script loading
+  jmp _prc.virtualRoomScripts
+_prc.roomLoadOk:
   .ACCU 16
   .INDEX 16
 
@@ -1071,6 +1076,7 @@ _prc.doRoomLoad:
   rep #$20
   pla
 
+_prc.virtualRoomScripts:
   ; --- Set VAR_NEW_ROOM before any scripts run ---
   ; ScummVM: VAR(VAR_NEW_ROOM) = room  (before runExitScript)
   ; VAR_NEW_ROOM = var 59 in SCUMM v5. Scripts read this to know destination.
@@ -1144,6 +1150,11 @@ _prc.noExitScript2:
   and #$00FF
   sta.w SCUMM.cameraFollows
 
+  ; Skip camera/viewport for virtual rooms (no tile data)
+  lda.l GLOBAL.room.idx
+  ora.l GLOBAL.room.idx+2
+  beq _prc.skipViewport                ; virtual room — no MSU tile data
+
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
 
@@ -1155,6 +1166,7 @@ _prc.noExitScript2:
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
+_prc.skipViewport:
 
   ; --- Run entry scripts in ScummVM order ---
   ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1

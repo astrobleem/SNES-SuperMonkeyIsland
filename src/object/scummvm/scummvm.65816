@@ -68,7 +68,7 @@ _init.zeroBits:
   cpx #256
   bcc _init.zeroBits
 
-  ; Set bitVar[361] — "game initialized" flag
+  ; Set bitVar[361] -- "game initialized" flag
   ; Normally set by script 188 (game-init kickstart), which is not in our
   ; MI1 extraction.  Without this bit, room 1 ENCD skips starting LSCR 200
   ; and Guybrush never gets placed.
@@ -603,12 +603,12 @@ _play.noRoomChange:
   beq _play.directSkip
 _play.scanOverride:
   dec a
-  bmi _play.directSkip                ; scanned all levels — no target found
+  bmi _play.directSkip                ; scanned all levels -- no target found
   pha
   asl a
   tax
   lda.w SCUMM.cutScenePtr,x
-  beq _play.scanPop                   ; this level has no target — try lower
+  beq _play.scanPop                   ; this level has no target -- try lower
   pla                                 ; A = found level index
   inc a
   sta.w SCUMM.cutsceneNest            ; collapse nest to found_level + 1
@@ -622,7 +622,7 @@ _play.scanPop:
 _play.directSkip:
   ; Override can't fire (csNest=0 or no target found).
   ; The endCutscene START check handles the redirect directly.
-  ; Nothing to do here — _play will catch it next time csNest > 0.
+  ; Nothing to do here -- _play will catch it next time csNest > 0.
   nop
 
 _play.noAbort:
@@ -694,7 +694,7 @@ _play.nextSlot:
   lda #1
   sta.w SCUMM.renderSlotDirty,x
   rep #$20
-  ; (removed forced cursor/userput re-enable — scripts own this state)
+  ; (removed forced cursor/userput re-enable -- scripts own this state)
   nop
   nop
   nop
@@ -718,7 +718,7 @@ _play.noEgoFixup:
   sep #$20
   lda.w SCUMM.actors.2.moving         ; actor 1 still moving?
   rep #$20
-  bne _play.noPendingVerb              ; yes — wait for arrival
+  bne _play.noPendingVerb              ; yes -- wait for arrival
   ; Actor 1 stopped → execute pending verb on pending object
   lda.w SCUMM.pendingVerb
   sta.w SCUMM.scratch                  ; scratch = verb ID
@@ -1029,7 +1029,7 @@ _prc.doRoomLoad:
   lda 3,s
   jsr room.load
   bcs _prc.roomLoadOk
-  ; room.load failed — virtual room (no MSU data): clear BG1 + proceed
+  ; room.load failed -- virtual room (no MSU data): clear BG1 + proceed
   ; Stack remains intact: roomNum[16], brightness[8], hdmaEnable[8]
   jsl scummvm.clearRoom0             ; blank BG1 for black background
   ; Mark as virtual room: zero the room index offset so downstream
@@ -1056,12 +1056,12 @@ _prc.roomLoadOk:
   jsl scummvm.loadDialogFont
 
   ; Build CGRAM HDMA table with room's palette 7 colors
-  ; (HDMA disabled, force blank active — CGRAM reads are safe)
+  ; (HDMA disabled, force blank active -- CGRAM reads are safe)
   jsl scummvm.buildCgramHdmaTable
 
   ; Restore HDMA enable + ScreenBrightness, exit force blank
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
-  ; NOTE: Only write GLOBAL.HDMA.CHANNEL.ENABLE — do NOT write HDMAEN ($420C)
+  ; NOTE: Only write GLOBAL.HDMA.CHANNEL.ENABLE -- do NOT write HDMAEN ($420C)
   ; directly. Mid-frame HDMA enable causes the hardware to process the table
   ; at the wrong scanline position, corrupting CGRAM entries. The NMI handler
   ; copies GLOBAL.HDMA.CHANNEL.ENABLE → HDMAEN at the start of each VBlank,
@@ -1070,7 +1070,7 @@ _prc.roomLoadOk:
   pla                                   ; pop saved hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE      ; NMI will enable at next VBlank
   pla                                   ; pop saved brightness (discard)
-  ; ScreenBrightness stays 0 — screen dark until play loop deferred restore
+  ; ScreenBrightness stays 0 -- screen dark until play loop deferred restore
   ; after ENCD + refreshObjectColumns. Prevents 1-frame flash of incorrect
   ; object states (e.g., rowboat visible before ENCD hides it).
   rep #$20
@@ -1087,7 +1087,7 @@ _prc.virtualRoomScripts:
   ; --- Run exit scripts BEFORE tearing down old room ---
   ; ScummVM order: VAR_EXIT_SCRIPT (var[30]), EXCD, VAR_EXIT_SCRIPT2 (var[31])
 
-  ; Run VAR_EXIT_SCRIPT (globalVar[30]) — script 7 in MI1
+  ; Run VAR_EXIT_SCRIPT (globalVar[30]) -- script 7 in MI1
   ldx #30*2
   lda.w SCUMM.globalVars,x
   and #$00FF
@@ -1105,7 +1105,7 @@ _prc.noExcd:
   .ACCU 16
   .INDEX 16
 
-  ; Run VAR_EXIT_SCRIPT2 (globalVar[31]) — MI1 doesn't use, but guard anyway
+  ; Run VAR_EXIT_SCRIPT2 (globalVar[31]) -- MI1 doesn't use, but guard anyway
   ldx #31*2
   lda.w SCUMM.globalVars,x
   and #$00FF
@@ -1132,7 +1132,7 @@ _prc.noExitScript2:
   jsr _scummvm.loadRoomScripts
 
   ; Reload surviving global scripts into fresh cache positions
-  ; (must run even if room has no scripts — cache was flushed above)
+  ; (must run even if room has no scripts -- cache was flushed above)
   jsr _scummvm.reloadGlobalScripts
 
   ; Update current room + SCUMM variables BEFORE starting ENCD
@@ -1153,7 +1153,7 @@ _prc.noExitScript2:
   ; Skip camera/viewport for virtual rooms (no tile data)
   lda.l GLOBAL.room.idx
   ora.l GLOBAL.room.idx+2
-  beq _prc.skipViewport                ; virtual room — no MSU tile data
+  beq _prc.skipViewport                ; virtual room -- no MSU tile data
 
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
@@ -1169,7 +1169,7 @@ _prc.noExitScript2:
 _prc.skipViewport:
 
   ; --- Run entry scripts in ScummVM order ---
-  ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) — script 5 in MI1
+  ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) -- script 5 in MI1
   ldx #28*2
   lda.w SCUMM.globalVars,x
   and #$00FF
@@ -1190,7 +1190,7 @@ _prc.noEncd:
   .ACCU 16
   .INDEX 16
 
-  ; 3. VAR_ENTRY_SCRIPT2 (globalVar[29]) — script 6 in MI1 (palette cycling)
+  ; 3. VAR_ENTRY_SCRIPT2 (globalVar[29]) -- script 6 in MI1 (palette cycling)
   ldx #29*2
   lda.w SCUMM.globalVars,x
   and #$00FF
@@ -1237,7 +1237,7 @@ _prc.failed:
   rts
 
 ;-------------------------------------------------------------------
-; _scummvm.assignActorWalkboxes — scan visible actors, assign walkbox
+; _scummvm.assignActorWalkboxes -- scan visible actors, assign walkbox
 ; Called after room load when BOXD data is fresh in $7F:5002.
 ; For each actor 1..SCUMM_WALK_ACTORS-1 in the current room with
 ; visible=1, calls findBox to determine which walkbox they're in.
@@ -1441,7 +1441,7 @@ _loadGlobal.exists:
   cmp #SCUMM_CACHE_SIZE
   bcc _loadGlobal.cacheOk
 
-  ; Cache full — try GC before giving up
+  ; Cache full -- try GC before giving up
   jsr _scummvm.cacheGC
 
   ; Retry space check after GC
@@ -1451,7 +1451,7 @@ _loadGlobal.exists:
   cmp #SCUMM_CACHE_SIZE
   bcc _loadGlobal.cacheOk
 
-  ; Still full after GC — genuinely out of space
+  ; Still full after GC -- genuinely out of space
   TRIGGER_ERROR E_ScummVmCacheFull
 
 _loadGlobal.cacheOk:
@@ -1718,7 +1718,7 @@ _reloadGlobal.loop:
   and #$00FF
   bne _reloadGlobal.next
 
-  ; This is a live GLOBAL slot — reload its script
+  ; This is a live GLOBAL slot -- reload its script
   phx
   phy
   lda.w SCUMM.slots.number,x
@@ -1736,7 +1736,7 @@ _reloadGlobal.loop:
   sta.w SCUMM.slots.cachePtr,x
   lda.w SCUMM.scratch
   sta.w SCUMM.slots.cacheLen,x
-  ; slot.pc is NOT reset — bytecode is identical, just at new offset
+  ; slot.pc is NOT reset -- bytecode is identical, just at new offset
 
 _reloadGlobal.next:
   .ACCU 16
@@ -1921,7 +1921,7 @@ _loadRoom.zeroTable:
   xba
   rep #$20
   pha                            ;push offset_hi
-  ; Read size32 (discard — we parse the block header instead)
+  ; Read size32 (discard -- we parse the block header instead)
   sep #$20
   lda.l MSU_DATA
   lda.l MSU_DATA
@@ -2317,7 +2317,7 @@ scummvm.triggerBadOpcode:
 .ends
 
 ;===================================================================
-; Walkbox Pathfinding — superfree section
+; Walkbox Pathfinding -- superfree section
 ;
 ; Contains: pointInBox, findBox, getNextBox, getBoxEdgeCrossing,
 ; buildWalkPath.  All routines use jsr/rts internally.
@@ -2328,7 +2328,7 @@ scummvm.triggerBadOpcode:
 .section "ScummVM walkbox pathfinding" free
 
 ;-------------------------------------------------------------------
-; pointInBox — test if point (px, py) is inside walkbox boxIdx
+; pointInBox -- test if point (px, py) is inside walkbox boxIdx
 ;
 ; Walkbox = quadrilateral with vertices UL, UR, LR, LL.
 ; Uses scanline: check Y in range, then interpolate left/right edges.
@@ -2617,7 +2617,7 @@ _pib.divZero:
 
 
 ;-------------------------------------------------------------------
-; findBox — find which walkbox contains point (px, py)
+; findBox -- find which walkbox contains point (px, py)
 ;
 ; @param tmp+0 (word) px
 ; @param tmp+2 (word) py
@@ -2655,7 +2655,7 @@ _findBox.loop:
   rep #$20
   .ACCU 16
   and #SCUMM_BOX_INVISIBLE
-  bne _findBox.skip    ;box is invisible — skip it
+  bne _findBox.skip    ;box is invisible -- skip it
 
   lda 1,s              ;peek box index from stack
   sta.b tmp+4          ;boxIdx for pointInBox
@@ -2685,7 +2685,7 @@ _findBox.found:
 
 
 ;-------------------------------------------------------------------
-; getNextBox — routing matrix lookup
+; getNextBox -- routing matrix lookup
 ;
 ; @param A = from box
 ; @param Y = to box
@@ -2703,7 +2703,7 @@ scummvm.getNextBox:
   sta.b tmp+6          ;from
   ;from * boxCount: use shift-add for speed
   ;A = from, need A * boxCount
-  phy                  ;save Y (to) — _gnb.mul trashes Y
+  phy                  ;save Y (to) -- _gnb.mul trashes Y
   jsr _gnb.mul
   ;tmp+6 = from * boxCount
   pla                  ;recover to (was Y, now in A)
@@ -2757,7 +2757,7 @@ _gnb.mul:
 
 
 ;-------------------------------------------------------------------
-; getBoxEdgeCrossing — find crossing waypoint between two adjacent boxes
+; getBoxEdgeCrossing -- find crossing waypoint between two adjacent boxes
 ;
 ; Finds overlapping Y range of both boxes, picks midpoint Y,
 ; then averages the X coords of both boxes at that Y.
@@ -2878,7 +2878,7 @@ _gbe.boxOffset:
 
 
 ;-------------------------------------------------------------------
-; buildWalkPath — compute waypoints from current pos to target pos
+; buildWalkPath -- compute waypoints from current pos to target pos
 ;
 ; @param A = actor index (0-15)
 ; @param tmp+0 = startX
@@ -2902,7 +2902,7 @@ scummvm.buildWalkPath:
   jsr scummvm.findBox   ;trashes tmp+4-26; result in A
   sta.w SCUMM.bwpCurBox
 
-  ;find dest box — copy target to tmp+0,+2 for findBox
+  ;find dest box -- copy target to tmp+0,+2 for findBox
   lda.w SCUMM.bwpTargetX
   sta.b tmp
   lda.w SCUMM.bwpTargetY
@@ -2924,7 +2924,7 @@ scummvm.buildWalkPath:
   ;pathLen = 0
   stz.w SCUMM.bwpPathLen
 
-  ;if destBox == $FF, target is outside walkboxes — clamp to nearest box
+  ;if destBox == $FF, target is outside walkboxes -- clamp to nearest box
   ;(must come BEFORE curBox check so target is always clamped)
   lda.w SCUMM.bwpDestBox
   cmp #$00FF
@@ -2933,9 +2933,9 @@ scummvm.buildWalkPath:
   lda.w SCUMM.bwpDestBox
   cmp #$00FF
   bne +
-  jmp _bwp.noPath          ;no walkboxes at all — give up
+  jmp _bwp.noPath          ;no walkboxes at all -- give up
 +
-  ;if curBox == $FF, actor is outside walkboxes — go direct (target already clamped)
+  ;if curBox == $FF, actor is outside walkboxes -- go direct (target already clamped)
   lda.w SCUMM.bwpCurBox
   cmp #$00FF
   beq _bwp.directPath
@@ -3025,7 +3025,7 @@ _bwp.directPath:
   rts
 
 ;-------------------------------------------------------------------
-; _bwp.adjustToBox — clamp target to nearest walkbox AABB
+; _bwp.adjustToBox -- clamp target to nearest walkbox AABB
 ; Called when findBox returns $FF for the target position.
 ; Scans all walkboxes, finds the one whose bounding rectangle is
 ; closest to (bwpTargetX, bwpTargetY), clamps target to that AABB,
@@ -3155,7 +3155,7 @@ _atb.loop:
   pha
   sta.b tmp+26                 ; bestBox = box
   lda.b tmp+16
-  sta.b tmp+28                 ; bestX = clampX (NOT tmp+20 — that's used for |dx|)
+  sta.b tmp+28                 ; bestX = clampX (NOT tmp+20 -- that's used for |dx|)
   lda.b tmp+18
   sta.b tmp+30                 ; bestY = clampY
 
@@ -3186,7 +3186,7 @@ _atb.rts:
 _bwp.noPath:
   .ACCU 16
   .INDEX 16
-  ;target outside all walkboxes — refuse walk (pathLen=0)
+  ;target outside all walkboxes -- refuse walk (pathLen=0)
   pla                   ;actor index (pushed at entry)
   and #$000F
   tax
@@ -3210,13 +3210,13 @@ scummvm.findBox_long:
 
 
 ;-------------------------------------------------------------------
-; createBoxMatrix — rebuild routing matrix after box flags change
+; createBoxMatrix -- rebuild routing matrix after box flags change
 ;
 ; Derives adjacency from the saved original routing matrix, then
 ; runs Floyd-Warshall to compute new transitive routes, skipping
 ; boxes with kBoxLocked ($40) or kBoxInvisible ($80) flags.
 ;
-; Uses bwp scratch area — safe since this is never called during
+; Uses bwp scratch area -- safe since this is never called during
 ; an active buildWalkPath.
 ;
 ; @clobbers A, X, Y, tmp+0..tmp+10, bwp scratch
@@ -3227,7 +3227,7 @@ scummvm.createBoxMatrix:
   lda.w SCUMM.boxCount
   cmp #2
   bcs +
-    jmp _cbm.done                  ;0 or 1 boxes — nothing to rebuild
+    jmp _cbm.done                  ;0 or 1 boxes -- nothing to rebuild
 +
   sta.w SCUMM.bwpDestBox           ;N (cached)
 
@@ -3361,7 +3361,7 @@ _cbm.fwK:
   jmp _cbm.done
 +
 
-  ;check box k flags — skip if locked or invisible
+  ;check box k flags -- skip if locked or invisible
   jsr _cbm.getBoxFlags
   and #(SCUMM_BOX_LOCKED | SCUMM_BOX_INVISIBLE)
   beq +
@@ -3393,7 +3393,7 @@ _cbm.fwI:
   jmp _cbm.fwNextI
 +
 
-  ;--- preload routing[i*N+k] — if $FF, skip entire row ---
+  ;--- preload routing[i*N+k] -- if $FF, skip entire row ---
   lda.w SCUMM.bwpArrayOfs
   clc
   adc.w SCUMM.bwpTargetX          ;i*N + k
@@ -3428,7 +3428,7 @@ _cbm.fwJ:
   and #(SCUMM_BOX_LOCKED | SCUMM_BOX_INVISIBLE)
   bne _cbm.fwNextJ
 
-  ;--- check routing[i*N+j] — skip if not $FF ---
+  ;--- check routing[i*N+j] -- skip if not $FF ---
   lda.w SCUMM.bwpArrayOfs
   clc
   adc.w SCUMM.bwpCurBox           ;i*N + j
@@ -3445,7 +3445,7 @@ _cbm.fwJ:
   cmp #$00FF
   bne _cbm.fwNextJ                 ;already has route
 
-  ;--- check routing[k*N+j] — skip if $FF ---
+  ;--- check routing[k*N+j] -- skip if $FF ---
   lda.w SCUMM.bwpPathLen
   clc
   adc.w SCUMM.bwpCurBox           ;k*N + j
@@ -3502,7 +3502,7 @@ _cbm.done:
 
 
 ;-------------------------------------------------------------------
-; _cbm.getBoxFlags — read flags byte for a walkbox
+; _cbm.getBoxFlags -- read flags byte for a walkbox
 ;
 ; @param A = box index
 ; @return A = flags byte (16-bit, high byte clear)
@@ -3541,7 +3541,7 @@ scummvm.createBoxMatrix_long:
 .ends
 
 ;===================================================================
-; SCUMM Opcode Dispatch — superfree section
+; SCUMM Opcode Dispatch -- superfree section
 ;
 ; Contains: executeSlot, fetchLoop, dispatch table, all 106 opcode
 ; handlers, parameter helpers, math/audio helpers, updateActors.
@@ -3586,7 +3586,7 @@ scummvm.executeSlot:
   ldx.w SCUMM.currentSlotPtr
   ldy.w SCUMM.slots.pc,x
 
-  ; Per-slot opcode execution limit — prevents tight loops from blocking the engine
+  ; Per-slot opcode execution limit -- prevents tight loops from blocking the engine
   lda #500
   sta.w SCUMM.opcodeLimit
 
@@ -3660,7 +3660,7 @@ _floop.overOk:
   stz.w SCUMM.cutSceneScript,x
   rep #$20
   .ACCU 16
-  ; Clear VAR_OVERRIDE, yield current slot — owner runs with new PC next frame
+  ; Clear VAR_OVERRIDE, yield current slot -- owner runs with new PC next frame
   ldx #5*2
   stz.w SCUMM.globalVars,x
   sec
@@ -3862,7 +3862,7 @@ _scummvm.readWordVararg:
   inx
   cpx #50                              ; argBuffer bounds check (50 bytes / 25 words)
   bcc -                                ; keep going if X < 50
-  ; overflow — drain remaining args without storing
+  ; overflow -- drain remaining args without storing
 _rwv.drain:
   jsr _scummvm.fetchByte
   cmp #$00FF
@@ -4200,7 +4200,7 @@ op_stub:
 ; Tier 1 -- Boot critical opcodes
 ;-------------------------------------------------------------------
 
-; scummvm.killSlotCleanup — kill slot at X with cutscene nest cleanup
+; scummvm.killSlotCleanup -- kill slot at X with cutscene nest cleanup
 ; Input: X = slot struct pointer
 ; ScummVM errors if a script with active cutsceneOverride is stopped.
 ; We gracefully unwind: decrement global cutsceneNest by the slot's count.
@@ -4301,7 +4301,7 @@ _startScript.noArgs:
   .ACCU 16
   .INDEX 16
   ply                             ; restore SCUMM PC
-  ; Refresh tmp — cacheGC during startScriptSlot may have moved our script
+  ; Refresh tmp -- cacheGC during startScriptSlot may have moved our script
   ldx.w SCUMM.currentSlotPtr
   lda.w SCUMM.slots.cachePtr,x
   clc
@@ -4352,12 +4352,12 @@ _stopScript.self:
 
 ; Helper: apply relative jump from SCUMM.scratch2 to Y
 ; Suppressed when SCUMM.inExpression is set (comparison opcodes inside
-; expressions must not branch — only the VAR_RESULT value matters).
+; expressions must not branch -- only the VAR_RESULT value matters).
 _scummvm.takeRelJump:
   .ACCU 16
   .INDEX 16
   lda.w SCUMM.inExpression
-  bne +                           ; inside expression — skip the jump
+  bne +                           ; inside expression -- skip the jump
   tya
   clc
   adc.w SCUMM.scratch2
@@ -4705,7 +4705,7 @@ op_cutscene:
   jsr _scummvm.skipWordVararg
   lda.w SCUMM.cutsceneNest
   cmp #5                              ; max 5 levels (cutScenePtr/Script/Data arrays are 5 entries)
-  bcs _op_cutscene.nestFull           ; at cap — skip to avoid WRAM overflow
+  bcs _op_cutscene.nestFull           ; at cap -- skip to avoid WRAM overflow
   inc a
   sta.w SCUMM.cutsceneNest
 
@@ -5315,7 +5315,7 @@ _cc.userputSoftOff:
 _cc.cursorImage:
   .ACCU 16
   .INDEX 16
-  ; getVarOrDirectByte(0x80), getVarOrDirectByte(0x40) — 2 params
+  ; getVarOrDirectByte(0x80), getVarOrDirectByte(0x40) -- 2 params
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
   lda #SCUMM_FLAG_BIT6
@@ -5341,7 +5341,7 @@ _cc.oneParam:
 _cc.charsetColor:
   .ACCU 16
   .INDEX 16
-  ; BUG4: getWordVararg — {byte, getVarOrDirectWord(0x80)}* terminated by byte==0xFF
+  ; BUG4: getWordVararg -- {byte, getVarOrDirectWord(0x80)}* terminated by byte==0xFF
 _cc.charsetColorLoop:
   jsr _scummvm.fetchByte
   cmp #$00FF
@@ -5466,7 +5466,7 @@ op_getActorMoving:
   jsr _scummvm.getVarOrDirectByte    ; actor number
   jsr _scummvm.getActorPtr           ; X = actor table offset
   lda.w SCUMM.actors.moving,x
-  and #$00FF                         ; db field — mask high byte
+  and #$00FF                         ; db field -- mask high byte
   jsr _scummvm.writeVariable
   clc
   rts
@@ -5577,7 +5577,7 @@ op_putActor:
   rep #$20
 
   ; Assign walkbox from position (ScummVM: adjustActorPos)
-  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (tmp) — findBox clobbers both
+  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (tmp) -- findBox clobbers both
   phy                                ; save Y = SCUMM PC
   lda.b tmp
   pha
@@ -5633,7 +5633,7 @@ op_getActorRoom:
   clc
   rts
 
-; panCameraTo ($12, $92) -- p16[7] — set camera pan target
+; panCameraTo ($12, $92) -- p16[7] -- set camera pan target
 op_panCameraTo:
   .ACCU 16
   .INDEX 16
@@ -5643,7 +5643,7 @@ op_panCameraTo:
   clc
   rts
 
-; setCameraAt ($32, $B2) -- p16[7] — instant camera snap
+; setCameraAt ($32, $B2) -- p16[7] -- instant camera snap
 ; Snaps camera to target position. If jump > 8px, calls
 ; room.reloadViewport to refresh all visible tile columns.
 op_setCameraAt:
@@ -5808,7 +5808,7 @@ _actorOps.dispatch:
   ;   0x11=scale(2xp8), 0x12=neverZClip(0), 0x13=setZClip(p8),
   ;   0x14=ignoreBoxes(0), 0x15=followBoxes(0), 0x16=animSpeed(p8),
   ;   0x17=shadow(p8)
-  ;--- Sub 0x01: setCostume — wire to actor table
+  ;--- Sub 0x01: setCostume -- wire to actor table
   cmp #$01
   bne +
     jmp _actorOps.sub_setCostume
@@ -5843,12 +5843,12 @@ _actorOps.dispatch:
   bne +
     jmp _actorOps.sub_string
 +
-  ;--- Sub 0x09: elevation (1 param: p16[7] — WORD)
+  ;--- Sub 0x09: elevation (1 param: p16[7] -- WORD)
   cmp #$09
   bne +
     jmp _actorOps.sub_p16
 +
-  ;--- Sub 0x08: init (0 params) — set facing=180 (south), per ScummVM initActor
+  ;--- Sub 0x08: init (0 params) -- set facing=180 (south), per ScummVM initActor
   cmp #$08
   bne +
     phy                              ; save script PC
@@ -5867,7 +5867,7 @@ _actorOps.dispatch:
   ;--- Sub 0x12: neverZClip (0 params)
   cmp #$12
   beq _actorOps.jmp_none
-  ;--- Sub 0x14: ignoreBoxes (0 params) — set actorIgnoreBoxes[actor]=1
+  ;--- Sub 0x14: ignoreBoxes (0 params) -- set actorIgnoreBoxes[actor]=1
   cmp #$14
   bne +
     lda 1,s                          ; actor struct offset from stack
@@ -5883,7 +5883,7 @@ _actorOps.dispatch:
     rep #$20
     jmp _actorOps.subLoop
 +
-  ;--- Sub 0x15: followBoxes (0 params) — set actorIgnoreBoxes[actor]=0
+  ;--- Sub 0x15: followBoxes (0 params) -- set actorIgnoreBoxes[actor]=0
   cmp #$15
   bne +
     lda 1,s                          ; actor struct offset from stack
@@ -5898,12 +5898,12 @@ _actorOps.dispatch:
     rep #$20
     jmp _actorOps.subLoop
 +
-  ;--- Sub 0x0E: initFrame — wire to actor table
+  ;--- Sub 0x0E: initFrame -- wire to actor table
   cmp #$0E
   bne +
     jmp _actorOps.sub_initFrame
 +
-  ;--- Sub 0x0C: talkColor — wire to actor table
+  ;--- Sub 0x0C: talkColor -- wire to actor table
   cmp #$0C
   bne +
     jmp _actorOps.sub_talkColor
@@ -5962,7 +5962,7 @@ _actorOps.sub_1param:
 _actorOps.sub_setCostume:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x00: p8[7] — store costume to actor table
+  ; Sub 0x00: p8[7] -- store costume to actor table
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6020,7 +6020,7 @@ _asc.noSlot:
 _actorOps.sub_initFrame:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x08: p8[7] — store initFrame to actor table
+  ; Sub 0x08: p8[7] -- store initFrame to actor table
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6042,7 +6042,7 @@ _actorOps.sub_initFrame:
 _actorOps.sub_setScale:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x11: p8[7]=scaleX, p8[6]=scaleY — store scaleX to actor struct
+  ; Sub 0x11: p8[7]=scaleX, p8[6]=scaleY -- store scaleX to actor struct
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6072,7 +6072,7 @@ _actorOps.sub_setScale:
 _actorOps.sub_setWidth:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x10: p8[7]=width — store to actorWidth parallel array
+  ; Sub 0x10: p8[7]=width -- store to actorWidth parallel array
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6099,7 +6099,7 @@ _actorOps.sub_setWidth:
 _actorOps.sub_setAnimSpeed:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x16: p8[7]=animSpeed — store to actorAnimSpeed parallel array
+  ; Sub 0x16: p8[7]=animSpeed -- store to actorAnimSpeed parallel array
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6126,7 +6126,7 @@ _actorOps.sub_setAnimSpeed:
 _actorOps.sub_setWalkSpeed:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x02: p8[7]=speedX, p8[6]=speedY — store to parallel arrays
+  ; Sub 0x02: p8[7]=speedX, p8[6]=speedY -- store to parallel arrays
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6175,7 +6175,7 @@ _actorOps.sub_setWalkSpeed:
 _actorOps.sub_setWalkAnimNr:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x04: p8[7]=walkAnimNr — store to parallel array
+  ; Sub 0x04: p8[7]=walkAnimNr -- store to parallel array
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6202,7 +6202,7 @@ _actorOps.sub_setWalkAnimNr:
 _actorOps.sub_setStandFrame:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x06: p8[7]=standFrame — store to parallel array
+  ; Sub 0x06: p8[7]=standFrame -- store to parallel array
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6229,7 +6229,7 @@ _actorOps.sub_setStandFrame:
 _actorOps.sub_setZClip:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x13: p8[7]=zClip — store to parallel array
+  ; Sub 0x13: p8[7]=zClip -- store to parallel array
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6256,7 +6256,7 @@ _actorOps.sub_setZClip:
 _actorOps.sub_setTalkAnim:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x05: p8[7]=talkAnimStart, p8[6]=talkAnimEnd — store to parallel arrays
+  ; Sub 0x05: p8[7]=talkAnimStart, p8[6]=talkAnimEnd -- store to parallel arrays
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6351,7 +6351,7 @@ _actorOps.sub_2word:
 _actorOps.sub_p16:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x09 elevation: p16[7] (word param) — store to actor struct
+  ; Sub 0x09 elevation: p16[7] (word param) -- store to actor struct
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6373,7 +6373,7 @@ _actorOps.storeElevation:
 _actorOps.sub_3param:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x07 palette: 3 params — p8[7] + p8[6] + p8[5]
+  ; Sub 0x07 palette: 3 params -- p8[7] + p8[6] + p8[5]
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6402,7 +6402,7 @@ _actorOps.sub_3param:
 _actorOps.sub_talkColor:
   .ACCU 16
   .INDEX 16
-  ; Sub 0x0C: p8[7] — store talkColor to actor table
+  ; Sub 0x0C: p8[7] -- store talkColor to actor table
   lda.w SCUMM.scratch
   and #$0080
   beq +
@@ -6436,12 +6436,12 @@ _actorOps.done:
   rts
 
 ;===================================================================
-; Batch stub opcodes — consume params correctly, no-op behavior
+; Batch stub opcodes -- consume params correctly, no-op behavior
 ; These allow ENCD and LSCR scripts to run without crashing.
 ;===================================================================
 
 ;-------------------------------------------------------------------
-; Sound opcodes — wired to Terrific Audio Driver (TAD)
+; Sound opcodes -- wired to Terrific Audio Driver (TAD)
 ;-------------------------------------------------------------------
 
 ; stopSound ($3C, $BC) -- p8[7] sound ID → stop all SFX
@@ -6563,7 +6563,7 @@ op_soundKludge:
 
 
 ;-------------------------------------------------------------------
-; MSU-1 Audio Helpers — used when musicMode = MSU-1
+; MSU-1 Audio Helpers -- used when musicMode = MSU-1
 ;-------------------------------------------------------------------
 
 ; Play MSU-1 audio track (A = track number, 16-bit)
@@ -6649,7 +6649,7 @@ _setClass.loop:
   sta.w SCUMM.scratch                ; save class value
   and #$00FF
   beq _setClass.clearAll             ; cls == 0 → clear all
-  ; Compute class bit: class_number = (cls & $1F) — ScummVM uses cls &= 0x1F
+  ; Compute class bit: class_number = (cls & $1F) -- ScummVM uses cls &= 0x1F
   and #$001F                         ; class number (0-31)
   cmp #16
   bcs _setClass.loop                 ; class > 15, unsupported in 16-bit storage
@@ -7044,7 +7044,7 @@ _roomOps.saveGame:
   .ACCU 16
   .INDEX 16
   ; sub-op 9: getVarOrDirectByte(0x80) + getVarOrDirectByte(0x40)
-  ; Only 1 invocation (room 77) — consume params and discard
+  ; Only 1 invocation (room 77) -- consume params and discard
   lda #$0080
   jsr _scummvm.skipP8fromScratch     ; save/load slot
   lda #$0040
@@ -7055,7 +7055,7 @@ _roomOps.saveGame:
 _roomOps.shakeOn:
   .ACCU 16
   .INDEX 16
-  ; sub-op 5: no parameters — just set shake flag
+  ; sub-op 5: no parameters -- just set shake flag
   sep #$20
   .ACCU 8
   lda #1
@@ -7068,7 +7068,7 @@ _roomOps.shakeOn:
 _roomOps.shakeOff:
   .ACCU 16
   .INDEX 16
-  ; sub-op 6: no parameters — just clear shake flag
+  ; sub-op 6: no parameters -- just clear shake flag
   sep #$20
   .ACCU 8
   stz.w SCUMM.shakeEnabled
@@ -7106,7 +7106,7 @@ _roomOps.scale:
   and #$00FF
   pha                                ; [SP+8] = y1
 
-  ; aux1 byte — new flags for next params
+  ; aux1 byte -- new flags for next params
   jsr _scummvm.fetchByte
   sta.w SCUMM.scratch
 
@@ -7136,7 +7136,7 @@ _roomOps.scale:
   and #$00FF
   pha                                ; [SP+4] = y2
 
-  ; aux2 byte — new flags for slot param
+  ; aux2 byte -- new flags for slot param
   jsr _scummvm.fetchByte
   sta.w SCUMM.scratch
 
@@ -7254,7 +7254,7 @@ _roomOps.intensity:
 _roomOps.roomShadow:
   .ACCU 16
   .INDEX 16
-  ; sub-op $0C: roomShadow — software renderer feature, consume params only
+  ; sub-op $0C: roomShadow -- software renderer feature, consume params only
   jsr _scummvm.fetchWord
   jsr _scummvm.fetchWord
   jsr _scummvm.fetchWord
@@ -7396,8 +7396,8 @@ _loadRoomEgo.done:
 
 
 ; ifState ($4F, $CF) / ifNotState ($2F, $6F, $AF, $EF)
-; p16[7] + p8[6] + jump(2) — always skip branch (stub)
-; ifState ($0F variant) — jumpRelative(state == expected) → jump when match
+; p16[7] + p8[6] + jump(2) -- always skip branch (stub)
+; ifState ($0F variant) -- jumpRelative(state == expected) → jump when match
 op_ifState:
   .ACCU 16
   .INDEX 16
@@ -7424,7 +7424,7 @@ op_ifState:
   clc
   rts
 
-; ifNotState ($2F variant) — jumpRelative(state != expected) → jump when no match
+; ifNotState ($2F variant) -- jumpRelative(state != expected) → jump when no match
 op_ifNotState:
   .ACCU 16
   .INDEX 16
@@ -7455,7 +7455,7 @@ _ifNotState.doJump:
 
 
 ;-------------------------------------------------------------------
-; Actor stubs — consume params, no-op
+; Actor stubs -- consume params, no-op
 ;-------------------------------------------------------------------
 
 ; animateActor ($11, $51, $91, $D1) -- p8[7]=actor, p8[6]=frame
@@ -7527,7 +7527,7 @@ op_walkActorToActor:
   lda.w SCUMM.scratch               ; target y
   sta.w SCUMM.actorTargetY,x
 
-  ; Save SCUMM PC (Y) — walkActorTo body destroys Y
+  ; Save SCUMM PC (Y) -- walkActorTo body destroys Y
   phy
   ; Reuse walkActorTo path-building logic
   jmp _walkActorTo.checkBoxes
@@ -7550,7 +7550,7 @@ op_walkActorTo:
   jsr _scummvm.getVarOrDirectWord    ; y
   sta.w SCUMM.scratch               ; target y
 
-  ; Save SCUMM PC (Y) — buildWalkPath/direct path clobber Y
+  ; Save SCUMM PC (Y) -- buildWalkPath/direct path clobber Y
   phy
 
   ; Derive actor number from struct offset (offset / 16)
@@ -7587,7 +7587,7 @@ _walkActorTo.checkBoxes:
   lda.w SCUMM.boxCount
   beq _walkActorTo.direct           ; no boxes, straight-line
 
-  ; Save fetchLoop bytecode pointer — buildWalkPath clobbers tmp
+  ; Save fetchLoop bytecode pointer -- buildWalkPath clobbers tmp
   lda.b tmp
   pha
   lda.b tmp+2
@@ -7605,7 +7605,7 @@ _walkActorTo.checkBoxes:
   sta.b tmp+4
   lda.w SCUMM.actorTargetY,x       ; targetY
   sta.b tmp+6
-  ; Save scratch2/scratch3 — buildWalkPath clobbers them via findBox
+  ; Save scratch2/scratch3 -- buildWalkPath clobbers them via findBox
   lda.w SCUMM.scratch2
   pha
   lda.w SCUMM.scratch3             ; actor index (also the param for buildWalkPath)
@@ -7692,7 +7692,7 @@ op_isActorInBox:
   sta.w SCUMM.scratch2
 
   ; Get actor position
-  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (tmp) — findBox clobbers both
+  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (tmp) -- findBox clobbers both
   phy                                  ; save Y = SCUMM PC
   lda.b tmp
   pha
@@ -7937,7 +7937,7 @@ _print.text:
   .ACCU 16
   .INDEX 16
   jsl scummvm.extractAndRenderString     ; advances Y past string + null terminator
-  jmp _print.done                      ; SO_TEXTSTRING is terminal — ScummVM returns, no $FF follows
+  jmp _print.done                      ; SO_TEXTSTRING is terminal -- ScummVM returns, no $FF follows
 
 _print.done:
   .ACCU 16
@@ -8090,7 +8090,7 @@ op_stringOps:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchByte             ; sub-opcode byte
-  sta.w SCUMM.currentOpcode          ; SET ONCE — getVarOrDirectByte reads this, does NOT clobber it
+  sta.w SCUMM.currentOpcode          ; SET ONCE -- getVarOrDirectByte reads this, does NOT clobber it
   and #$001F
 
   cmp #$01
@@ -8123,7 +8123,7 @@ op_stringOps:
 +
   .ACCU 16
   .INDEX 16
-  ; unknown sub-op — consume 2 p8 params as fallback
+  ; unknown sub-op -- consume 2 p8 params as fallback
   jmp _stringOps.fallbackTwoP8
 
 ;--- Sub-op 5: createString(stringId, size) ---
@@ -8181,15 +8181,15 @@ _stringOps.putCodeLoop:
   jsr _scummvm.fetchByte             ; read byte from script stream
   plx                                ; restore write offset
   and #$00FF
-  bne +                              ; not $00 — continue
-  jmp _stringOps.putCodeDone         ; $00 terminator — done
+  bne +                              ; not $00 -- continue
+  jmp _stringOps.putCodeDone         ; $00 terminator -- done
 +
   cmp #$00FF
-  bne +                              ; not $FF — continue
-  jmp _stringOps.putCodeFF           ; $FF escape — handle specially
+  bne +                              ; not $FF -- continue
+  jmp _stringOps.putCodeFF           ; $FF escape -- handle specially
 +
   cpx #SCUMM_STRING_MAX_LEN
-  bcs _stringOps.putCodeDrain        ; slot full — drain remaining bytes
+  bcs _stringOps.putCodeDrain        ; slot full -- drain remaining bytes
   ; Store char at slot[X]: compute dest = scratch3 + X
   phy                                ; save script PC
   pha                                ; save char value
@@ -8268,7 +8268,7 @@ _stringOps.putCodeStoreByte:
 _stringOps.putCodeDrain:
   .ACCU 16
   .INDEX 16
-  ; Slot is full — keep consuming script bytes until null terminator
+  ; Slot is full -- keep consuming script bytes until null terminator
   phx
   jsr _scummvm.fetchByte
   plx
@@ -8512,12 +8512,12 @@ op_saveRestoreVerbs:
 
 
 ;===================================================================
-; Remaining opcode stubs — batch implementation
+; Remaining opcode stubs -- batch implementation
 ; All consume params correctly and return safe defaults.
 ;===================================================================
 
 ;-------------------------------------------------------------------
-; getActorWalkBox — result + p8[7]=actor → SCUMM.actorWalkBox[actor]
+; getActorWalkBox -- result + p8[7]=actor → SCUMM.actorWalkBox[actor]
 ;-------------------------------------------------------------------
 op_getActorWalkBox:
   .ACCU 16
@@ -8534,7 +8534,7 @@ op_getActorWalkBox:
   rts
 
 ;-------------------------------------------------------------------
-; getActorCostume — result + p8[7]=actor → actors.costume (byte)
+; getActorCostume -- result + p8[7]=actor → actors.costume (byte)
 ;-------------------------------------------------------------------
 op_getActorCostume:
   .ACCU 16
@@ -8550,7 +8550,7 @@ op_getActorCostume:
   rts
 
 ;-------------------------------------------------------------------
-; getActorFacing — result + p8[7]=actor → actors.facing (word)
+; getActorFacing -- result + p8[7]=actor → actors.facing (word)
 ;-------------------------------------------------------------------
 op_getActorFacing:
   .ACCU 16
@@ -8565,7 +8565,7 @@ op_getActorFacing:
   rts
 
 ;-------------------------------------------------------------------
-; getActorElevation — result + p8[7]=actor → actors.elevation (word)
+; getActorElevation -- result + p8[7]=actor → actors.elevation (word)
 ;-------------------------------------------------------------------
 op_getActorElevation:
   .ACCU 16
@@ -8580,7 +8580,7 @@ op_getActorElevation:
   rts
 
 ;-------------------------------------------------------------------
-; getActorScale — result + p8[7]=actor → actors.scalex (byte, 255=full)
+; getActorScale -- result + p8[7]=actor → actors.scalex (byte, 255=full)
 ;-------------------------------------------------------------------
 op_getActorScale:
   .ACCU 16
@@ -8596,7 +8596,7 @@ op_getActorScale:
   rts
 
 ;-------------------------------------------------------------------
-; getAnimCounter — result + p8[7]=actor → 0 (no backing data)
+; getAnimCounter -- result + p8[7]=actor → 0 (no backing data)
 ;-------------------------------------------------------------------
 op_getAnimCounter:
   .ACCU 16
@@ -8610,7 +8610,7 @@ op_getAnimCounter:
   rts
 
 ;-------------------------------------------------------------------
-; getActorWidth — result + p8[7]=actor → actorWidth (default 24 if 0)
+; getActorWidth -- result + p8[7]=actor → actorWidth (default 24 if 0)
 ;-------------------------------------------------------------------
 op_getActorWidth:
   .ACCU 16
@@ -8727,8 +8727,8 @@ op_getClosestObjActor:
   rts
 
 ;-------------------------------------------------------------------
-; getDist ($34, $B4) — result + p16[7] + p16[6] → return 0 (stub)
-; actorFromPos ($15, $55, $95, $D5) — result + p16[7] + p16[6] → 0
+; getDist ($34, $B4) -- result + p16[7] + p16[6] → return 0 (stub)
+; actorFromPos ($15, $55, $95, $D5) -- result + p16[7] + p16[6] → 0
 ;-------------------------------------------------------------------
 op_getDist:
   .ACCU 16
@@ -8770,7 +8770,7 @@ op_getVerbEntrypoint:
   rts
 
 ;-------------------------------------------------------------------
-; findObject ($35, $B5) — result + p8[7] screenX + p8[6] screenY
+; findObject ($35, $B5) -- result + p8[7] screenX + p8[6] screenY
 ;-------------------------------------------------------------------
 op_findObject:
   .ACCU 16
@@ -8791,7 +8791,7 @@ op_findObject:
   rts
 
 ;-------------------------------------------------------------------
-; findInventory ($3D, $7D, $BD, $FD) — result + p8[7]=owner + p8[6]=index
+; findInventory ($3D, $7D, $BD, $FD) -- result + p8[7]=owner + p8[6]=index
 ; Returns the Nth object owned by the given actor (1-based index).
 ;-------------------------------------------------------------------
 op_findInventory:
@@ -8814,7 +8814,7 @@ op_findInventory:
   rts
 
 ;-------------------------------------------------------------------
-; actorFollowCamera ($52, $D2) — p8[7] — follow actor with camera
+; actorFollowCamera ($52, $D2) -- p8[7] -- follow actor with camera
 ;-------------------------------------------------------------------
 op_actorFollowCamera:
   .ACCU 16
@@ -8841,7 +8841,7 @@ _afc.done:
   rts
 
 ;-------------------------------------------------------------------
-; putActorAtObject ($0E, $4E, $8E, $CE) — p8[7] actor + p16[6] object
+; putActorAtObject ($0E, $4E, $8E, $CE) -- p8[7] actor + p16[6] object
 ; Teleports actor to object's walk-to point.
 ;-------------------------------------------------------------------
 op_putActorAtObject:
@@ -8869,7 +8869,7 @@ op_putActorAtObject:
   rts
 
 ;-------------------------------------------------------------------
-; walkActorToObject ($36, $76, $B6, $F6) — p8[7] actor + p16[6] object
+; walkActorToObject ($36, $76, $B6, $F6) -- p8[7] actor + p16[6] object
 ; Walks actor to object's walk-to point via pathfinding.
 ;-------------------------------------------------------------------
 op_walkActorToObject:
@@ -8897,7 +8897,7 @@ op_walkActorToObject:
   rts
 
 ;-------------------------------------------------------------------
-; pickupObject ($25, $65, $A5, $E5) — p16[7]=obj + p8[6]=room
+; pickupObject ($25, $65, $A5, $E5) -- p16[7]=obj + p8[6]=room
 ; Sets owner to ego (1), hides from room, caches name, rebuilds list.
 ;-------------------------------------------------------------------
 op_pickupObject:
@@ -8919,7 +8919,7 @@ op_pickupObject:
   sta.w SCUMM.objectState,x          ; state=1 (picked up, per ScummVM putState)
   rep #$20
   ; Remove OCHR tiles if object had a visual patch
-  ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
+  ; Save tmp (bytecode pointer) -- removeObjectPatch clobbers tmp+0..tmp+22
   lda.b tmp+2
   pha
   lda.b tmp
@@ -8946,7 +8946,7 @@ _pickupObj.done:
   rts
 
 ;-------------------------------------------------------------------
-; pickupObjectOld ($50, $D0) — p16[7]=obj only
+; pickupObjectOld ($50, $D0) -- p16[7]=obj only
 ; Same as pickupObject but without room parameter.
 ;-------------------------------------------------------------------
 op_pickupObjectOld:
@@ -8964,7 +8964,7 @@ op_pickupObjectOld:
   lda #1
   sta.w SCUMM.objectState,x          ; state=1 (picked up, per ScummVM putState)
   rep #$20
-  ; Save tmp (bytecode pointer) — removeObjectPatch clobbers tmp+0..tmp+22
+  ; Save tmp (bytecode pointer) -- removeObjectPatch clobbers tmp+0..tmp+22
   lda.b tmp+2
   pha
   lda.b tmp
@@ -8991,7 +8991,7 @@ _pickupObjOld.done:
   rts
 
 ;-------------------------------------------------------------------
-; multiply ($1B, $9B) — result + p16[7]
+; multiply ($1B, $9B) -- result + p16[7]
 ; result = readVar(resultVar) * operand
 ;-------------------------------------------------------------------
 op_multiply:
@@ -9011,7 +9011,7 @@ op_multiply:
   rts
 
 ;-------------------------------------------------------------------
-; divide ($5B, $DB) — result + p16[7]
+; divide ($5B, $DB) -- result + p16[7]
 ; result = readVar(resultVar) / operand
 ;-------------------------------------------------------------------
 op_divide:
@@ -9040,7 +9040,7 @@ _op_div.zero_stk:
   rts
 
 ;-------------------------------------------------------------------
-; ifClassOfIs ($1D, $9D) — p16[7] + varargs(word until $FF) + jump(2)
+; ifClassOfIs ($1D, $9D) -- p16[7] + varargs(word until $FF) + jump(2)
 ; Checks all class conditions; if ALL match → skip jump, else → take jump
 ;-------------------------------------------------------------------
 op_ifClassOfIs:
@@ -9136,7 +9136,7 @@ _icoi.loopDone:
   rts
 
 ;-------------------------------------------------------------------
-; setObjectName ($54, $D4) — p16[7] + null-terminated string, no-op
+; setObjectName ($54, $D4) -- p16[7] + null-terminated string, no-op
 ;-------------------------------------------------------------------
 op_setObjectName:
   .ACCU 16
@@ -9148,7 +9148,7 @@ op_setObjectName:
   rts
 
 ;-------------------------------------------------------------------
-; drawBox ($3F, $7F, $BF, $FF) — x(p16[7]) + y(p16[6]) + aux(1) + x2(p16[7]') + y2(p16[6]') + color(p8[5]')
+; drawBox ($3F, $7F, $BF, $FF) -- x(p16[7]) + y(p16[6]) + aux(1) + x2(p16[7]') + y2(p16[6]') + color(p8[5]')
 ; ScummVM re-reads _opcode from the aux byte for x2/y2/color flag bits
 ;-------------------------------------------------------------------
 op_drawBox:
@@ -9173,7 +9173,7 @@ _drawBox.done:
   rts
 
 ;-------------------------------------------------------------------
-; oldRoomEffect ($5C, $DC) — sub-opcode + optional p16, no-op
+; oldRoomEffect ($5C, $DC) -- sub-opcode + optional p16, no-op
 ;-------------------------------------------------------------------
 op_oldRoomEffect:
   .ACCU 16
@@ -9190,7 +9190,7 @@ _oldRoomEffect.done:
   rts
 
 ;-------------------------------------------------------------------
-; pseudoRoom ($CC) — ScummVM v5 format:
+; pseudoRoom ($CC) -- ScummVM v5 format:
 ;   fetchByte → real_room (i), then loop fetchByte → j:
 ;     j == 0 → done
 ;     j >= 0x80 → resourceMapper[j & 0x7F] = real_room
@@ -9498,7 +9498,7 @@ _ua.skipSlot:
   lda #WALK_SPEED                     ; default if 0
 _ua.hasWalkSpeed:
   .ACCU 8
-  sta.l $4203                         ; WRMPYB — start multiply
+  sta.l $4203                         ; WRMPYB -- start multiply
   nop
   nop
   nop
@@ -9704,7 +9704,7 @@ scummvm.classBitLut:
 
 
 ;===================================================================
-; scummvm.zeroExtraWram — Zero WRAM not covered by existing init loops.
+; scummvm.zeroExtraWram -- Zero WRAM not covered by existing init loops.
 ; Eliminates Mesen testrunner uninit-read warnings for render slots,
 ; room objects, actor arrays, scroll staging, and OAM scratch.
 ; Called via jsl from ScummVM.init. DBR=$7E. A/XY=16-bit on entry.
@@ -9718,7 +9718,7 @@ scummvm.zeroExtraWram:
   php
   rep #$31
 
-  ;render slot arrays: NOT zeroed here — partial zeroing causes stale
+  ;render slot arrays: NOT zeroed here -- partial zeroing causes stale
   ;dirty flags to trigger DMA with length=0 (=64KB). Properly initialized
   ;by loadActorCostumes on first room load.
 
@@ -9817,7 +9817,7 @@ _zew.invNames:
 
 
 ;===================================================================
-; loadActorCostumes_impl — superfree bank
+; loadActorCostumes_impl -- superfree bank
 ; Scans actors in current room, assigns render slots (5 max),
 ; DMAs palettes + stand-frame CHR per slot during force-blank.
 ; Called via jsl from bank 0 wrapper.
@@ -10156,7 +10156,7 @@ _lac.dmaDone:
 
 
 ;===================================================================
-; renderActors_impl — superfree bank
+; renderActors_impl -- superfree bank
 ; Multi-actor OAM renderer. Loops over render slots, computes screen
 ; position, looks up current pic via CostumeDirTable, writes OAM.
 ; D register = ScummVM object ZP. DBR = $7E.
@@ -10495,7 +10495,7 @@ _ri.chrReady:
   sta.w SCUMM.scratch2                ; save facing for later
   ply                                 ; restore Y = struct base
 
-  ; Skip if position is (0,0) — actor not placed yet
+  ; Skip if position is (0,0) -- actor not placed yet
   lda.w SCUMM.actorScreenX
   ora.w SCUMM.actorScreenY
   bne _ri.posReady
@@ -10620,7 +10620,7 @@ _ri.scaleInterp:
   ; sign = (delta_s < 0) ^ (offset_y < 0) ^ (range_y < 0)
   stz.b tmp+4                         ; sign accumulator (0=positive)
 
-  ; abs(range_y) — currently in A and on top of stack
+  ; abs(range_y) -- currently in A and on top of stack
   bpl +
   eor #$FFFF
   inc a
@@ -10774,8 +10774,8 @@ _ri.elevDone:
   .ACCU 16
 
   ; --- SA-1 sprite scaling hook (non-blocking) ---
-  ; Phase 1: Harvest — check if a previous frame's CMD=2 completed
-  ; Phase 2: Submit — fire new CMD=2 if needed, return immediately
+  ; Phase 1: Harvest -- check if a previous frame's CMD=2 completed
+  ; Phase 2: Submit -- fire new CMD=2 if needed, return immediately
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3                ; render slot
@@ -10918,7 +10918,7 @@ _ri.scaleSubmit:
   ; Fire-and-forget: submit CMD=2 to SA-1 (non-blocking)
   jsl scummvm.requestCompositeScale
   ; requestCompositeScale now returns immediately after writing mailbox.
-  ; Mark slot as pending — harvest will happen next frame.
+  ; Mark slot as pending -- harvest will happen next frame.
   ldx.w SCUMM.scratch3
   lda #1
   sta.w SCUMM.slotScalePending,x
@@ -11230,7 +11230,7 @@ _ri.nextEntry:
   jmp _ri.headRender                     ; per-entry OAM done, proceed to head
 
   ; =================================================================
-  ; GRID OAM BUILDER — for composite-scaled actors
+  ; GRID OAM BUILDER -- for composite-scaled actors
   ; Reads SA-1 output metadata from I-RAM $30F0-$30F3:
   ;   $30F0: outTilesWide, $30F1: outTilesTall
   ;   $30F2: scaledRelX (signed), $30F3: scaledRelY (signed)
@@ -11355,7 +11355,7 @@ _ri.gridRowLoop:
 _ri.gridColLoop:
   cpx #$0200
   bcc _ri.gridColInBounds
-  ; OAM full — bail out, clean up tileCol then let gridDone handle rest
+  ; OAM full -- bail out, clean up tileCol then let gridDone handle rest
   sep #$20
   .ACCU 8
   pla                                  ; discard tileCol (1 byte)
@@ -11515,7 +11515,7 @@ _ri.gridDone:
   tcs
 
   stx.w GLOBAL.currentOamSlot
-  jmp _ri.noHead                       ; skip head — SA-1 already composited it
+  jmp _ri.noHead                       ; skip head -- SA-1 already composited it
 
   ; =================================================================
   ; HEAD OAM RENDERING (limb 1, composited on top of body)
@@ -12029,7 +12029,7 @@ _ri.noCursor:
 .ends
 
 ;===========================================================================
-; requestScaledTiles — Send CHR data to SA-1 for nearest-neighbor scaling
+; requestScaledTiles -- Send CHR data to SA-1 for nearest-neighbor scaling
 ;
 ; Input:
 ;   A (16-bit) = scale factor (1-254)
@@ -12143,7 +12143,7 @@ _srt.poll:
   dex
   bne _srt.poll
 
-  ; Timeout — leave CHR source pointing at ROM (fallback)
+  ; Timeout -- leave CHR source pointing at ROM (fallback)
   plp
   clc                                  ; carry clear = failure
   rtl
@@ -12194,7 +12194,7 @@ _srt.zeroOut:
 .ends
 
 ;===========================================================================
-; requestCompositeScale — Submit body+head CHR/OAM to SA-1 CMD=2
+; requestCompositeScale -- Submit body+head CHR/OAM to SA-1 CMD=2
 ;
 ; NON-BLOCKING: writes mailbox and returns immediately. Caller checks
 ; SA1_MBOX_STATUS next frame to harvest results.
@@ -12207,7 +12207,7 @@ _srt.zeroOut:
 ;   SCUMM.actorHeadPicCur = head pic index ($FF = no head)
 ;   renderSlotCostume = costume number (for head lookup)
 ; Output:
-;   Returns after writing CMD=2. No CHR redirect — caller harvests.
+;   Returns after writing CMD=2. No CHR redirect -- caller harvests.
 ; Clobbers: A, X, Y, _costDirPtr
 ;===========================================================================
 .section "scummvm SA1 composite request" superfree
@@ -12399,7 +12399,7 @@ _rcs.sendCmd:
 .ends
 
 ;===========================================================================
-; verbOps implementation — superfree section (bank 0 too full)
+; verbOps implementation -- superfree section (bank 0 too full)
 ; Called via jsl from op_verbOps. Y = SCUMM PC, [tmp] = script base.
 ; SCUMM.resultVar = verb ID. All sub-opcodes handled here.
 ;===========================================================================
@@ -12588,7 +12588,7 @@ _voi.readVar:
   beq _voi.readGlobal
   cmp #SCUMM_VAR_LOCAL_MASK
   beq _voi.readLocal
-  ; bit variable — return 0/1
+  ; bit variable -- return 0/1
   pla
   and #SCUMM_VAR_INDEX_MASK
   ; index in A, divide by 8 for byte offset, bit within byte
@@ -12854,7 +12854,7 @@ _voi.xySkip:
 
 
 ;===================================================================
-; Default verb initializer (superfree — called via jsl from init)
+; Default verb initializer (superfree -- called via jsl from init)
 ; Hardcodes MI1's standard 10 verbs until proper boot flow runs.
 ; Table format: 8 bytes per entry (fixed size, no variable-length names)
 ;   id(1), x_pixel(1), y_pixel(1), nameLen(1), nameOffset(2), pad(2)
@@ -12994,7 +12994,7 @@ _idv.n9: .db "Pull"
 
 
 ;===================================================================
-; Verb bar renderer (superfree — called via jsl from play method)
+; Verb bar renderer (superfree -- called via jsl from play method)
 ; Builds BG2 tilemap from verb table, then DMA uploads it.
 ;===================================================================
 .bank 5 slot 0
@@ -13002,7 +13002,7 @@ _idv.n9: .db "Pull"
 .section "ScummVMVerbBarChecked" free
 
 ;-------------------------------------------------------------------
-; scummvm.renderVerbBarChecked — guard verb rendering with userPut
+; scummvm.renderVerbBarChecked -- guard verb rendering with userPut
 ; If userPut <= 0, clear verbDirty instead of rendering.
 ; Otherwise render normally when verbDirty is set.
 ; JSL/RTL.
@@ -13377,7 +13377,7 @@ scummvm.buildCgramHdmaTable:
 
   ; Enter force blank and disable HDMA to safely read CGRAM.
   ; Zero GLOBAL.HDMA.CHANNEL.ENABLE so NMI cannot re-enable HDMA
-  ; (NMI is non-maskable — sei doesn't block it).
+  ; (NMI is non-maskable -- sei doesn't block it).
   sep #$20
   lda.w GLOBAL.HDMA.CHANNEL.ENABLE
   pha
@@ -13513,7 +13513,7 @@ scummvm.buildCgramHdmaTable:
   stz.w 54,x
   stz.w 55,x
   stz.w 56,x
-  ; Entry 1: CGRAM[$73] = $7FFF (white body — normal verb text)
+  ; Entry 1: CGRAM[$73] = $7FFF (white body -- normal verb text)
   ; Placed first so it's written earliest (scanline 138), maximizing
   ; margin before sentence text at scanline 146.
   lda #$73
@@ -13523,7 +13523,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 59,x
   lda #$7F
   sta.w 60,x
-  ; Entry 2: CGRAM[$71] = $6318 (light grey fill — normal)
+  ; Entry 2: CGRAM[$71] = $6318 (light grey fill -- normal)
   lda #$71
   sta.w 61,x
   sta.w 62,x
@@ -13531,7 +13531,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 63,x
   lda #$63
   sta.w 64,x
-  ; Entry 3: CGRAM[$72] = $294A (dark shadow — normal)
+  ; Entry 3: CGRAM[$72] = $294A (dark shadow -- normal)
   lda #$72
   sta.w 65,x
   sta.w 66,x
@@ -13539,7 +13539,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 67,x
   lda #$29
   sta.w 68,x
-  ; Entry 4: CGRAM[$61] = $6318 (light grey fill — highlight)
+  ; Entry 4: CGRAM[$61] = $6318 (light grey fill -- highlight)
   lda #$61
   sta.w 69,x
   sta.w 70,x
@@ -13547,7 +13547,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 71,x
   lda #$63
   sta.w 72,x
-  ; Entry 5: CGRAM[$62] = $294A (dark shadow — highlight)
+  ; Entry 5: CGRAM[$62] = $294A (dark shadow -- highlight)
   lda #$62
   sta.w 73,x
   sta.w 74,x
@@ -13555,7 +13555,7 @@ scummvm.buildCgramHdmaTable:
   sta.w 75,x
   lda #$29
   sta.w 76,x
-  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body — highlight)
+  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body -- highlight)
   lda #$63
   sta.w 77,x
   sta.w 78,x
@@ -13577,7 +13577,7 @@ scummvm.buildCgramHdmaTable:
   stz.w 86,x
 
   ; Restore HDMA enable flag + display AFTER entire table is built.
-  ; Only set GLOBAL.HDMA.CHANNEL.ENABLE — do NOT write HDMAEN directly.
+  ; Only set GLOBAL.HDMA.CHANNEL.ENABLE -- do NOT write HDMAEN directly.
   ; Mid-frame HDMA enable corrupts CGRAM. NMI enables HDMA at next VBlank.
   pla
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE
@@ -13591,7 +13591,7 @@ scummvm.buildCgramHdmaTable:
 
 
 ;===================================================================
-; Cursor tile data — 8x8 4bpp arrow sprite (32 bytes)
+; Cursor tile data -- 8x8 4bpp arrow sprite (32 bytes)
 ; Hardcoded arrow pointing upper-left
 ;===================================================================
 .bank 5 slot 0
@@ -13620,7 +13620,7 @@ CursorTileData:
   .db %10000100, %01111000   ; row 5: 1 2 2 2 2 1 0 0
   .db %10110000, %01000000   ; row 6: 1 2 1 1 0 0 0 0
   .db %11011000, %00000000   ; row 7: 1 1 0 1 1 0 0 0
-; Bitplanes 2-3 (all zero — indices 0-3 only need planes 0-1):
+; Bitplanes 2-3 (all zero -- indices 0-3 only need planes 0-1):
   .db $00, $00, $00, $00, $00, $00, $00, $00
   .db $00, $00, $00, $00, $00, $00, $00, $00
 CursorTileDataEnd:
@@ -13629,7 +13629,7 @@ CursorTileDataEnd:
 
 
 ;===================================================================
-; Cursor update — superfree (called via jsl from play method)
+; Cursor update -- superfree (called via jsl from play method)
 ; Reads joypad, moves cursor, writes SCUMM vars, handles A-button
 ; click for walk and verb selection.
 ;===================================================================
@@ -13710,7 +13710,7 @@ _uc.mouseDone:
   .ACCU 16
   .INDEX 16
 
-  ;--- Read joypad state (direct WRAM access — can't jsr bank 0 from superfree) ---
+  ;--- Read joypad state (direct WRAM access -- can't jsr bank 0 from superfree) ---
   lda.w inputDevice.press
   sta.w SCUMM.scratch                 ; current press state
   lda.w inputDevice.trigger
@@ -13868,14 +13868,14 @@ _uc.hasVerb2:
   lda #1                              ; actor index = 1 (Guybrush)
   jsl scummvm.buildWalkPath_long
 
-  ; Check if path was built (pathLen > 0) — if not, target was outside walkboxes
+  ; Check if path was built (pathLen > 0) -- if not, target was outside walkboxes
   ldx #1                              ; actor 1 byte index
   sep #$20
   lda.w SCUMM.walkPathLen,x
   rep #$20
   and #$00FF
   bne _uc.walkDone
-  jmp _uc.noClick                     ; refuse walk — target not in any walkbox
+  jmp _uc.noClick                     ; refuse walk -- target not in any walkbox
 
 _uc.directWalk:
   .ACCU 16
@@ -14142,7 +14142,7 @@ _uc.hoverLoop:
   bcc _uc.hoverNext
   beq _uc.hoverNext
 
-  ; Hover match — check if changed
+  ; Hover match -- check if changed
   cpx.w SCUMM.highlightVerb
   beq _uc.highlightDone               ; same as before, skip redraw
   stx.w SCUMM.highlightVerb
@@ -14222,7 +14222,7 @@ _uc.noR:
 
 
 ;===================================================================
-; DMA registration helper — superfree (called via jsl from play)
+; DMA registration helper -- superfree (called via jsl from play)
 ; Directly writes DMA queue entries for pending CHR/cursor/verb
 ; transfers. Avoids bank 0 bloat from inline registerTransfer calls.
 ;===================================================================
@@ -14261,12 +14261,12 @@ _rpd.chrSlotLoop:
   jmp _rpd.chrSlotNext
 +
 
-  ; This slot is dirty — try to register DMA (keep flag until success)
+  ; This slot is dirty -- try to register DMA (keep flag until success)
   jsr _rpd.findSlot                   ; X = free DMA queue slot offset
   bcs +
   jmp _rpd.chrSlotNext                ; queue full, keep dirty for retry
 +
-  ; DMA slot found — NOW clear the dirty flag
+  ; DMA slot found -- NOW clear the dirty flag
   phx                                 ; save DMA queue slot
   ldx.w SCUMM.scratch2                ; render slot index
   sep #$20
@@ -14396,11 +14396,11 @@ _rpd.headSlotLoop:
   and #$00FF
   beq _rpd.headSlotNext
 
-  ; This slot has dirty head — queue DMA
+  ; This slot has dirty head -- queue DMA
   jsr _rpd.findSlot                   ; X = free DMA queue slot offset
   bcc _rpd.headSlotNext               ; queue full, keep dirty for retry
 
-  ; DMA slot found — clear dirty
+  ; DMA slot found -- clear dirty
   phx                                 ; save DMA queue slot
   ldx.w SCUMM.scratch2                ; render slot index
   sep #$20
@@ -14479,7 +14479,7 @@ _rpd.noHead:
 _rpd.cursorTileReady:
   .ACCU 16
   .INDEX 16
-  ;--- Cursor palette DMA (every frame — guards against CGRAM corruption) ---
+  ;--- Cursor palette DMA (every frame -- guards against CGRAM corruption) ---
   lda.w SCUMM.cursorEnabled
   beq _rpd.noCursor
   jsr _rpd.findSlot
@@ -14623,7 +14623,7 @@ _scummTalkColorLUT:
 
 
 ;===================================================================
-; Dialog text renderer — superfree
+; Dialog text renderer -- superfree
 ; extractAndRenderString: reads SCUMM string from bytecode,
 ; renders to BG3 tilemap buffer, sets dialog state.
 ; clearDialogTilemap: fills tilemap with $0000, flags DMA.
@@ -14684,13 +14684,13 @@ _ears.scanFF:
   iny                                  ; skip sub-code
   ; sub-codes 1, 2, 3, 8: no extra args
   cmp #1
-  beq _ears.scanDone                   ; newline — stop counting (first line only)
+  beq _ears.scanDone                   ; newline -- stop counting (first line only)
   cmp #2
   beq _ears.scanLoop
   cmp #3
   beq _ears.scanLoop
   cmp #8
-  beq _ears.scanDone                   ; newline — stop counting (first line only)
+  beq _ears.scanDone                   ; newline -- stop counting (first line only)
   ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
@@ -14795,7 +14795,7 @@ _ears.center:
   clc
   adc.w SCUMM.dialogCharCount           ; start + count
   cmp #33                               ; > 32?
-  bcc _ears.noOverflow                   ; fits — use saved start
+  bcc _ears.noOverflow                   ; fits -- use saved start
   ; Overflow: compute new start = max(0, 32 - count)
   pla                                    ; discard saved start
   lda #32
@@ -14882,7 +14882,7 @@ _ears.renderNewline:
   and #$FFC0                             ; ...to next 64-byte boundary
   tax
   cpx #1152                              ; verb area starts at row 18 (18*64=$0480, pixel Y 144)
-  bcc +                                  ; within gameplay area — continue
+  bcc +                                  ; within gameplay area -- continue
   jmp _ears.renderEnd                    ; at/past verb area → stop
 +
 
@@ -14971,7 +14971,7 @@ _ears.nlStartOk:
   clc
   adc.w SCUMM.scratch                    ; A = row_base + start_offset
   tax                                    ; X = new tilemap position
-  jmp _ears.renderLoop                   ; bra out of range — use jmp
+  jmp _ears.renderLoop                   ; bra out of range -- use jmp
 
 _ears.renderLoopTrap:
   .ACCU 16
@@ -14993,7 +14993,7 @@ _ears.renderChar:
   ; Right margin wrap: if column wrapped to 0, indent by 1 tile
   txa
   and #$003F                           ; mod 64 = byte offset within row
-  bne _ears.renderLoopTrap             ; not at start of row — continue
+  bne _ears.renderLoopTrap             ; not at start of row -- continue
   inx                                  ; skip column 0
   inx
   bra _ears.renderLoopTrap
@@ -15103,7 +15103,7 @@ _cvt.clearLoop:
 
 
 ;===================================================================
-; Sentence line renderer — superfree
+; Sentence line renderer -- superfree
 ; Renders the current verb/action on BG2 verb tilemap row 0 (Y=144).
 ; Default "Walk to" when no verb selected.
 ;===================================================================
@@ -15307,7 +15307,7 @@ _rsl.defaultName:
 
 
 ;===================================================================
-; Object hover detection — called per frame from updateCursor
+; Object hover detection -- called per frame from updateCursor
 ; Sets SCUMM.cursorObject + SCUMM.sentenceDirty on change.
 ;===================================================================
 .bank 5 slot 0
@@ -15319,7 +15319,7 @@ scummvm.updateObjectHover:
   lda.w SCUMM.cursorY
   cmp #144
   bcs _oh.verbArea
-  ;room area — check object under cursor
+  ;room area -- check object under cursor
   sta.w SCUMM.scratch                   ;scratch = screenY
   lda.w SCUMM.cursorX                   ;A = screenX
   jsl room.findObject                   ;A = objId (0=none)
@@ -15338,7 +15338,7 @@ _oh.verbArea:
   bcc _oh.verbOnly
   cmp #192
   bcs _oh.verbOnly
-  ;inventory row — compute which item slot
+  ;inventory row -- compute which item slot
   lda.w SCUMM.cursorX
   lsr a
   lsr a
@@ -15350,7 +15350,7 @@ _oh.verbArea:
   adc.w SCUMM.inventoryScroll           ;+ scroll offset = absolute item index
   cmp.w SCUMM.inventoryCount
   bcs _oh.clearObj                      ;beyond inventory → clear
-  ;valid item — look up obj_id from list
+  ;valid item -- look up obj_id from list
   asl a                                 ;* 2 = byte offset
   tax
   lda.w SCUMM.inventoryList,x
@@ -15365,7 +15365,7 @@ _oh.verbArea:
 _oh.verbOnly:
   .ACCU 16
   .INDEX 16
-  ;verb area (not inventory row) — clear object if any
+  ;verb area (not inventory row) -- clear object if any
 _oh.clearObj:
   .ACCU 16
   .INDEX 16
@@ -15549,7 +15549,7 @@ _aon.ret:
 
 
 ;===================================================================
-; drawObject state helpers — superfree to avoid dispatch growth
+; drawObject state helpers -- superfree to avoid dispatch growth
 ;===================================================================
 .bank 5 slot 0
 .base BSL
@@ -15637,7 +15637,7 @@ _dosN.done:
 
 
 ;===================================================================
-; resolveClickTarget — returns walk target for room click
+; resolveClickTarget -- returns walk target for room click
 ; If cursorObject != 0, returns object walk-to point.
 ; Otherwise returns cursor room position.
 ; Output: A = targetX, SCUMM.scratch = targetY
@@ -15650,7 +15650,7 @@ scummvm.resolveClickTarget:
   rep #$31
   lda.w SCUMM.cursorObject
   beq _rct.cursorPos
-  ;object click — look up walk-to point from roomObjTable
+  ;object click -- look up walk-to point from roomObjTable
   sta.b tmp                            ;tmp = target obj_id
   ldy.w SCUMM.roomObjCount
   beq _rct.cursorPos
@@ -15691,7 +15691,7 @@ _rct.cursorPos:
 
 
 ;===================================================================
-; lookupObjectWalkTo — find walk-to point for any object ID
+; lookupObjectWalkTo -- find walk-to point for any object ID
 ; Input: A = object ID
 ; Output: A = walk_x, SCUMM.scratch = walk_y, carry set if found
 ;===================================================================
@@ -15737,14 +15737,14 @@ _lowt.found:
 
 
 ;===================================================================
-; putActorAtObject / walkActorToObject — unified implementation
+; putActorAtObject / walkActorToObject -- unified implementation
 ;===================================================================
 .bank 5 slot 0
 .base BSL
 .section "ScummVM actorAtObj" free
 
 ;-------------------------------------------------------------------
-; scummvm.actorAtObj_impl — put or walk actor to object's walk-to point
+; scummvm.actorAtObj_impl -- put or walk actor to object's walk-to point
 ; Input: A = object ID, SCUMM.scratch2 = actor struct offset
 ;        carry SET = put (teleport), carry CLEAR = walk
 ;-------------------------------------------------------------------
@@ -15828,14 +15828,14 @@ _aao.fail:
 
 
 ;===================================================================
-; Camera system — per-frame camera position update
+; Camera system -- per-frame camera position update
 ;===================================================================
 .bank 5 slot 0
 .base BSL
 .section "ScummVM camera" free
 
 ;-------------------------------------------------------------------
-; scummvm.moveCamera — update camera position per frame
+; scummvm.moveCamera -- update camera position per frame
 ; Called via jsl from play() after updateActors.
 ; If following an actor, updates cameraDest from actor X.
 ; Moves camera center toward cameraDest at FAST_X speed.
@@ -16081,7 +16081,7 @@ _snap.done:
   rtl
 
 ;-------------------------------------------------------------------
-; scummvm.setCameraAtImpl — instant camera snap (JSL/RTL)
+; scummvm.setCameraAtImpl -- instant camera snap (JSL/RTL)
 ; Input:  A = target X center position
 ; Clamps to [MIN_X, MAX_X], writes cameraDest + cameraPosX,
 ; exits follow mode, computes cameraX/cameraXOld left edge.
@@ -16139,7 +16139,7 @@ _setCamAt.noSnap:
 .ends
 
 ;===================================================================
-; scummvm.getVerbEntrypoint_impl — superfree
+; scummvm.getVerbEntrypoint_impl -- superfree
 ; Input:  A = object ID, SCUMM.scratch = verb ID
 ; Output: A = verb entry offset (>0 = handler exists, 0 = none)
 ;===================================================================
@@ -16218,7 +16218,7 @@ _gve.foundVerb:
 .ends
 
 ;===================================================================
-; scummvm.startObjectScript — superfree
+; scummvm.startObjectScript -- superfree
 ; Start executing an object's verb script in a new slot.
 ; Input:  A = object ID, SCUMM.scratch = entry offset within VERB data
 ; Output: none
@@ -16376,7 +16376,7 @@ _sos.zeroLocals:
 
 
 ;===================================================================
-; rebuildInventory — scan objectOwner for ego (actor 1), rebuild list
+; rebuildInventory -- scan objectOwner for ego (actor 1), rebuild list
 ; Sets inventoryDirty + verbDirty. JSL/RTL.
 ;===================================================================
 .bank 5 slot 0
@@ -16412,7 +16412,7 @@ _rbi.scan:
   and #$00FF
   cmp #1
   bne _rbi.next
-  ; Found an ego-owned item — store obj_id
+  ; Found an ego-owned item -- store obj_id
   cpy #INV_MAX_ITEMS * 2              ; cap at 32 items
   bcs _rbi.next
   txa                                  ; A = obj_id (== object index)
@@ -16450,7 +16450,7 @@ _rbi.next:
 
 
 ;===================================================================
-; cacheInventoryName — cache object name from current room data
+; cacheInventoryName -- cache object name from current room data
 ; Input: A = obj_id. Searches roomObjTable for matching object,
 ; copies name into invNameCache. JSL/RTL.
 ;===================================================================
@@ -16462,7 +16462,7 @@ scummvm.cacheInventoryName:
   phb
   phx
   phy
-  pha                                    ; save A (16-bit) — must match pla width
+  pha                                    ; save A (16-bit) -- must match pla width
   sep #$20
   lda #$7E
   pha
@@ -16599,7 +16599,7 @@ _cin.copyLoop:
 
 
 ;===================================================================
-; findInventory_impl — find Nth object owned by actor
+; findInventory_impl -- find Nth object owned by actor
 ; Input: A = owner actor, SCUMM.scratch = index (1-based)
 ; Output: A = obj_id (0 if not found). JSL/RTL.
 ;===================================================================
@@ -16611,13 +16611,13 @@ scummvm.findInventory_impl:
   phb
   phx
   phy
+  pha                                    ; save A (16-bit) � must match pla width
   sep #$20
-  pha
   lda #$7E
   pha
   plb
   rep #$31
-  pla
+  pla                                    ; restore A (16-bit)
   and #$00FF                           ; A = owner
   sta.w SCUMM.scratch2                 ; scratch2 = target owner
 
@@ -16634,10 +16634,10 @@ _fi.scan:
   and #$00FF
   cmp.w SCUMM.scratch2
   bne _fi.next
-  ; Found a match — decrement counter
+  ; Found a match -- decrement counter
   dec.w SCUMM.scratch3
   bne _fi.next
-  ; This is the Nth item — return obj_id
+  ; This is the Nth item -- return obj_id
   txa                                  ; A = obj_id
   ply
   plx
@@ -16664,7 +16664,7 @@ _fi.zero:
 
 
 ;===================================================================
-; getInventoryCount_impl — count objects owned by actor
+; getInventoryCount_impl -- count objects owned by actor
 ; Input: A = owner actor
 ; Output: A = count. JSL/RTL.
 ;===================================================================
@@ -16676,13 +16676,13 @@ scummvm.getInventoryCount_impl:
   phb
   phx
   phy
+  pha                                    ; save A (16-bit) � must match pla width
   sep #$20
-  pha
   lda #$7E
   pha
   plb
   rep #$31
-  pla
+  pla                                    ; restore A (16-bit)
   and #$00FF                           ; A = owner
   sta.w SCUMM.scratch2                 ; target owner
   ldy #0                              ; Y = count
@@ -16712,7 +16712,7 @@ _gic.next:
 .ends
 
 ;===================================================================
-; saveRestoreVerbs implementation — superfree (bank 5)
+; saveRestoreVerbs implementation -- superfree (bank 5)
 ; Stack on entry (after jsl):
 ;   8,s = begin_verb, 6,s = end_verb, 4,s = mode (unused)
 ; SCUMM.scratch = sub-opcode ($01=save, $02=restore, $03=delete)
@@ -16904,7 +16904,7 @@ _srv.done:
 
 
 ;===================================================================
-; getStringWidth_impl — measure pixel width of a SCUMM string slot
+; getStringWidth_impl -- measure pixel width of a SCUMM string slot
 ; Input: A = string slot ID (0-15, already clamped)
 ; Output: A = pixel width (16-bit). JSL/RTL.
 ;===================================================================
@@ -17009,7 +17009,7 @@ _gsw.done:
 
 
 ;===================================================================
-; getClosestObjActor_impl — find nearest actor/object to reference
+; getClosestObjActor_impl -- find nearest actor/object to reference
 ; Input: A = reference actor/object ID (16-bit)
 ; Output: A = closest actor/object ID (or $00FF if none). JSL/RTL.
 ;===================================================================
@@ -17188,7 +17188,7 @@ _gcoa.return:
 
 
 ;===================================================================
-; darkenPalette_impl — scale RGB from CGRAM shadow, write to CGRAM
+; darkenPalette_impl -- scale RGB from CGRAM shadow, write to CGRAM
 ; Params in BWRAM_PALETTE_SCRATCH: +0=redScale, +2=greenScale,
 ;   +4=blueScale (0-255 each), +6=startColor, +8=endColor
 ;===================================================================
@@ -17350,7 +17350,7 @@ _darken.mulDone:
 
 
 ;===================================================================
-; setPalColor_impl — convert VGA RGB to BGR555, write shadow + CGRAM
+; setPalColor_impl -- convert VGA RGB to BGR555, write shadow + CGRAM
 ; Params in BWRAM_PALETTE_SCRATCH: +0=r, +2=g, +4=b (VGA 0-63),
 ;   +6=palette index
 ;===================================================================
@@ -17427,7 +17427,7 @@ scummvm.setPalColor_impl:
 
 
 ;===================================================================
-; runInputScript — start VAR_VERB_SCRIPT with clickArea/verb/button args
+; runInputScript -- start VAR_VERB_SCRIPT with clickArea/verb/button args
 ;
 ; Called from bank 0 via JSL.  Reads VAR(7) = verb script number,
 ; fills argBuffer[0..2], calls startScriptSlot_long, copies args.
@@ -17528,7 +17528,7 @@ scummvm.clearRoom0:
   dey
   bne -
 
-  ; DMA dialog font to VRAM — room 0 fast path skips room.load,
+  ; DMA dialog font to VRAM -- room 0 fast path skips room.load,
   ; so processRoomChange's loadDialogFont JSL never fires
   jsl scummvm.loadDialogFont
   sep #$20          ; loadDialogFont returns 16-bit, restore 8-bit for NMI write
@@ -17546,14 +17546,14 @@ scummvm.clearRoom0:
 
 
 ;===================================================================
-; Dialog font DMA — called from processRoomChange after room.load
+; Dialog font DMA -- called from processRoomChange after room.load
 ; Force blank is guaranteed active by the caller.
 ;===================================================================
 .section "scummvm loadDialogFont impl" superfree
 .base BSL
 
 scummvm.loadDialogFont:
-  ; Just set the NMI pending flag — actual DMA happens in VBlank
+  ; Just set the NMI pending flag -- actual DMA happens in VBlank
   sep #$20
   lda #1
   sta.w SCUMM.dialogFontNmiPending

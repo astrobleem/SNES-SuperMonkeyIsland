@@ -1156,11 +1156,9 @@ _prc.noExitScript2:
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom
 
-  ; --- Reload viewport at corrected camera position ---
-  ; Use room.reloadViewport which properly handles NMI stop, force blank,
-  ; HDMA disable, NMI staging flag clearing, tile cache reinit, and cleanup.
+  ; Reload viewport (force-blank DMA of BG tiles)
   jsr room.reloadViewport
-  ; Sync scroll state so syncScroll doesn't see stale delta on next frame
+  ; Sync scroll state
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
@@ -1198,7 +1196,11 @@ _prc.noEntryScript2:
   .ACCU 16
   .INDEX 16
 
-  ; Load actor costume tiles + palette to VRAM/CGRAM
+  ; Load costumes for ego + actors already placed.
+  ; NOTE: actors placed by LSCR scripts (started by ENCD) won't be found
+  ; until they execute on the next _play tick. Running a scheduler tick here
+  ; would fix this but causes MSU-1 pointer conflicts with the tile streamer.
+  ; TODO: add MSU-1 seek-save/restore around script loading to fix this.
   jsr _scummvm.loadActorCostumes
 
   ; Assign walkboxes for all visible actors in this room
@@ -2259,6 +2261,41 @@ _startExcd.found:
   lda #0
   ldy #SCUMM_WHERE_ROOM
   jmp _startScript.initSlot
+
+
+;===================================================================
+; _scummvm.runOneSchedulerTick
+; Execute one pass of the SCUMM script scheduler so newly-started
+; scripts (e.g. LSCR from ENCD) can run their first opcodes.
+; This allows putActorInRoom to place actors before loadActorCostumes.
+;===================================================================
+_scummvm.runOneSchedulerTick:
+  rep #$31
+  stz.w SCUMM.currentSlot
+  stz.w SCUMM.currentSlotPtr
+_rost.loop:
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_RUNNING
+  bne _rost.next
+  lda.w SCUMM.slots.freezeCount,x
+  and #$00FF
+  bne _rost.next
+  lda.w SCUMM.slots.delay,x
+  bne _rost.next
+  jsl scummvm.executeSlot
+_rost.next:
+  lda.w SCUMM.currentSlotPtr
+  clc
+  adc #_sizeof_scummSlot
+  sta.w SCUMM.currentSlotPtr
+  lda.w SCUMM.currentSlot
+  inc a
+  sta.w SCUMM.currentSlot
+  cmp #SCUMM_MAX_SLOTS
+  bcc _rost.loop
+  rts
 
 
 ;===================================================================
@@ -5457,12 +5494,18 @@ op_putActorInRoom:
   pla                                ; recover actor number
   and #$00FF
   cmp #1
-  bne +
+  bne _pair.notEgo
+  pha
   lda.w SCUMM.scratch3              ; room number
   and #$00FF
-  beq +                              ; room 0 = remove actor, not room change
+  beq +
   sta.w SCUMM.newRoom
 +
+  pla
+  clc
+  rts
+
+_pair.notEgo:
   clc
   rts
 
@@ -14376,6 +14419,11 @@ _rpd.chrSlotLoop:
   tay                                 ; Y = word index
 
   lda.w SCUMM.slotChrLen,y
+  bne +
+  ply                                 ; discard saved render slot
+  ply                                 ; discard saved Y
+  jmp _rpd.chrSlotNext               ; len=0 wraps to 64KB — skip this slot
++
   sta.w GLOBAL.dmaQueue.1.transferLength,x
   lda.w SCUMM.slotChrVram,y
   sta.w GLOBAL.dmaQueue.1.targetAdress,x
@@ -17527,6 +17575,79 @@ scummvm.setPalColor_impl:
 ;   SCUMM.argBuffer+2 = verb/code (word)
 ;   SCUMM.argBuffer+4 = button code (word)
 ;   SCUMM.argCount = 6
+;===================================================================
+; assignRenderSlot_impl -- superfree
+; Called via JSL from putActorInRoom when a non-ego actor is placed
+; in the current room.  Finds a free render slot, copies actor+costume.
+; Input: A = actor number (16-bit), SCUMM.scratch2 = actor struct offset,
+;        SCUMM.scratch3 = target room number.
+; Preserves: Y (bytecode PC).
+;===================================================================
+.section "ScummVM assignRenderSlot" superfree
+.ACCU 16
+.INDEX 16
+
+scummvm.assignRenderSlot_impl:
+  rep #$31
+  and #$00FF
+  beq _ars.done                      ; actor 0 = reserved, skip
+  pha                                ; save actor number (16-bit)
+
+  ; Check target room == currentRoom
+  lda.w SCUMM.scratch3
+  and #$00FF
+  beq _ars.pop                       ; room 0 = removed
+  cmp.w SCUMM.currentRoom
+  bne _ars.pop
+
+  ; Check costume != 0
+  ldx.w SCUMM.scratch2               ; actor struct offset
+  inx                                ; +1 = costume field
+  lda.w SCUMM.actors,x
+  and #$00FF
+  beq _ars.pop                       ; no costume
+
+  ; Check if actor already has a render slot
+  pla
+  pha
+  sep #$20
+  .ACCU 8
+  ldx #0
+_ars.chkLoop:
+  cmp.w SCUMM.renderSlotActor,x
+  beq _ars.exists
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _ars.chkLoop
+
+  ; Find free slot (actor==0 means empty), skip slot 0 (ego)
+  ldx #1
+_ars.findLoop:
+  lda.w SCUMM.renderSlotActor,x
+  beq _ars.assign
+  inx
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcc _ars.findLoop
+  bra _ars.exists                    ; all full
+
+_ars.assign:
+  .ACCU 8
+  .INDEX 16
+  ; X = free slot index.  Set actor + costume.
+  lda 1,s                            ; actor number (low byte of 16-bit stack value)
+  sta.w SCUMM.renderSlotActor,x
+
+_ars.exists:
+  rep #$20
+  .ACCU 16
+_ars.pop:
+  pla
+_ars.done:
+  rtl
+
+.ends
+
+
 ;===================================================================
 .section "ScummVM runInputScript" superfree
 .ACCU 16

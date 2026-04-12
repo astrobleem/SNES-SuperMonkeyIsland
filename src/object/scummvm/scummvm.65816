@@ -621,8 +621,6 @@ _play.scanPop:
   bra _play.scanOverride
 _play.directSkip:
   ; Override can't fire (csNest=0 or no target found).
-  ; The endCutscene START check handles the redirect directly.
-  ; Nothing to do here -- _play will catch it next time csNest > 0.
   nop
 
 _play.noAbort:
@@ -9425,14 +9423,19 @@ _ua.slotLoop:
   sta.w SCUMM.uaActorStructOfs
   tax
 
-  ; Skip if actor not placed in a room (room=0)
+  ; Skip if actor not placed (room=0), but clear stale moving flag first
   lda.w SCUMM.actors.room,x
   and #$00FF
-  beq _ua.skipSlot
-
-  ; Check if this actor is in the current room
-  cmp.w SCUMM.currentRoom
-  bne _ua.skipSlot
+  bne _ua.hasRoom
+  ; Room 0 = not placed. Clear any stale moving flag to prevent infinite waitForActor.
+  sep #$20
+  stz.w SCUMM.actors.moving,x
+  rep #$20
+  jmp _ua.nextSlot
+_ua.hasRoom:
+  ; Process walks for ALL placed actors regardless of current room.
+  ; ScummVM processes actor walks even when actor is not in current room;
+  ; skipping them causes moving flag to never clear → waitForActor blocks forever.
 
   ; Check if actor is moving
   lda.w SCUMM.actors.moving,x
@@ -9444,6 +9447,11 @@ _ua.slotLoop:
   lda.w SCUMM.walkPathLen,x
   and #$00FF
   bne +
+  ; pathLen=0 but moving=1: clear moving to prevent infinite waitForActor
+  ldx.w SCUMM.uaActorStructOfs
+  sep #$20
+  stz.w SCUMM.actors.moving,x
+  rep #$20
 _ua.skipSlot:
   .ACCU 16
   .INDEX 16
@@ -14848,6 +14856,7 @@ _ears.startReady:
 
   ; --- Render: read chars from bytecode, write tilemap entries ---
   ; Reads until $00 terminator (like skipPrintString). Renders printable chars.
+  bra _ears.renderLoop                  ; skip trampolines to enter render loop
 _ears.renderEndTrap:
   .ACCU 16
   .INDEX 16

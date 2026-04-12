@@ -1482,6 +1482,19 @@ _loadGlobal.cacheOk:
 ; Input: A = script number to start
 ;-------------------------------------------------------------------
 _scummvm.startScriptSlot:
+  ; --- Copy protection bypass (ScummVM: o5_startScript) ---
+  ; MI1 CD copy protection runs in room 90 via script 155 (credits+quiz).
+  ; SNES has no keyboard, so skip script 155 entirely — the boot script
+  ; polls isScriptRunning(155) and continues when it ends.
+  cmp #155
+  bne _startScript.noCpBypass
+  lda.w SCUMM.currentRoom
+  cmp #90
+  bne _startScript.noCpBypass
+  clc                             ; carry clear = "script not started"
+  rts
+_startScript.noCpBypass:
+
   sta.w SCUMM.scratch
 
   ; Stop any existing instance of this script (ScummVM: runScript calls stopScript first)

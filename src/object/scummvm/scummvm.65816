@@ -8861,9 +8861,19 @@ op_putActorAtObject:
   asl a                              ; * 16 = actor struct offset
   sta.w SCUMM.scratch2               ; scratch2 = actor struct offset
   lda.w SCUMM.scratch3               ; A = object ID
+  ; Save SCUMM PC + bytecode pointer â€” actorAtObj clobbers Y and tmp
   phy                                ; save SCUMM PC
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
+  lda.w SCUMM.scratch3               ; restore A = object ID
   sec                                ; carry set = PUT (teleport)
   jsl scummvm.actorAtObj_impl
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
   ply                                ; restore SCUMM PC
   clc
   rts
@@ -8889,9 +8899,19 @@ op_walkActorToObject:
   asl a                              ; * 16 = actor struct offset
   sta.w SCUMM.scratch2               ; scratch2 = actor struct offset
   lda.w SCUMM.scratch3               ; A = object ID
+  ; Save SCUMM PC + bytecode pointer â€” actorAtObj clobbers Y and tmp
   phy                                ; save SCUMM PC
+  lda.b tmp
+  pha
+  lda.b tmp+2
+  pha
+  lda.w SCUMM.scratch3               ; restore A = object ID
   clc                                ; carry clear = WALK (pathfind)
   jsl scummvm.actorAtObj_impl
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
   ply                                ; restore SCUMM PC
   clc
   rts
@@ -16611,7 +16631,7 @@ scummvm.findInventory_impl:
   phb
   phx
   phy
-  pha                                    ; save A (16-bit) — must match pla width
+  pha                                    ; save A (16-bit) ï¿½ must match pla width
   sep #$20
   lda #$7E
   pha
@@ -16676,7 +16696,7 @@ scummvm.getInventoryCount_impl:
   phb
   phx
   phy
-  pha                                    ; save A (16-bit) — must match pla width
+  pha                                    ; save A (16-bit) ï¿½ must match pla width
   sep #$20
   lda #$7E
   pha

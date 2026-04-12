@@ -517,6 +517,7 @@ SCUMM.dialogCharCount    dw      ; number of printable chars (for timer calc)
 SCUMM.dialogTilemap      ds 2048 ; BG3 WRAM tilemap buffer (32x32 x 2B)
 SCUMM.dialogPalTrans     dw      ; dynamic palette color 0 (always $0000 = transparent)
 SCUMM.dialogPalColor     dw      ; dynamic palette color 1 (talk color BGR555)
+SCUMM.keyAckDelay        dw      ; frames var[105] has been 0 while button held (copy protection bypass)
 .ends
 
 ; BG3 VRAM layout constants

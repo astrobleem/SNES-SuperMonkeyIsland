@@ -14243,6 +14243,54 @@ _uc.noR:
   .ACCU 16
   .INDEX 16
 
+  ; --- Keyboard variable emulation for MI1 CD copy protection ---
+  ; Scripts 154/155 use var[105] with a three-phase handshake:
+  ;   1. Debounce: set var[105]=0, yield twice, if !=0 loop (clears stale keys)
+  ;   2. Wait press: yield, if var[105]==0 loop (waits for key press)
+  ;   3. Wait release: set var[105]=-1, yield, if ==-1 loop (waits for key up)
+  ; When button held, delay 4 frames before setting 0->1 (passes debounce),
+  ; then delay 4 frames before clearing -1->0 (simulates key release).
+  ; When button released, clear -1->0 immediately.
+  ldx #105*2
+  lda.w inputDevice.press
+  bit.w #(JOY_BUTTON_START | JOY_BUTTON_A)
+  beq _uc.keyUp
+  ; --- Button held ---
+  lda.w SCUMM.globalVars,x
+  beq _uc.keyCountPress           ; 0: count toward simulated press
+  cmp #$FFFF
+  beq _uc.keyCountRelease         ; -1: count toward simulated release
+  stz.w SCUMM.keyAckDelay         ; other (1): script processing, reset
+  bra _uc.noKeyAck
+_uc.keyCountPress:
+  lda.w SCUMM.keyAckDelay
+  inc a
+  sta.w SCUMM.keyAckDelay
+  cmp #4
+  bcc _uc.noKeyAck                ; wait 4 frames (debounce window)
+  stz.w SCUMM.keyAckDelay
+  lda #1
+  sta.w SCUMM.globalVars,x        ; var[105]=1 (key press)
+  bra _uc.noKeyAck
+_uc.keyCountRelease:
+  lda.w SCUMM.keyAckDelay
+  inc a
+  sta.w SCUMM.keyAckDelay
+  cmp #4
+  bcc _uc.noKeyAck                ; wait 4 frames (release window)
+  stz.w SCUMM.keyAckDelay
+  stz.w SCUMM.globalVars,x        ; var[105]=0 (key release)
+  bra _uc.noKeyAck
+_uc.keyUp:
+  ; No button: clear -1 sentinel immediately + reset delay
+  lda.w SCUMM.globalVars,x
+  cmp #$FFFF
+  bne _uc.keyResetOnly
+  stz.w SCUMM.globalVars,x        ; immediate release
+_uc.keyResetOnly:
+  stz.w SCUMM.keyAckDelay
+_uc.noKeyAck:
+
   plb
   rtl
 
@@ -17479,7 +17527,6 @@ scummvm.runInputScript_impl:
   ; Read VAR_VERB_SCRIPT (globalVar[7])
   ldx #7*2
   lda.w SCUMM.globalVars,x
-  and #$00FF
   beq _ris.done                       ; no verb script configured
 
   ; A = script number; argBuffer already filled by caller

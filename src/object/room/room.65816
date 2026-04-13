@@ -147,22 +147,23 @@ room.loadIndex:
   php
   rep #$31
 
-  ;calculate index offset: ROOM_INDEX_OFFSET + room_id * 8
+  ;calculate linear offset: ROM_DATA_ROOM_INDEX + room_id * 8
   asl a
   asl a
   asl a
   clc
-  adc.w #ROOM_INDEX_OFFSET
-  ;A = low 16 bits of seek address, X = high 16 bits (0)
+  adc.w #ROM_DATA_ROOM_INDEX
+  ;A = low 16 bits of offset, X = high 8 bits (0 — index fits in first 64KB)
   ldx #0
-  jsr room.msu1Seek
+  jsr room.setRomDataPtr
 
-  ;read 8 bytes from MSU_DATA into index entry struct
-  ;MSU_DATA auto-advances on each byte read
+  ;read 8 bytes from ROM into index entry struct
   sep #$20
+  ldy #0
   ldx #0
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.w GLOBAL.room.idx,x
+  iny
   inx
   cpx #ROOM_INDEX_ENTRY_SIZE
   bne -
@@ -193,20 +194,31 @@ room.loadHeader:
   php
   rep #$31
 
-  ;seek to room data block
+  ;set ROM pointer to room data block
   lda.w GLOBAL.room.idx.offset_lo
   ldx.w GLOBAL.room.idx.offset_hi
-  jsr room.msu1Seek
+  jsr room.setRomDataPtr
 
-  ;read 32 bytes of header from MSU_DATA into WRAM struct
-  ;use indexed loop with struct base address
+  ;read 32 bytes of header from ROM into WRAM struct
   sep #$20
+  ldy #0
   ldx #0
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.w GLOBAL.room.hdr,x
+  iny
   inx
   cpx #ROOM_HEADER_SIZE
   bne -
+
+  ;advance romReadPos past header (base + 32)
+  rep #$20
+  lda.w GLOBAL.room.idx.offset_lo
+  clc
+  adc #ROOM_HEADER_SIZE
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.idx.offset_hi
+  adc #0
+  sta.w GLOBAL.room.romReadPos_hi
 
   plp
   rts
@@ -233,17 +245,25 @@ room.loadPalette:
 room.loadTileset:
   php
   rep #$31
-  tsx
 
+  ; Set ROM pointer to tileset data (romReadPos = after palette)
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
+
+  ; DMA from ROM to VRAM (tileset CHR data)
+  tsx
   sep #$20
-  lda.b #DMA_TRANSFER.VRAM | DMA_TRANSFER.OPTION.FIXED_SOURCE
+  lda.b #DMA_TRANSFER.VRAM       ; normal incrementing source (not FIXED_SOURCE)
   pha                           ;1 byte: transfer type
 
-  pea MSU_DATA                  ;2 bytes: source address ($2001)
+  rep #$20
+  lda.b tmp+24                  ; ROM source address (low 16 bits)
+  pha                           ;2 bytes: source address
 
   sep #$20
-  lda #0
-  pha                           ;1 byte: source bank ($00)
+  lda.b tmp+26                  ; ROM source bank
+  pha                           ;1 byte: source bank
 
   rep #$20
   lda.w #ROOM_TILES_VRAM * 2    ;target: VRAM byte address 0
@@ -259,6 +279,16 @@ room.loadTileset:
 
   jsr core.dma.registerTransfer
   txs                           ;restore stack
+
+  ; Advance romReadPos past tileset
+  rep #$20
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.chr_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc #0
+  sta.w GLOBAL.room.romReadPos_hi
 
   plp
   rts
@@ -281,9 +311,15 @@ room.loadTilemapDual:
   php
   rep #$31
 
+  ;set ROM pointer to tilemap data (romReadPos = after tileset)
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
+  stz.b tmp+10                  ;ROM read offset within tilemap (Y alias)
+
   ;load dimensions from header
   lda.w GLOBAL.room.hdr.width_tiles
-  sta.b tmp                     ;total columns to read from MSU
+  sta.b tmp                     ;total columns to read from ROM
 
   lda.w GLOBAL.room.hdr.height_tiles
   sta.b tmp+2                   ;rows per column
@@ -308,7 +344,9 @@ _room.dualTilemap.columnLoop:
   .ACCU 16
   .INDEX 16
   lda.b tmp                     ;total columns remaining
-  beq _room.dualTilemap.done
+  bne +
+  jmp _room.dualTilemap.done
++
 
   ;check if we still have VRAM columns to write
   lda.b tmp+8
@@ -340,14 +378,20 @@ _room.dualTilemap.columnLoop:
 _room.dualTilemap.bothLoop:
   .ACCU 16
   .INDEX 16
+  phy                           ;save row counter
+  ldy.b tmp+10                  ;ROM read offset
   sep #$20
-  lda.l MSU_DATA                ;low byte
+  lda [tmp+24],y                ;low byte from ROM
   sta.l VMDATAL
   sta.l SCROLL_TILEMAP_WRAM,x
-  lda.l MSU_DATA                ;high byte
-  sta.l VMDATAH                 ;triggers VRAM addr += 32
+  iny
+  lda [tmp+24],y                ;high byte from ROM
+  sta.l VMDATAH
   sta.l SCROLL_TILEMAP_WRAM+1,x
+  iny
   rep #$20
+  sty.b tmp+10                  ;save ROM offset
+  ply                           ;restore row counter
   inx
   inx
   dey
@@ -377,12 +421,18 @@ _room.dualTilemap.wramOnly:
 _room.dualTilemap.wramLoop:
   .ACCU 16
   .INDEX 16
+  phy
+  ldy.b tmp+10                  ;ROM read offset
   sep #$20
-  lda.l MSU_DATA                ;low byte
+  lda [tmp+24],y
   sta.l SCROLL_TILEMAP_WRAM,x
-  lda.l MSU_DATA                ;high byte
+  iny
+  lda [tmp+24],y
   sta.l SCROLL_TILEMAP_WRAM+1,x
+  iny
   rep #$20
+  sty.b tmp+10
+  ply
   inx
   inx
   dey
@@ -398,7 +448,7 @@ _room.dualTilemap.nextCol:
   lda.b tmp
   dec a
   sta.b tmp
-  bra _room.dualTilemap.columnLoop
+  jmp _room.dualTilemap.columnLoop
 
 _room.dualTilemap.done:
   .ACCU 16
@@ -538,6 +588,12 @@ room.loadTilemapToWram:
   php
   rep #$31
 
+  ;set ROM pointer to tilemap (romReadPos = after tileset)
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
+  stz.b tmp+10                  ;ROM read offset
+
   lda.w GLOBAL.room.hdr.width_tiles
   sta.b tmp                     ;total columns
   lda.w GLOBAL.room.hdr.height_tiles
@@ -555,12 +611,18 @@ _room.wramTilemap.colLoop:
 _room.wramTilemap.rowLoop:
   .ACCU 16
   .INDEX 16
+  phy
+  ldy.b tmp+10
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
   sta.l SCROLL_TILEMAP_WRAM,x
-  lda.l MSU_DATA
+  iny
+  lda [tmp+24],y
   sta.l SCROLL_TILEMAP_WRAM+1,x
+  iny
   rep #$20
+  sty.b tmp+10
+  ply
   inx
   inx
   dey
@@ -579,24 +641,24 @@ _room.wramTilemap.done:
 
 
 /**
-* Compute MSU-1 base offset for tile data random access.
-* tileDataMsuBase = roomDataOffset + ROOM_HEADER_SIZE + ROOM_PALETTE_SIZE
+* Compute ROM linear offset for tile data random access.
+* tileDataRomOfs = roomDataOffset + ROOM_HEADER_SIZE + ROOM_PALETTE_SIZE
 *
-* This is the MSU file offset where tile 0's data begins.
-* Individual tile N is at tileDataMsuBase + N * 32.
+* This is the linear offset in rom_data.bin where tile 0's data begins.
+* Individual tile N is at tileDataRomOfs + N * 32.
 */
 room.computeTileDataBase:
   php
   rep #$31
 
-  ;tileDataMsuBase = dataOffset + 32 (header) + 256 (palette)
+  ;tileDataRomOfs = dataOffset + 32 (header) + 256 (palette)
   lda.w GLOBAL.room.idx.offset_lo
   clc
   adc.w #ROOM_HEADER_SIZE + ROOM_PALETTE_SIZE
-  sta.w GLOBAL.room.tileDataMsuBase_lo
+  sta.w GLOBAL.room.tileDataRomOfs_lo
   lda.w GLOBAL.room.idx.offset_hi
   adc #0                        ;carry from low add
-  sta.w GLOBAL.room.tileDataMsuBase_hi
+  sta.w GLOBAL.room.tileDataRomOfs_hi
 
   plp
   rts
@@ -664,77 +726,140 @@ room.load:
   ;flush DMA queue for palette (we're in force blank)
   jsr core.dma.processQueue
 
-  ;MSU_DATA stream now after palette = tileset data
-  ;Step 2: skip entire tileset — tiles loaded on-demand by tile cache
-  jsr room.drainFullTileset
+  ;romReadPos is past tileset (loadTileset advanced it).
+  ;Tiles are loaded on-demand by the tile cache from ROM.
 
-  ;MSU_DATA stream now after tileset = tilemap data
   ;read all tilemap to WRAM $7F only (no VRAM writes)
+  ;romReadPos points to tilemap data
   jsr room.loadTilemapToWram
 
-  ;compute base MSU offset for individual tile reads (do BEFORE walkbox load)
+  ;advance romReadPos past tilemap
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.map_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc.w GLOBAL.room.hdr.map_size_hi
+  sta.w GLOBAL.room.romReadPos_hi
+
+  ;compute base ROM offset for individual tile reads (do BEFORE walkbox load)
   jsr room.computeTileDataBase
 
-  ;load walkbox data by seeking directly to box_data offset in MSU
+  ;load walkbox data (seeks to box data offset in ROM)
   jsl room.loadWalkboxData
 
-  ;--- Read room object data from MSU (positioned after box data) ---
+  ;--- Read room object data from ROM ---
+  ;romReadPos needs to be set past walkbox data for object reads
+  ;Compute: tileDataRomOfs + chr_size + map_size + col_size + box_size
+  lda.w GLOBAL.room.tileDataRomOfs_lo
+  clc
+  adc.w GLOBAL.room.hdr.chr_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.tileDataRomOfs_hi
+  adc.w GLOBAL.room.hdr.chr_size_hi
+  sta.w GLOBAL.room.romReadPos_hi
+  ;add map_size
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.map_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc.w GLOBAL.room.hdr.map_size_hi
+  sta.w GLOBAL.room.romReadPos_hi
+  ;add col_size
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.col_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc.w GLOBAL.room.hdr.col_size_hi
+  sta.w GLOBAL.room.romReadPos_hi
+  ;add box_size
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.box_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc #0
+  sta.w GLOBAL.room.romReadPos_hi
+
+  ;set ROM pointer for object data reads
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
+  stz.b tmp+10                    ;ROM read offset for object data
+
   lda.w SCUMM.boxDataSize
   bne +
   jmp _rl.noObjData
 +
   ;read 8-byte header: count(2) + name_size(2) + verb_data_size(2) + reserved(2)
+  ldy.b tmp+10
   sep #$20
 .ACCU 8
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
 .ACCU 16
+  sty.b tmp+10
   sta.w SCUMM.roomObjCount
+  ldy.b tmp+10
   sep #$20
 .ACCU 8
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
 .ACCU 16
   sta.w SCUMM.roomObjNameSize
   sep #$20
 .ACCU 8
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
 .ACCU 16
   sta.w SCUMM.roomObjVerbSize
   sep #$20
 .ACCU 8
-  lda.l MSU_DATA                           ;reserved lo
-  lda.l MSU_DATA                           ;reserved hi
+  lda [tmp+24],y                           ;reserved lo
+  iny
+  lda [tmp+24],y                           ;reserved hi
+  iny
   rep #$20
 .ACCU 16
+  sty.b tmp+10
   ;read object entries: count * 16 bytes
   lda.w SCUMM.roomObjCount
   beq _rl.noObjEntries
   asl a
   asl a
   asl a
-  asl a
-  tay
+  asl a                         ;byte count
+  sta.b tmp+12                  ;save count
+  ldy.b tmp+10                  ;ROM read offset
   ldx #0
   sep #$20
 .ACCU 8
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.l SCUMM.roomObjTable,x
+  iny
   inx
-  dey
+  cpx.b tmp+12
   bne -
   rep #$20
 .ACCU 16
+  sty.b tmp+10
 _rl.noObjEntries:
   .ACCU 16
   .INDEX 16
@@ -743,51 +868,60 @@ _rl.noObjEntries:
   beq _rl.noVerbIdx
   asl a
   asl a
-  tay
+  sta.b tmp+12
+  ldy.b tmp+10
   ldx #0
   sep #$20
 .ACCU 8
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.l SCUMM.roomObjVerbIdx,x
+  iny
   inx
-  dey
+  cpx.b tmp+12
   bne -
   rep #$20
 .ACCU 16
+  sty.b tmp+10
 _rl.noVerbIdx:
   .ACCU 16
   .INDEX 16
   ;read name table
   lda.w SCUMM.roomObjNameSize
   beq _rl.noNames
-  tay
+  sta.b tmp+12
+  ldy.b tmp+10
   ldx #0
   sep #$20
 .ACCU 8
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.l SCUMM.roomObjNames,x
+  iny
   inx
-  dey
+  cpx.b tmp+12
   bne -
   rep #$20
 .ACCU 16
+  sty.b tmp+10
 _rl.noNames:
   .ACCU 16
   .INDEX 16
   ;read verb data blobs
   lda.w SCUMM.roomObjVerbSize
   beq _rl.objDone
-  tay
+  sta.b tmp+12
+  ldy.b tmp+10
   ldx #0
   sep #$20
 .ACCU 8
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.l SCUMM.roomObjVerbData,x
+  iny
   inx
-  dey
+  cpx.b tmp+12
   bne -
   rep #$20
 .ACCU 16
+  sty.b tmp+10
   bra _rl.objDone
 _rl.noObjData:
   .ACCU 16
@@ -922,27 +1056,29 @@ room.initObjectStates:
   rep #$31
   lda.w SCUMM.roomObjCount
   beq _ios.done
-  tay                                   ;Y = loop counter
-  ldx #0                                ;X = entry byte offset
+  sta.b tmp+14                          ;loop counter
+  stz.b tmp+16                          ;entry byte offset (X alias)
+  ldy.b tmp+10                          ;ROM read offset
 _ios.loop:
+  ldx.b tmp+16
   lda.l SCUMM.roomObjTable,x            ;obj_id (16-bit)
-  phx
-  phy
   tax                                   ;X = obj_id
   sep #$20
 .ACCU 8
-  lda.l MSU_DATA                        ;read initial_state from MSU stream
+  lda [tmp+24],y                        ;read initial_state from ROM
   sta.w SCUMM.objectState,x
+  iny
   rep #$20
 .ACCU 16
-  ply
-  plx
-  txa
+  lda.b tmp+16
   clc
   adc #16                               ;advance to next 16-byte entry
-  tax
-  dey
+  sta.b tmp+16
+  lda.b tmp+14
+  dec a
+  sta.b tmp+14
   bne _ios.loop
+  sty.b tmp+10                          ;save final ROM offset
 _ios.done:
   rtl
 
@@ -975,13 +1111,13 @@ _box.hasData:
 
   sta.w SCUMM.boxDataSize
 
-  ;--- Compute absolute MSU offset to box data ---
-  ;box_offset = tileDataMsuBase + chr_size + map_size + col_size
-  lda.w GLOBAL.room.tileDataMsuBase_lo
+  ;--- Compute ROM offset to box data ---
+  ;box_offset = tileDataRomOfs + chr_size + map_size + col_size
+  lda.w GLOBAL.room.tileDataRomOfs_lo
   clc
   adc.w GLOBAL.room.hdr.chr_size
   sta.b tmp
-  lda.w GLOBAL.room.tileDataMsuBase_hi
+  lda.w GLOBAL.room.tileDataRomOfs_hi
   adc.w GLOBAL.room.hdr.chr_size_hi
   sta.b tmp+2
 
@@ -1003,53 +1139,23 @@ _box.hasData:
   adc.w GLOBAL.room.hdr.col_size_hi
   sta.b tmp+2
 
-  ;--- Inline MSU seek to box data offset ---
-  ;wait for any pending seek to complete
-  sep #$20
-  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
-- dex
-  beq +
-  lda.l MSU_STATUS
-  bmi -
-+
-  ;write 32-bit seek address
-  rep #$31
+  ;--- Set ROM pointer to box data ---
   lda.b tmp
-  sta.l MSU_ADRESS
-  lda.b tmp+2
-  sta.l MSU_ADRESS+2
+  ldx.b tmp+2
+  jsr room.setRomDataPtr
 
-  ;SD2SNES settle delay
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-
-  ;wait for seek complete
-  sep #$20
-  ldx.w #ROOM_MSU1_SEEK_TIMEOUT
-- dex
-  beq +
-  lda.l MSU_STATUS
-  bmi -
-+
-  rep #$20
-
-  ;read box_size bytes from MSU_DATA to $7F:5000
+  ;read box_size bytes from ROM to $7F:5000
   phy
-  lda.w GLOBAL.room.hdr.box_size
-  tay
-  ldx #0
+  ldy #0                        ;ROM read offset
+  ldx #0                        ;write offset
   sep #$20
-- lda.l MSU_DATA
+_box.readLoop:
+  lda [tmp+24],y               ;8-bit read from ROM
   sta.l $7F5000,x
+  iny
   inx
-  dey
-  bne -
+  cpx.w SCUMM.boxDataSize
+  bne _box.readLoop
   rep #$20
   ply
 
@@ -1190,20 +1296,24 @@ room.loadOchrData:
   cmp.w #SCUMM_OCHR_MAX_SIZE_7E + 1
   bcs _ochr.tooLarge
 
-  ;store size and read MSU_DATA into SCUMM.ochrData
+  ;store size and read ROM data into SCUMM.ochrData
   sta.w SCUMM.ochrDataSize
+  ;ROM pointer should still be valid (set during object data reads)
+  ;tmp+10 tracks the ROM read offset
   phy
-  tay                           ;Y = byte count
+  ldy.b tmp+10                  ;ROM offset
   ldx #0
   sep #$20
 .ACCU 8
-- lda.l MSU_DATA
+- lda [tmp+24],y
   sta.l SCUMM.ochrData,x
+  iny
   inx
-  dey
+  cpx.w SCUMM.ochrDataSize
   bne -
   rep #$20
 .ACCU 16
+  sty.b tmp+10
   ply
 
   ;parse OCHR header: obj_patch_count (LE16)
@@ -1214,15 +1324,7 @@ room.loadOchrData:
   rtl
 
 _ochr.tooLarge:
-  ;drain bytes from MSU stream to keep position correct
-  tay
-  sep #$20
-.ACCU 8
-- lda.l MSU_DATA
-  dey
-  bne -
-  rep #$20
-.ACCU 16
+  ;with ROM, no need to drain — just skip
 
 _ochr.none:
   plp
@@ -1940,24 +2042,45 @@ _roc.done:
 
 room.loadPaletteShadow:
   php
-  sep #$20
-  .ACCU 8
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; Set ROM pointer to palette data (romReadPos = after header)
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
 
   ; Set CGRAM write address to 0
+  sep #$20
+  .ACCU 8
   lda #0
   sta.l $002121
 
-  ; Read 256 bytes from MSU_DATA, write to CGRAM and BW-RAM shadow
+  ; Read 256 bytes from ROM, write to CGRAM and BW-RAM shadow
   rep #$10
   .INDEX 16
+  ldy #0
   ldx #0
 _rps.loop:
-  lda.l MSU_DATA
-  sta.l $002122                     ; CGRAM data port (auto-increments per pair)
+  lda [tmp+24],y
+  sta.l $002122                     ; CGRAM data port
   sta.l BWRAM_CGRAM_SHADOW,x
+  iny
   inx
   cpx #BWRAM_CGRAM_SHADOW_SIZE
   bne _rps.loop
+
+  ; Advance romReadPos past palette
+  rep #$20
+  .ACCU 16
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc #BWRAM_CGRAM_SHADOW_SIZE
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc #0
+  sta.w GLOBAL.room.romReadPos_hi
 
   plp
   rtl

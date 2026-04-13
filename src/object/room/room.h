@@ -1,4 +1,5 @@
 .include "src/config/config.inc"
+.include "build/rom_data.inc"
 
 ;MSU-1 seek timeout (same value as msu1.h, duplicated to avoid pulling in full msu1 class)
 .define ROOM_MSU1_SEEK_TIMEOUT $2000
@@ -90,8 +91,10 @@ GLOBAL.room.nmiColRows     dw                 ;rows to write
 GLOBAL.room.colStaging     ds 50              ;NMI column staging buffer (25 rows * 2 bytes)
 GLOBAL.room.cacheNextSlot  dw                 ;ring buffer next allocation slot (0-895)
 GLOBAL.room.cacheMissCount dw                 ;tiles to DMA in NMI this frame
-GLOBAL.room.tileDataMsuBase_lo dw             ;MSU offset to tile data (low 16)
-GLOBAL.room.tileDataMsuBase_hi dw             ;MSU offset to tile data (high 16)
+GLOBAL.room.tileDataRomOfs_lo dw              ;ROM linear offset to tile data (low 16)
+GLOBAL.room.tileDataRomOfs_hi dw              ;ROM linear offset to tile data (high 8 in low byte)
+GLOBAL.room.romReadPos_lo     dw              ;current ROM read position (low 16)
+GLOBAL.room.romReadPos_hi     dw              ;current ROM read position (high 8 in low byte)
 GLOBAL.room.nmiTileFlag    db                 ;nonzero = NMI should write tile data
 GLOBAL.room.nmiTileCount   dw                 ;number of new tiles for NMI
 GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buffer

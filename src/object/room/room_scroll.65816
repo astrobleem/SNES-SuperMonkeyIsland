@@ -284,10 +284,10 @@ _initVP.p1Loop:
   asl a
   asl a                          ;A = tileId * 32
   clc
-  adc.w GLOBAL.room.tileDataMsuBase_lo
+  adc.w GLOBAL.room.tileDataRomOfs_lo
   sta.b tmp+16                  ;MSU addr low
   lda.w #0
-  adc.w GLOBAL.room.tileDataMsuBase_hi
+  adc.w GLOBAL.room.tileDataRomOfs_hi
   tax                            ;X = MSU addr high
   lda.b tmp+16                  ;A = MSU addr low
   jsr room.msu1Seek
@@ -828,10 +828,10 @@ _stageCol.p1Loop:
   asl a
   asl a                          ;tileId * 32 (fits 16 bits)
   clc
-  adc.w GLOBAL.room.tileDataMsuBase_lo
+  adc.w GLOBAL.room.tileDataRomOfs_lo
   pha                            ;push MSU addr low
   lda.w #0
-  adc.w GLOBAL.room.tileDataMsuBase_hi
+  adc.w GLOBAL.room.tileDataRomOfs_hi
   tax                            ;X = MSU addr high
   pla                            ;A = MSU addr low
   jsr room.msu1Seek

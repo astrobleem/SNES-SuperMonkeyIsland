@@ -253,110 +253,25 @@ _init.zeroCache:
   cpx #SCUMM_CACHE_SIZE
   bcc _init.zeroCache
 
-  ;--- Read script section offset from MSU-1 header ---
-  ; MSU header at offset $0024 has 32-bit script section offset
-  lda.w #SCUMM_MSU_SCRIPT_HDR_OFFSET
-  ldx #0
-  jsr room.msu1Seek
-
-  ; Read LE32 into scriptSectionLo/Hi using XBA word-read pattern
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  ;--- Script section: use build-time constants from rom_data.inc ---
+  lda.w #ROM_DATA_SCRIPT_HDR & $FFFF
   sta.w SCUMM.scriptSectionLo
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_SCRIPT_HDR >> 16
   sta.w SCUMM.scriptSectionHi
 
-  ; Check that script section exists
-  lda.w SCUMM.scriptSectionLo
-  ora.w SCUMM.scriptSectionHi
-  bne +
-    TRIGGER_ERROR E_ScummVmBadOpcode
-+
-  .ACCU 16
-  .INDEX 16
-
-  ;--- Seek to script section and read 32-byte header ---
-  lda.w SCUMM.scriptSectionLo
-  ldx.w SCUMM.scriptSectionHi
-  jsr room.msu1Seek
-
-  ; Skip magic (4 bytes) + version (1) + reserved (1) = 6 bytes
-  sep #$20
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  rep #$20
-
-  ; Read global_slots (LE16) -- XBA word-read
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_GLOBAL_SLOTS
   sta.w SCUMM.globalSlots
-
-  ; Read room_slots (LE16) -- XBA word-read
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_ROOM_SCR_SLOTS
   sta.w SCUMM.roomSlots
 
-  ; Skip 6 reserved bytes (bytes 10-15)
-  sep #$20
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  rep #$20
-
-  ; Read global_index_offset (LE32, bytes 16-19) -- XBA word-read
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_GLOBAL_INDEX & $FFFF
   sta.w SCUMM.globalIndexLo
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_GLOBAL_INDEX >> 16
   sta.w SCUMM.globalIndexHi
 
-  ; Read room_index_offset (LE32, bytes 20-23) -- XBA word-read
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_ROOM_SCR_INDEX & $FFFF
   sta.w SCUMM.roomIndexLo
-  sep #$20
-  lda.l MSU_DATA
-  xba
-  lda.l MSU_DATA
-  xba
-  rep #$20
+  lda.w #ROM_DATA_ROOM_SCR_INDEX >> 16
   sta.w SCUMM.roomIndexHi
 
   ;--- Set SCUMM v5 system variables (from ScummVM resetScummVars) ---
@@ -1318,14 +1233,14 @@ _aaw.skip16:
 ;===================================================================
 
 ;-------------------------------------------------------------------
-; _scummvm.copyMsuToCache -- copy bytes from MSU-1 into $7F cache
+; _scummvm.copyRomToCache -- copy bytes from ROM into $7F cache
 ; Input: A = byte count to copy
-; Assumes: MSU-1 data port is already seeked to correct position
+; Assumes: tmp+24 set via room.setRomDataPtr to source address
 ; Uses cacheWritePtr as destination offset (updated on return)
 ; Output: A = cachePtr where data was written, X = byte count
 ; Clobbers: SCUMM.scratch, SCUMM.scratch2
 ;-------------------------------------------------------------------
-_scummvm.copyMsuToCache:
+_scummvm.copyRomToCache:
   sta.w SCUMM.scratch           ; scratch = byte count
 
   ; Save starting cacheWritePtr (= destination offset)
@@ -1335,21 +1250,30 @@ _scummvm.copyMsuToCache:
   ; X = destination offset into $7F bank
   ldx.w SCUMM.cacheWritePtr
 
-  ; Copy loop: read MSU_DATA byte-by-byte into $7F cache
+  ; Copy loop: read from ROM via [tmp+24],y into $7F cache
   phy
-  ldy.w SCUMM.scratch           ; Y = remaining count
-  beq _copyMsu.done
-_copyMsu.loop:
+  ldy #0
+  lda.w SCUMM.scratch           ; check count
+  beq _copyRom.done
+  ; Use scratch as remaining count in 16-bit
+  pha                            ; push remaining count
+_copyRom.loop:
   .ACCU 16
   .INDEX 16
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
   sta.l SCUMM_CACHE_WRAM,x
   rep #$20
+  iny
   inx
-  dey
-  bne _copyMsu.loop
-_copyMsu.done:
+  ; Check for bank crossing (Y wraps at $0000 after $FFFF)
+  ; Scripts are <64KB so this won't happen in practice
+  lda 1,s
+  dec a
+  sta 1,s
+  bne _copyRom.loop
+  pla                            ; discard count
+_copyRom.done:
   .ACCU 16
   .INDEX 16
   ply
@@ -1374,7 +1298,7 @@ _copyMsu.done:
 _scummvm.loadGlobalScript:
   sta.w SCUMM.scratch
 
-  ; Compute index entry MSU offset: globalIndexOffset + scriptNum * 8
+  ; Compute index entry ROM offset: globalIndexOffset + scriptNum * 8
   asl a
   asl a
   asl a
@@ -1385,34 +1309,38 @@ _scummvm.loadGlobalScript:
   adc.w SCUMM.globalIndexHi
   tax
   lda.w SCUMM.scratch2
-  jsr room.msu1Seek
+  jsr room.setRomDataPtr         ;tmp+24 = index entry address
 
-  ; Read 8-byte index entry: offset32 + size32
+  ; Read 8-byte index entry via [tmp+24],y: offset32 + size32
+  ldy #0
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 0 (lo)
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 1
   xba
   rep #$20
-  pha                        ;push offset_lo
+  pha                            ;push offset_lo
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 2
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 3 (hi)
   xba
   rep #$20
-  pha                        ;push offset_hi
+  pha                            ;push offset_hi
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;size byte 0 (lo)
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;size byte 1
   xba
   rep #$20
-  pha                        ;push size_lo
-  sep #$20
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  rep #$20
+  pha                            ;push size_lo
+  ; bytes 6-7 (size_hi) not needed
 
   ; Stack: [size_lo] [offset_hi] [offset_lo]
   ; Check for null entry (offset == 0)
@@ -1457,15 +1385,15 @@ _loadGlobal.exists:
 _loadGlobal.cacheOk:
   .ACCU 16
   .INDEX 16
-  ; Seek to script data
+  ; Set ROM pointer to script data
   lda 3,s
   tax                 ;X = offset_hi (high 16 bits)
   lda 5,s             ;A = offset_lo (low 16 bits)
-  jsr room.msu1Seek
+  jsr room.setRomDataPtr         ;tmp+24 = script data address
 
-  ; Copy bytecode from MSU-1 into cache via helper
+  ; Copy bytecode from ROM into cache via helper
   lda 1,s
-  jsr _scummvm.copyMsuToCache
+  jsr _scummvm.copyRomToCache
   ; A = cachePtr, X = byte count
 
   ; Clean up stack (size_lo, offset_hi, offset_lo)
@@ -1515,7 +1443,25 @@ _startScript.stopLoop:
   and #$00FF
   cmp 1,s                      ; compare with saved script number on stack
   bne _startScript.stopNext
-  jsr scummvm.killSlotCleanup
+  ; Inline killSlotCleanup (can't JSR — function may be in another bank)
+  lda.w SCUMM.slots.cutsceneOverride,x
+  and #$00FF
+  beq _startScript.stopKill
+    sta.w SCUMM.scratch
+    lda.w SCUMM.cutsceneNest
+    sec
+    sbc.w SCUMM.scratch
+    bpl +
+      lda #0
++   sta.w SCUMM.cutsceneNest
+    sep #$20
+    stz.w SCUMM.slots.cutsceneOverride,x
+    rep #$20
+_startScript.stopKill:
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
   bra _startScript.stopDone     ; only one instance possible
 _startScript.stopNext:
   .ACCU 16
@@ -1903,7 +1849,7 @@ _loadRoom.zeroTable:
   bcc _loadRoom.zeroTable
   plx
 
-  ;--- Seek to room index entry: roomIndexOffset + room * 8 ---
+  ;--- Read room index entry from ROM: roomIndexOffset + room * 8 ---
   lda.w SCUMM.scratch
   asl a
   asl a
@@ -1915,32 +1861,29 @@ _loadRoom.zeroTable:
   adc.w SCUMM.roomIndexHi
   tax
   lda.w SCUMM.scratch2
-  phy
-  jsr room.msu1Seek
-  ply
+  jsr room.setRomDataPtr         ;tmp+24 = index entry address
 
-  ;--- Read 8-byte index entry: offset32 + size32 ---
+  ;--- Read 8-byte index entry via [tmp+24],y: offset32 + size32 ---
+  ldy #0
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 0
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 1
   xba
   rep #$20
   pha                            ;push offset_lo
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 2
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny           ;offset byte 3
   xba
   rep #$20
   pha                            ;push offset_hi
-  ; Read size32 (discard -- we parse the block header instead)
-  sep #$20
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  lda.l MSU_DATA
-  rep #$20
+  ; size32 not needed (we parse the block header)
 
   ; Stack: [offset_hi] [offset_lo]
   ; Check for null entry (offset == 0)
@@ -1957,56 +1900,62 @@ _loadRoom.zeroTable:
 _loadRoom.exists:
   .ACCU 16
   .INDEX 16
-  ;--- Seek to room script block ---
+  ;--- Set ROM pointer to room script block ---
   lda 1,s                        ;offset_hi
   tax
   lda 3,s                        ;offset_lo
-  phy
-  jsr room.msu1Seek
-  ply
+  ; Save linear ROM offset for sequential advancement
+  sta.w SCUMM.scratch2           ;romPos_lo
+  stx.w SCUMM.scratch3           ;romPos_hi
+  jsr room.setRomDataPtr         ;tmp+24 = block start
   pla                            ;discard offset_hi
   pla                            ;discard offset_lo
 
-  ;--- Read block header ---
+  ;--- Read block header via [tmp+24],y ---
+  ldy #0
   ; encd_size (LE16)
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
   sta.w SCUMM.roomEncdLen
 
   ; excd_size (LE16)
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
   sta.w SCUMM.roomExcdLen
 
   ; lscr_count (u8) + reserved (u8)
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   rep #$20
   and #$00FF
   sta.w SCUMM.roomLscrCount
-  sep #$20
-  lda.l MSU_DATA                 ;drain reserved byte
-  rep #$20
+  iny                              ;skip reserved byte
 
   ;--- Read per-LSCR header entries ---
   ; For each LSCR: number(u8) + size(LE16) → store in table
   lda.w SCUMM.roomLscrCount
-  beq _loadRoom.copyEncd
+  beq _loadRoom.hdrDone
   pha                            ;push remaining count
 _loadRoom.lscrHdr:
   .ACCU 16
   .INDEX 16
   ; Read lscr_number (u8)
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   rep #$20
   and #$00FF
   sec
@@ -2017,9 +1966,11 @@ _loadRoom.lscrHdr:
 
   ; Read lscr_size (LE16)
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
-  lda.l MSU_DATA
+  lda [tmp+24],y
+  iny
   xba
   rep #$20
   sta.w SCUMM.roomLscrTable.cacheLen,x
@@ -2030,33 +1981,69 @@ _loadRoom.lscrHdr:
   bne _loadRoom.lscrHdr
   pla                            ;discard count
 
+_loadRoom.hdrDone:
+  .ACCU 16
+  .INDEX 16
+  ; Advance linear ROM position past header bytes we just read (Y = bytes consumed)
+  tya
+  clc
+  adc.w SCUMM.scratch2
+  sta.w SCUMM.scratch2           ;romPos_lo
+  lda.w SCUMM.scratch3
+  adc #0
+  sta.w SCUMM.scratch3           ;romPos_hi
+
+  ;--- Copy ENCD from ROM → cache ---
 _loadRoom.copyEncd:
   .ACCU 16
   .INDEX 16
-  ;--- Copy ENCD from MSU → cache ---
   lda.w SCUMM.roomEncdLen
   beq _loadRoom.copyExcd
   lda.w SCUMM.cacheWritePtr
   sta.w SCUMM.roomEncdPtr
+  ; Set ROM pointer to current position
+  lda.w SCUMM.scratch2
+  ldx.w SCUMM.scratch3
+  jsr room.setRomDataPtr
   lda.w SCUMM.roomEncdLen
-  jsr _scummvm.copyMsuToCache
+  jsr _scummvm.copyRomToCache
+  ; Advance romPos by encd size
+  lda.w SCUMM.scratch2
+  clc
+  adc.w SCUMM.roomEncdLen
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch3
+  adc #0
+  sta.w SCUMM.scratch3
 
 _loadRoom.copyExcd:
   .ACCU 16
   .INDEX 16
-  ;--- Copy EXCD from MSU → cache ---
+  ;--- Copy EXCD from ROM → cache ---
   lda.w SCUMM.roomExcdLen
   beq _loadRoom.copyLscr
   lda.w SCUMM.cacheWritePtr
   sta.w SCUMM.roomExcdPtr
+  ; Set ROM pointer to current position
+  lda.w SCUMM.scratch2
+  ldx.w SCUMM.scratch3
+  jsr room.setRomDataPtr
   lda.w SCUMM.roomExcdLen
-  jsr _scummvm.copyMsuToCache
+  jsr _scummvm.copyRomToCache
+  ; Advance romPos by excd size
+  lda.w SCUMM.scratch2
+  clc
+  adc.w SCUMM.roomExcdLen
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch3
+  adc #0
+  sta.w SCUMM.scratch3
 
 _loadRoom.copyLscr:
   .ACCU 16
   .INDEX 16
-  ;--- Copy LSCR bytecodes from MSU → cache ---
-  ; LSCRs are stored in number-ascending order in MSU, matching table iteration
+  ;--- Copy LSCR bytecodes from ROM → cache ---
+  ; LSCRs are stored in number-ascending order, matching table iteration
   phx
   ldx #0
 _loadRoom.lscrLoop:
@@ -2068,13 +2055,28 @@ _loadRoom.lscrLoop:
   beq _loadRoom.lscrNext          ; no entry at this index
   ; Save table offset, copy this LSCR
   phx
+  ; Set ROM pointer to current position
+  lda.w SCUMM.scratch2
+  ldx.w SCUMM.scratch3
+  jsr room.setRomDataPtr
+  plx
+  phx
   lda.w SCUMM.cacheWritePtr
-  sta.w SCUMM.scratch2            ; save cachePtr for this entry
+  sta.w SCUMM.scratch            ; save cachePtr for this entry (reuse scratch)
   lda.w SCUMM.roomLscrTable.cacheLen,x
-  jsr _scummvm.copyMsuToCache
+  pha                             ; save size for romPos advance
+  jsr _scummvm.copyRomToCache
+  ; Advance romPos by LSCR size
+  pla                             ; recover size
+  clc
+  adc.w SCUMM.scratch2
+  sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch3
+  adc #0
+  sta.w SCUMM.scratch3
   ; Write cachePtr back into the table
   plx
-  lda.w SCUMM.scratch2
+  lda.w SCUMM.scratch
   sta.w SCUMM.roomLscrTable.cachePtr,x
 _loadRoom.lscrNext:
   .ACCU 16
@@ -2083,7 +2085,7 @@ _loadRoom.lscrNext:
   inx
   inx
   inx                              ; next lscrEntry (4 bytes)
-  bra _loadRoom.lscrLoop
+  jmp _loadRoom.lscrLoop
 _loadRoom.lscrDone:
   .ACCU 16
   .INDEX 16

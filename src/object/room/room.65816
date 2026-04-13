@@ -84,6 +84,14 @@ _srdp.storeBank:
   plp
   rts
 
+;===================================================================
+; room.setRomDataPtrLong -- JSL-callable wrapper for cross-bank use
+; Same interface as setRomDataPtr: A=lo16, X=hi8 → tmp+24 set
+;===================================================================
+room.setRomDataPtrLong:
+  jsr room.setRomDataPtr
+  rtl
+
 
 room.msu1Seek:
   php
@@ -232,6 +240,10 @@ room.loadHeader:
 room.loadPalette:
   php
   rep #$31
+  ; Set ROM pointer here (bank 0) before JSL into superfree section
+  lda.w GLOBAL.room.romReadPos_lo
+  ldx.w GLOBAL.room.romReadPos_hi
+  jsr room.setRomDataPtr
   jsl room.loadPaletteShadow
   plp
   rts
@@ -1142,7 +1154,7 @@ _box.hasData:
   ;--- Set ROM pointer to box data ---
   lda.b tmp
   ldx.b tmp+2
-  jsr room.setRomDataPtr
+  jsl room.setRomDataPtrLong
 
   ;read box_size bytes from ROM to $7F:5000
   phy
@@ -2045,11 +2057,7 @@ room.loadPaletteShadow:
   rep #$31
   .ACCU 16
   .INDEX 16
-
-  ; Set ROM pointer to palette data (romReadPos = after header)
-  lda.w GLOBAL.room.romReadPos_lo
-  ldx.w GLOBAL.room.romReadPos_hi
-  jsr room.setRomDataPtr
+  ; tmp+24 already set by caller (room.loadPalette in bank 0)
 
   ; Set CGRAM write address to 0
   sep #$20

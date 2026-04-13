@@ -275,7 +275,7 @@ _initVP.p1Loop:
   jsr room.allocCacheSlot        ;returns slot in A (clobbers X, Y)
   sta.b tmp+14                  ;allocated slot
 
-  ;compute MSU address: tileDataMsuBase + tileId * 32
+  ;compute ROM address: tileDataRomOfs + tileId * 32
   ;tileId < 2048, so tileId * 32 fits in 16 bits
   lda.b tmp+12
   asl a
@@ -285,12 +285,12 @@ _initVP.p1Loop:
   asl a                          ;A = tileId * 32
   clc
   adc.w GLOBAL.room.tileDataRomOfs_lo
-  sta.b tmp+16                  ;MSU addr low
+  sta.b tmp+16                  ;ROM addr low
   lda.w #0
   adc.w GLOBAL.room.tileDataRomOfs_hi
-  tax                            ;X = MSU addr high
-  lda.b tmp+16                  ;A = MSU addr low
-  jsr room.msu1Seek
+  tax                            ;X = ROM addr high
+  lda.b tmp+16                  ;A = ROM addr low
+  jsr room.setRomDataPtr         ;tmp+24 = 24-bit CPU address
 
   ;set VMAIN increment-by-1 for tile data write
   sep #$20
@@ -306,15 +306,17 @@ _initVP.p1Loop:
   asl a
   sta.l VMADDL
 
-  ;phase A: read 32 bytes from MSU into bank $7E staging buffer
+  ;phase A: read 32 bytes from ROM into bank $7E staging buffer
   ldx #0
+  ldy #0
 _initVP.tileStage:
   .ACCU 16
   .INDEX 16
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
   sta.w GLOBAL.room.vpTileStaging,x
   rep #$20
+  iny
   inx
   cpx #32
   bne _initVP.tileStage
@@ -820,7 +822,7 @@ _stageCol.p1Loop:
   inx
   stx.b tmp+8
 
-  ;MSU seek: tileDataMsuBase + tileId * 32
+  ;ROM read: tileDataRomOfs + tileId * 32
   lda.b tmp+16                  ;tileId
   asl a
   asl a
@@ -829,25 +831,26 @@ _stageCol.p1Loop:
   asl a                          ;tileId * 32 (fits 16 bits)
   clc
   adc.w GLOBAL.room.tileDataRomOfs_lo
-  pha                            ;push MSU addr low
+  pha                            ;push ROM addr low
   lda.w #0
   adc.w GLOBAL.room.tileDataRomOfs_hi
-  tax                            ;X = MSU addr high
-  pla                            ;A = MSU addr low
-  jsr room.msu1Seek
+  tax                            ;X = ROM addr high
+  pla                            ;A = ROM addr low
+  jsr room.setRomDataPtr         ;tmp+24 = 24-bit CPU address
 
-  ;read 32 bytes from MSU to tile staging buffer
+  ;read 32 bytes from ROM to tile staging buffer
   ldx.b tmp+6                   ;staging byte offset
-  ldy #32
+  ldy #0
 _stageCol.tileRead:
   .ACCU 16
   .INDEX 16
   sep #$20
-  lda.l MSU_DATA
+  lda [tmp+24],y
   sta.l SCROLL_TILE_STAGE_WRAM,x
   rep #$20
+  iny
   inx
-  dey
+  cpy #32
   bne _stageCol.tileRead
   stx.b tmp+6                   ;update staging offset
 

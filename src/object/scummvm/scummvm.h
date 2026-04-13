@@ -1,4 +1,5 @@
 .include "src/config/config.inc"
+.include "build/rom_data.inc"
 
 ;---------------------------------------------------------------------------
 ; SCUMM v5 Interpreter — Constants, Structs, WRAM layout

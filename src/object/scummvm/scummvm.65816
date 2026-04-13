@@ -1805,6 +1805,14 @@ _updateRoomPtrs.next:
 ;-------------------------------------------------------------------
 _scummvm.loadRoomScripts:
   rep #$31
+
+  ;--- Bounds check: room must be < roomSlots ---
+  cmp.w SCUMM.roomSlots
+  bcc +
+  clc
+  rts
++
+
   sta.w SCUMM.scratch
 
   ;--- Zero LSCR table + ENCD/EXCD pointers ---

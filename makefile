@@ -118,11 +118,6 @@ $(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx
 #convert graphic files. conversion flags are determined by special string inside filename ".gfx_%." (e.g. fixed8x8.gfx_font.png) and fetched from corresponding variable name ($(gfx_font_flags) in this case)
 $(converted_graphics): $(builddir)/%.$(tile): %.$(image) | $(builddirs)
 	$(gfxconverter) $($(filter gfx_%, $(subst .,$(space), $@))_flags) -infile $< -outfilebase $(patsubst %.$(tile), %, $@)
-	@# Strip bitplane 1 from 2bpp dialog font tiles so only indices 0-1 are used.
-	@# BG3 shares CGRAM with BG1; index 2-3 picks up room palette colors (magenta).
-	@if echo "$@" | grep -q 'gfx_font\.tiles$$'; then \
-		python3 -c "import sys; d=bytearray(open(sys.argv[1],'rb').read()); [d.__setitem__(i*2+1, 0) or d.__setitem__(i*2, d[i*2]|b) for i in range(len(d)//2) for b in [d[i*2+1]]]; open(sys.argv[1],'wb').write(d)" "$@"; \
-	fi
 
 
 #convert sprite animation folders to sprite animation file

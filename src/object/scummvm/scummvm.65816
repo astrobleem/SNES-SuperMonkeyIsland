@@ -15108,9 +15108,8 @@ _ears.renderChar:
   ; tile index = char - $20 (ASCII space = tile 0 in font)
   sec
   sbc #$20
-  ; tilemap word: priority 1 + palette 4 + tile index
-  ; BG3 palette 4 = CGRAM 16-19, not touched by CGRAM HDMA table
-  ora #$3000
+  ; tilemap word: priority 1 + palette 7 + tile index
+  ora #$3C00
   cpx #DIALOG_TILEMAP_SIZE
   bcs _ears.renderLoopTrap             ; bounds check: skip if past tilemap end
   sta.w SCUMM.dialogTilemap,x
@@ -15283,7 +15282,7 @@ _rsl.defaultLoop:
   and #$00FF
   sec
   sbc #$20                            ; ASCII to tile index
-  ora #$3000                          ; priority 1 + palette 4
+  ora #$3C00                          ; priority 1 + palette 7 (white)
   sta.w SCUMM.verbTilemap,y
   inx
   iny
@@ -15343,7 +15342,7 @@ _rsl.writeLoop:
   and #$00FF
   sec
   sbc #$20                            ; ASCII to tile index
-  ora #$3000                          ; priority 1 + palette 4
+  ora #$3C00                          ; priority 1 + palette 7 (white)
   sta.w SCUMM.verbTilemap,x
   iny
   inx
@@ -15616,7 +15615,7 @@ _aon.invWriteChar:
   and #$00FF
   sec
   sbc #$20                              ;ASCII → tile index
-  ora #$3000                            ;priority + palette 4
+  ora #$3C00                            ;priority + palette 7 (white)
   sta.w SCUMM.verbTilemap,y
   inx
   iny
@@ -15657,7 +15656,7 @@ _aon.writeChar:
   and #$00FF
   sec
   sbc #$20                              ;ASCII → tile index
-  ora #$3000                            ;priority + palette 4
+  ora #$3C00                            ;priority + palette 7 (white)
   sta.w SCUMM.verbTilemap,y
   inx
   iny

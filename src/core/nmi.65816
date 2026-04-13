@@ -375,29 +375,6 @@ _nmi.noOamDma:
 
 _nmi.noDialogTilemap:
 
-	;--- Dialog palette: write 4 colors to CGRAM for BG3 palette 4 ---
-	;BG3 palette 4 = CGRAM entries 16-19 (byte addr $20).
-	;Font tilemap uses palette 4 (ora #$3000). These slots overlap with
-	;BG1 palette 1 entries 0-3, but are not touched by CGRAM HDMA table.
-	;Entry 16 = transparent ($0000), entry 17 = talk color, entries 18-19 = $0000.
-	lda #$10                          ;CGRAM color number 16 (BG3 palette 4)
-	sta.l $2121
-	;Write 4 colors (8 bytes) via 8-bit stores to $2122 (CGDATA).
-	;16-bit sta would spill into $2123 (W12SEL), corrupting window regs.
-	lda #0
-	sta.l $2122                       ;color 0 lo = $00 (transparent)
-	sta.l $2122                       ;color 0 hi = $00
-	;color 1 = talk color from dialogPalColor
-	lda.l SCUMM.dialogPalColor
-	sta.l $2122                       ;color 1 lo
-	lda.l SCUMM.dialogPalColor+1
-	sta.l $2122                       ;color 1 hi
-	lda #0
-	sta.l $2122                       ;color 2 lo = $00 (black)
-	sta.l $2122                       ;color 2 hi = $00
-	sta.l $2122                       ;color 3 lo = $00 (black)
-	sta.l $2122                       ;color 3 hi = $00
-
 	;--- Verb tilemap NMI DMA: WRAM verbTilemap → VRAM $4800 ---
 	;Gated by SCUMM.verbTilemapNmiPending; set each time verb bar changes.
 	lda.w SCUMM.verbTilemapNmiPending

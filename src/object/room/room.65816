@@ -498,7 +498,18 @@ room.clearTilemap:
   sta.l VMAIN
   rep #$20
 
-  ;set VRAM address
+  ;--- Zero tile 0 (32 bytes at VRAM $0000) so $0000 tilemap entries are blank ---
+  lda.w #ROOM_TILES_VRAM
+  sta.l VMADDL
+  sep #$20
+  lda #0
+  .REPT 16
+    sta.l VMDATAL
+    sta.l VMDATAH
+  .ENDR
+  rep #$20
+
+  ;--- Zero BG1 tilemap (all entries → tile 0 = blank) ---
   lda.w #ROOM_TILEMAP_VRAM_WORD
   sta.l VMADDL
 
@@ -508,6 +519,20 @@ room.clearTilemap:
   sep #$20
   lda #0
   ldy.w #ROOM_TILEMAP_CLEAR_SIZE / 2
+- sta.l VMDATAL
+  sta.l VMDATAH
+  dey
+  bne -
+  rep #$20
+
+  ;--- Zero BG3 tilemap (dialog overlay: word $4C00, 32x32 = $800 bytes) ---
+  ;Must clear directly during force blank since the NMI relay may be
+  ;suppressed by dialogBootSuppress during early boot sequence.
+  lda.w #$4C00
+  sta.l VMADDL
+  sep #$20
+  lda #0
+  ldy.w #$0400                       ;$800 bytes = $400 words
 - sta.l VMDATAL
   sta.l VMDATAH
   dey

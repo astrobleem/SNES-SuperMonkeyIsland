@@ -52,8 +52,9 @@ room.initTileCache:
   php
   rep #$31
 
-  ;zero ring buffer pointer
-  stz.w GLOBAL.room.cacheNextSlot
+  ;start ring buffer at slot 1 (slot 0 is reserved as blank tile)
+  lda #1
+  sta.w GLOBAL.room.cacheNextSlot
   stz.w GLOBAL.room.cacheMissCount
 
   ;fill tileIdToSlot[0..2047] with $FFFF
@@ -134,12 +135,12 @@ _allocSlot.noEvict:
   lda.b tmp+22                  ;slot
   sta.l SCROLL_TILE2SLOT_WRAM,x
 
-  ;advance ring buffer: cacheNextSlot = (slot + 1) % 896
+  ;advance ring buffer: cacheNextSlot wraps from 895 to 1 (slot 0 reserved)
   lda.b tmp+22
   inc a
   cmp.w #ROOM_CACHE_SLOTS
   bcc +
-    lda #0
+    lda #1
 +
   .ACCU 16
   .INDEX 16

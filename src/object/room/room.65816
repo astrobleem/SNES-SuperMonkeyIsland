@@ -525,6 +525,30 @@ room.clearTilemap:
   bne -
   rep #$20
 
+  ;--- Zero BG2 tilemap (verb layer: word $4800, 32x32 = $800 bytes) ---
+  ;Stale BG2 entries in the room area show through transparent BG1 tiles.
+  lda.w #$4800
+  sta.l VMADDL
+  sep #$20
+  lda #0
+  ldy.w #$0400                       ;$800 bytes = $400 words
+- sta.l VMDATAL
+  sta.l VMDATAH
+  dey
+  bne -
+  rep #$20
+
+  ;--- Zero BG3 tile 0 (16 bytes at VRAM word $5000) so $0000 entries are blank ---
+  lda.w #$5000
+  sta.l VMADDL
+  sep #$20
+  lda #0
+  .REPT 8
+    sta.l VMDATAL
+    sta.l VMDATAH
+  .ENDR
+  rep #$20
+
   ;--- Zero BG3 tilemap (dialog overlay: word $4C00, 32x32 = $800 bytes) ---
   ;Must clear directly during force blank since the NMI relay may be
   ;suppressed by dialogBootSuppress during early boot sequence.

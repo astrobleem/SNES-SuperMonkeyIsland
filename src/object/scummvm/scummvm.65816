@@ -110,6 +110,7 @@ _init.zeroBits:
   stz.w SCUMM.newRoom
   stz.w SCUMM.bgInitDone
   stz.w SCUMM.gcInProgress
+  stz.w SCUMM.egoFixupPending
   stz.w SCUMM.hdmaChannel          ; zeros both hdmaChannel + hdmaCgramChannel (adjacent db's)
   stz.w SCUMM.cgramHdmaTable       ; zero first entry so HDMA terminates immediately if read
   stz.w SCUMM.roomEncdPtr
@@ -371,10 +372,9 @@ _init.zeroDialogTilemap:
   ;--- Init camera state (superfree helper) ---
   jsl scummvm.initCameraVars
 
-  ;--- Set starting room (triggers room load on first play frame) ---
+  ;--- Set up pseudo-room mapper ---
   ; MI1 room 1 is entered via pseudo-room 130 (pier/lookout direction).
   ; ENCD checks VAR_ROOM against 130/131/132 to determine entry direction.
-  ; Without pseudo-room, class 10 stays on exits → transitions blocked.
   ; Set up mapper: 130/131/132 all resolve to real room 1.
   sep #$20
   lda #1
@@ -384,25 +384,6 @@ _init.zeroDialogTilemap:
   sta.w SCUMM.resourceMapper,x
   inx
   sta.w SCUMM.resourceMapper,x
-  rep #$20
-  lda #130
-  sta.w SCUMM.newRoom
-
-  ;--- Pre-seed ego for room 1 (skipping MI1 intro) ---
-  ; Set costume 1 (Guybrush standard) so loadActorCostumes DMAs correct data.
-  ; ENCD may override this, triggering dirty-slot CHR+palette DMA.
-  ldx #1*16                         ; actor 1 struct offset
-  lda #160
-  sta.w SCUMM.actors.x,x
-  lda #100
-  sta.w SCUMM.actors.y,x
-  sep #$20
-  lda #1
-  sta.w SCUMM.actors.costume,x
-  lda #90                           ; facing east
-  sta.w SCUMM.actors.facing,x
-  lda #1
-  sta.w SCUMM.actors.visible,x
   rep #$20
 
   ;--- Zero walk path state (prevent garbage movement before walkActorTo) ---
@@ -444,31 +425,21 @@ _init.lastScale:
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
-  ; Boot script puts actors 8-11 in room 0 then loops waiting for ego to
-  ; be moving before calling startScript(35).  With correct SCUMM
-  ; conditional semantics the loop waits for moving!=0, but updateActors
-  ; clears the seed before the check runs.  Start script 35 directly to
-  ; bypass the wait; boot script continues its loop independently.
+  ; Boot script handles full game init.  Pass Local[0] = -7873 ($E11F) to
+  ; trigger the ScummVM copy-protection bypass path built into the script.
+  ; This skips the dial-a-pirate flow (SNES has no keyboard) and goes
+  ; directly to the game-init chain that puts ego in room 38.
   lda #1
   jsr _scummvm.startScriptSlot
-
-  ;--- Start script 35 directly (bypass boot script's ego-moving wait) ---
-  ; Boot script 1 loops waiting for ego moving before calling
-  ; startScript(35).  We start 35 directly so the game-init chain runs
-  ; immediately.  gv7 (VAR_BOOT_PARAM) is already set to $0100 above.
-  lda #35
-  jsr _scummvm.startScriptSlot
+  ; Write boot_param to slot 0 Local[0] (slot offset + 14 = localVars[0])
+  lda #$E11F
+  sta.w SCUMM.slots.localVars
 
   ;--- Mark VM as running ---
   lda #1
   sta.w SCUMM.running
 
-  ;--- Request ego costume fixup after first scheduler pass ---
-  ; Boot script + ENCD set costume 1 (standard Guybrush walk).
-  ; Force costume 1 after the ENCD has executed to ensure correct data.
-  sta.w SCUMM.egoFixupPending
-
-  ;--- Init default verb bar (room 10 scripts don't run yet) ---
+  ;--- Init default verb bar ---
   jsl scummvm.initDefaultVerbs
 
   plb                               ; restore DBR
@@ -652,6 +623,11 @@ _play.noPendingVerb:
   .ACCU 16
   .INDEX 16
 
+  ; Skip room-dependent rendering until a room is loaded
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  beq _play.noRoomRender
+
   ; Update camera position (follow actor / pan)
   jsl scummvm.moveCamera
   ; Reset NMI tile staging for this frame (before any stageColumnForNmi calls)
@@ -668,6 +644,7 @@ _play.noPendingVerb:
   ; Render verb bar if dirty + user input enabled (must run before DMA registration)
   rep #$31
   jsl scummvm.renderVerbBarChecked
+_play.noRoomRender:
   nop
   nop
   nop

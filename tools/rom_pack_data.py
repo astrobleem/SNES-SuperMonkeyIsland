@@ -175,7 +175,7 @@ def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False):
         room_blocks[rid] = build_room_data_block(room)
 
     max_room_id = max(r['room_id'] for r in rooms)
-    room_index_slots = max_room_id + 1
+    room_index_slots = max(max_room_id + 1, 256)  # cover all possible SCUMM room IDs
 
     # --- Load script data ---
     global_scripts = discover_global_scripts(data_dir)

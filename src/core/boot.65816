@@ -185,6 +185,16 @@ sa1.init:
   .ACCU 8
   .INDEX 8
 
+  ; Map upper ROM banks for room/script data access.
+  ; Banks 32+ ($E0-$FF) are empty — safe to permanently remap.
+  ; EXB=4 → $E0-$EF = physical banks 64-79 (data 0-1MB)
+  ; FXB=5 → $F0-$FF = physical banks 80-95 (data 1-2MB)
+  ; Data beyond 2MB: temporarily swap FXB to 6 or 7 during room loads.
+  lda #4
+  sta.l EXB               ; $2222
+  lda #5
+  sta.l FXB               ; $2223
+
   ; Enable BW-RAM writes for both CPUs
   lda #SBWE_SNES_BWRAM_WRITE_ENABLE
   sta.l SBWE              ; $2226

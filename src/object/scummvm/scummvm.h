@@ -536,6 +536,7 @@ SCUMM.keyAckDelay        dw      ; frames var[105] has been 0 while button held 
   _oamSrcLen ds 1
   _costDirPtr ds 3         ; 24-bit pointer into CostumeDirTable
   _costDirPtrPad ds 1      ; alignment
+  ; ROM data pointer uses tmp+24 (3 bytes) from kernel ZP, not per-object ZP
   zpLen ds 0
 .ende
 

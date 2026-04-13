@@ -17,6 +17,74 @@
 * @param a<16bit>  low 16 bits of address
 * @param x<16bit>  high 16 bits of address
 */
+;===================================================================
+; room.setRomDataPtr -- set 24-bit pointer for ROM data access
+;
+; Converts a linear offset within rom_data.bin to a CPU address
+; using the SA-1 MMC bank mapping:
+;   EXB=4 → $E0-$EF = physical 64-79  (offset 0x000000-0x0FFFFF)
+;   FXB=5 → $F0-$FF = physical 80-95  (offset 0x100000-0x1FFFFF)
+;   For offset >= 0x200000: swap FXB to 6 or 7.
+;
+; Input:  A = offset low 16 bits, X = offset high 8 bits (bits 16-23)
+; Output: tmp+24 set to 24-bit CPU address
+; Clobbers: A, X
+;===================================================================
+room.setRomDataPtr:
+  php
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ; Store offset[15:0] into tmp+24 low word
+  sta.b tmp+24
+
+  ; X = offset[23:16].  Compute CPU bank from physical bank.
+  ; Physical bank = 64 + X.  Block = (64 + X) >> 4 = 4 + (X >> 4).
+  ; Bank within block = X & $0F.
+  txa
+  and #$00FF
+  pha                       ; save offset high byte
+  lsr a
+  lsr a
+  lsr a
+  lsr a                     ; A = X >> 4 = block offset (0, 1, 2, 3)
+  beq _srdp.exb             ; block 0 → EXB window ($E0)
+
+  ; block 1+ → FXB window ($F0)
+  ; If block > 1, need to swap FXB register
+  cmp #1
+  beq _srdp.fxbDefault      ; block 1 → FXB already = 5
+
+  ; block 2 or 3 → swap FXB to (4 + block_offset)
+  clc
+  adc #4                    ; FXB value = 4 + block_offset
+  sep #$20
+  sta.l FXB
+  rep #$20
+
+_srdp.fxbDefault:
+  pla                       ; recover offset high byte
+  and #$000F                ; bank within block
+  clc
+  adc #$00F0                ; CPU bank = $F0 + bank_within_block
+  bra _srdp.storeBank
+
+_srdp.exb:
+  pla                       ; recover offset high byte
+  and #$000F                ; bank within block
+  clc
+  adc #$00E0                ; CPU bank = $E0 + bank_within_block
+
+_srdp.storeBank:
+  sep #$20
+  sta.b tmp+24+2       ; store bank byte
+  rep #$20
+
+  plp
+  rts
+
+
 room.msu1Seek:
   php
   rep #$31

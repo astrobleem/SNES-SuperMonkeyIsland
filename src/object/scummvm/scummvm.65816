@@ -293,15 +293,18 @@ _init.zeroCache:
   lda #1400
   ldx #40*2
   sta.w SCUMM.globalVars,x          ; VAR(40) = VAR_HEAPSPACE = 1400
+  lda #4
+  ldx #19*2
+  sta.w SCUMM.globalVars,x          ; VAR(19) = VAR_TIMER_NEXT = 4 (ScummVM default)
   lda #3
-  ldx #46*2
-  sta.w SCUMM.globalVars,x          ; VAR(46) = VAR_SOUNDCARD = 3 (SB)
+  ldx #48*2
+  sta.w SCUMM.globalVars,x          ; VAR(48) = VAR_SOUNDCARD = 3 (SB)
   lda #19
-  ldx #47*2
-  sta.w SCUMM.globalVars,x          ; VAR(47) = VAR_VIDEOMODE = 19 (VGA)
-  lda #1
   ldx #49*2
-  sta.w SCUMM.globalVars,x          ; VAR(49) = VAR_FIXEDDISK = 1
+  sta.w SCUMM.globalVars,x          ; VAR(49) = VAR_VIDEOMODE = 19 (VGA)
+  lda #1
+  ldx #51*2
+  sta.w SCUMM.globalVars,x          ; VAR(51) = VAR_FIXEDDISK = 1
   lda #$0100
   ldx #7*2
   sta.w SCUMM.globalVars,x          ; VAR(7) = $0100 = Part 1 fresh start (script 188 switch)
@@ -459,6 +462,42 @@ _init.lastScale:
 +
   .ACCU 16
   .INDEX 16
+
+  ;--- Per-frame timer variable updates (ScummVM scummLoop) ---
+  ; delta = VAR_TIMER_NEXT (var 19), default 4
+  ldx #19*2
+  lda.w SCUMM.globalVars,x           ; delta = VAR(19) = VAR_TIMER_NEXT
+  beq _play.timerDone                 ; delta=0 → skip (shouldn't happen)
+  ; VAR_TIMER (var 46) = delta (reset each frame)
+  ldx #46*2
+  sta.w SCUMM.globalVars,x
+  ; VAR_TIMER_TOTAL (var 47) += delta
+  ldx #47*2
+  clc
+  adc.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x
+  ; VAR_TMR_1 (var 11) += delta
+  ldx #19*2
+  lda.w SCUMM.globalVars,x           ; reload delta
+  ldx #11*2
+  clc
+  adc.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x
+  ; VAR_TMR_2 (var 12) += delta
+  ldx #19*2
+  lda.w SCUMM.globalVars,x
+  ldx #12*2
+  clc
+  adc.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x
+  ; VAR_TMR_3 (var 13) += delta
+  ldx #19*2
+  lda.w SCUMM.globalVars,x
+  ldx #13*2
+  clc
+  adc.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x
+_play.timerDone:
 
   ; Check for pending room change (sanitize to 8-bit room numbers)
   lda.w SCUMM.newRoom

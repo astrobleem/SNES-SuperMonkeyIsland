@@ -355,8 +355,10 @@ def _rgb_to_bgr555_array(rgb_array):
 
 # Magic pink transparent colors in SCUMM MI1 object images.
 # (171,0,171) = VGA palette index 5 in most rooms.
+# (168,0,168) = same after BGR555 round-trip (171 >> 3 << 3 = 168).
 # (252,84,252) = alternate transparency marker used by some extractors.
-SCUMM_TRANS_COLORS = {(171, 0, 171), (252, 84, 252)}
+# (248,80,248) = same after BGR555 round-trip.
+SCUMM_TRANS_COLORS = {(171, 0, 171), (168, 0, 168), (252, 84, 252), (248, 80, 248)}
 
 
 def _load_room_objects(room_dir, bg_width, bg_height):

@@ -738,8 +738,14 @@ room.load:
   ;flush DMA queue for palette (we're in force blank)
   jsr core.dma.processQueue
 
-  ;romReadPos is past tileset (loadTileset advanced it).
-  ;Tiles are loaded on-demand by the tile cache from ROM.
+  ;Advance romReadPos past tileset (tiles loaded on-demand by cache)
+  lda.w GLOBAL.room.romReadPos_lo
+  clc
+  adc.w GLOBAL.room.hdr.chr_size
+  sta.w GLOBAL.room.romReadPos_lo
+  lda.w GLOBAL.room.romReadPos_hi
+  adc.w GLOBAL.room.hdr.chr_size_hi
+  sta.w GLOBAL.room.romReadPos_hi
 
   ;read all tilemap to WRAM $7F only (no VRAM writes)
   ;romReadPos points to tilemap data

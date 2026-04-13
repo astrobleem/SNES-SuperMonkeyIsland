@@ -1,0 +1,12 @@
+; ROM data addresses -- included by engine code for build-time constants.
+; The actual binary data is appended to the ROM post-build (not via INCBIN)
+; because WLA-DX cannot handle >64 HiROM banks.
+;
+; SA-1 MMC registers (EXB/FXB) remap CPU address windows to access
+; the upper physical ROM banks at runtime.
+
+.include "src/config/config.inc"
+.include "build/rom_data.inc"
+
+; Physical bank where appended data starts (4MB / 64KB = bank 64)
+.define ROM_DATA_PHYSICAL_BANK_BASE 64

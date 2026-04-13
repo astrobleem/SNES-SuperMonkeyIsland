@@ -75,12 +75,19 @@ converted_bg_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(sprite
 sprite_animations := $(shell find $(datadir)/ -type d -name '*.gfx_sprite')
 converted_sprite_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(sprite_animations))))
 
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin)
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
-#link 65816 objects
+# ROM data packer (room tiles + script bytecodes for upper ROM banks)
+romdatabin := $(builddir)/rom_data.bin
+romdatainc := $(builddir)/rom_data.inc
+romdatapacker := python3 ./tools/rom_pack_data.py
+
+#link 65816 objects, then append ROM data
 all: $(linkobjectfile)
 	$(linker) $(linkflags) $(linkobjectfile) $(romfile)
+	@echo "Appending ROM data (room tiles + scripts) to upper banks..."
+	cat $(romdatabin) >> $(romfile)
 	$(MD) $(distdir)
 	cp $(romfile) $(distdir)/SuperMonkeyIsland.sfc
 
@@ -98,6 +105,10 @@ $(linkobjectfile): $(objects)
 $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles) $(scriptfiles) $(interfacefiles) $(inheritancefiles) $(datafiles) | $(builddirs)
 	$(assembler) $(assemblerflags) $< $@
 
+
+#pack room + script data into ROM data blob
+$(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) | $(builddirs)
+	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc)
 
 #compile TAD audio data (run tad-compiler to produce binary blob)
 $(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx/*.txt) $(wildcard audio/samples/*.wav) | $(builddirs)

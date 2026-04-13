@@ -14,7 +14,7 @@ SLOT 2 16	;zero-page ram. 16=debug value to check if all routines relocate prope
 .ENDME
 
 .ROMBANKSIZE $10000    ; Every ROM bank is 64 KBytes in size, also necessary.
-.ROMBANKS 64           ; 32Mbits (4MB) -- 64 HiROM banks, directly addressable via SA-1
+.ROMBANKS 64           ; 32Mbits (4MB) -- 64 HiROM banks. Room/script data appended post-build (banks 64+)
 
 
 /*

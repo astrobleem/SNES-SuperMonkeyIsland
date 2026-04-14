@@ -463,41 +463,9 @@ _init.lastScale:
   .ACCU 16
   .INDEX 16
 
-  ;--- Per-frame timer variable updates (ScummVM scummLoop) ---
-  ; delta = VAR_TIMER_NEXT (var 19), default 4
-  ldx #19*2
-  lda.w SCUMM.globalVars,x           ; delta = VAR(19) = VAR_TIMER_NEXT
-  beq _play.timerDone                 ; delta=0 → skip (shouldn't happen)
-  ; VAR_TIMER (var 46) = delta (reset each frame)
-  ldx #46*2
-  sta.w SCUMM.globalVars,x
-  ; VAR_TIMER_TOTAL (var 47) += delta
-  ldx #47*2
-  clc
-  adc.w SCUMM.globalVars,x
-  sta.w SCUMM.globalVars,x
-  ; VAR_TMR_1 (var 11) += delta
-  ldx #19*2
-  lda.w SCUMM.globalVars,x           ; reload delta
-  ldx #11*2
-  clc
-  adc.w SCUMM.globalVars,x
-  sta.w SCUMM.globalVars,x
-  ; VAR_TMR_2 (var 12) += delta
-  ldx #19*2
-  lda.w SCUMM.globalVars,x
-  ldx #12*2
-  clc
-  adc.w SCUMM.globalVars,x
-  sta.w SCUMM.globalVars,x
-  ; VAR_TMR_3 (var 13) += delta
-  ldx #19*2
-  lda.w SCUMM.globalVars,x
-  ldx #13*2
-  clc
-  adc.w SCUMM.globalVars,x
-  sta.w SCUMM.globalVars,x
-_play.timerDone:
+  ;--- Timer updates moved to AFTER slot execution (see _play.timerUpdate) ---
+  ;--- This matches ScummVM's scummLoop order: scripts run first, then timers.
+  ;--- Prevents timer increments from corrupting var[11]/[12]/[13] set by scripts.
 
   ; Check for pending room change (sanitize to 8-bit room numbers)
   lda.w SCUMM.newRoom
@@ -546,7 +514,10 @@ _play.scanPop:
   bra _play.scanOverride
 _play.directSkip:
   ; Override can't fire (csNest=0 or no target found).
-  nop
+  ; Set var[39] = 1 so boot script can detect START and exit attract loop.
+  ldx #39*2
+  lda #1
+  sta.w SCUMM.globalVars,x
 
 _play.noAbort:
   .ACCU 16
@@ -722,6 +693,22 @@ _play.noSentence:
 
   ; Register pending DMA transfers (CHR, cursor, verb, dialog) via superfree helper
   jsl scummvm.registerPendingDma
+
+  ;--- Per-frame timer variable updates (ScummVM scummLoop) ---
+  ;--- VAR_TMR_1/2/3 (var 11/12/13) increments REMOVED: scripts use these
+  ;--- variables for general purposes (e.g. room number in loadRoomWithEgo).
+  ;--- The per-frame increment corrupts them. VAR_TIMER/VAR_TIMER_TOTAL still update.
+  rep #$31
+  ldx #19*2
+  lda.w SCUMM.globalVars,x           ; delta = VAR(19) = VAR_TIMER_NEXT
+  beq _play.timerDone
+  ldx #46*2
+  sta.w SCUMM.globalVars,x           ; VAR_TIMER (var 46) = delta
+  ldx #47*2
+  clc
+  adc.w SCUMM.globalVars,x
+  sta.w SCUMM.globalVars,x           ; VAR_TIMER_TOTAL (var 47) += delta
+_play.timerDone:
 
 _play.done:
   .ACCU 16
@@ -5439,6 +5426,9 @@ _cc.epilogue:
   rts
 
 ; systemOps ($98)
+; Sub-op 3 (restart) is intentionally a no-op. The boot script's attract
+; mode loop uses var[39] to branch: START sets var[39]=1, which skips
+; the restart and falls through to loadRoomWithEgo (game start).
 op_systemOps:
   .ACCU 16
   .INDEX 16
@@ -15165,7 +15155,15 @@ _ears.renderChar:
 _ears.renderEnd:
   .ACCU 16
   .INDEX 16
-  iny                                  ; skip past $00 terminator
+  ; Skip remaining string data to $00 terminator.
+  ; _ears.renderNewline may bail here early (verb area overflow),
+  ; leaving Y mid-string. Must consume all bytes to $00.
+- lda [tmp],y
+  and #$00FF
+  beq +
+  iny
+  bra -
++ iny                                  ; skip past $00 terminator
 
   ; --- Default dialogColor to white if not set ---
   lda.w SCUMM.dialogColor

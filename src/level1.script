@@ -17,6 +17,7 @@
 
   jsr core.vram.init
   jsr core.cgram.clear
+  jsr core.oam.clearTable
 
   lda.w #OBJECT.PROPERTIES.isChapter
   jsr abstract.Iterator.setProperties
@@ -40,13 +41,14 @@
   stz.w windowMainscreen
   rep #$31
 
-  ;--- Create Brightness object and set to full ---
-  NEW Brightness.CLS.PTR objBrightness
-  lda #BRIGHTNESS.FULL
-  CALL Brightness.set.MTD objBrightness
+  ;--- Keep screen dark — SCUMM owns ScreenBrightness from here ---
+  sep #$20
+  stz.w ScreenBrightness
+  rep #$20
 
   ;--- Create ScummVM interpreter object ---
   ; ScummVM.init reads MSU-1 script headers and starts boot script 1
+  ; No Brightness object — SCUMM's processRoomChange handles fade-in/out
   NEW ScummVM.CLS.PTR objScummVM
 
   ;--- Idle loop: ScummVM.play runs in OOP play loop ---

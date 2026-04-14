@@ -464,13 +464,16 @@ _init.lastScale:
   .ACCU 16
   .INDEX 16
 
-  ;--- Timer updates moved to AFTER slot execution (see _play.timerUpdate) ---
-  ;--- This matches ScummVM's scummLoop order: scripts run first, then timers.
-  ;--- Prevents timer increments from corrupting var[11]/[12]/[13] set by scripts.
+  ; (brightness force moved to end of _play, after processRoomChange)
 
-  ; Check for pending room change (sanitize to 8-bit room numbers)
+  ; Check for pending room change (sanitize to 8-bit, reject invalid rooms)
   lda.w SCUMM.newRoom
   and #$00FF
+  cmp #100                         ; MI1 rooms are 0-99; reject garbage values
+  bcc +
+  lda.w SCUMM.currentRoom          ; invalid newRoom → keep current (no change)
+  and #$00FF
++
   sta.w SCUMM.newRoom
   lda.w SCUMM.currentRoom
   and #$00FF
@@ -710,6 +713,18 @@ _play.noSentence:
   adc.w SCUMM.globalVars,x
   sta.w SCUMM.globalVars,x           ; VAR_TIMER_TOTAL (var 47) += delta
 _play.timerDone:
+
+  ; Force brightness after game start: script 23's bytecode overrun executes
+  ; garbage opcodes that trigger spurious processRoomChange, causing fade-outs.
+  ; Must run AFTER all scripts + processRoomChange to override their changes.
+  rep #$31
+  ldx #39*2
+  lda.w SCUMM.globalVars,x
+  beq _play.done
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  rep #$20
 
 _play.done:
   .ACCU 16
@@ -1128,31 +1143,23 @@ _prc.noEntryScript2:
   ; Clear any stale BG3 text from boot scripts before making screen visible
   jsl scummvm.clearDialogTilemap
 
-  ; --- Fade in (no ENCD case) ---
-_prc.fadeInNoEncd:
+  ; --- Set brightness to $0F immediately (no gradual fade) ---
+  ; The waitFrame-based fade loop can hang during game start when NMI
+  ; timing is disrupted by the systemOps restart. Set directly.
   sep #$20
-  .ACCU 8
-  lda.w ScreenBrightness
-  cmp #$0F
-  bcs _prc.fadeInNoEncdDone
-  clc
-  adc #3
-  cmp #$0F
-  bcc +
-    lda #$0F
-+
+  lda #$0F
   sta.w ScreenBrightness
-  rep #$20
-  .ACCU 16
-  jsr core.nmi.waitFrame
-  bra _prc.fadeInNoEncd
-_prc.fadeInNoEncdDone:
   rep #$20
   .ACCU 16
 
 _prc.failed:
   .ACCU 16
   .INDEX 16
+  ; Ensure screen is visible after room change
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  rep #$20
   rts
 
 ;-------------------------------------------------------------------
@@ -1416,7 +1423,22 @@ _loadGlobal.cacheOk:
 ; Input: A = script number to start
 ;-------------------------------------------------------------------
 _scummvm.startScriptSlot:
-  ; Copy protection bypass removed: script 155 starts normally.
+  ; Skip script 23 during game start (var[39]=1): its conditional flow
+  ; overruns the bytecode due to missing attract-mode game state, executing
+  ; garbage opcodes that corrupt brightness and trigger spurious room changes.
+  ; Room 22 is loaded directly by systemOps.gameStart instead.
+  cmp #23
+  bne _startScript.not23
+  pha
+  ldx #39*2
+  lda.w SCUMM.globalVars,x
+  beq +
+  pla
+  clc                                ; script not started
+  rts
++
+  pla
+_startScript.not23:
   ; It gets stuck on the quiz (no keyboard input on SNES), but the boot
   ; script only needs isScriptRunning(155)==true to exit its wait loop.
   ; The keyboard emulation at updateCursor handles button→var[105] mapping
@@ -3724,6 +3746,24 @@ _floop.overOk:
   sec
   bra _scummvm.fetchYield             ; yield; owner slot gets new PC on next iteration
 _floop.noOverride:
+  ; Pre-dispatch bounds check: kill script if PC ran past bytecode
+  ldx.w SCUMM.currentSlotPtr
+  tya
+  cmp.w SCUMM.slots.cacheLen,x
+  bcc _floop.pcInBounds
+  beq _floop.pcInBounds
+  ; PC overrun — kill script before it executes garbage opcodes
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  tya
+  sta.l $7EFD10                    ; DEBUG: overrun PC
+  lda.w SCUMM.slots.number,x
+  sta.l $7EFD14                    ; DEBUG: script number
+  sec
+  jmp _scummvm.fetchYield         ; yield (dead script)
+_floop.pcInBounds:
   ; Read opcode byte (16-bit load, mask to 8-bit)
   lda [tmp],y
   and #$00FF
@@ -3736,7 +3776,8 @@ _floop.noOverride:
   jsr (_scummvm.dispatchTable,x)
   bcs _scummvm.fetchYield     ; handler said yield
   dec.w SCUMM.opcodeLimit
-  bne _scummvm.fetchLoop      ; counter not zero, keep going
+  beq _scummvm.fetchYield     ; counter zero, yield
+  jmp _scummvm.fetchLoop      ; keep going (JMP — branch range exceeded)
 _scummvm.fetchYield:
   ; Save Y back to slot.pc
   ldx.w SCUMM.currentSlotPtr
@@ -5472,6 +5513,7 @@ _systemOps.killSkip:
   bcc _systemOps.killLoop
   stz.w SCUMM.cutsceneNest
   stz.w SCUMM.newRoom
+  stz.w SCUMM.currentRoom            ; force processRoomChange on next tick
   ply
   plx
   ; Check var[39]: attract loop restart vs game start
@@ -5486,15 +5528,18 @@ _systemOps.gameStart:
   stz.w SCUMM.cursorEnabled
   ldx #52*2
   stz.w SCUMM.globalVars,x
-  ; Set newRoom=1 directly. Script 23 (started by game-start code at $16D1)
-  ; should load the starting room, but its conditional flow depends on game
-  ; state not established during the fast SNES attract mode. This ensures
-  ; room 1 (beach) loads even if script 23 fails.
-  lda #1
+  ; Set newRoom=22 (Deep in the Caribbean opening cinematic).
+  ; Also force brightness to $0F so the screen isn't stuck black.
+  ; processRoomChange's fade-in should handle this, but as a safety net
+  ; ensure the screen is visible after the room loads.
+  lda #22
   sta.w SCUMM.newRoom
-  ; Also set VAR_ROOM so scripts see the correct room
   ldx #4*2
   sta.w SCUMM.globalVars,x
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  rep #$20
 _systemOps.noRestart:
   clc
   rts
@@ -5819,9 +5864,9 @@ op_loadRoom:
   ldx #4*2                            ; VAR_ROOM
   stz.w SCUMM.globalVars,x
   stz.w SCUMM.newRoom                 ; clear any stale pending change
-  sep #$20
-  stz.w ScreenBrightness              ; blank screen (hides stale tiles)
-  rep #$20
+  ; NOTE: brightness NOT cleared here — processRoomChange manages fade-in/out.
+  ; Clearing here would override processRoomChange's brightness after game start
+  ; (script 23's bytecode overrun executes garbage loadRoom(0) calls).
   clc
   rts
 

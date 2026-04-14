@@ -429,16 +429,17 @@ _init.lastScale:
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
-  ; Boot script handles full game init.  Pass Local[0] = $E13F to take
-  ; the normal boot path: attract mode → copy protection → game start.
-  ; The boot script at offset $0009 checks isEqual(Local[0], $E13F).
-  ; With $E13F the check succeeds, jumping to $0018 (normal init).
-  ; Copy protection (Dial-a-Pirate) is handled by script 155 and the
-  ; keyboard emulation in updateCursor.
+  ; Boot script handles full game init.  boot_param=0 (default) gives
+  ; normal boot: attract mode → copy protection → game start.
+  ; The boot script at $0009 checks isEqual(Local[0], $E13F).
+  ; With Local[0]=0, isEqual fails → fall through to $0010 which sets
+  ; Local[0]=0 and jumps to $004B (normal default boot path).
+  ; $E13F was for PC sound driver selection (not applicable to SNES).
   lda #1
   jsr _scummvm.startScriptSlot
   ; Write boot_param to slot 0 Local[0] (slot offset + 14 = localVars[0])
-  lda #$E13F
+  ; Default = 0 (ScummVM default for MI1 CD)
+  lda #0
   sta.w SCUMM.slots.localVars
 
   ;--- Mark VM as running ---
@@ -5453,7 +5454,7 @@ op_systemOps:
   ; --- systemOps(3) = restart ---
   ; ScummVM restart(): kills all scripts, clears state, restarts boot script.
   ; Kill all scripts except the current slot, clear cutscene/room state,
-  ; reset PC to 0, restore Local[0] to boot_param ($E13F), yield.
+  ; reset PC to 0, restore Local[0] to boot_param (0), yield.
   phx
   phy
   ldx #0
@@ -5487,9 +5488,9 @@ _systemOps.killSkip:
   iny
   cpy #50                            ; 25 local vars * 2 bytes
   bcc -
-  ; Restore Local[0] = boot_param so isEqual(Local[0], $E13F) succeeds on restart
+  ; Restore Local[0] = boot_param (0 = default, same as ScummVM restart)
   ldx.w SCUMM.currentSlotPtr
-  lda #$E13F
+  lda #0
   sta.w SCUMM.slots.localVars,x
   ply
   plx

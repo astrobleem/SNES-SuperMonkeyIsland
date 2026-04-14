@@ -363,8 +363,8 @@ _init.zeroDialogTilemap:
   bcc _init.zeroDialogTilemap
   lda #1
   sta.w SCUMM.dialogDmaPending
-  lda #400
-  sta.w SCUMM.dialogBootSuppress   ; suppress CD text for ~6.7 sec
+  lda #10
+  sta.w SCUMM.dialogBootSuppress   ; suppress stale CD text briefly during init
 
   ;--- Init inventory state ---
   stz.w SCUMM.inventoryCount
@@ -428,15 +428,16 @@ _init.lastScale:
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
-  ; Boot script handles full game init.  Pass Local[0] = $E11F to
-  ; trigger the copy-protection bypass path built into the boot script.
+  ; Boot script handles full game init.  Pass Local[0] = $E13F to take
+  ; the normal boot path: attract mode → copy protection → game start.
   ; The boot script at offset $0009 checks isEqual(Local[0], $E13F).
-  ; SCUMM isEqual jumps when NOT equal, so $E11F != $E13F takes the
-  ; bypass branch at $0018, skipping the normal attract/CP init.
+  ; With $E13F the check succeeds, jumping to $0018 (normal init).
+  ; Copy protection (Dial-a-Pirate) is handled by script 155 and the
+  ; keyboard emulation in updateCursor.
   lda #1
   jsr _scummvm.startScriptSlot
   ; Write boot_param to slot 0 Local[0] (slot offset + 14 = localVars[0])
-  lda #$E11F
+  lda #$E13F
   sta.w SCUMM.slots.localVars
 
   ;--- Mark VM as running ---
@@ -517,12 +518,7 @@ _play.scanPop:
   pla
   bra _play.scanOverride
 _play.directSkip:
-  ; Override can't fire (csNest=0 or no target found).
-  ; Set var[39] = 1 so boot script can detect START and exit attract loop.
-  ldx #39*2
-  lda #1
-  sta.w SCUMM.globalVars,x
-
+  ; Override can't fire (csNest=0 or no target found). No action.
 _play.noAbort:
   .ACCU 16
   .INDEX 16
@@ -713,18 +709,6 @@ _play.noSentence:
   adc.w SCUMM.globalVars,x
   sta.w SCUMM.globalVars,x           ; VAR_TIMER_TOTAL (var 47) += delta
 _play.timerDone:
-
-  ; Force brightness after game start: script 23's bytecode overrun executes
-  ; garbage opcodes that trigger spurious processRoomChange, causing fade-outs.
-  ; Must run AFTER all scripts + processRoomChange to override their changes.
-  rep #$31
-  ldx #39*2
-  lda.w SCUMM.globalVars,x
-  beq _play.done
-  sep #$20
-  lda #$0F
-  sta.w ScreenBrightness
-  rep #$20
 
 _play.done:
   .ACCU 16
@@ -1423,22 +1407,6 @@ _loadGlobal.cacheOk:
 ; Input: A = script number to start
 ;-------------------------------------------------------------------
 _scummvm.startScriptSlot:
-  ; Skip script 23 during game start (var[39]=1): its conditional flow
-  ; overruns the bytecode due to missing attract-mode game state, executing
-  ; garbage opcodes that corrupt brightness and trigger spurious room changes.
-  ; Room 22 is loaded directly by systemOps.gameStart instead.
-  cmp #23
-  bne _startScript.not23
-  pha
-  ldx #39*2
-  lda.w SCUMM.globalVars,x
-  beq +
-  pla
-  clc                                ; script not started
-  rts
-+
-  pla
-_startScript.not23:
   ; It gets stuck on the quiz (no keyboard input on SNES), but the boot
   ; script only needs isScriptRunning(155)==true to exit its wait loop.
   ; The keyboard emulation at updateCursor handles button→var[105] mapping
@@ -3757,10 +3725,6 @@ _floop.noOverride:
   lda #SCUMM_SLOT_DEAD
   sta.w SCUMM.slots.status,x
   rep #$20
-  tya
-  sta.l $7EFD10                    ; DEBUG: overrun PC
-  lda.w SCUMM.slots.number,x
-  sta.l $7EFD14                    ; DEBUG: script number
   sec
   jmp _scummvm.fetchYield         ; yield (dead script)
 _floop.pcInBounds:
@@ -3788,10 +3752,7 @@ _scummvm.fetchYield:
   cmp.w SCUMM.slots.cacheLen,x
   bcc _fetchYield.ok              ; PC < cacheLen → OK
   beq _fetchYield.ok              ; PC == cacheLen → OK
-  ; PC overrun — log debug info and kill the script
-  sta.l $7EFD10                    ; DEBUG: overrun PC
-  lda.w SCUMM.slots.number,x
-  sta.l $7EFD14                    ; DEBUG: script number
+  ; PC overrun — kill the script
   sep #$20
   lda #SCUMM_SLOT_DEAD
   sta.w SCUMM.slots.status,x
@@ -5480,18 +5441,16 @@ _cc.epilogue:
 ; systemOps ($98)
 ; Sub-op 3 = restart. Kills all scripts EXCEPT the current one (boot script),
 ; clears cutscene state, and resets current slot to PC=0 via Y register.
-; This loops the attract mode: the boot script restarts from the beginning.
-; The var[39] check in the bytecode skips past the restart when START is
-; pressed, falling through to game start code instead.
+; The boot script restarts from the beginning (attract mode loop).
 op_systemOps:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchByte
   cmp #3
   bne _systemOps.noRestart
-  ; --- Restart/cleanup: always kill other scripts + clear cutscene.
-  ; When var[39]=0 (attract loop): also reset PC=0 and yield (loop).
-  ; When var[39]=1 (START pressed): don't reset PC, continue to game start. ---
+  ; --- systemOps(3) = restart ---
+  ; Kill all scripts except the current slot, clear cutscene state,
+  ; reset PC to 0, yield. The boot script restarts from the beginning.
   phx
   phy
   ldx #0
@@ -5516,30 +5475,9 @@ _systemOps.killSkip:
   stz.w SCUMM.currentRoom            ; force processRoomChange on next tick
   ply
   plx
-  ; Check var[39]: attract loop restart vs game start
-  ldx #39*2
-  lda.w SCUMM.globalVars,x
-  bne _systemOps.gameStart         ; var[39]!=0 → game start
-  ldy #0                          ; var[39]=0 → attract loop → reset PC=0
-  sec                              ; yield (restart next tick)
+  ldy #0                             ; reset PC to 0
+  sec                                 ; yield (restart next tick)
   rts
-_systemOps.gameStart:
-  ; Clear cursor state
-  stz.w SCUMM.cursorEnabled
-  ldx #52*2
-  stz.w SCUMM.globalVars,x
-  ; Set newRoom=22 (Deep in the Caribbean opening cinematic).
-  ; Also force brightness to $0F so the screen isn't stuck black.
-  ; processRoomChange's fade-in should handle this, but as a safety net
-  ; ensure the screen is visible after the room loads.
-  lda #22
-  sta.w SCUMM.newRoom
-  ldx #4*2
-  sta.w SCUMM.globalVars,x
-  sep #$20
-  lda #$0F
-  sta.w ScreenBrightness
-  rep #$20
 _systemOps.noRestart:
   clc
   rts

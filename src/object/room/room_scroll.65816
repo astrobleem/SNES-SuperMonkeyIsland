@@ -466,14 +466,18 @@ room.reloadViewport:
   php
   rep #$31
 
+  ;save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
+  sep #$20
+  lda.w ScreenBrightness
+  pha                             ;save brightness
+  rep #$20
+
   ;block all interrupts for safe VRAM access
   sei
   jsr core.nmi.stop
 
-  ;save HDMA + brightness state
+  ;save HDMA state
   sep #$20
-  lda.w ScreenBrightness
-  pha                             ;save brightness
   lda.w GLOBAL.HDMA.CHANNEL.ENABLE
   pha                             ;save HDMA
 
@@ -526,14 +530,18 @@ room.remapViewport:
   php
   rep #$31
 
+  ;save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
+  sep #$20
+  lda.w ScreenBrightness
+  pha
+  rep #$31
+
   ;block interrupts for safe VRAM writes
   sei
   jsr core.nmi.stop
 
   ;save HDMA state and disable
   sep #$20
-  lda.w ScreenBrightness
-  pha
   lda.w GLOBAL.HDMA.CHANNEL.ENABLE
   pha
   lda #0

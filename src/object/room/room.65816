@@ -1895,13 +1895,18 @@ room.refreshObjectColumns:
 _roc.hasDirty:
 
   ;--- enter force blank for direct VRAM access ---
+  ; Save brightness BEFORE core.nmi.stop (which zeros ScreenBrightness)
+  sep #$20
+  .ACCU 8
+  lda.w ScreenBrightness
+  pha                             ;save brightness
+  rep #$20
+
   sei                             ;block IRQ
   jsr core.nmi.stop               ;disable NMI
 
   sep #$20
   .ACCU 8
-  lda.w ScreenBrightness
-  pha                             ;save brightness
   lda.w GLOBAL.HDMA.CHANNEL.ENABLE
   pha                             ;save HDMA channels
   lda #0

@@ -3742,6 +3742,20 @@ _scummvm.fetchYield:
   ldx.w SCUMM.currentSlotPtr
   tya
   sta.w SCUMM.slots.pc,x
+  ; Bounds check: kill if PC > cacheLen (bytecode overrun).
+  ; PC == cacheLen is normal (1 past last byte, from stopObjectCode).
+  cmp.w SCUMM.slots.cacheLen,x
+  bcc _fetchYield.ok              ; PC < cacheLen → OK
+  beq _fetchYield.ok              ; PC == cacheLen → OK
+  ; PC overrun — log debug info and kill the script
+  sta.l $7EFD10                    ; DEBUG: overrun PC
+  lda.w SCUMM.slots.number,x
+  sta.l $7EFD14                    ; DEBUG: script number
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+_fetchYield.ok:
   rtl
 
 

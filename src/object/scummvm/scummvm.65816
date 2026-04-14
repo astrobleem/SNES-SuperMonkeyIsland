@@ -428,10 +428,11 @@ _init.lastScale:
   rep #$20
 
   ;--- Start MI1 boot script (script 1) ---
-  ; Boot script handles full game init.  Pass Local[0] = -7873 ($E11F) to
-  ; trigger the ScummVM copy-protection bypass path built into the script.
-  ; This skips the dial-a-pirate flow (SNES has no keyboard) and goes
-  ; directly to the game-init chain that puts ego in room 38.
+  ; Boot script handles full game init.  Pass Local[0] = $E11F to
+  ; trigger the copy-protection bypass path built into the boot script.
+  ; The boot script at offset $0009 checks isEqual(Local[0], $E13F).
+  ; SCUMM isEqual jumps when NOT equal, so $E11F != $E13F takes the
+  ; bypass branch at $0018, skipping the normal attract/CP init.
   lda #1
   jsr _scummvm.startScriptSlot
   ; Write boot_param to slot 0 Local[0] (slot offset + 14 = localVars[0])

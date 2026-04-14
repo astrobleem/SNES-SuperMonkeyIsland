@@ -5433,7 +5433,7 @@ op_systemOps:
   .INDEX 16
   jsr _scummvm.fetchByte
   cmp #3
-  bne _systemOps.done
+  bne _systemOps.noRestart
   ; --- Restart/cleanup: always kill other scripts + clear cutscene.
   ; When var[39]=0 (attract loop): also reset PC=0 and yield (loop).
   ; When var[39]=1 (START pressed): don't reset PC, continue to game start. ---
@@ -5463,11 +5463,18 @@ _systemOps.killSkip:
   ; Check var[39]: attract loop restart vs game start
   ldx #39*2
   lda.w SCUMM.globalVars,x
-  bne _systemOps.done             ; var[39]!=0 → game start → continue (clc)
+  bne _systemOps.gameStart         ; var[39]!=0 → game start
   ldy #0                          ; var[39]=0 → attract loop → reset PC=0
   sec                              ; yield (restart next tick)
   rts
-_systemOps.done:
+_systemOps.gameStart:
+  ; Clear cursor state so script 23's isLess(var[52],0) check passes.
+  ; The game start code may re-enable cursor via verbOps, but script 23
+  ; must see var[52]=0 on its first opcode.
+  stz.w SCUMM.cursorEnabled
+  ldx #52*2
+  stz.w SCUMM.globalVars,x
+_systemOps.noRestart:
   clc
   rts
 

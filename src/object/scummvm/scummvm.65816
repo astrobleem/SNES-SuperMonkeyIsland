@@ -5469,11 +5469,26 @@ _systemOps.killSkip:
   rts
 _systemOps.gameStart:
   ; Clear cursor state so script 23's isLess(var[52],0) check passes.
-  ; The game start code may re-enable cursor via verbOps, but script 23
-  ; must see var[52]=0 on its first opcode.
   stz.w SCUMM.cursorEnabled
   ldx #52*2
   stz.w SCUMM.globalVars,x
+  ; Set bit_var[563] = 1 (game init flag checked by script 23 at $0007).
+  ; Without this, script 23 takes a wrong branch and runs off the end of
+  ; its bytecode into garbage. Bit 563 = byte 70, bit 3.
+  ; Must use bank $7E explicitly — DBR may be ROM bank $C0 during fetchLoop.
+  phb
+  pea $7E7E                        ; push $7E twice (for PLB to set DBR=$7E)
+  plb
+  plb
+  phx
+  ldx #70
+  sep #$20
+  lda.w SCUMM.bitVars,x
+  ora #$08
+  sta.w SCUMM.bitVars,x
+  rep #$20
+  plx
+  plb                              ; restore original DBR
 _systemOps.noRestart:
   clc
   rts

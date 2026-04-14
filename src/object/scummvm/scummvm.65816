@@ -3641,8 +3641,11 @@ scummvm.executeSlot:
   ldx.w SCUMM.currentSlotPtr
   ldy.w SCUMM.slots.pc,x
 
-  ; Per-slot opcode execution limit -- prevents tight loops from blocking the engine
-  lda #500
+  ; Per-slot opcode execution limit -- prevents tight loops from blocking the engine.
+  ; ScummVM uses ~500K cycles (counting bytes consumed, not just opcodes).
+  ; SNES counts opcodes only: a print with 100 bytes of text = 1 opcode.
+  ; Use 100 to balance responsiveness with execution progress.
+  lda #100
   sta.w SCUMM.opcodeLimit
 
 _scummvm.fetchLoop:
@@ -7460,6 +7463,8 @@ _roomOps.palManipulate:
 op_loadRoomWithEgo:
   .ACCU 16
   .INDEX 16
+  lda.w SCUMM.currentOpcode          ; DEBUG: log opcode byte
+  sta.l $7EFD04
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object (p16[7])
   pha                                ; save object ID for room lookup
@@ -7469,6 +7474,7 @@ op_loadRoomWithEgo:
   bne _loadRoomEgo.hasRoom
   ; room=0: look up room from object via ObjRoomTable (ScummVM: getObjectRoom)
   pla                                ; A = object ID (16-bit, objects range 0-1045)
+  sta.l $7EFD00                      ; DEBUG: log object ID
   ; Bounds check: if object >= OBJ_ROOM_TABLE_SIZE, skip
   cmp #OBJ_ROOM_TABLE_SIZE
   bcs _loadRoomEgo.noRoom
@@ -7478,6 +7484,7 @@ op_loadRoomWithEgo:
   rep #$20
   and #$00FF
   beq _loadRoomEgo.noRoom           ; room 0 in table = unknown
+  sta.l $7EFD02                      ; DEBUG: log resolved room
   sta.w SCUMM.newRoom
   bra _loadRoomEgo.roomSet
 _loadRoomEgo.hasRoom:

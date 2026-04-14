@@ -39,8 +39,16 @@
 ++
   .ACCU 8
   .INDEX 16
+  ; Skip ScreenBrightness write when SCUMM VM is running — SCUMM's
+  ; processRoomChange and _play brightness guard own brightness control.
+  ; Use long address for SCUMM.running (defined in scummvm.h, not included here).
+  rep #$20
+  lda.l SCUMM.running
+  sep #$20
+  bne +
   lda this.current
   sta.w ScreenBrightness
++
   rts
 
   /**

@@ -712,6 +712,21 @@ _play.noSentence:
   sta.w SCUMM.globalVars,x           ; VAR_TIMER_TOTAL (var 47) += delta
 _play.timerDone:
 
+  ; --- Brightness guard ---
+  ; Ensure screen is visible when a room is loaded.
+  rep #$31
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  sta.l $7EFD20                      ; DEBUG: currentRoom at guard
+  beq _play.done                     ; room 0 = no room loaded, stay dark
+  sep #$20
+  lda.w ScreenBrightness
+  bne +                              ; already bright, skip
+  lda #$0F
+  sta.w ScreenBrightness
++
+  rep #$20
+
 _play.done:
   .ACCU 16
   .INDEX 16
@@ -880,27 +895,12 @@ _prc.bgReady:
   ; Save resolved room number
   pha
 
-  ; --- Fade out before room change ---
-  ; Step brightness down by 3 per frame (~5 frames from $0F to $00).
-  ; HDMA stays enabled so current room renders normally while dimming.
-_prc.fadeOut:
+  ; --- Instant blank for room change (no gradual fade) ---
+  ; Gradual fade used waitFrame which blocked for 5 frames, causing
+  ; brightness to stay at $00 when scripts trigger rapid room changes.
   sep #$20
-  .ACCU 8
-  lda.w ScreenBrightness
-  beq _prc.fadeOutDone
-  sec
-  sbc #3
-  bcs +
-    lda #0
-+
-  sta.w ScreenBrightness
+  stz.w ScreenBrightness
   rep #$20
-  .ACCU 16
-  jsr core.nmi.waitFrame
-  bra _prc.fadeOut
-_prc.fadeOutDone:
-  rep #$20
-  .ACCU 16
 
   ; Disable HDMA and zero ScreenBrightness before room.load.
   ; HDMA runs during forced blanking and corrupts CGRAM entries that
@@ -5815,15 +5815,15 @@ op_loadRoom:
   and #$00FF
   bne _loadRoom.nonZero
 
-  ; Room 0: apply immediately so consecutive loadRoom(0)+loadRoom(N)
-  ; works correctly (credits script 152: loadRoom(0) then loadRoom(10))
+  ; Room 0: clear SCUMM room state (ScummVM startScene(0) behavior).
+  ; Zero BOTH currentRoom and newRoom so they match — processRoomChange
+  ; only fires when they differ, so setting both to 0 avoids triggering
+  ; the room 0 fast path (which clears BG1 tiles). The next loadRoom(N)
+  ; with N>0 will set newRoom=N, causing processRoomChange to load room N.
   stz.w SCUMM.currentRoom
+  stz.w SCUMM.newRoom
   ldx #4*2                            ; VAR_ROOM
   stz.w SCUMM.globalVars,x
-  stz.w SCUMM.newRoom                 ; clear any stale pending change
-  ; NOTE: brightness NOT cleared here — processRoomChange manages fade-in/out.
-  ; Clearing here would override processRoomChange's brightness after game start
-  ; (script 23's bytecode overrun executes garbage loadRoom(0) calls).
   clc
   rts
 

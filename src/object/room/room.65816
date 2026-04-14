@@ -633,6 +633,14 @@ room.loadTilemapToWram:
   php
   rep #$31
 
+  ; Sanity check: reject garbage room headers (prevents infinite loop)
+  lda.w GLOBAL.room.hdr.width_tiles
+  cmp #129                       ; max reasonable width: 128 tiles (1024px)
+  bcs _room.wramTilemap.done     ; garbage → skip
+  lda.w GLOBAL.room.hdr.height_tiles
+  cmp #65                        ; max reasonable height: 64 tiles (512px)
+  bcs _room.wramTilemap.done     ; garbage → skip
+
   ;set ROM pointer to tilemap (romReadPos = after tileset)
   lda.w GLOBAL.room.romReadPos_lo
   ldx.w GLOBAL.room.romReadPos_hi
@@ -763,6 +771,29 @@ room.load:
 +
   ;read 32-byte header (seeks to dataOffset internally)
   jsr room.loadHeader
+
+  ;validate header: reject garbage data (rooms not in ROM data pack)
+  lda.w GLOBAL.room.hdr.width_tiles
+  cmp #129                       ; max 128 tiles
+  bcs _room.loadBadHeader
+  lda.w GLOBAL.room.hdr.height_tiles
+  cmp #65                        ; max 64 tiles
+  bcs _room.loadBadHeader
+  bra _room.loadHeaderOk
+_room.loadBadHeader:
+  ; Invalid room data — bail out as room-not-found
+  sep #$20
+  lda.w ScreenBrightness
+  sta.l INIDSP
+  pla                             ;restore saved interrupt flags
+  sta.w GLOBAL.interruptFlags
+  sta.l NMITIMEN
+  rep #$20
+  cli
+  plp
+  clc                             ;return failure
+  rts
+_room.loadHeaderOk:
 
   ;MSU_DATA stream now positioned after header = palette data
   ;register CGRAM DMA (256 bytes)

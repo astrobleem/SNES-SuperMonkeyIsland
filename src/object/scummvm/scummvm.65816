@@ -89,6 +89,7 @@ _init.zeroBits:
   stz.w SCUMM.scratch2
   stz.w SCUMM.cacheWritePtr
   stz.w SCUMM.cutsceneNest
+  stz.w SCUMM.inExpression
   ; Zero cutscene arrays (5 levels: Ptr 10B, Script 5B, Data 10B)
   ldx #0
 - stz.w SCUMM.cutScenePtr,x
@@ -4455,8 +4456,8 @@ op_isEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; equal → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not equal → cond FALSE → take jump
+  bne +                          ; not equal → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; equal → cond TRUE → take jump
 +
   clc
   rts
@@ -4477,8 +4478,8 @@ op_isNotEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bne +                          ; not equal → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; equal → cond FALSE → take jump
+  beq +                          ; equal → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; not equal → cond TRUE → take jump
 +
   clc
   rts
@@ -4495,8 +4496,8 @@ op_notEqualZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  bne +                          ; not zero → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; zero → cond FALSE → take jump
+  beq +                          ; zero → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; not zero → cond TRUE → take jump
 +
   clc
   rts
@@ -4513,8 +4514,8 @@ op_equalZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  beq +                          ; zero → cond TRUE → skip jump
-    jsr _scummvm.takeRelJump     ; not zero → cond FALSE → take jump
+  bne +                          ; not zero → cond FALSE → skip jump
+    jsr _scummvm.takeRelJump     ; zero → cond TRUE → take jump
 +
   clc
   rts
@@ -4535,8 +4536,8 @@ op_isGreater:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → b > a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond FALSE → jump
+  bcs +                          ; A >= scratch → b <= a → cond FALSE → skip
+    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond TRUE → jump
 +
   clc
   rts
@@ -4557,12 +4558,9 @@ op_isLess:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq _isL.doJump                ; A == scratch → b == a → b >= a → jump
-  bcs +                          ; A > scratch → b < a → cond TRUE → skip
-_isL.doJump:
-  .ACCU 16
-  .INDEX 16
-    jsr _scummvm.takeRelJump     ; A <= scratch → b >= a → cond FALSE → jump
+  bcc +                          ; A < scratch → b > a → cond FALSE → skip
+  beq +                          ; A == scratch → b == a → cond FALSE → skip
+    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond TRUE → jump
 +
   clc
   rts
@@ -4583,8 +4581,8 @@ op_isLessEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcs +                          ; A >= scratch → b <= a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond FALSE → jump
+  bcc +                          ; A < scratch → b > a → cond FALSE → skip
+    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond TRUE → jump
 +
   clc
   rts
@@ -4605,9 +4603,13 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; A == scratch → b >= a → cond TRUE → skip
-  bcc +                          ; A < scratch → b > a → b >= a → cond TRUE → skip
-    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond FALSE → jump
+  bcc _isGE.doJump               ; A < scratch → b > a → b >= a → cond TRUE → jump
+  beq _isGE.doJump               ; A == scratch → b >= a → cond TRUE → jump
+  bra +                          ; A > scratch → b < a → cond FALSE → skip
+_isGE.doJump:
+  .ACCU 16
+  .INDEX 16
+    jsr _scummvm.takeRelJump
 +
   clc
   rts
@@ -5449,8 +5451,9 @@ op_systemOps:
   cmp #3
   bne _systemOps.noRestart
   ; --- systemOps(3) = restart ---
-  ; Kill all scripts except the current slot, clear cutscene state,
-  ; reset PC to 0, yield. The boot script restarts from the beginning.
+  ; ScummVM restart(): kills all scripts, clears state, restarts boot script.
+  ; Kill all scripts except the current slot, clear cutscene/room state,
+  ; reset PC to 0, restore Local[0] to boot_param ($E13F), yield.
   phx
   phy
   ldx #0
@@ -5473,6 +5476,21 @@ _systemOps.killSkip:
   stz.w SCUMM.cutsceneNest
   stz.w SCUMM.newRoom
   stz.w SCUMM.currentRoom            ; force processRoomChange on next tick
+  ; Clear slot local variables and restore boot_param (ScummVM restart behavior)
+  ldx.w SCUMM.currentSlotPtr
+  ldy #0
+  lda #0
+- sta.w SCUMM.slots.localVars,x
+  inx
+  inx
+  iny
+  iny
+  cpy #50                            ; 25 local vars * 2 bytes
+  bcc -
+  ; Restore Local[0] = boot_param so isEqual(Local[0], $E13F) succeeds on restart
+  ldx.w SCUMM.currentSlotPtr
+  lda #$E13F
+  sta.w SCUMM.slots.localVars,x
   ply
   plx
   ldy #0                             ; reset PC to 0

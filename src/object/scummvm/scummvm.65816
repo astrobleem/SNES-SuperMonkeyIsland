@@ -5431,12 +5431,9 @@ op_systemOps:
   jsr _scummvm.fetchByte
   cmp #3
   bne _systemOps.done
-  ; --- Restart: only when var[39]=0 (attract loop). When var[39]=1
-  ; (START pressed), skip restart so game start code at $16D1 runs. ---
-  ldx #39*2
-  lda.w SCUMM.globalVars,x
-  bne _systemOps.done             ; var[39]!=0 → START pressed → skip restart
-  ; --- Kill all other scripts, reset boot script to PC=0 ---
+  ; --- Restart/cleanup: always kill other scripts + clear cutscene.
+  ; When var[39]=0 (attract loop): also reset PC=0 and yield (loop).
+  ; When var[39]=1 (START pressed): don't reset PC, continue to game start. ---
   phx
   phy
   ldx #0
@@ -5460,8 +5457,12 @@ _systemOps.killSkip:
   stz.w SCUMM.newRoom
   ply
   plx
-  ldy #0                         ; Y=0 → fetchYield saves PC=0 (restart)
-  sec                             ; yield
+  ; Check var[39]: attract loop restart vs game start
+  ldx #39*2
+  lda.w SCUMM.globalVars,x
+  bne _systemOps.done             ; var[39]!=0 → game start → continue (clc)
+  ldy #0                          ; var[39]=0 → attract loop → reset PC=0
+  sec                              ; yield (restart next tick)
   rts
 _systemOps.done:
   clc

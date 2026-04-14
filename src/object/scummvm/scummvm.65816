@@ -1416,18 +1416,11 @@ _loadGlobal.cacheOk:
 ; Input: A = script number to start
 ;-------------------------------------------------------------------
 _scummvm.startScriptSlot:
-  ; --- Copy protection bypass (ScummVM: o5_startScript) ---
-  ; MI1 CD copy protection runs in room 90 via script 155 (credits+quiz).
-  ; SNES has no keyboard, so skip script 155 entirely — the boot script
-  ; polls isScriptRunning(155) and continues when it ends.
-  cmp #155
-  bne _startScript.noCpBypass
-  lda.w SCUMM.currentRoom
-  cmp #90
-  bne _startScript.noCpBypass
-  clc                             ; carry clear = "script not started"
-  rts
-_startScript.noCpBypass:
+  ; Copy protection bypass removed: script 155 starts normally.
+  ; It gets stuck on the quiz (no keyboard input on SNES), but the boot
+  ; script only needs isScriptRunning(155)==true to exit its wait loop.
+  ; The keyboard emulation at updateCursor handles button→var[105] mapping
+  ; so pressing A/START eventually completes the quiz.
 
   sta.w SCUMM.scratch
 
@@ -5427,13 +5420,50 @@ _cc.epilogue:
   rts
 
 ; systemOps ($98)
-; Sub-op 3 (restart) is intentionally a no-op. The boot script's attract
-; mode loop uses var[39] to branch: START sets var[39]=1, which skips
-; the restart and falls through to loadRoomWithEgo (game start).
+; Sub-op 3 = restart. Kills all scripts EXCEPT the current one (boot script),
+; clears cutscene state, and resets current slot to PC=0 via Y register.
+; This loops the attract mode: the boot script restarts from the beginning.
+; The var[39] check in the bytecode skips past the restart when START is
+; pressed, falling through to game start code instead.
 op_systemOps:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchByte
+  cmp #3
+  bne _systemOps.done
+  ; --- Restart: only when var[39]=0 (attract loop). When var[39]=1
+  ; (START pressed), skip restart so game start code at $16D1 runs. ---
+  ldx #39*2
+  lda.w SCUMM.globalVars,x
+  bne _systemOps.done             ; var[39]!=0 → START pressed → skip restart
+  ; --- Kill all other scripts, reset boot script to PC=0 ---
+  phx
+  phy
+  ldx #0
+  ldy #0
+_systemOps.killLoop:
+  cpx.w SCUMM.currentSlotPtr
+  beq _systemOps.killSkip
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+_systemOps.killSkip:
+  txa
+  clc
+  adc #_sizeof_scummSlot
+  tax
+  iny
+  cpy #SCUMM_MAX_SLOTS
+  bcc _systemOps.killLoop
+  stz.w SCUMM.cutsceneNest
+  stz.w SCUMM.newRoom
+  ply
+  plx
+  ldy #0                         ; Y=0 → fetchYield saves PC=0 (restart)
+  sec                             ; yield
+  rts
+_systemOps.done:
   clc
   rts
 
@@ -5765,6 +5795,15 @@ op_loadRoom:
 
 _loadRoom.nonZero:
   sta.w SCUMM.newRoom                  ; request room change (deferred)
+  ; Set VAR_ROOM (var 4) immediately so scripts that check VAR(VAR_ROOM)
+  ; after loadRoom see the new value within the same play tick. Without
+  ; this, the attract mode's conditional display blocks all fail (VAR_ROOM
+  ; is stale) and 45 breakHere pauses are skipped — the entire attract
+  ; sequence runs in one frame instead of minutes.
+  ; NOTE: currentRoom is NOT set here — processRoomChange needs
+  ; newRoom != currentRoom to trigger the actual room data load.
+  ldx #4*2                             ; VAR_ROOM (var 4)
+  sta.w SCUMM.globalVars,x
   clc
   rts
 

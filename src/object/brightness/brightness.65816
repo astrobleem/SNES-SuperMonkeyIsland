@@ -41,10 +41,9 @@
   .INDEX 16
   ; Skip ScreenBrightness write when SCUMM VM is running — SCUMM's
   ; processRoomChange and _play brightness guard own brightness control.
-  ; Use long address for SCUMM.running (defined in scummvm.h, not included here).
-  rep #$20
-  lda.l SCUMM.running
-  sep #$20
+  ; SCUMM.running is at WRAM $7E:F10A. Must use explicit bank $7E
+  ; because linker symbols resolve to bank $00 which doesn't mirror above $2000.
+  lda.l $7EF10A                   ; SCUMM.running (avoid cross-bank symbol issue)
   bne +
   lda this.current
   sta.w ScreenBrightness

@@ -951,15 +951,16 @@ _prc.notRoom0:
 +
 
   ; --- Display LucasArts logo (room 10) for ~3 seconds ---
-  ; Room 10 is a 640px wide room. The LUCASFILM GAMES logo text spans
-  ; approximately x=360-590 (230px). Center it in the 256px viewport:
-  ; cameraX = 360 - (256-230)/2 = 347, rounded to tile boundary = 344.
-  ; reloadViewport was called above for room 10 with this camera.
+  ; Room 10 is 640px wide. LUCASFILM GAMES text is on the right (~x=360-590).
+  ; cameraX=256 is the maximum scroll within the 64-tile VRAM nametable.
+  ; The initial room.load + snapCameraToRoom left the viewport at cam=0,
+  ; so we must reloadViewport here to DMA the correct tile columns.
   rep #$20
-  lda #344
-  sta.w xScrollBG1
+  lda #256
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
+  sta.w xScrollBG1
+  jsr room.reloadViewport              ; re-DMA tile cache for cam=256
   ; Restore brightness for logo display
   sep #$20
   lda #$0F
@@ -975,7 +976,7 @@ _prc90.logoWait:
   pha
   ; Keep scroll set each frame in case anything resets it
   rep #$20
-  lda #344
+  lda #256
   sta.w xScrollBG1
   jsr core.nmi.waitFrame
   pla
@@ -1126,25 +1127,9 @@ _prc.doRoomLoad:
   ; Jump past tile-dependent code to script loading
   jmp _prc.virtualRoomScripts
 _prc.roomLoadGood:
-  ; Room 10 (LucasArts logo): center LUCASFILM GAMES text in viewport.
-  ; Room 10 is 640px wide; logo text spans ~x=360-590.
-  ; cameraX=344 centers the text.  room.load zeros cameraX in initScroll,
-  ; so we set it AFTER load and call reloadViewport.
-  lda 3,s                              ; peek room number from stack
-  and #$00FF
-  cmp #10
-  bne _prc.roomLoadOk
-  lda #344
-  sta.w GLOBAL.room.cameraX
-  sta.w GLOBAL.room.cameraXOld
-  sta.w xScrollBG1                     ; NMI reads this for BG1HOFS
-  phx
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda #472                             ; 344 + 128 = center screen position
-  sta.w SCUMM.globalVars,x
-  sta.w SCUMM.cameraDest
-  plx
-  jsr room.reloadViewport              ; re-DMA tile columns for new camera
+  ; Room 10 camera handled by bypass (room 90 intercept) which sets cam=256
+  ; and calls reloadViewport.  snapCameraToRoom below would override any
+  ; camera setup here, so don't bother setting it during room.load.
 _prc.roomLoadOk:
   .ACCU 16
   .INDEX 16
@@ -1252,6 +1237,15 @@ _prc.noExitScript2:
   lda.l GLOBAL.room.idx
   ora.l GLOBAL.room.idx+2
   beq _prc.skipViewport                ; virtual room -- no MSU tile data
+
+  ; Room 10 (logo): skip snapCamera + reloadViewport.
+  ; room.load already DMA'd all 64 columns of tile data to VRAM.
+  ; snapCameraToRoom would snap cam to ego actor (x=0), destroying the
+  ; logo scroll. The bypass (room 90 intercept) handles the viewport.
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  cmp #10
+  beq _prc.skipViewport
 
   ; Update camera limits + snap to followed actor
   jsl scummvm.snapCameraToRoom

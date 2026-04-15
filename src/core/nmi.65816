@@ -464,9 +464,16 @@ core.nmi.init:
 	jsr ClearWRAM
 	jsr ClearVRAM
 
-	;zero scroll flags before enabling NMI (prevent uninitialized reads)
-	stz.w GLOBAL.room.nmiColFlag
-	stz.w GLOBAL.room.nmiTileFlag
+	;zero scroll+SCUMM NMI-gated flags before enabling NMI.
+	;DBR=$00 during boot, so stz.w misses bank $7E. Use sta.l (24-bit).
+	lda #0
+	sta.l GLOBAL.room.nmiColFlag
+	sta.l GLOBAL.room.nmiTileFlag
+	sta.l SCUMM.dialogFontNmiPending
+	sta.l SCUMM.verbFontNmiPending
+	sta.l SCUMM.dialogTilemapNmiPending
+	sta.l SCUMM.verbTilemapNmiPending
+	sta.l GLOBAL.oamUploadFlag
 
     lda.w GLOBAL.interruptFlags
 	ora #NMITIMEN_NMI_ENABLE |	NMITIMEN_AUTO_JOY_READ	;enable screen and nmi, auto joypad

@@ -52,18 +52,15 @@ room.setRomDataPtr:
   beq _srdp.exb             ; block 0 → EXB window ($E0)
 
   ; block 1+ → FXB window ($F0)
-  ; If block > 1, need to swap FXB register
-  cmp #1
-  beq _srdp.fxbDefault      ; block 1 → FXB already = 5
-
-  ; block 2 or 3 → swap FXB to (4 + block_offset)
+  ; Always set FXB = (4 + block_offset) so a previous call that set
+  ; FXB to 6 or 7 doesn't leave stale state for a block-1 read.
   clc
-  adc #4                    ; FXB value = 4 + block_offset
+  adc #4                    ; FXB value = 4 + block_offset (block 1→5, 2→6, 3→7)
   sep #$20
   sta.l FXB
   rep #$20
 
-_srdp.fxbDefault:
+_srdp.fxbRestored:
   pla                       ; recover offset high byte
   and #$000F                ; bank within block
   clc

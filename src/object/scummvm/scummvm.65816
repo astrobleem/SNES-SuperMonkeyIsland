@@ -923,7 +923,116 @@ _prc.bgReady:
   ; loadRoom(N) triggers a fresh room load even if N==old currentRoom.
   lda.w SCUMM.newRoom
   and #$00FF
-  bne _prc.doRoomLoad
+  bne _prc.notRoom0
+
+  ; Fall through to room 0 handler below
+  jmp _prc.doRoom0
+
+_prc.notRoom0:
+  ; --- Room 90 bypass: copy protection room (Dial-a-Pirate) ---
+  ; Script 155 issues loadRoom(90) for the copy protection screen.
+  ; On SNES we skip the room load, pre-set the correct answer, and kill
+  ; scripts 155/154.  Script 1's isScriptRunning(155) wait loop is an
+  ; infinite loop if 155 is dead (equalZero jumps back), so we advance
+  ; script 1's PC past it to offset 0x084E.
+  cmp #90
+  beq +
+  jmp _prc.doRoomLoad
++
+
+  ; Room 90 discarded: restore stack and return without loading anything.
+  ; Stack: roomNum[16], brightness[8], hdmaEnable[8]  (pushed above)
+  sep #$20
+  pla                                   ; pop hdmaEnable
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  pla                                   ; pop brightness
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+  pla                                   ; pop roomNum
+
+  ; Kill scripts 155 and 154 (copy protection)
+  ldx #0
+_prc90.scan155:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  beq _prc90.next155
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  cmp #155
+  bne _prc90.next155
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  bra _prc90.done155
+_prc90.next155:
+  txa
+  clc
+  adc #64
+  tax
+  cpx #1600
+  bcc _prc90.scan155
+_prc90.done155:
+
+  ldx #0
+_prc90.scan154:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  beq _prc90.next154
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  cmp #154
+  bne _prc90.next154
+  sep #$20
+  lda #SCUMM_SLOT_DEAD
+  sta.w SCUMM.slots.status,x
+  rep #$20
+  bra _prc90.done154
+_prc90.next154:
+  txa
+  clc
+  adc #64
+  tax
+  cpx #1600
+  bcc _prc90.scan154
+_prc90.done154:
+
+  ; Advance script 1's PC past the isScriptRunning(155) wait loop.
+  ldx #0
+_prc90.scan1:
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  beq _prc90.next1
+  lda.w SCUMM.slots.number,x
+  and #$00FF
+  cmp #1
+  bne _prc90.next1
+  lda #$084E
+  sta.w SCUMM.slots.pc,x
+  bra _prc90.done1
+_prc90.next1:
+  txa
+  clc
+  adc #64
+  tax
+  cpx #1600
+  bcc _prc90.scan1
+_prc90.done1:
+
+  ; Set Var[105] = 0xFF9C (correct-answer sentinel for copy protection check)
+  ldx #(105 * 2)
+  lda #$FF9C
+  sta.w SCUMM.globalVars,x
+
+  ; Sync newRoom = currentRoom so processRoomChange does not re-fire next tick
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  sta.w SCUMM.newRoom
+  jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
+
+_prc.doRoom0:
 
   ; Room 0: clear room state + BG1 VRAM tilemap via superfree thunk
   jsl scummvm.clearRoom0
@@ -2187,26 +2296,15 @@ _rei.found:
   stz.w GLOBAL.room.nmiTileStageLen
   jsr room.refreshObjectColumns
 
-  ; --- Fade in after ENCD + tile patches ---
-  ; Step brightness up by 3 per frame (~5 frames from $00 to $0F).
-_rei.fadeIn:
+  ; --- Restore brightness after room load ---
+  ; Previously did a 5-frame fade-in ($03→$06→$09→$0C→$0F) using waitFrame.
+  ; With rapid room cycling (attract mode), the fade consumed too much visible
+  ; time. Set $0F instantly instead — the brightness guard at _play.done also
+  ; forces $0F but this handles it immediately after ENCD.
   sep #$20
   .ACCU 8
-  lda.w ScreenBrightness
-  cmp #$0F
-  bcs _rei.fadeInDone
-  clc
-  adc #3
-  cmp #$0F
-  bcc +
-    lda #$0F
-+
+  lda #$0F
   sta.w ScreenBrightness
-  rep #$20
-  .ACCU 16
-  jsr core.nmi.waitFrame
-  bra _rei.fadeIn
-_rei.fadeInDone:
   rep #$20
   .ACCU 16
 
@@ -4205,7 +4303,9 @@ _writeVar.local:
 ; _scummvm.findSlotByNumber -- find slot running script N
 ; Input: A = script number
 ; Output: X = slot byte offset, carry set if found
+; Also exported as global scummvm.findSlotByScript for cross-scope callers.
 ;-------------------------------------------------------------------
+scummvm.findSlotByScript:
 _scummvm.findSlotByNumber:
   .ACCU 16
   .INDEX 16
@@ -5455,6 +5555,20 @@ op_systemOps:
   ; ScummVM restart(): kills all scripts, clears state, restarts boot script.
   ; Kill all scripts except the current slot, clear cutscene/room state,
   ; reset PC to 0, restore Local[0] to boot_param (0), yield.
+  ;
+  ; SNES guard: if the intro sequence is active (currentRoom is one of the
+  ; intro rooms: 10=logo, 22=narrator, 70=narrator-alt, 38=lookout), suppress
+  ; the restart so attract-mode scripts (152/155) cannot abort the intro.
+  lda.w SCUMM.currentRoom
+  and #$00FF
+  cmp #10
+  beq _systemOps.noRestart
+  cmp #22
+  beq _systemOps.noRestart
+  cmp #70
+  beq _systemOps.noRestart
+  cmp #38
+  beq _systemOps.noRestart
   phx
   phy
   ldx #0
@@ -5507,7 +5621,8 @@ _systemOps.noRestart:
 
 ; resourceRoutines ($0C, $8C) -- resource preload/cache management
 ; Sub-opcode byte controls flag bits, not the main opcode.
-; All are no-ops for MSU-1 on-demand loading; just skip params.
+; Most are no-ops for MSU-1 on-demand loading; just skip params.
+; Exception: sub-opcode 0x04 (loadRoom) triggers an actual room change.
 op_resourceRoutines:
   .ACCU 16
   .INDEX 16
@@ -5515,6 +5630,8 @@ op_resourceRoutines:
   sta.w SCUMM.scratch        ; save full sub-opcode
 
   and #$003F                 ; mask to get key
+  cmp #$04
+  beq _resRoutines.loadRoom  ; loadRoom: set newRoom (like op_loadRoom)
   cmp #$11
   beq _resRoutines.done      ; clearHeap: no params
   cmp #$14
@@ -5525,6 +5642,22 @@ op_resourceRoutines:
   sta.w SCUMM.currentOpcode          ; set as current for flag check
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
+  bra _resRoutines.done
+
+_resRoutines.loadRoom:
+  .ACCU 16
+  .INDEX 16
+  ; loadRoom (sub 0x04): one p8 arg = room number.
+  ; Mirrors op_loadRoom: set newRoom + VAR_ROOM so processRoomChange fires.
+  lda.w SCUMM.scratch
+  sta.w SCUMM.currentOpcode
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectByte    ; room number -> A (16-bit, high=0)
+  and #$00FF
+  beq _resRoutines.done              ; room 0 = no-op (no unload on SNES)
+  sta.w SCUMM.newRoom                ; request deferred room change
+  ldx #4*2                           ; VAR_ROOM (var 4)
+  sta.w SCUMM.globalVars,x           ; update VAR_ROOM immediately
   bra _resRoutines.done
 
 _resRoutines.flObject:
@@ -5571,22 +5704,11 @@ op_putActorInRoom:
 ++
   rep #$20
 
-  ; If ego actor (actor 1) → trigger room change (ScummVM: VAR_NEW_ROOM)
-  pla                                ; recover actor number
-  and #$00FF
-  cmp #1
-  bne _pair.notEgo
-  pha
-  lda.w SCUMM.scratch3              ; room number
-  and #$00FF
-  beq +
-  sta.w SCUMM.newRoom
-+
-  pla
-  clc
-  rts
-
-_pair.notEgo:
+  ; ScummVM: putActorInRoom does NOT trigger a room change.  It only
+  ; sets a->_room.  Room changes are handled by loadRoomWithEgo/startScene.
+  ; (Previous code wrote SCUMM.newRoom for actor 1, which caused the boot
+  ; script's actor-init loop to leave a stale room in newRoom.)
+  pla                                ; discard saved actor number
   clc
   rts
 

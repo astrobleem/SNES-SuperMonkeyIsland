@@ -951,15 +951,12 @@ _prc.notRoom0:
 +
 
   ; --- Display LucasArts logo (room 10) for ~3 seconds ---
-  ; Room 10 is a 640px wide room. The LUCASFILM GAMES logo is on the
-  ; right side (~x=400). Scroll BG1 to show the logo, restore brightness,
-  ; and hold for 180 frames.
-  ;
-  ; Scroll camera to show the LUCASFILM GAMES text (right side of room 10).
-  ; The reloadViewport after room 10 load DMA'd the correct tile columns.
-  ; Set xScrollBG1 here (camera sync in _play may have overwritten it).
+  ; Room 10 is a 640px wide room. The LUCASFILM GAMES logo text spans
+  ; approximately x=360-590 (230px). Center it in the 256px viewport:
+  ; cameraX = 360 - (256-230)/2 = 347, rounded to tile boundary = 344.
+  ; reloadViewport was called above for room 10 with this camera.
   rep #$20
-  lda #256
+  lda #344
   sta.w xScrollBG1
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
@@ -978,7 +975,7 @@ _prc90.logoWait:
   pha
   ; Keep scroll set each frame in case anything resets it
   rep #$20
-  lda #256
+  lda #344
   sta.w xScrollBG1
   jsr core.nmi.waitFrame
   pla
@@ -1129,21 +1126,21 @@ _prc.doRoomLoad:
   ; Jump past tile-dependent code to script loading
   jmp _prc.virtualRoomScripts
 _prc.roomLoadGood:
-  ; Room 10 (LucasArts logo): scroll camera to show logo on right side.
-  ; Room 10 is 640px wide; the LUCASFILM GAMES text is at x~400.
-  ; room.load zeros cameraX in initScroll, so we set it AFTER load
-  ; and call reloadViewport to DMA the correct tile columns.
+  ; Room 10 (LucasArts logo): center LUCASFILM GAMES text in viewport.
+  ; Room 10 is 640px wide; logo text spans ~x=360-590.
+  ; cameraX=344 centers the text.  room.load zeros cameraX in initScroll,
+  ; so we set it AFTER load and call reloadViewport.
   lda 3,s                              ; peek room number from stack
   and #$00FF
   cmp #10
   bne _prc.roomLoadOk
-  lda #256                             ; left edge = 384-128
+  lda #344
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1                     ; NMI reads this for BG1HOFS
   phx
   ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda #384
+  lda #472                             ; 344 + 128 = center screen position
   sta.w SCUMM.globalVars,x
   sta.w SCUMM.cameraDest
   plx

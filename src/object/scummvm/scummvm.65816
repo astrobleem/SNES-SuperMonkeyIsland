@@ -951,16 +951,16 @@ _prc.notRoom0:
 +
 
   ; --- Display LucasArts logo (room 10) for ~3 seconds ---
-  ; Room 10 is 640px wide. LUCASFILM GAMES text is on the right (~x=360-590).
-  ; cameraX=256 is the maximum scroll within the 64-tile VRAM nametable.
-  ; The initial room.load + snapCameraToRoom left the viewport at cam=0,
-  ; so we must reloadViewport here to DMA the correct tile columns.
+  ; Room 10 is 640px wide. LUCASFILM GAMES text spans ~x=360-590.
+  ; cameraX=344 centers the text in the 256px viewport.
+  ; reloadViewport handles VRAM wrapping for columns >63 via the
+  ; tile cache circular buffer (stageColumnForNmi wraps col & 31).
   rep #$20
-  lda #256
+  lda #344
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
-  jsr room.reloadViewport              ; re-DMA tile cache for cam=256
+  jsr room.reloadViewport              ; re-DMA tile cache for cam=344
   ; Restore brightness for logo display
   sep #$20
   lda #$0F
@@ -976,7 +976,7 @@ _prc90.logoWait:
   pha
   ; Keep scroll set each frame in case anything resets it
   rep #$20
-  lda #256
+  lda #344
   sta.w xScrollBG1
   jsr core.nmi.waitFrame
   pla

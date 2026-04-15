@@ -1029,6 +1029,14 @@ _prc90.done1:
   lda #$FF9C
   sta.w SCUMM.globalVars,x
 
+  ; Set Var[39] = 1 to skip the attract/demo loop.
+  ; Boot script offset $0D82 checks equalZero(Var[39]): while Var[39]==0 it
+  ; cycles through room-preview slides.  Setting Var[39]!=0 makes the boot
+  ; script jump to $16D1 (actual game start) instead.
+  ldx #(39 * 2)
+  lda #1
+  sta.w SCUMM.globalVars,x
+
   ; Sync newRoom = currentRoom so processRoomChange does not re-fire next tick
   lda.w SCUMM.currentRoom
   and #$00FF
@@ -5559,11 +5567,15 @@ op_systemOps:
   ; Kill all scripts except the current slot, clear cutscene/room state,
   ; reset PC to 0, restore Local[0] to boot_param (0), yield.
   ;
-  ; SNES guard: if the intro sequence is active (currentRoom is one of the
-  ; intro rooms: 10=logo, 22=narrator, 70=narrator-alt, 38=lookout), suppress
-  ; the restart so attract-mode scripts (152/155) cannot abort the intro.
+  ; SNES guard: suppress restart during intro rooms AND room 0 (transit).
+  ; Room 0 is a clearing room used during transitions — restarting there
+  ; causes an infinite room 0<->10 loop because the boot script restarts
+  ; from PC=0 before it ever reaches the game-start code at $16D1.
+  ; Also suppress if Var[39] != 0 (copy-protection bypass has fired and
+  ; the game should be starting, not looping).
   lda.w SCUMM.currentRoom
   and #$00FF
+  beq _systemOps.noRestart             ; room 0 = transit, never restart
   cmp #10
   beq _systemOps.noRestart
   cmp #22
@@ -5572,6 +5584,10 @@ op_systemOps:
   beq _systemOps.noRestart
   cmp #38
   beq _systemOps.noRestart
+  ; If copy-protection bypass already fired (Var[39]!=0), suppress restart
+  ldx #(39 * 2)
+  lda.w SCUMM.globalVars,x
+  bne _systemOps.noRestart
   phx
   phy
   ldx #0

@@ -943,15 +943,54 @@ _prc.notRoom0:
   jmp _prc.doRoomLoad
 +
 
+  ; --- Display LucasArts logo (room 10) for ~3 seconds ---
+  ; Room 10 is a 640px wide room. The LUCASFILM GAMES logo is on the
+  ; right side (~x=400). Scroll BG1 to show the logo, restore brightness,
+  ; and hold for 180 frames.
+  ;
+  ; Scroll camera to show the LUCASFILM GAMES text (right side of room 10).
+  ; The reloadViewport after room 10 load DMA'd the correct tile columns.
+  ; Set xScrollBG1 here (camera sync in _play may have overwritten it).
+  rep #$20
+  lda #256
+  sta.w xScrollBG1
+  sta.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+  ; Restore brightness for logo display
+  sep #$20
+  lda #$0F
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  ; Restore HDMA for logo display
+  lda 1,s                               ; peek hdmaEnable (top of stack)
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  rep #$20
+  ; Wait ~180 frames (3 seconds at 60fps) showing the logo
+  lda #180
+_prc90.logoWait:
+  pha
+  ; Keep scroll set each frame in case anything resets it
+  rep #$20
+  lda #256
+  sta.w xScrollBG1
+  jsr core.nmi.waitFrame
+  pla
+  dec a
+  bne _prc90.logoWait
+  ; Now fade out the logo
+  sep #$20
+  lda #0
+  sta.w ScreenBrightness
+  sta.l INIDSP
+  rep #$20
+
   ; Room 90 discarded: restore stack and return without loading anything.
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]  (pushed above)
   sep #$20
   pla                                   ; pop hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE
   sta.l HDMAEN
-  pla                                   ; pop brightness
-  sta.w ScreenBrightness
-  sta.l INIDSP
+  pla                                   ; pop brightness (discard — we managed brightness above)
   rep #$20
   pla                                   ; pop roomNum
 
@@ -1066,7 +1105,7 @@ _prc.doRoomLoad:
   ; Restore room number and load via Phase 0 room loader
   lda 3,s
   jsr room.load
-  bcs _prc.roomLoadOk
+  bcs _prc.roomLoadGood
   ; room.load failed -- virtual room (no MSU data): clear BG1 + proceed
   ; Stack remains intact: roomNum[16], brightness[8], hdmaEnable[8]
   jsl scummvm.clearRoom0             ; blank BG1 for black background
@@ -1085,6 +1124,26 @@ _prc.doRoomLoad:
   pla                                ; pop roomNum
   ; Jump past tile-dependent code to script loading
   jmp _prc.virtualRoomScripts
+_prc.roomLoadGood:
+  ; Room 10 (LucasArts logo): scroll camera to show logo on right side.
+  ; Room 10 is 640px wide; the LUCASFILM GAMES text is at x~400.
+  ; room.load zeros cameraX in initScroll, so we set it AFTER load
+  ; and call reloadViewport to DMA the correct tile columns.
+  lda 3,s                              ; peek room number from stack
+  and #$00FF
+  cmp #10
+  bne _prc.roomLoadOk
+  lda #256                             ; left edge = 384-128
+  sta.w GLOBAL.room.cameraX
+  sta.w GLOBAL.room.cameraXOld
+  sta.w xScrollBG1                     ; NMI reads this for BG1HOFS
+  phx
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda #384
+  sta.w SCUMM.globalVars,x
+  sta.w SCUMM.cameraDest
+  plx
+  jsr room.reloadViewport              ; re-DMA tile columns for new camera
 _prc.roomLoadOk:
   .ACCU 16
   .INDEX 16

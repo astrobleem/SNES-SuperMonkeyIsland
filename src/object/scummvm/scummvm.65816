@@ -681,6 +681,9 @@ _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
+  ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
+  ldx #3*2
+  stz.w SCUMM.globalVars,x
   jsl scummvm.clearDialogTilemap
 _play.noDialog:
   .ACCU 16
@@ -8224,6 +8227,20 @@ _print.text:
   .ACCU 16
   .INDEX 16
   jsl scummvm.extractAndRenderString     ; advances Y past string + null terminator
+  ; If extractAndRenderString didn't set dialogActive (text rendering failed),
+  ; set a minimum timer so waitForMessage still provides pacing.  In ScummVM
+  ; print always sets VAR_HAVE_MSG.  Without this fallback, failed renders
+  ; cause the attract mode to skip past all text display instantly.
+  rep #$20
+  lda.w SCUMM.dialogActive
+  bne _print.textDone
+  lda #1
+  sta.w SCUMM.dialogActive
+  ldx #3*2
+  sta.w SCUMM.globalVars,x             ; VAR_HAVE_MSG = 1
+  lda #180                             ; 3 seconds minimum display
+  sta.w SCUMM.dialogTimer
+_print.textDone:
   jmp _print.done                      ; SO_TEXTSTRING is terminal -- ScummVM returns, no $FF follows
 
 _print.done:
@@ -15391,6 +15408,10 @@ _ears.renderEnd:
   ; --- Set dialog state ---
   lda #1
   sta.w SCUMM.dialogActive
+  ; Set VAR_HAVE_MSG (global var 3) = 1 to match ScummVM behavior.
+  ; SCUMM scripts and waitForMessage may check VAR(3) for message state.
+  ldx #3*2
+  sta.w SCUMM.globalVars,x
   ; Timer = char_count * 6 + 60 (min 1 second)
   lda.w SCUMM.dialogCharCount
   asl a                                ; *2

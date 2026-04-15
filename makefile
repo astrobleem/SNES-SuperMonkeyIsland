@@ -75,13 +75,14 @@ converted_bg_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(sprite
 sprite_animations := $(shell find $(datadir)/ -type d -name '*.gfx_sprite')
 converted_sprite_animations := $(sort $(addprefix $(builddir)/,$(addsuffix .$(spriteanimation), $(sprite_animations))))
 
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin)
-builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
-
 # ROM data packer (room tiles + script bytecodes for upper ROM banks)
 romdatabin := $(builddir)/rom_data.bin
 romdatainc := $(builddir)/rom_data.inc
 romdatapacker := python3 ./tools/rom_pack_data.py
+
+objroomtable := $(builddir)/obj_room_table.inc
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable)
+builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects, then append ROM data
 all: $(linkobjectfile)
@@ -106,9 +107,16 @@ $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles
 	$(assembler) $(assemblerflags) $< $@
 
 
-#pack room + script data into ROM data blob
+#generate object-to-room lookup table (used by loadRoomWithEgo room=0)
+$(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)
+	python3 ./tools/gen_obj_room_table.py
+
+#pack room + script data into ROM data blob (produces both .bin and .inc)
 $(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) | $(builddirs)
 	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc)
+
+# rom_data.inc is produced as a side-effect of rom_data.bin
+$(romdatainc): $(romdatabin)
 
 #compile TAD audio data (run tad-compiler to produce binary blob)
 $(tadaudiobin): $(tadproject) $(wildcard audio/songs/*.mml) $(wildcard audio/sfx/*.txt) $(wildcard audio/samples/*.wav) | $(builddirs)

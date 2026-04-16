@@ -711,6 +711,13 @@ _play.noSentence:
   adc.w SCUMM.globalVars,x
   sta.w SCUMM.globalVars,x           ; VAR_TIMER_TOTAL (var 47) += delta
 _play.timerDone:
+  ; VAR_MUSIC_TIMER (var 14) — synthetic frame counter for iMUSE substitute.
+  ; Intro LSCR scripts gate on isLessEqual(Var[14], N) loops in non-talkie mode.
+  ; Without this increment, those loops hang forever.
+  ldx #14*2
+  lda.w SCUMM.globalVars,x
+  inc a
+  sta.w SCUMM.globalVars,x
 
   ; --- Brightness guard ---
   ; Ensure screen is visible when a room is loaded.
@@ -1036,11 +1043,12 @@ _prc90.next154:
   bcc _prc90.scan154
 _prc90.done154:
 
-  ; Advance script 1's PC to game start code ($16D1).
-  ; $084E is the post-copy-protection demo/attract loop that cycles through
-  ; rooms rapidly. Skip it — the actual intro cutscene is triggered by
-  ; game start code (room 1 ENCD → LSCR 200).
-  ; $16D1 = putActorInRoom + putActor + startScript(23) + stopObjectCode
+  ; Advance script 1's PC past the isScriptRunning(155) wait loop.
+  ; $084E = post-copy-protection code. The boot script checks Var[105],
+  ; then enters the intro/demo dispatcher which chains scenes via
+  ; startScript(1) restarts. Pacing comes from room LSCR scripts.
+  ; With the cache fix, LSCR data is now correct so room scripts
+  ; should pace the intro properly.
   ldx #0
 _prc90.scan1:
   lda.w SCUMM.slots.status,x
@@ -1050,7 +1058,7 @@ _prc90.scan1:
   and #$00FF
   cmp #1
   bne _prc90.next1
-  lda #$16D1
+  lda #$084E
   sta.w SCUMM.slots.pc,x
   bra _prc90.done1
 _prc90.next1:
@@ -1067,25 +1075,11 @@ _prc90.done1:
   lda #$FF9C
   sta.w SCUMM.globalVars,x
 
-  ; Set newRoom=130 (pseudo-room → room 1 via resourceMapper).
-  ; The boot script at $16D1 reads Local[0] for the room, but Local[0]=0
-  ; since we skip the demo loop that sets it. Set newRoom directly.
-  ; processRoomChange will load room 1, whose ENCD starts LSCR 200
-  ; (game startup script — with the cache fix, LSCR now has correct data).
-  lda #130
-  sta.w SCUMM.newRoom
-  ; Place ego actor (actor 1) in the starting room
-  ldx #1*16
-  sep #$20
-  lda #130
-  sta.w SCUMM.actors.room,x
-  lda #1
-  sta.w SCUMM.actors.visible,x
-  rep #$20
-  lda #160
-  sta.w SCUMM.actors.x,x
-  lda #120
-  sta.w SCUMM.actors.y,x
+  ; Sync currentRoom so processRoomChange doesn't re-trigger the bypass.
+  ; The boot script's intro dispatcher will set newRoom via its own
+  ; loadRoom/loadRoomWithEgo calls.
+  lda.w SCUMM.newRoom
+  sta.w SCUMM.currentRoom
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
 _prc.doRoom0:
@@ -6877,11 +6871,24 @@ op_isSoundRunning:
   .INDEX 16
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; consume sound ID param
-  ; Stub: return 0 (sound not playing)
-  ; Scripts busy-wait on isSoundRunning==0 to proceed; returning 1 causes infinite loops
-  ; TODO: replace with real TAD/MSU-1 state when audio is wired
-  lda #0
+  jsr _scummvm.getVarOrDirectByte    ; consume sound ID param (A = sound ID)
+  ; Check if TAD is currently playing any SFX or song
+  phy
+  sep #$20
+  jsl Tad_IsSfxPlaying               ; carry set if SFX playing
+  bcs _isr.playing
+  jsl Tad_IsSongPlaying              ; carry set if song playing
+  bcs _isr.playing
+  rep #$20
+  ply
+  lda #0                             ; not playing
+  jsr _scummvm.writeVariable
+  clc
+  rts
+_isr.playing:
+  rep #$20
+  ply
+  lda #1                             ; playing
   jsr _scummvm.writeVariable
   clc
   rts

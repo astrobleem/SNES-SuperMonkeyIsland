@@ -955,6 +955,9 @@ _prc.realRoom:
   ; scripts 155/154.  Script 1's isScriptRunning(155) wait loop is an
   ; infinite loop if 155 is dead (equalZero jumps back), so we advance
   ; script 1's PC past it to offset 0x084E.
+  ; NOTE: A was clobbered by brightness/HDMA setup above. The resolved
+  ; room number is on the stack at SP+3 (past two 8-bit pushes).
+  lda 3,s                              ; peek resolved room number
   cmp #90
   beq +
   jmp _prc.doRoomLoad
@@ -1101,9 +1104,16 @@ _prc90.next1:
   bcc _prc90.scan1
 _prc90.done1:
 
-  ; Sync currentRoom so processRoomChange doesn't re-trigger the bypass.
-  lda.w SCUMM.newRoom
-  sta.w SCUMM.currentRoom
+  ; Cancel the room 90 load: set newRoom = currentRoom so processRoomChange
+  ; doesn't re-trigger. This keeps the CURRENT room (room 22, narrator)
+  ; visible so script 115 can display "Deep in the Caribbean" text and
+  ; the campfire scene. Script 1 resumes at $084E which will eventually
+  ; load the next room when the intro sequence is ready.
+  lda.w SCUMM.currentRoom
+  sta.w SCUMM.newRoom
+  ; Also update VAR_ROOM to match
+  ldx #4*2
+  sta.w SCUMM.globalVars,x
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
 _prc.doRoom0Setup:

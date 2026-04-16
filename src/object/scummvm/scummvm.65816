@@ -4711,14 +4711,14 @@ op_isEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bne +                          ; not equal → cond FALSE → skip jump
-    jsr _scummvm.takeRelJump     ; equal → cond TRUE → take jump
+  beq +                          ; equal → cond TRUE → skip jump (fall through)
+    jsr _scummvm.takeRelJump     ; not equal → cond FALSE → jump
 +
   clc
   rts
 
 ; isNotEqual ($08, $88) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b != a) → jump when equal (cond FALSE)
+; ScummVM: jumpRelative(b != a) → jump when b==a (cond FALSE)
 op_isNotEqual:
   .ACCU 16
   .INDEX 16
@@ -4733,14 +4733,14 @@ op_isNotEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  beq +                          ; equal → cond FALSE → skip jump
-    jsr _scummvm.takeRelJump     ; not equal → cond TRUE → take jump
+  bne +                          ; not equal → cond TRUE → skip jump (fall through)
+    jsr _scummvm.takeRelJump     ; equal → cond FALSE → jump
 +
   clc
   rts
 
 ; notEqualZero ($A8) -- getVar + jump
-; ScummVM: jumpRelative(a != 0) → jump when zero (cond FALSE)
+; ScummVM: jumpRelative(a != 0) → jump when a==0 (cond FALSE)
 op_notEqualZero:
   .ACCU 16
   .INDEX 16
@@ -4751,14 +4751,14 @@ op_notEqualZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  beq +                          ; zero → cond FALSE → skip jump
-    jsr _scummvm.takeRelJump     ; not zero → cond TRUE → take jump
+  bne +                          ; not zero → cond TRUE → skip jump (fall through)
+    jsr _scummvm.takeRelJump     ; zero → cond FALSE → jump
 +
   clc
   rts
 
 ; equalZero ($28) -- getVar + jump
-; ScummVM: jumpRelative(a == 0) → jump when NOT zero (cond FALSE)
+; ScummVM: jumpRelative(a == 0) → jump when a!=0 (cond FALSE)
 op_equalZero:
   .ACCU 16
   .INDEX 16
@@ -4769,14 +4769,15 @@ op_equalZero:
   sta.w SCUMM.scratch2
   pla
   cmp #0
-  bne +                          ; not zero → cond FALSE → skip jump
-    jsr _scummvm.takeRelJump     ; zero → cond TRUE → take jump
+  beq +                          ; zero → cond TRUE → skip jump (fall through)
+    jsr _scummvm.takeRelJump     ; not zero → cond FALSE → jump
 +
   clc
   rts
 
 ; isGreater ($78, $F8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b > a) → jump when b <= a (cond FALSE)
+; ScummVM: jumpRelative(b > a) → if(!(b>a)) jump → jump when a >= b
+; cmp does A-scratch = a-b. Carry set when a >= b.
 op_isGreater:
   .ACCU 16
   .INDEX 16
@@ -4791,14 +4792,14 @@ op_isGreater:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcs +                          ; A >= scratch → b <= a → cond FALSE → skip
-    jsr _scummvm.takeRelJump     ; A < scratch → b > a → cond TRUE → jump
+  bcc +                          ; a < b → b > a → cond TRUE → skip (fall through)
+    jsr _scummvm.takeRelJump     ; a >= b → !(b>a) → cond FALSE → jump
 +
   clc
   rts
 
 ; isLess ($44, $C4) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b < a) → jump when b >= a (cond FALSE)
+; ScummVM: jumpRelative(b < a) → if(!(b<a)) jump → jump when a <= b
 op_isLess:
   .ACCU 16
   .INDEX 16
@@ -4813,15 +4814,17 @@ op_isLess:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → b > a → cond FALSE → skip
-  beq +                          ; A == scratch → b == a → cond FALSE → skip
-    jsr _scummvm.takeRelJump     ; A > scratch → b < a → cond TRUE → jump
+  beq _isL.doJump                ; a == b → !(b<a) → jump
+  bcs +                          ; a > b → b < a → cond TRUE → skip (fall through)
+    ; a < b → !(b<a) → cond FALSE → jump
+_isL.doJump:
+    jsr _scummvm.takeRelJump
 +
   clc
   rts
 
 ; isLessEqual ($38, $B8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b <= a) → jump when b > a (cond FALSE)
+; ScummVM: jumpRelative(b <= a) → if(!(b<=a)) jump → jump when a < b
 op_isLessEqual:
   .ACCU 16
   .INDEX 16
@@ -4836,14 +4839,14 @@ op_isLessEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc +                          ; A < scratch → b > a → cond FALSE → skip
-    jsr _scummvm.takeRelJump     ; A >= scratch → b <= a → cond TRUE → jump
+  bcs +                          ; a >= b → b <= a → cond TRUE → skip (fall through)
+    jsr _scummvm.takeRelJump     ; a < b → !(b<=a) → cond FALSE → jump
 +
   clc
   rts
 
 ; isGreaterEqual ($04, $84) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b >= a) → jump when b < a (cond FALSE)
+; ScummVM: jumpRelative(b >= a) → if(!(b>=a)) jump → jump when a > b
 op_isGreaterEqual:
   .ACCU 16
   .INDEX 16
@@ -4858,13 +4861,9 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch2
   pla
   cmp.w SCUMM.scratch
-  bcc _isGE.doJump               ; A < scratch → b > a → b >= a → cond TRUE → jump
-  beq _isGE.doJump               ; A == scratch → b >= a → cond TRUE → jump
-  bra +                          ; A > scratch → b < a → cond FALSE → skip
-_isGE.doJump:
-  .ACCU 16
-  .INDEX 16
-    jsr _scummvm.takeRelJump
+  bcc +                          ; a < b → b > a → b >= a → cond TRUE → skip
+  beq +                          ; a == b → b >= a → cond TRUE → skip (fall through)
+    jsr _scummvm.takeRelJump     ; a > b → !(b>=a) → cond FALSE → jump
 +
   clc
   rts

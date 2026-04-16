@@ -1036,8 +1036,10 @@ _prc90.next154:
   bcc _prc90.scan154
 _prc90.done154:
 
-  ; Advance script 1's PC directly to game start code ($16D1).
-  ; Skips the demo loop entirely — retail MI1 has no attract mode.
+  ; Advance script 1's PC to game start code ($16D1).
+  ; $084E is the post-copy-protection demo/attract loop that cycles through
+  ; rooms rapidly. Skip it — the actual intro cutscene is triggered by
+  ; game start code (room 1 ENCD → LSCR 200).
   ; $16D1 = putActorInRoom + putActor + startScript(23) + stopObjectCode
   ldx #0
 _prc90.scan1:
@@ -1065,12 +1067,14 @@ _prc90.done1:
   lda #$FF9C
   sta.w SCUMM.globalVars,x
 
-  ; Set up the game start room directly in newRoom (below)
-  ; Set newRoom=130 (pseudo-room for lookout → room 1) so the next
-  ; _play tick loads the game starting room directly.
+  ; Set newRoom=130 (pseudo-room → room 1 via resourceMapper).
+  ; The boot script at $16D1 reads Local[0] for the room, but Local[0]=0
+  ; since we skip the demo loop that sets it. Set newRoom directly.
+  ; processRoomChange will load room 1, whose ENCD starts LSCR 200
+  ; (game startup script — with the cache fix, LSCR now has correct data).
   lda #130
   sta.w SCUMM.newRoom
-  ; Place Guybrush (actor 1) in room 130 at center position
+  ; Place ego actor (actor 1) in the starting room
   ldx #1*16
   sep #$20
   lda #130
@@ -2176,9 +2180,7 @@ _loadRoom.copyEncd:
   lda.w SCUMM.scratch2
   ldx.w SCUMM.scratch3
   jsr room.setRomDataPtr
-  lda.w SCUMM.roomEncdLen
-  jsr _scummvm.copyRomToCache
-  ; Advance romPos by encd size
+  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
   lda.w SCUMM.scratch2
   clc
   adc.w SCUMM.roomEncdLen
@@ -2186,6 +2188,8 @@ _loadRoom.copyEncd:
   lda.w SCUMM.scratch3
   adc #0
   sta.w SCUMM.scratch3
+  lda.w SCUMM.roomEncdLen
+  jsr _scummvm.copyRomToCache
 
 _loadRoom.copyExcd:
   .ACCU 16
@@ -2199,9 +2203,7 @@ _loadRoom.copyExcd:
   lda.w SCUMM.scratch2
   ldx.w SCUMM.scratch3
   jsr room.setRomDataPtr
-  lda.w SCUMM.roomExcdLen
-  jsr _scummvm.copyRomToCache
-  ; Advance romPos by excd size
+  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
   lda.w SCUMM.scratch2
   clc
   adc.w SCUMM.roomExcdLen
@@ -2209,6 +2211,8 @@ _loadRoom.copyExcd:
   lda.w SCUMM.scratch3
   adc #0
   sta.w SCUMM.scratch3
+  lda.w SCUMM.roomExcdLen
+  jsr _scummvm.copyRomToCache
 
 _loadRoom.copyLscr:
   .ACCU 16
@@ -2232,23 +2236,21 @@ _loadRoom.lscrLoop:
   jsr room.setRomDataPtr
   plx
   phx
-  lda.w SCUMM.cacheWritePtr
-  sta.w SCUMM.scratch            ; save cachePtr for this entry (reuse scratch)
+  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
   lda.w SCUMM.roomLscrTable.cacheLen,x
-  pha                             ; save size for romPos advance
-  jsr _scummvm.copyRomToCache
-  ; Advance romPos by LSCR size
-  pla                             ; recover size
   clc
   adc.w SCUMM.scratch2
   sta.w SCUMM.scratch2
   lda.w SCUMM.scratch3
   adc #0
   sta.w SCUMM.scratch3
-  ; Write cachePtr back into the table
-  plx
-  lda.w SCUMM.scratch
+  ; Store cacheWritePtr as this LSCR's cache offset (before copy advances it)
+  lda.w SCUMM.cacheWritePtr
   sta.w SCUMM.roomLscrTable.cachePtr,x
+  ; Copy LSCR bytecode to cache
+  lda.w SCUMM.roomLscrTable.cacheLen,x
+  jsr _scummvm.copyRomToCache
+  plx
 _loadRoom.lscrNext:
   .ACCU 16
   .INDEX 16

@@ -910,12 +910,11 @@ _prc.bgReady:
   jmp _prc.doRoom0Setup
 _prc.notRoom0:
 
-  ; --- Room 90 check MUST come before virtual room fast path ---
-  ; Room 90 has no tile data in the ROM data pack, so room.loadIndex
-  ; returns carry clear (virtual). Without this early check, room 90
-  ; enters the virtual room path and the copy protection bypass at
-  ; _prc90.scan155 is never reached.
-  lda 1,s                          ; peek resolved room number
+  ; --- Room 90 check: use REQUESTED room (newRoom), not resolved ---
+  ; resourceMapper maps room 90 to room 58 on disk, so comparing the
+  ; resolved room against 90 always fails. Check the original request.
+  lda.w SCUMM.newRoom
+  and #$00FF
   cmp #90
   bne _prc.notRoom90early
   pla                              ; pop resolved room number (discard)
@@ -1105,6 +1104,13 @@ _prc90.scan1:
   bne _prc90.next1
   lda #$084E
   sta.w SCUMM.slots.pc,x
+  ; Delay script 1 for 600 frames (~10 seconds) to let the narrator
+  ; text (script 115) display "Deep in the Caribbean..." in room 22.
+  ; In the original game, the copy protection dialog provides this
+  ; delay naturally. The SCUMM scheduler decrements delay each tick
+  ; and skips the slot until it reaches 0.
+  lda #600
+  sta.w SCUMM.slots.delay,x
   bra _prc90.done1
 _prc90.next1:
   txa

@@ -494,6 +494,18 @@ _init.lastScale:
   beq _play.noGameStartRedirect      ; no room change pending
   lda #130
   sta.w SCUMM.newRoom                ; redirect to lookout
+  ; Place Guybrush (actor 1) in the target room at the lookout position
+  ldx #1*16                          ; actor 1 struct offset
+  sep #$20
+  lda #130
+  sta.w SCUMM.actors.room,x          ; actor room = 130
+  lda #1
+  sta.w SCUMM.actors.visible,x       ; visible = 1
+  rep #$20
+  lda #160
+  sta.w SCUMM.actors.x,x             ; x = 160 (center)
+  lda #120
+  sta.w SCUMM.actors.y,x             ; y = 120
 _play.noGameStartRedirect:
 
   lda.w SCUMM.newRoom

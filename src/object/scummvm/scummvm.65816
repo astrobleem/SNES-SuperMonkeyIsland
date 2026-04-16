@@ -910,11 +910,22 @@ _prc.bgReady:
   jmp _prc.doRoom0Setup
 _prc.notRoom0:
 
+  ; --- Room 90 check MUST come before virtual room fast path ---
+  ; Room 90 has no tile data in the ROM data pack, so room.loadIndex
+  ; returns carry clear (virtual). Without this early check, room 90
+  ; enters the virtual room path and the copy protection bypass at
+  ; _prc90.scan155 is never reached.
+  lda 1,s                          ; peek resolved room number
+  cmp #90
+  bne _prc.notRoom90early
+  pla                              ; pop resolved room number (discard)
+  jmp _prc90.scan155               ; jump to copy protection bypass
+_prc.notRoom90early:
+
   ; --- Virtual room fast path: skip display blanking ---
   ; Check if the resolved room has tile data in the ROM data pack.
-  ; If not (virtual room like room 83), skip brightness blanking and
-  ; BG1 clearing — keep the previous room's tiles visible on screen.
-  ; This prevents black frames during demo dispatcher scene transitions.
+  ; If not (virtual room), skip brightness blanking and BG1 clearing —
+  ; keep the previous room's tiles visible on screen.
   lda 1,s                          ; peek resolved room number
   jsr room.loadIndex               ; carry set = room exists, clear = virtual
   bcs _prc.realRoom

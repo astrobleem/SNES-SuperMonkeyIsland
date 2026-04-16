@@ -1057,12 +1057,18 @@ _prc90.next154:
 _prc90.done154:
 
   ; ---------------------------------------------------------------
-  ; DO NOT re-enter the floppy attract/demo dispatcher ($084E).
-  ; MI1 CD has NO attract mode. The demo dispatcher at $084E cycles
-  ; through island rooms (25,18,64,83,...) endlessly — that is the
-  ; floppy-era demo loop, not the CD intro. It was removed because
-  ; every time it was added back, it produced the wrong game flow.
-  ; The correct MI1 CD flow is: logo → narrator (room 22) → game.
+  ; Copy protection bypass: pre-set the correct answer and advance
+  ; script 1's PC past the isScriptRunning(155) wait loop to $084E.
+  ;
+  ; $084E is the NORMAL post-copy-protection game initialization.
+  ; It is NOT an attract/demo mode. The boot script at $084E sets up
+  ; game vars, locks resources, then runs the intro sequence:
+  ;   room 22 (narrator/"Deep in the Caribbean") → island flyover
+  ;   → campfire scene → title screen → Guybrush at lookout.
+  ;
+  ; The rooms cycling (25,18,64,83...) that appear from $084E ARE
+  ; the MI1 intro playing. If scenes appear wrong, the fix is in
+  ; the rendering/script layer, not in changing the PC target.
   ; ---------------------------------------------------------------
 
   ; Set Var[105] = 0xFF9C (correct-answer sentinel for copy protection)
@@ -1070,10 +1076,10 @@ _prc90.done154:
   lda #$FF9C
   sta.w SCUMM.globalVars,x
 
-  ; Advance script 1 PC past the isScriptRunning(155) wait loop
-  ; directly to the game start sequence at $16D1.
-  ; Boot script layout: $0844 = wait loop, $084E = demo dispatcher
-  ; (DO NOT USE), $16D1 = game start / post-demo exit code.
+  ; Advance script 1's PC past the isScriptRunning(155) wait loop
+  ; to $084E (normal post-copy-protection initialization).
+  ; The loop at $0844 waits for 155 to start running, then falls
+  ; through. Since we killed 155, the loop would spin forever.
   ldx #0
 _prc90.scan1:
   lda.w SCUMM.slots.status,x
@@ -1083,7 +1089,7 @@ _prc90.scan1:
   and #$00FF
   cmp #1
   bne _prc90.next1
-  lda #$16D1
+  lda #$084E
   sta.w SCUMM.slots.pc,x
   bra _prc90.done1
 _prc90.next1:

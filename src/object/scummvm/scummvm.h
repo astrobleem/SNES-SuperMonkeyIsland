@@ -460,6 +460,7 @@ SCUMM.cursorTileDone  dw      ; nonzero = cursor CHR already DMA'd to VRAM
 SCUMM.mouseActive     dw      ; nonzero = mouse detected (set by updateCursor)
 SCUMM.pendingVerb     dw      ; verb to execute when ego arrives (0=none)
 SCUMM.pendingObject   dw      ; object for pending verb execution
+SCUMM.actorsDirty     dw      ; nonzero = re-run loadActorCostumes before next renderActors
 .ends
 
 ;---------------------------------------------------------------------------

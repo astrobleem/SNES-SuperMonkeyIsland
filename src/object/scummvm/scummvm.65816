@@ -647,6 +647,14 @@ _play.noPendingVerb:
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
 
+  ; If any putActorInRoom since last frame targeted currentRoom, reload
+  ; actor costumes now so new actors get their palette+CHR DMA'd to VRAM.
+  lda.w SCUMM.actorsDirty
+  beq _play.noActorReload
+    stz.w SCUMM.actorsDirty
+    jsr _scummvm.loadActorCostumes
+_play.noActorReload:
+
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
@@ -5848,6 +5856,19 @@ op_putActorInRoom:
     stz.w SCUMM.actors.visible,x
 ++
   rep #$20
+
+  ; If the target room matches currentRoom, flag costumes dirty so the
+  ; main loop re-runs loadActorCostumes (DMAs the new actor's palette+CHR).
+  ; Needed because processRoomChange runs loadActorCostumes BEFORE ENCD
+  ; places non-ego actors, so their costumes never get loaded otherwise.
+  lda.w SCUMM.scratch3
+  and #$00FF
+  beq +                              ; room=0 (remove) — no need to reload
+  cmp.w SCUMM.currentRoom
+  bne +
+    lda #1
+    sta.w SCUMM.actorsDirty
++
 
   ; ScummVM: putActorInRoom does NOT trigger a room change.  It only
   ; sets a->_room.  Room changes are handled by loadRoomWithEgo/startScene.

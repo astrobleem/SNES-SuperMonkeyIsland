@@ -188,6 +188,43 @@ def encode_tilemap_column_major(entries, w_tiles, h_tiles):
     return bytes(data)
 
 
+def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
+    """Build per-tile priority bitmap from ZP01 zplane.
+
+    Always returns exactly ceil(w_tiles * h_tiles / 8) bytes so the engine
+    can derive pri_size from room dimensions at load time (no header
+    field needed). Rooms without zplane_01.png get an all-zero bitmap.
+
+    Layout: column-major, packed 8 tiles per byte, bit 0 = first tile in
+    column. A tile's bit is 1 if ANY pixel in its 8x8 footprint is set in
+    ZP01 (ScummVM's foreground mask — render in front of actors).
+    """
+    num_tiles = w_tiles * h_tiles
+    out = bytearray((num_tiles + 7) // 8)
+
+    zp01_path = room_dir / "zplane_01.png"
+    if not zp01_path.exists():
+        return bytes(out)
+
+    zp_img = Image.open(zp01_path).convert('1')
+    if zp_img.size != (width_px, height_px):
+        log.warning("zplane_01.png %s != background %dx%d; ignoring",
+                    zp_img.size, width_px, height_px)
+        return bytes(out)
+
+    zp_arr = np.array(zp_img, dtype=np.uint8)
+    zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
+    any_fg = zp_tiled.any(axis=(1, 3))  # (h_tiles, w_tiles), bool
+
+    bit_idx = 0
+    for col in range(w_tiles):
+        for row in range(h_tiles):
+            if any_fg[row, col]:
+                out[bit_idx >> 3] |= 1 << (bit_idx & 7)
+            bit_idx += 1
+    return bytes(out)
+
+
 def build_column_index(map_data, width_tiles, height_tiles):
     """Build column streaming index from column-major tilemap data.
 
@@ -230,11 +267,10 @@ def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
                       box_size=0, ochr_size=0):
     """Build 32-byte room header.
 
-    The box_size field is 32-bit but always fits in 16 bits. The high 16 bits
-    at offset $1E are repurposed as ochr_size (object patch data size).
+    Layout unchanged from the legacy format. The ZP01 priority bitmap
+    lives at end of the room block; engine derives its size from
+    (width_tiles * height_tiles + 7) / 8.
     """
-    # Pack box_size as 16-bit (low) + ochr_size as 16-bit (high) into the
-    # 32-bit box_size field at offset $1C-$1F.
     box_field_32 = (box_size & 0xFFFF) | ((ochr_size & 0xFFFF) << 16)
     return struct.pack('<HHHHHHHHIIII',
         room_id,
@@ -718,6 +754,11 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     map_data = encode_tilemap_column_major(bg_entries, width_tiles, height_tiles)
     col_data = build_column_index(map_data, width_tiles, height_tiles)
 
+    # ZP01 per-tile priority bitmap (appended to room block). Empty if the
+    # room has no zplane_01.png or the mask is all zeros.
+    pri_data = encode_priority_mask(room_dir, width_px, height_px,
+                                     width_tiles, height_tiles)
+
     # Walkbox binary
     box_path = room_dir / "walkbox.box"
     if box_path.exists():
@@ -747,6 +788,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     (output_dir / f"{prefix}.pal").write_bytes(pal_data)
     (output_dir / f"{prefix}.chr").write_bytes(chr_data)
     (output_dir / f"{prefix}.map").write_bytes(map_data)
+    (output_dir / f"{prefix}.pri").write_bytes(pri_data)
     (output_dir / f"{prefix}.col").write_bytes(col_data)
     (output_dir / f"{prefix}.box").write_bytes(box_data)
     (output_dir / f"{prefix}.ochr").write_bytes(ochr_data)

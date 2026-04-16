@@ -30,6 +30,12 @@
 ;bank $7F buffer addresses (long-addressed)
 .define SCROLL_TILEMAP_WRAM      $7F0000  ;full room tilemap (max ~6.3KB)
 
+;ZP01 per-tile priority bitmap: 1 bit/tile, column-major matching
+;SCROLL_TILEMAP_WRAM. 1024 bytes covers 8192 tiles (max 128x64 room).
+;Priority-set tiles get SNES bit 13 OR'd into the VRAM tilemap word at
+;remap time, placing them in front of actors with OAM priority 2.
+.define SCROLL_PRIORITY_WRAM     $7F2C00  ;1024 bytes
+
 ;VRAM tile cache (Step 2) — bank $7F lookup tables
 .define SCROLL_TILE2SLOT_WRAM    $7F3000  ;tileIdToSlot[2048] (4KB, 2 bytes per entry)
 .define SCROLL_SLOT2TILE_WRAM    $7F4000  ;slotToTileId[896]  (1792 bytes)

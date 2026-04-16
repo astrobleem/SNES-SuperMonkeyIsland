@@ -948,22 +948,23 @@ _prc.notRoom0:
 +
 
   ; --- Display LucasArts logo (room 10) for ~3 seconds ---
-  ; Room 10 is 640px wide. LUCASFILM GAMES text spans ~x=360-590.
-  ; cameraX=344 centers the text in the 256px viewport.
-  ; reloadViewport handles VRAM wrapping for columns >63 via the
-  ; tile cache circular buffer (stageColumnForNmi wraps col & 31).
+  ; Only show the logo on FIRST boot. The demo dispatcher restarts the
+  ; boot script via startScript(1), which re-triggers room 90 loading.
+  ; Skip the logo on subsequent passes to avoid 3-second delays per scene.
   rep #$20
+  lda.l SCUMM.globalVars + 105*2         ; Var[105] = copy protection sentinel
+  cmp #$FF9C
+  beq _prc90.skipLogo                     ; already set → logo was already shown
+  ; First boot: show the logo
   lda #344
   sta.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
   jsr room.reloadViewport              ; re-DMA tile cache for cam=344
-  ; Restore brightness for logo display
   sep #$20
   lda #$0F
   sta.w ScreenBrightness
   sta.l INIDSP
-  ; Restore HDMA for logo display
   lda 1,s                               ; peek hdmaEnable (top of stack)
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE
   rep #$20
@@ -971,7 +972,6 @@ _prc.notRoom0:
   lda #180
 _prc90.logoWait:
   pha
-  ; Keep scroll set each frame in case anything resets it
   rep #$20
   lda #344
   sta.w xScrollBG1
@@ -979,12 +979,12 @@ _prc90.logoWait:
   pla
   dec a
   bne _prc90.logoWait
-  ; Now fade out the logo
   sep #$20
   lda #0
   sta.w ScreenBrightness
   sta.l INIDSP
   rep #$20
+_prc90.skipLogo:
 
   ; Room 90 discarded: restore stack and return without loading anything.
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]  (pushed above)
@@ -3904,6 +3904,14 @@ _floop.noOverride:
   sec
   jmp _scummvm.fetchYield         ; yield (dead script)
 _floop.pcInBounds:
+  ; Check slot still alive (startScript may have killed+replaced this slot)
+  ; ScummVM: executeScript loop checks status == ssRunning before each opcode
+  ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_RUNNING
+  bne _scummvm.fetchYield     ; slot was killed — stop executing
+
   ; Read opcode byte (16-bit load, mask to 8-bit)
   lda [tmp],y
   and #$00FF
@@ -3919,8 +3927,14 @@ _floop.pcInBounds:
   beq _scummvm.fetchYield     ; counter zero, yield
   jmp _scummvm.fetchLoop      ; keep going (JMP — branch range exceeded)
 _scummvm.fetchYield:
-  ; Save Y back to slot.pc
+  ; Save Y back to slot.pc — but ONLY if slot is still alive.
+  ; startScript may have killed this slot and replaced it with a new instance
+  ; (same slot index). Writing the old Y would corrupt the new script's pc=0.
   ldx.w SCUMM.currentSlotPtr
+  lda.w SCUMM.slots.status,x
+  and #$00FF
+  cmp #SCUMM_SLOT_DEAD
+  beq _fetchYield.ok              ; slot dead — don't save PC, don't bounds-check
   tya
   sta.w SCUMM.slots.pc,x
   ; Bounds check: kill if PC > cacheLen (bytecode overrun).

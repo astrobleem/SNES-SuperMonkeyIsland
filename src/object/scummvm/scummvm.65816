@@ -902,6 +902,31 @@ _prc.bgReady:
   ; Save resolved room number
   pha
 
+  ; --- Room 0 fast path (before blanking) ---
+  lda.w SCUMM.newRoom
+  and #$00FF
+  bne _prc.notRoom0
+  ; Room 0: need brightness/HDMA on stack for doRoom0
+  jmp _prc.doRoom0Setup
+_prc.notRoom0:
+
+  ; --- Virtual room fast path: skip display blanking ---
+  ; Check if the resolved room has tile data in the ROM data pack.
+  ; If not (virtual room like room 83), skip brightness blanking and
+  ; BG1 clearing — keep the previous room's tiles visible on screen.
+  ; This prevents black frames during demo dispatcher scene transitions.
+  lda 1,s                          ; peek resolved room number
+  jsr room.loadIndex               ; carry set = room exists, clear = virtual
+  bcs _prc.realRoom
+  ; Virtual room: don't touch display at all.
+  ; Zero the room index offset so downstream code knows no tiles loaded.
+  lda #0
+  sta.l GLOBAL.room.idx
+  sta.l GLOBAL.room.idx+2
+  pla                              ; pop resolved room number (discard)
+  jmp _prc.virtualRoomScripts      ; run scripts only, keep display as-is
+_prc.realRoom:
+
   ; --- Instant blank for room change (no gradual fade) ---
   ; Gradual fade used waitFrame which blocked for 5 frames, causing
   ; brightness to stay at $00 when scripts trigger rapid room changes.
@@ -924,18 +949,6 @@ _prc.bgReady:
   sta.l HDMAEN
   stz.w ScreenBrightness
   rep #$20
-
-  ; --- Room 0 fast path: just set currentRoom=0 and return ---
-  ; This allows scripts to "clear" the current room so a subsequent
-  ; loadRoom(N) triggers a fresh room load even if N==old currentRoom.
-  lda.w SCUMM.newRoom
-  and #$00FF
-  bne _prc.notRoom0
-
-  ; Fall through to room 0 handler below
-  jmp _prc.doRoom0
-
-_prc.notRoom0:
   ; --- Room 90 bypass: copy protection room (Dial-a-Pirate) ---
   ; Script 155 issues loadRoom(90) for the copy protection screen.
   ; On SNES we skip the room load, pre-set the correct answer, and kill
@@ -1082,8 +1095,20 @@ _prc90.done1:
   sta.w SCUMM.currentRoom
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
-_prc.doRoom0:
+_prc.doRoom0Setup:
+  ; Room 0 needs brightness/HDMA on stack (same as real room path)
+  sep #$20
+  stz.w ScreenBrightness
+  lda.w ScreenBrightness
+  pha
+  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
+  pha
+  lda #0
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.l HDMAEN
+  rep #$20
 
+_prc.doRoom0:
   ; Room 0: clear room state + BG1 VRAM tilemap via superfree thunk
   jsl scummvm.clearRoom0
   .db $EA, $EA, $EA, $EA, $EA
@@ -1150,10 +1175,15 @@ _prc.roomLoadOk:
   sep #$20
   pla                                   ; pop saved hdmaEnable
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE      ; NMI will enable at next VBlank
-  pla                                   ; pop saved brightness (discard)
-  ; ScreenBrightness stays 0 -- screen dark until play loop deferred restore
-  ; after ENCD + refreshObjectColumns. Prevents 1-frame flash of incorrect
-  ; object states (e.g., rowboat visible before ENCD hides it).
+  pla                                   ; pop saved brightness
+  ; Restore brightness immediately after tile DMA + palette setup.
+  ; Tiles are in VRAM, palette is configured, HDMA table built —
+  ; the room background is ready. Showing it now instead of after
+  ; ENCD/scripts eliminates ~20 black frames per room transition.
+  ; Tradeoff: objects may flash briefly before ENCD hides them, but
+  ; this is far less noticeable than prolonged black screens.
+  lda #$0F
+  sta.w ScreenBrightness
   rep #$20
   pla
 

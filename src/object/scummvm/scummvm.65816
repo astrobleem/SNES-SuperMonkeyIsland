@@ -1056,12 +1056,24 @@ _prc90.next154:
   bcc _prc90.scan154
 _prc90.done154:
 
-  ; Advance script 1's PC past the isScriptRunning(155) wait loop.
-  ; $084E = post-copy-protection code. The boot script checks Var[105],
-  ; then enters the intro/demo dispatcher which chains scenes via
-  ; startScript(1) restarts. Pacing comes from room LSCR scripts.
-  ; With the cache fix, LSCR data is now correct so room scripts
-  ; should pace the intro properly.
+  ; ---------------------------------------------------------------
+  ; DO NOT re-enter the floppy attract/demo dispatcher ($084E).
+  ; MI1 CD has NO attract mode. The demo dispatcher at $084E cycles
+  ; through island rooms (25,18,64,83,...) endlessly — that is the
+  ; floppy-era demo loop, not the CD intro. It was removed because
+  ; every time it was added back, it produced the wrong game flow.
+  ; The correct MI1 CD flow is: logo → narrator (room 22) → game.
+  ; ---------------------------------------------------------------
+
+  ; Set Var[105] = 0xFF9C (correct-answer sentinel for copy protection)
+  ldx #(105 * 2)
+  lda #$FF9C
+  sta.w SCUMM.globalVars,x
+
+  ; Advance script 1 PC past the isScriptRunning(155) wait loop
+  ; directly to the game start sequence at $16D1.
+  ; Boot script layout: $0844 = wait loop, $084E = demo dispatcher
+  ; (DO NOT USE), $16D1 = game start / post-demo exit code.
   ldx #0
 _prc90.scan1:
   lda.w SCUMM.slots.status,x
@@ -1071,7 +1083,7 @@ _prc90.scan1:
   and #$00FF
   cmp #1
   bne _prc90.next1
-  lda #$084E
+  lda #$16D1
   sta.w SCUMM.slots.pc,x
   bra _prc90.done1
 _prc90.next1:
@@ -1083,14 +1095,7 @@ _prc90.next1:
   bcc _prc90.scan1
 _prc90.done1:
 
-  ; Set Var[105] = 0xFF9C (correct-answer sentinel for copy protection check)
-  ldx #(105 * 2)
-  lda #$FF9C
-  sta.w SCUMM.globalVars,x
-
   ; Sync currentRoom so processRoomChange doesn't re-trigger the bypass.
-  ; The boot script's intro dispatcher will set newRoom via its own
-  ; loadRoom/loadRoomWithEgo calls.
   lda.w SCUMM.newRoom
   sta.w SCUMM.currentRoom
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)

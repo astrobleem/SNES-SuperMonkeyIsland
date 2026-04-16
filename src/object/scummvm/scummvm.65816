@@ -477,37 +477,6 @@ _init.lastScale:
   lda.w SCUMM.currentRoom
   and #$00FF
   sta.w SCUMM.currentRoom
-  ; Game start redirect: if Var[39]!=0 (game starting) and the boot
-  ; script/script 23 set newRoom to a demo room instead of the lookout,
-  ; override to pseudo-room 130 (maps to room 1 via resourceMapper).
-  ; Script 23's loadRoomWithEgo fails due to incomplete object metadata.
-  ldx #(39 * 2)
-  lda.w SCUMM.globalVars,x
-  beq _play.noGameStartRedirect
-  lda.w SCUMM.newRoom
-  and #$00FF
-  cmp #130
-  beq _play.noGameStartRedirect      ; already going to lookout
-  cmp #1
-  beq _play.noGameStartRedirect      ; already going to room 1
-  cmp.w SCUMM.currentRoom
-  beq _play.noGameStartRedirect      ; no room change pending
-  lda #130
-  sta.w SCUMM.newRoom                ; redirect to lookout
-  ; Place Guybrush (actor 1) in the target room at the lookout position
-  ldx #1*16                          ; actor 1 struct offset
-  sep #$20
-  lda #130
-  sta.w SCUMM.actors.room,x          ; actor room = 130
-  lda #1
-  sta.w SCUMM.actors.visible,x       ; visible = 1
-  rep #$20
-  lda #160
-  sta.w SCUMM.actors.x,x             ; x = 160 (center)
-  lda #120
-  sta.w SCUMM.actors.y,x             ; y = 120
-_play.noGameStartRedirect:
-
   lda.w SCUMM.newRoom
   cmp.w SCUMM.currentRoom
   beq _play.noRoomChange
@@ -547,17 +516,8 @@ _play.scanPop:
   pla
   bra _play.scanOverride
 _play.directSkip:
-  ; No cutscene override available.  If still in demo/intro loop
-  ; (Var[39]==0), set Var[39]=1 so boot script exits loop at $0D82
-  ; and proceeds to game start at $16D1.  Same as pressing Space in DOS.
-  ; Also set newRoom=130 (pseudo-room for lookout, maps to room 1).
-  ; Script 23's loadRoomWithEgo fails to resolve the correct starting
-  ; room due to incomplete object metadata, so we force it here.
-  ldx #(39 * 2)
-  lda.w SCUMM.globalVars,x
-  bne _play.noAbort                    ; already set — game starting
-  lda #1
-  sta.w SCUMM.globalVars,x            ; Var[39] = 1 → exit demo loop
+  ; No cutscene override available — no action needed.
+  ; (Boot script jumps directly to game start, no demo loop to exit.)
 _play.noAbort:
   .ACCU 16
   .INDEX 16
@@ -1076,7 +1036,9 @@ _prc90.next154:
   bcc _prc90.scan154
 _prc90.done154:
 
-  ; Advance script 1's PC past the isScriptRunning(155) wait loop.
+  ; Advance script 1's PC directly to game start code ($16D1).
+  ; Skips the demo loop entirely — retail MI1 has no attract mode.
+  ; $16D1 = putActorInRoom + putActor + startScript(23) + stopObjectCode
   ldx #0
 _prc90.scan1:
   lda.w SCUMM.slots.status,x
@@ -1086,7 +1048,7 @@ _prc90.scan1:
   and #$00FF
   cmp #1
   bne _prc90.next1
-  lda #$084E
+  lda #$16D1
   sta.w SCUMM.slots.pc,x
   bra _prc90.done1
 _prc90.next1:
@@ -1103,15 +1065,23 @@ _prc90.done1:
   lda #$FF9C
   sta.w SCUMM.globalVars,x
 
-  ; Var[39] stays 0 (default) — let the intro/demo loop run naturally.
-  ; The boot script at $0D82 checks equalZero(Var[39]): while 0 it plays
-  ; the intro cutscene and demo.  The player presses START to set Var[39]
-  ; and proceed to game start at $16D1.
-
-  ; Sync newRoom = currentRoom so processRoomChange does not re-fire next tick
-  lda.w SCUMM.currentRoom
-  and #$00FF
+  ; Set up the game start room directly in newRoom (below)
+  ; Set newRoom=130 (pseudo-room for lookout → room 1) so the next
+  ; _play tick loads the game starting room directly.
+  lda #130
   sta.w SCUMM.newRoom
+  ; Place Guybrush (actor 1) in room 130 at center position
+  ldx #1*16
+  sep #$20
+  lda #130
+  sta.w SCUMM.actors.room,x
+  lda #1
+  sta.w SCUMM.actors.visible,x
+  rep #$20
+  lda #160
+  sta.w SCUMM.actors.x,x
+  lda #120
+  sta.w SCUMM.actors.y,x
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
 _prc.doRoom0:

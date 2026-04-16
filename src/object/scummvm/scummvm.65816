@@ -1104,13 +1104,9 @@ _prc90.scan1:
   bne _prc90.next1
   lda #$084E
   sta.w SCUMM.slots.pc,x
-  ; Delay script 1 for 600 frames (~10 seconds) to let the narrator
-  ; text (script 115) display "Deep in the Caribbean..." in room 22.
-  ; In the original game, the copy protection dialog provides this
-  ; delay naturally. The SCUMM scheduler decrements delay each tick
-  ; and skips the slot until it reaches 0.
-  lda #600
-  sta.w SCUMM.slots.delay,x
+  ; No delay needed: the boot script at $084E starts script 152
+  ; (the MI1 CD intro sequence) and waits for it to complete.
+  ; Script 152 handles the entire campfire/narrator/title flow.
   bra _prc90.done1
 _prc90.next1:
   txa
@@ -1121,16 +1117,12 @@ _prc90.next1:
   bcc _prc90.scan1
 _prc90.done1:
 
-  ; Cancel the room 90 load: set newRoom = currentRoom so processRoomChange
-  ; doesn't re-trigger. This keeps the CURRENT room (room 22, narrator)
-  ; visible so script 115 can display "Deep in the Caribbean" text and
-  ; the campfire scene. Script 1 resumes at $084E which will eventually
-  ; load the next room when the intro sequence is ready.
-  lda.w SCUMM.currentRoom
-  sta.w SCUMM.newRoom
-  ; Also update VAR_ROOM to match
-  ldx #4*2
-  sta.w SCUMM.globalVars,x
+  ; Sync rooms: set currentRoom = newRoom to suppress re-trigger, then
+  ; let the boot script proceed naturally from $084E. The boot script
+  ; calls loadRoom(0) at $0962 to clear room state, then starts the
+  ; intro via script 152.
+  lda.w SCUMM.newRoom
+  sta.w SCUMM.currentRoom
   jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
 _prc.doRoom0Setup:

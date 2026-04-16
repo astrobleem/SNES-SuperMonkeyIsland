@@ -2559,6 +2559,10 @@ scummvm.startScriptSlot_long:
   jsr _scummvm.startScriptSlot
   rtl
 
+scummvm.processRoomChange:
+  jsr _scummvm.processRoomChange
+  rtl
+
 scummvm.triggerBadOpcode:
   TRIGGER_ERROR E_ScummVmBadOpcode
 
@@ -5761,17 +5765,15 @@ op_resourceRoutines:
 _resRoutines.loadRoom:
   .ACCU 16
   .INDEX 16
-  ; loadRoom (sub 0x04): one p8 arg = room number.
-  ; Mirrors op_loadRoom: set newRoom + VAR_ROOM so processRoomChange fires.
+  ; loadRoom (sub 0x04): resource preload hint.
+  ; ScummVM: ensureResourceLoaded(rtRoom, room) — preloads room resources.
+  ; On SNES, rooms load on-demand from ROM data pack, so this is a no-op.
+  ; Do NOT set newRoom — that would overwrite a pending op_loadRoom change
+  ; (e.g., boot script's loadRoom(22) gets clobbered by resRoutines(10)).
   lda.w SCUMM.scratch
   sta.w SCUMM.currentOpcode
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; room number -> A (16-bit, high=0)
-  and #$00FF
-  beq _resRoutines.done              ; room 0 = no-op (no unload on SNES)
-  sta.w SCUMM.newRoom                ; request deferred room change
-  ldx #4*2                           ; VAR_ROOM (var 4)
-  sta.w SCUMM.globalVars,x           ; update VAR_ROOM immediately
+  jsr _scummvm.getVarOrDirectByte    ; consume the room number param
   bra _resRoutines.done
 
 _resRoutines.flObject:
@@ -6064,14 +6066,12 @@ op_loadRoom:
   rts
 
 _loadRoom.nonZero:
-  sta.w SCUMM.newRoom                  ; request room change (deferred)
+  sta.w SCUMM.newRoom                  ; request room change
   ; Set VAR_ROOM (var 4) immediately so scripts that check VAR(VAR_ROOM)
   ; after loadRoom see the new value within the same play tick. Without
   ; this, the attract mode's conditional display blocks all fail (VAR_ROOM
   ; is stale) and 45 breakHere pauses are skipped — the entire attract
   ; sequence runs in one frame instead of minutes.
-  ; NOTE: currentRoom is NOT set here — processRoomChange needs
-  ; newRoom != currentRoom to trigger the actual room data load.
   ldx #4*2                             ; VAR_ROOM (var 4)
   sta.w SCUMM.globalVars,x
   clc

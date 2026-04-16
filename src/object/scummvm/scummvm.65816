@@ -9267,7 +9267,25 @@ op_actorFollowCamera:
   and #$00FF
   sta.w SCUMM.cameraFollows
   beq _afc.done
-  ; Immediately set cameraDest to actor's X
+  ; ScummVM: setCameraFollows checks if actor is NOT in current room.
+  ; If so, triggers startScene(actor.room) to load the actor's room.
+  pha                                 ; save actor number
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16
+  tax
+  lda.w SCUMM.actors,x              ; actor.room (byte at +0)
+  and #$00FF
+  beq _afc.noRoomChange              ; room 0 = not placed
+  cmp.w SCUMM.currentRoom
+  beq _afc.noRoomChange              ; already in current room
+  ; Actor is in a different room → trigger room change
+  sta.w SCUMM.newRoom
+_afc.noRoomChange:
+  ; Set cameraDest to actor's X
+  pla                                 ; restore actor number
+  and #$00FF
   asl a
   asl a
   asl a

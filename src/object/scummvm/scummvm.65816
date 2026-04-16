@@ -2180,16 +2180,21 @@ _loadRoom.copyEncd:
   lda.w SCUMM.scratch2
   ldx.w SCUMM.scratch3
   jsr room.setRomDataPtr
-  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
+  ; Compute next romPos and save to stack (copyRomToCache clobbers scratch2/3)
   lda.w SCUMM.scratch2
   clc
   adc.w SCUMM.roomEncdLen
-  sta.w SCUMM.scratch2
+  pha                            ; push new romPos_lo
   lda.w SCUMM.scratch3
   adc #0
-  sta.w SCUMM.scratch3
+  pha                            ; push new romPos_hi
   lda.w SCUMM.roomEncdLen
   jsr _scummvm.copyRomToCache
+  ; Restore romPos from stack
+  pla
+  sta.w SCUMM.scratch3
+  pla
+  sta.w SCUMM.scratch2
 
 _loadRoom.copyExcd:
   .ACCU 16
@@ -2203,16 +2208,21 @@ _loadRoom.copyExcd:
   lda.w SCUMM.scratch2
   ldx.w SCUMM.scratch3
   jsr room.setRomDataPtr
-  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
+  ; Compute next romPos and save to stack
   lda.w SCUMM.scratch2
   clc
   adc.w SCUMM.roomExcdLen
-  sta.w SCUMM.scratch2
+  pha
   lda.w SCUMM.scratch3
   adc #0
-  sta.w SCUMM.scratch3
+  pha
   lda.w SCUMM.roomExcdLen
   jsr _scummvm.copyRomToCache
+  ; Restore romPos from stack
+  pla
+  sta.w SCUMM.scratch3
+  pla
+  sta.w SCUMM.scratch2
 
 _loadRoom.copyLscr:
   .ACCU 16
@@ -2236,20 +2246,25 @@ _loadRoom.lscrLoop:
   jsr room.setRomDataPtr
   plx
   phx
-  ; Advance romPos BEFORE copy (copyRomToCache clobbers scratch2)
-  lda.w SCUMM.roomLscrTable.cacheLen,x
+  ; Compute next romPos and save to stack (copyRomToCache clobbers scratch2)
+  lda.w SCUMM.scratch2
   clc
-  adc.w SCUMM.scratch2
-  sta.w SCUMM.scratch2
+  adc.w SCUMM.roomLscrTable.cacheLen,x
+  pha                            ; push new romPos_lo
   lda.w SCUMM.scratch3
   adc #0
-  sta.w SCUMM.scratch3
+  pha                            ; push new romPos_hi
   ; Store cacheWritePtr as this LSCR's cache offset (before copy advances it)
   lda.w SCUMM.cacheWritePtr
   sta.w SCUMM.roomLscrTable.cachePtr,x
   ; Copy LSCR bytecode to cache
   lda.w SCUMM.roomLscrTable.cacheLen,x
   jsr _scummvm.copyRomToCache
+  ; Restore romPos from stack
+  pla
+  sta.w SCUMM.scratch3
+  pla
+  sta.w SCUMM.scratch2
   plx
 _loadRoom.lscrNext:
   .ACCU 16

@@ -45,10 +45,14 @@ DEFAULT_MANIFEST = ROOT / "audio" / "registered_sfx.txt"
 # Standard SFX instrument template. The SBL VOC rate is embedded in the WAV,
 # so `freq: 261.63` + `first_octave/last_octave: 4` means "play note c4 to get
 # native-rate playback" — consistent with the sound-effects.txt snippet below.
+#
+# `loop: "none"` is critical for one-shot SFX: a looping sample keeps playing
+# forever after the bytecode ends (the SFX bytecode has no explicit key-off,
+# so the envelope stays at sustain level while a looping BRR re-reads blocks
+# indefinitely — you hear the same snippet on repeat).
 SFX_TEMPLATE: dict = {
     "freq": 261.63,
-    "loop": "dupe_block_hack_filter_1",
-    "loop_setting": 2,
+    "loop": "none",
     "evaluator": "default",
     "ignore_gaussian_overflow": False,
     "first_octave": 4,
@@ -97,21 +101,46 @@ def update_tad_project(scumm_ids: list[int], wavs: dict[int, Path]) -> None:
     instruments: list[dict] = data.setdefault("instruments", [])
     sfx_list: list[str] = data.setdefault("sound_effects", [])
 
-    # Index existing instrument names.
+    # Expected SFX names for this manifest.
+    want_inst = {f"sfx_soun_{sid:03d}" for sid in scumm_ids}
+    want_sfx = {f"soun_{sid:03d}" for sid in scumm_ids}
+
+    # Drop sfx_soun_* / soun_* entries that are NOT in the current manifest
+    # so the project stays a faithful mirror (idempotent sync, not append-only).
+    instruments[:] = [
+        i for i in instruments
+        if not i["name"].startswith("sfx_soun_") or i["name"] in want_inst
+    ]
+    sfx_list[:] = [
+        n for n in sfx_list
+        if not n.startswith("soun_") or n in want_sfx
+    ]
+
     have_inst = {inst["name"] for inst in instruments}
     have_sfx = set(sfx_list)
+
+    # Build a fresh config for each SFX so template changes (e.g. loop mode)
+    # propagate to entries that already exist in the project.
+    def make_entry(sid: int) -> dict:
+        return {
+            "name": f"sfx_soun_{sid:03d}",
+            "source": wav_rel_source(wavs[sid]),
+            **SFX_TEMPLATE,
+            "comment": f"MI1 SOUN {sid:03d}",
+        }
+
+    # Overwrite existing sfx_ entries in place (preserve position).
+    for i, inst in enumerate(instruments):
+        if inst["name"].startswith("sfx_soun_"):
+            sid = int(inst["name"].split("_")[-1])
+            if sid in wavs:
+                instruments[i] = make_entry(sid)
 
     for sid in scumm_ids:
         inst_name = f"sfx_soun_{sid:03d}"
         sfx_name = f"soun_{sid:03d}"
         if inst_name not in have_inst:
-            wav = wavs[sid]
-            instruments.append({
-                "name": inst_name,
-                "source": wav_rel_source(wav),
-                **SFX_TEMPLATE,
-                "comment": f"MI1 SOUN {sid:03d}",
-            })
+            instruments.append(make_entry(sid))
             have_inst.add(inst_name)
         if sfx_name not in have_sfx:
             # Insert before any test_* names so real SFX indices stay contiguous.
@@ -143,6 +172,10 @@ def regenerate_sfx_txt(scumm_ids: list[int]) -> None:
         name = parts[i]
         body = parts[i + 1].strip("\n")
         stanzas[name] = body
+
+    # Drop soun_NNN stanzas not in the current manifest (idempotent sync).
+    want = {f"soun_{sid:03d}" for sid in scumm_ids}
+    stanzas = {n: b for n, b in stanzas.items() if not _SFX_ID_RE.match(n) or n in want}
 
     # Ensure a stanza exists for each soun_NNN id.
     for sid in scumm_ids:

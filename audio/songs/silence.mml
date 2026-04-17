@@ -1,0 +1,10 @@
+; Silence - blank placeholder song
+; This is the default song loaded by TAD to confirm the driver works
+
+#Title Silence
+#Game Super Monkey Island
+#Author Test
+
+@sine sine
+
+A @sine o4 r1 r1 r1 r1

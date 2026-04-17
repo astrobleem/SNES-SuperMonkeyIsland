@@ -1,0 +1,4 @@
+=== test_beep ===
+    set_instrument_and_gain sine F127
+    set_volume 25
+    play_note d4 8

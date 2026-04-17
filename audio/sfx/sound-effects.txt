@@ -1,18 +1,15 @@
 === soun_008 ===
-    set_instrument sfx_soun_008
-    set_adsr 15 0 7 0
+    set_instrument_and_adsr sfx_soun_008 15 0 7 0
     set_volume 127
     play_note c4 16
 
 === soun_099 ===
-    set_instrument sfx_soun_099
-    set_adsr 15 0 7 0
+    set_instrument_and_adsr sfx_soun_099 15 0 7 0
     set_volume 127
     play_note c4 48
 
 === soun_110 ===
-    set_instrument sfx_soun_110
-    set_adsr 15 0 7 0
+    set_instrument_and_adsr sfx_soun_110 15 0 7 0
     set_volume 127
     play_note c4 48
 

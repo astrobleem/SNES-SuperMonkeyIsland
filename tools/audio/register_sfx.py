@@ -149,11 +149,12 @@ def regenerate_sfx_txt(scumm_ids: list[int]) -> None:
         sfx_name = f"soun_{sid:03d}"
         if sfx_name in stanzas:
             continue
-        # Use set_instrument_and_gain for envelope gain override, AND
-        # set_volume for per-voice DSP volume — both must be nonzero for
-        # the SFX to be audible (matches the shipped test_beep pattern).
+        # set_instrument_and_adsr atomically sets instrument + ADSR envelope.
+        # Args: <name> <attack 0-15> <decay 0-7> <sustain_level 0-7> <sustain_rate 0-31>.
+        # Fast attack (15), no decay (0), max sustain (7), no release (0) ->
+        # envelope ramps to peak instantly and holds until note-off.
         stanzas[sfx_name] = (
-            f"    set_instrument_and_gain sfx_{sfx_name} F127\n"
+            f"    set_instrument_and_adsr sfx_{sfx_name} 15 0 7 0\n"
             f"    set_volume 127\n"
             f"    play_note c4 48"
         )

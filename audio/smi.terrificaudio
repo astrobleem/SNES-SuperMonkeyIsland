@@ -146,6 +146,19 @@
       "last_octave": 4,
       "envelope": "adsr 15 7 2 0",
       "comment": "MI1 SOUN 008 — UI blip (615B SBL @ 21.7 kHz)"
+    },
+    {
+      "name": "sfx_soun_099",
+      "source": "samples/sfx/soun_099_room070.wav",
+      "freq": 261.63,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 4,
+      "last_octave": 4,
+      "envelope": "adsr 15 7 2 0",
+      "comment": "MI1 SOUN 099 — intro SFX (first script call @ frame 188)"
     }
   ],
   "samples": [],
@@ -156,6 +169,7 @@
   "high_priority_sound_effects": [],
   "sound_effects": [
     "soun_008",
+    "soun_099",
     "test_beep"
   ],
   "low_priority_sound_effects": [],

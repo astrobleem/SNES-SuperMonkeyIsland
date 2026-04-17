@@ -3,6 +3,11 @@
     set_volume 96
     play_note c4 16
 
+=== soun_099 ===
+    set_instrument sfx_soun_099
+    set_volume 96
+    play_note c4 48
+
 === test_beep ===
     set_instrument_and_gain sine F127
     set_volume 25

@@ -179,10 +179,18 @@ Tad_sfxQueue_pan         db      ; SFX pan value
 ; The LoadAudioData callback is included here and uses label arithmetic
 ; to compute absolute addresses (no bank-alignment requirement).
 
+; tad-compiler's data-table entries are offsets relative to a "LoadAudioData
+; code prefix" that it assumes sits before the bin in the same section (43
+; bytes for HiROM 64tass-export). Our LoadAudioData lives elsewhere, so we
+; pad the label `Tad_AudioData` 43 bytes ahead of the real bin start to
+; realign what LoadAudioData computes with what the data table means.
+.define TAD_BIN_DATA_OFFSET 43
+
 .bank 2 slot 0
 .base BSL
 .section "TAD Audio Data" free
 Tad_AudioData:
+  .dsb TAD_BIN_DATA_OFFSET, $00
 Tad_Loader_Bin:
   .incbin "build/audio/tad-audio-data.bin" SKIP TAD_LOADER_OFFSET READ TAD_LOADER_SIZE
 Tad_AudioDriver_Bin:

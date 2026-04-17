@@ -1,6 +1,25 @@
 	.include "src/core/boot.h"
 
 
+; Dev test harness — SELECT cycles through registered TAD SFX, START toggles
+; script-execution pause. Remove before release.
+;
+; We do our own rising-edge detection on `inputDevice.press` instead of relying
+; on `inputDevice.trigger`: SCUMM script dispatch reads/consumes trigger bits,
+; which would swallow our SELECT presses before we saw them.
+;
+; Ramsection lives in bank 0 slot 2 (auto-zeroed by the early ClearWRAM sweep).
+.define N_DEV_SFX 17
+
+.ramsection "dev_sfx_test" bank 0 slot 2
+  dev_sfx_idx     db    ; next SFX index to queue (0..N_DEV_SFX-1)
+  dev_paused      db    ; 0 = run SCUMM scripts, 1 = skip them
+  dev_prev_press  dw    ; last-frame raw button state (for edge detect)
+  dev_curr_press  dw    ; scratch: current raw button state
+  dev_new_edges   dw    ; scratch: bits that went 0→1 this frame
+.ends
+
+
 .Section "Main Code"
 core.boot.init:
 	sep #$20
@@ -69,8 +88,17 @@ core.boot.init:
 ;tier 0 main loop starts here:
 core.boot.mainLoop:
     jsr core.nmi.waitFrame
-	jsr core.oam.play
-	jsr core.object.play
+
+	jsr _dev_test_harness
+
+	; Skip SCUMM script processing while paused (dev_paused != 0).
+	sep #$20
+	lda.w dev_paused
+	rep #$20
+	bne _dev_paused_skip
+	    jsr core.oam.play
+	    jsr core.object.play
+_dev_paused_skip:
 
 	;process Terrific Audio Driver (once per frame, after game logic)
 	sep #$20
@@ -78,6 +106,56 @@ core.boot.mainLoop:
 	rep #$20
 
 	bra core.boot.mainLoop
+
+
+; ---- Dev test harness (remove before release) ----
+;
+; SELECT (bit $2000): queues the next registered SFX.
+; START  (bit $1000): toggles dev_paused, freezing SCUMM script processing.
+;
+; Does its own rising-edge detection against `inputDevice.press` (offset 0 of
+; the device struct). Entry: any A/I width. Exit: A is 16-bit.
+_dev_test_harness:
+	rep #$20
+
+	; current_press is at `inputDevice + 0`; mask to 16 bits because
+	; WLA-DX hands us a full 24-bit WRAM address via ramsections.
+	lda.w (inputDevice) & $FFFF
+	sta.w dev_curr_press
+	eor.w dev_prev_press               ; A = current XOR prev
+	and.w dev_curr_press               ; A = (XOR) AND current = newly-pressed
+	sta.w dev_new_edges
+
+	lda.w dev_curr_press
+	sta.w dev_prev_press
+
+	; --- SELECT edge: advance and queue next SFX ---
+	lda.w dev_new_edges
+	and.w #$2000
+	beq _dth_not_sel
+	    sep #$20
+	    lda.w dev_sfx_idx
+	    jsl Tad_QueueSoundEffect
+	    inc a
+	    cmp.b #N_DEV_SFX
+	    bcc _dth_sel_store
+	        lda.b #0
+_dth_sel_store:
+	    sta.w dev_sfx_idx
+	    rep #$20
+_dth_not_sel:
+
+	; --- START edge: toggle SCUMM pause ---
+	lda.w dev_new_edges
+	and.w #$1000
+	beq _dth_not_start
+	    sep #$20
+	    lda.w dev_paused
+	    eor.b #1
+	    sta.w dev_paused
+	    rep #$20
+_dth_not_start:
+	rts
 .ends
 
 ;null guard: OOP dispatcher uses $0000 as "no method" sentinel.

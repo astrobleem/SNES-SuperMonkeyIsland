@@ -149,9 +149,10 @@ def regenerate_sfx_txt(scumm_ids: list[int]) -> None:
         sfx_name = f"soun_{sid:03d}"
         if sfx_name in stanzas:
             continue
+        # Use set_instrument_and_gain with fixed gain F127 so the SFX plays
+        # at full volume regardless of the instrument's ADSR sustain level.
         stanzas[sfx_name] = (
-            f"    set_instrument sfx_{sfx_name}\n"
-            f"    set_volume 96\n"
+            f"    set_instrument_and_gain sfx_{sfx_name} F127\n"
             f"    play_note c4 48"
         )
 

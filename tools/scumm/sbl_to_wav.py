@@ -63,7 +63,11 @@ def decode_sbl(data: bytes) -> tuple[int, bytes]:
 
 def u8_to_s16_pcm(u8: bytes) -> bytes:
     # Unsigned 8-bit (0..255, 128 = silence) -> signed 16-bit little-endian.
-    return b"".join(struct.pack("<h", (b - 128) * 256) for b in u8)
+    # Pad tail with silence so the total sample count is a multiple of 16
+    # (BRR block size; tad-compiler rejects non-aligned input).
+    pad = (-len(u8)) % 16
+    padded = u8 + b"\x80" * pad  # 0x80 is unsigned-8-bit silence
+    return b"".join(struct.pack("<h", (b - 128) * 256) for b in padded)
 
 
 def convert_one(src: Path, out_dir: Path) -> tuple[Path, int, int] | None:

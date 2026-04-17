@@ -112,8 +112,8 @@ $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles
 $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)
 	python3 ./tools/gen_obj_room_table.py
 
-#generate SCUMM sound ID -> TAD dispatch map
-$(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) tools/scumm/gen_audio_map.py | $(builddirs)
+#generate SCUMM sound ID -> TAD dispatch map (reads smi.terrificaudio sfx list)
+$(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) $(tadproject) tools/scumm/gen_audio_map.py | $(builddirs)
 	python3 ./tools/scumm/gen_audio_map.py
 
 #pack room + script data into ROM data blob (produces both .bin and .inc)

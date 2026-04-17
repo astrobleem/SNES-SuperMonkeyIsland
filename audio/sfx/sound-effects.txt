@@ -1,3 +1,8 @@
+=== soun_008 ===
+    set_instrument sfx_soun_008
+    set_volume 96
+    play_note c4 16
+
 === test_beep ===
     set_instrument_and_gain sine F127
     set_volume 25

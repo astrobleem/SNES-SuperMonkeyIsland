@@ -133,6 +133,19 @@
       "last_octave": 3,
       "envelope": "adsr 15 7 2 0",
       "comment": "drum hat — HP noise fast decay"
+    },
+    {
+      "name": "sfx_soun_008",
+      "source": "samples/sfx/soun_008_room010.wav",
+      "freq": 261.63,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 4,
+      "last_octave": 4,
+      "envelope": "adsr 15 7 2 0",
+      "comment": "MI1 SOUN 008 — UI blip (615B SBL @ 21.7 kHz)"
     }
   ],
   "samples": [],
@@ -142,6 +155,7 @@
   },
   "high_priority_sound_effects": [],
   "sound_effects": [
+    "soun_008",
     "test_beep"
   ],
   "low_priority_sound_effects": [],

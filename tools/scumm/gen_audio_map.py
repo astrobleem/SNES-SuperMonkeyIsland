@@ -19,11 +19,17 @@ in `data/scumm_extracted/sounds/soun_NNN_roomMMM.bin` (NNN = sound ID).
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import sys
 from pathlib import Path
 
-SOUND_DIR = Path(__file__).resolve().parents[2] / "data" / "scumm_extracted" / "sounds"
-DEFAULT_OUT = Path(__file__).resolve().parents[2] / "build" / "audio" / "scumm_sound_map.inc"
+ROOT = Path(__file__).resolve().parents[2]
+SOUND_DIR = ROOT / "data" / "scumm_extracted" / "sounds"
+DEFAULT_OUT = ROOT / "build" / "audio" / "scumm_sound_map.inc"
+DEFAULT_TAD = ROOT / "audio" / "smi.terrificaudio"
+
+_SFX_NAME_RE = re.compile(r"^soun_(\d+)$")
 
 KIND_STUB = "stub"
 KIND_MIDI = "midi"
@@ -55,15 +61,37 @@ def classify(data: bytes) -> str:
     return KIND_UNKNOWN
 
 
-def build_map(sound_dir: Path) -> tuple[list[int], list[tuple[int, str, int | None]]]:
+def read_tad_sfx_map(tad_path: Path) -> dict[int, int]:
+    """Return {scumm_id: tad_sfx_index} for every `soun_NNN` entry in the
+    smi.terrificaudio `sound_effects` list, in declaration order."""
+    data = json.loads(tad_path.read_text(encoding="utf-8"))
+    order: list[str] = data.get("sound_effects", [])
+    # TAD also scans high_priority/low_priority pools; include them for
+    # completeness if anyone wires MI1 SFX into those tiers later.
+    # Index ordering: high_priority first, then normal, then low_priority.
+    full: list[str] = (
+        data.get("high_priority_sound_effects", [])
+        + order
+        + data.get("low_priority_sound_effects", [])
+    )
+    out: dict[int, int] = {}
+    for tad_idx, name in enumerate(full):
+        m = _SFX_NAME_RE.match(name)
+        if m:
+            out[int(m.group(1))] = tad_idx
+    return out
+
+
+def build_map(sound_dir: Path, tad_path: Path | None) -> tuple[list[int], list[tuple[int, str, int | None]]]:
     files = sorted(sound_dir.glob("soun_*.bin"))
     if not files:
         raise SystemExit(f"no sound files under {sound_dir}")
 
+    sfx_overrides = read_tad_sfx_map(tad_path) if tad_path else {}
+
     entries: list[tuple[int, str, int | None]] = []  # (scumm_id, kind, tad_idx)
     table: list[int] = [NO_AUDIO] * 256  # oversize then trim at end
     next_song = 0
-    next_sfx = 0
     max_id = -1
 
     for path in files:
@@ -84,17 +112,24 @@ def build_map(sound_dir: Path) -> tuple[list[int], list[tuple[int, str, int | No
             entries.append((sid, kind, next_song))
             next_song += 1
         elif kind == KIND_SBL:
-            if next_sfx > MAX_SFX_IDX:
-                raise SystemExit(f"too many SFX (>{MAX_SFX_IDX})")
-            table[sid] = next_sfx
-            entries.append((sid, kind, next_sfx))
-            next_sfx += 1
+            tad_idx = sfx_overrides.get(sid)
+            if tad_idx is None:
+                # SBL exists but no matching soun_NNN entry in TAD yet -> silent
+                entries.append((sid, kind, None))
+                continue
+            if tad_idx > MAX_SFX_IDX:
+                raise SystemExit(f"SFX index {tad_idx} for scumm id {sid} exceeds max {MAX_SFX_IDX}")
+            table[sid] = tad_idx
+            entries.append((sid, kind, tad_idx))
         else:
             entries.append((sid, kind, None))
 
     if max_id < 0:
         raise SystemExit("no valid sound files found")
-    return table[: max_id + 1], entries
+    # Pad the table to 256 entries so op_startSound et al can index any
+    # 8-bit SCUMM ID without a bounds check. Entries beyond the last known
+    # ID stay $FF (silent/no-audio) — matches the unused-ID semantics.
+    return table[:256], entries
 
 
 def emit_inc(out: Path, table: list[int], entries: list[tuple[int, str, int | None]]) -> None:
@@ -133,8 +168,10 @@ def emit_inc(out: Path, table: list[int], entries: list[tuple[int, str, int | No
     for sid, kind, tad in entries:
         if kind == KIND_MIDI:
             lines.append(f";; {sid:3d}  song {tad:3d}")
-        elif kind == KIND_SBL:
+        elif kind == KIND_SBL and tad is not None:
             lines.append(f";; {sid:3d}   sfx {tad:3d}")
+        elif kind == KIND_SBL:
+            lines.append(f";; {sid:3d}   sfx (unregistered — silent until added to smi.terrificaudio)")
         elif kind == KIND_ADL:
             lines.append(f";; {sid:3d}   ADL (unplayable — silent)")
         elif kind == KIND_SPK:
@@ -150,18 +187,22 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sound-dir", type=Path, default=SOUND_DIR)
     ap.add_argument("--output", type=Path, default=DEFAULT_OUT)
+    ap.add_argument("--tad-project", type=Path, default=DEFAULT_TAD,
+                    help="path to smi.terrificaudio; SFX indices are taken from its "
+                    "sound_effects list (entries named soun_NNN map to SCUMM id NNN).")
     args = ap.parse_args()
 
-    table, entries = build_map(args.sound_dir)
+    table, entries = build_map(args.sound_dir, args.tad_project)
     emit_inc(args.output, table, entries)
 
     songs = sum(1 for _, k, _ in entries if k == KIND_MIDI)
-    sfx = sum(1 for _, k, _ in entries if k == KIND_SBL)
+    sfx_wired = sum(1 for _, k, idx in entries if k == KIND_SBL and idx is not None)
+    sfx_silent = sum(1 for _, k, idx in entries if k == KIND_SBL and idx is None)
     adls = sum(1 for _, k, _ in entries if k == KIND_ADL)
     spks = sum(1 for _, k, _ in entries if k == KIND_SPK)
     stubs = sum(1 for _, k, _ in entries if k == KIND_STUB)
     print(f"wrote {args.output}")
-    print(f"  {len(table)} entries | songs={songs} sfx={sfx} adl={adls} spk={spks} stub={stubs}")
+    print(f"  {len(table)} entries | songs={songs} sfx_wired={sfx_wired} sfx_silent={sfx_silent} adl={adls} spk={spks} stub={stubs}")
     return 0
 
 

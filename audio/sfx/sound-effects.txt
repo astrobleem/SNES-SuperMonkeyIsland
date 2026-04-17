@@ -1,13 +1,19 @@
 === soun_008 ===
-    set_instrument_and_gain sfx_soun_008 F127
+    set_instrument sfx_soun_008
+    set_adsr 15 0 7 0
+    set_volume 127
     play_note c4 16
 
 === soun_099 ===
-    set_instrument_and_gain sfx_soun_099 F127
+    set_instrument sfx_soun_099
+    set_adsr 15 0 7 0
+    set_volume 127
     play_note c4 48
 
 === soun_110 ===
-    set_instrument_and_gain sfx_soun_110 F127
+    set_instrument sfx_soun_110
+    set_adsr 15 0 7 0
+    set_volume 127
     play_note c4 48
 
 === test_beep ===

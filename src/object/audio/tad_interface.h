@@ -43,8 +43,10 @@
 .define TadFlags_RESET_GLOBAL_VOLUMES      $20
 .define TAD_ALL_FLAGS (TadFlags_RELOAD_COMMON_AUDIO_DATA | TadFlags_PLAY_SONG_IMMEDIATELY | TadFlags_RESET_GLOBAL_VOLUMES)
 
-; Default flags: play songs immediately
-.define TAD_DEFAULT_FLAGS TadFlags_PLAY_SONG_IMMEDIATELY
+; Default flags: play songs immediately + reset global volumes on common
+; audio data load (otherwise the SPC driver boots with global SFX / music
+; volume at 0, SFX voices key on but envelope stays silent).
+.define TAD_DEFAULT_FLAGS (TadFlags_PLAY_SONG_IMMEDIATELY | TadFlags_RESET_GLOBAL_VOLUMES)
 
 ; --- TadAudioMode ---
 .define TadAudioMode_MONO     0

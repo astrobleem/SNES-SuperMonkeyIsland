@@ -149,10 +149,12 @@ def regenerate_sfx_txt(scumm_ids: list[int]) -> None:
         sfx_name = f"soun_{sid:03d}"
         if sfx_name in stanzas:
             continue
-        # Use set_instrument_and_gain with fixed gain F127 so the SFX plays
-        # at full volume regardless of the instrument's ADSR sustain level.
+        # Use set_instrument_and_gain for envelope gain override, AND
+        # set_volume for per-voice DSP volume — both must be nonzero for
+        # the SFX to be audible (matches the shipped test_beep pattern).
         stanzas[sfx_name] = (
             f"    set_instrument_and_gain sfx_{sfx_name} F127\n"
+            f"    set_volume 127\n"
             f"    play_note c4 48"
         )
 

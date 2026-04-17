@@ -81,7 +81,8 @@ romdatainc := $(builddir)/rom_data.inc
 romdatapacker := python3 ./tools/rom_pack_data.py
 
 objroomtable := $(builddir)/obj_room_table.inc
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable)
+scummsoundmap := $(builddir)/audio/scumm_sound_map.inc
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects, then append ROM data
@@ -110,6 +111,10 @@ $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles
 #generate object-to-room lookup table (used by loadRoomWithEgo room=0)
 $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)
 	python3 ./tools/gen_obj_room_table.py
+
+#generate SCUMM sound ID -> TAD dispatch map
+$(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) tools/scumm/gen_audio_map.py | $(builddirs)
+	python3 ./tools/scumm/gen_audio_map.py
 
 #pack room + script data into ROM data blob (produces both .bin and .inc)
 $(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) | $(builddirs)

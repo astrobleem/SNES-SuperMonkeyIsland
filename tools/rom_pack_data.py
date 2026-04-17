@@ -36,7 +36,7 @@ BLOCK_ALIGNMENT = 4       # 4-byte alignment (no need for 512B MSU alignment)
 SCRIPT_MAGIC = b"SCPT"
 SCRIPT_VERSION = 1
 SECTION_HEADER_SIZE = 32
-ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr')
+ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr', '.pri')
 
 
 def align_to(offset, alignment):
@@ -76,8 +76,11 @@ def load_room_files(rooms_dir):
 
 
 def build_room_data_block(room):
+    # .pri goes LAST. Engine derives its size from room dimensions and
+    # seeks to (room_start + room_size - pri_size) to read the bitmap.
     return (room['hdr'] + room['pal'] + room['chr'] + room['map'] +
-            room['col'] + room['box'] + room['obj'] + room['ochr'])
+            room['col'] + room['box'] + room['obj'] + room['ochr'] +
+            room['pri'])
 
 
 # ---------------------------------------------------------------------------
@@ -206,8 +209,12 @@ def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False):
 
     room_section_end = current
 
-    # Section 2: Script header + indices + data
-    script_header_offset = align_to(room_section_end, BLOCK_ALIGNMENT)
+    # Section 2: Script header + indices + data.
+    # Align script section to 1MB (SA-1 FXB block) so all scripts live
+    # in a single FXB window — [tmp+24],y reads can't cross a bank
+    # boundary without FXB changing mid-read, and the engine's copy
+    # loops don't handle that.
+    script_header_offset = align_to(room_section_end, 0x100000)
     global_index_offset = script_header_offset + SECTION_HEADER_SIZE
     room_script_index_offset = global_index_offset + global_slots * INDEX_ENTRY_SIZE
     script_data_offset = align_to(

@@ -827,6 +827,9 @@ _room.loadHeaderOk:
   ;load walkbox data (seeks to box data offset in ROM)
   jsl room.loadWalkboxData
 
+  ;load ZP01 priority bitmap from end of room block (bank 5 → JSL)
+  jsl room.loadPriorityBitmap
+
   ;--- Read room object data from ROM ---
   ;romReadPos needs to be set past walkbox data for object reads
   ;Compute: tileDataRomOfs + chr_size + map_size + col_size + box_size
@@ -1169,6 +1172,102 @@ _ios.done:
 .bank 5 slot 0
 .base BSL
 .section "room walkbox loader" free
+
+/**
+* Load ZP01 per-tile priority bitmap into SCROLL_PRIORITY_WRAM.
+*
+* The bitmap is appended at the very end of each room block so its
+* position is independent of other sections: start offset =
+* (idx.offset + idx.size - pri_size). Size is derived from the room's
+* tile grid: (width_tiles * height_tiles + 7) / 8.
+*
+* Every room gets a bitmap — rooms without ZP01 have an all-zero one.
+* The buffer is always pre-zeroed so priority doesn't leak across rooms.
+*/
+room.loadPriorityBitmap:
+  php
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+
+  ;zero the 1024-byte priority buffer
+  ldx #0
+  lda #0
+_prb.zero:
+  sta.l SCROLL_PRIORITY_WRAM,x
+  inx
+  inx
+  cpx #1024
+  bcc _prb.zero
+
+  ;compute pri_size = (width_tiles * height_tiles + 7) / 8
+  ;width_tiles <= 128, height_tiles <= 64, product <= 8192, fits in 16b
+  lda.w GLOBAL.room.hdr.width_tiles
+  sta.b tmp                       ;multiplicand
+  stz.b tmp+2                     ;accumulator
+  ldx.w GLOBAL.room.hdr.height_tiles
+  beq _prb.done                   ;height 0 → no pri
+_prb.mul:
+  lda.b tmp+2
+  clc
+  adc.b tmp
+  sta.b tmp+2
+  dex
+  bne _prb.mul
+  lda.b tmp+2                     ;A = total tile count
+  clc
+  adc #7
+  lsr a
+  lsr a
+  lsr a                           ;A = (tiles + 7) / 8 = pri_size bytes
+  beq _prb.done
+  sta.b tmp                       ;save pri_size
+
+  ;compute pri_offset = room.idx.offset + room.idx.size - pri_size
+  lda.w GLOBAL.room.idx.offset_lo
+  clc
+  adc.w GLOBAL.room.idx.size_lo
+  sta.b tmp+4                     ;tail_lo
+  lda.w GLOBAL.room.idx.offset_hi
+  adc.w GLOBAL.room.idx.size_hi
+  sta.b tmp+6                     ;tail_hi
+
+  lda.b tmp+4
+  sec
+  sbc.b tmp                       ;subtract pri_size
+  sta.b tmp+4
+  lda.b tmp+6
+  sbc #0
+  sta.b tmp+6
+
+  ;seek: A = offset low 16, X = offset high 8 (cross-bank call)
+  lda.b tmp+4
+  ldx.b tmp+6
+  jsl room.setRomDataPtrLong      ;tmp+24 = pri data start
+
+  ;read pri_size bytes into SCROLL_PRIORITY_WRAM, 8-bit all the way
+  sep #$20
+  .ACCU 8
+  rep #$10
+  .INDEX 16
+  ldy #0
+  ldx #0
+_prb.copy:
+  cpx.b tmp                       ;compare X (bytes copied) vs pri_size
+  bcs _prb.copyDone
+  lda [tmp+24],y
+  sta.l SCROLL_PRIORITY_WRAM,x
+  iny
+  inx
+  bra _prb.copy
+_prb.copyDone:
+  rep #$20
+  .ACCU 16
+
+_prb.done:
+  plp
+  rtl
+
 
 /**
 * Load walkbox data via MSU seek (avoids draining col_size bytes).

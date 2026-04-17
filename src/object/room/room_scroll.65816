@@ -9,6 +9,53 @@
 
 
 /**
+* Return the ZP01 priority bit for a tile, given its WRAM tilemap byte offset.
+*
+* The priority bitmap is column-major, 1 bit per tile, matching the
+* SCROLL_TILEMAP_WRAM layout. For a tile at WRAM byte offset X (16-bit):
+*   tile_idx    = X >> 1
+*   pri_byte    = tile_idx >> 3 = X >> 4
+*   bit_in_byte = tile_idx & 7  = (X >> 1) & 7
+*
+* Input:  A = WRAM byte offset (16-bit)
+* Output: carry = priority bit (0 = background, 1 = foreground)
+* Clobbers: A, Y
+*/
+_scroll.priorityBit:
+  .ACCU 16
+  .INDEX 16
+  phx                            ;preserve caller's X
+  phy                            ;preserve caller's Y
+  pha                            ;save offset for byte math
+  lsr a                          ;A = tile_idx
+  and.w #$0007                  ;A = bit_in_byte
+  sta.b tmp+28                  ;save bit_in_byte (avoid clobbering Y)
+  pla                            ;A = offset
+  lsr a
+  lsr a
+  lsr a
+  lsr a                          ;A = pri_byte_idx
+  tax                            ;X = byte offset
+  sep #$20
+  .ACCU 8
+  lda.l SCROLL_PRIORITY_WRAM,x  ;A = byte containing the bit
+  ldx.b tmp+28                  ;X = bit_in_byte (reuse X as shift count)
+_spb.shift:
+  cpx #0
+  beq _spb.test
+  lsr a
+  dex
+  bra _spb.shift
+_spb.test:
+  lsr a                          ;carry = bit 0 of byte = priority bit
+  rep #$20
+  .ACCU 16
+  ply                            ;restore caller's Y
+  plx                            ;restore caller's X
+  rts
+
+
+/**
 * Initialize scroll state after a room is loaded.
 */
 room.initScroll:
@@ -353,9 +400,11 @@ _initVP.p1Remap:
   ;A = VRAM slot index
   sta.b tmp+14
 
-  ;remap custom format → SNES tilemap word
+  ;remap custom format → SNES tilemap word + ZP01 priority bit
   ;custom: VH_pppTTTTTTTTTTT → SNES: VHPpppTTTTTTTTTT
-  ;slot replaces tile ID; palette shifts from bits 13-11 to 12-10; priority=0
+  ;slot replaces tile ID; palette shifts from bits 13-11 to 12-10.
+  ;Priority bit 13 comes from SCROLL_PRIORITY_WRAM (column-major, 1 bit
+  ;per tile). Current WRAM offset is on top of stack via the outer phx.
   lda.b tmp+10                  ;original custom word
   and.w #$C000                  ;V/H flip (bits 15-14)
   sta.b tmp+16                  ;save flip bits
@@ -364,6 +413,17 @@ _initVP.p1Remap:
   lsr a                          ;shift to SNES position (bits 12-10)
   ora.b tmp+14                  ;OR with slot (bits 9-0)
   ora.b tmp+16                  ;OR with flip bits
+  sta.b tmp+18                  ;stash partial remapped word
+
+  ;priority bit: tile_idx = WRAM_offset >> 1;
+  ;pri_byte_idx = tile_idx >> 3; bit_in_byte = tile_idx & 7.
+  ;Use a shared helper so both remap paths agree on the math.
+  lda 1,s                        ;peek saved WRAM byte offset (from outer phx)
+  jsr _scroll.priorityBit        ;carry = priority bit
+  lda.b tmp+18                  ;restore remapped word
+  bcc +
+    ora.w #$2000                ;set SNES priority bit 13
++
 
   ;store remapped word to colStaging
   ldy.b tmp+6
@@ -913,6 +973,17 @@ _stageCol.p2Loop:
   lsr a                          ;shift to SNES position (bits 12-10)
   ora.b tmp+18                  ;OR slot
   ora.b tmp+22                  ;OR flip
+  sta.b tmp+20                  ;stash partial remapped word
+
+  ;priority bit: use current X (WRAM byte offset) directly.
+  phx                            ;preserve X for the outer loop
+  txa                            ;A = WRAM byte offset
+  jsr _scroll.priorityBit        ;carry = priority bit
+  plx                            ;restore
+  lda.b tmp+20                  ;restore partial word
+  bcc +
+    ora.w #$2000                ;set SNES priority bit 13
++
   sta.w GLOBAL.room.colStaging,y
 
   inx

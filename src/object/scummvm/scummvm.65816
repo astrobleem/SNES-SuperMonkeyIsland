@@ -11455,13 +11455,16 @@ _ri.scaleHookDone:
 _ri.buildOam:
   .ACCU 16
   .INDEX 16
-  ; Compute flip mask: priority 3 + palette bits + optional H-flip
+  ; Compute flip mask: priority 2 + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
+  ; Priority 2 lets BG1 tiles with tilemap-priority-bit set render in
+  ; front of the actor (SCUMM ZP01 zplane masking — loaded per room by
+  ; room.loadPriorityBitmap, applied in the remap loops of room_scroll).
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3               ; render slot
   lda.l _ri.palBitsLut,x             ; palette bits (PPP << 1)
-  ora #$30                            ; priority 3
+  ora #$20                            ; priority 2 (below BG pri-1 tiles)
   sta.w SCUMM.actorFlipMask
 
   ; Check facing: 270 = west = H-flip

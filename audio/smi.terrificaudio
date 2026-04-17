@@ -159,6 +159,19 @@
       "last_octave": 4,
       "envelope": "adsr 15 7 2 0",
       "comment": "MI1 SOUN 099 — intro SFX (first script call @ frame 188)"
+    },
+    {
+      "name": "sfx_soun_110",
+      "source": "samples/sfx/soun_110_room075.wav",
+      "freq": 261.63,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 4,
+      "last_octave": 4,
+      "envelope": "adsr 15 7 2 0",
+      "comment": "MI1 SOUN 110"
     }
   ],
   "samples": [],
@@ -170,6 +183,7 @@
   "sound_effects": [
     "soun_008",
     "soun_099",
+    "soun_110",
     "test_beep"
   ],
   "low_priority_sound_effects": [],

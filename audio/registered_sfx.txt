@@ -1,0 +1,12 @@
+# SCUMM sound IDs registered as TAD SFX.
+# Order here controls the TAD SFX index assigned (first id -> index 0).
+# Re-run tools/audio/register_sfx.py after editing.
+#
+# Keep the list intro-focused until we have audio-RAM telemetry. Each
+# registered SFX consumes PCM * ~0.56 bytes in audio RAM after BRR
+# encoding; total budget is ~64 KB minus ~6 KB for Tier-1 instruments.
+
+# --- intro-critical ---
+8    # UI blip (615 B @ 21.7 kHz, ~18 ms)
+99   # first SFX the intro script requests (13 KB, ~609 ms)
+110  # second SFX the intro script requests (20 KB, ~920 ms)

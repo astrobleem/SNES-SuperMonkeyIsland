@@ -727,6 +727,9 @@ _play.timerDone:
   inc a
   sta.w SCUMM.globalVars,x
 
+  ; Virtual sound slots tick down alongside — keeps isSoundRunning honest.
+  jsl scummvm.virtSound_tick
+
   ; --- Brightness guard ---
   ; Ensure screen is visible when a room is loaded.
   rep #$31
@@ -6874,15 +6877,183 @@ _actorOps.done:
 ; Sound opcodes -- wired to Terrific Audio Driver (TAD)
 ;-------------------------------------------------------------------
 
+; ---- Virtual sound slot helpers ----
+; Give op_isSoundRunning a duration-gated answer for sounds that aren't
+; fully driven by a real audio backend. The intro pacing scripts rely on
+; isSoundRunning returning nonzero on the first check after startSound.
+
+; _virtSound.prime: reserve/refresh a slot for a sound.
+;  Entry: 8-bit A = sound id, 16-bit X = TTL frames, 16-bit Y = kind (0=SFX, 1=song)
+;  Exit:  A/X/Y trashed
+; Uses abs_long,X throughout to avoid any DBR dependency — the helper is
+; reachable from both SCUMM dispatch (bank 4) and the class section (bank 0).
+_scummvm.virtSound_prime:
+  .ACCU 8
+  .INDEX 16
+  sta.l SCUMM.scratch                ; id
+  rep #$20
+  txa
+  sta.l SCUMM.scratch2               ; ttl
+  tya
+  sta.l SCUMM.scratch3               ; kind
+  sep #$20
+  ldx #0                             ; scan for existing slot holding this id
+_vsp.findExisting:
+  lda.l SCUMM.scratch
+  cmp.l SCUMM.virtSoundId,x
+  beq _vsp.gotSlot
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bne _vsp.findExisting
+  ldx #0                             ; none found — find first empty
+_vsp.findEmpty:
+  lda.l SCUMM.virtSoundId,x
+  beq _vsp.gotSlot
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bne _vsp.findEmpty
+  ldx #0                             ; all full — stomp slot 0
+_vsp.gotSlot:
+  lda.l SCUMM.scratch
+  sta.l SCUMM.virtSoundId,x
+  lda.l SCUMM.scratch3
+  sta.l SCUMM.virtSoundKind,x
+  ; Write 16-bit TTL to virtSoundTtl[X*2]
+  txa
+  asl
+  tax
+  rep #$20
+  lda.l SCUMM.scratch2
+  sta.l SCUMM.virtSoundTtl,x
+  sep #$20
+  rts
+
+; _virtSound.isRunning: is this sound id live in the virt table?
+;  Entry: 8-bit A = sound id
+;  Exit:  carry set → running; carry clear → not in table or ttl=0
+;         A/X/Y trashed
+_scummvm.virtSound_isRunning:
+  .ACCU 8
+  .INDEX 16
+  ldx #0
+_vsc.loop:
+  cmp.l SCUMM.virtSoundId,x
+  beq _vsc.maybe
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bne _vsc.loop
+  clc
+  rts
+_vsc.maybe:
+  txa
+  asl
+  tax
+  rep #$20
+  lda.l SCUMM.virtSoundTtl,x
+  sep #$20
+  beq _vsc.expired
+  sec
+  rts
+_vsc.expired:
+  clc
+  rts
+
+; _virtSound.clearId: drop slot matching sound id (for stopSound).
+;  Entry: 8-bit A = sound id
+;  Exit:  A/X/Y trashed
+_scummvm.virtSound_clearId:
+  .ACCU 8
+  .INDEX 16
+  ldx #0
+_vscl.loop:
+  cmp.l SCUMM.virtSoundId,x
+  beq _vscl.hit
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bne _vscl.loop
+  rts
+_vscl.hit:
+  lda #0
+  sta.l SCUMM.virtSoundId,x
+  sta.l SCUMM.virtSoundKind,x
+  txa
+  asl
+  tax
+  rep #$20
+  lda #0
+  sta.l SCUMM.virtSoundTtl,x
+  sep #$20
+  rts
+
+; _virtSound.clearAllSongs: drop every slot whose kind = 1 (for stopMusic).
+;  Exit:  A/X/Y trashed
+_scummvm.virtSound_clearAllSongs:
+  .ACCU 8
+  .INDEX 16
+  ldx #0
+_vsca.loop:
+  lda.l SCUMM.virtSoundKind,x
+  beq _vsca.next
+  lda #0
+  sta.l SCUMM.virtSoundId,x
+  sta.l SCUMM.virtSoundKind,x
+  phx
+  txa
+  asl
+  tax
+  rep #$20
+  lda #0
+  sta.l SCUMM.virtSoundTtl,x
+  sep #$20
+  plx
+_vsca.next:
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bne _vsca.loop
+  rts
+
+; scummvm.virtSound_tick: run every frame — decrement all nonzero TTLs,
+; clear the id when TTL hits 0. Called from bank 0 via jsl, hence rtl.
+; Non-underscore label because WLA-DX treats `_`-prefixed labels as
+; section-local and this is called cross-section.
+;  Exit:  A/X/Y trashed
+scummvm.virtSound_tick:
+  .ACCU 16
+  .INDEX 16
+  ldx #0
+_vst.loop:
+  lda.l SCUMM.virtSoundTtl,x
+  beq _vst.next
+  dec a
+  sta.l SCUMM.virtSoundTtl,x
+  bne _vst.next
+  ; TTL just expired — clear the id + kind (slot index = x/2)
+  phx
+  txa
+  lsr
+  tax
+  sep #$20
+  lda #0
+  sta.l SCUMM.virtSoundId,x
+  sta.l SCUMM.virtSoundKind,x
+  rep #$20
+  plx
+_vst.next:
+  inx
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS * 2
+  bne _vst.loop
+  rtl
+
 ; stopSound ($3C, $BC) -- p8[7] sound ID → stop all SFX
 op_stopSound:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte
-  ; Stop all sound effects via TAD
+  jsr _scummvm.getVarOrDirectByte     ; A = scumm sound id
   phy
   sep #$20
+  jsr _scummvm.virtSound_clearId      ; A = id in low byte
   lda.b #TadCommand_STOP_SOUND_EFFECTS
   ldx #0
   ldy #0
@@ -6895,6 +7066,8 @@ op_stopSound:
 ; startSound ($1C, $9C) -- p8[7] sound ID → queue SFX
 ; SCUMM sound IDs are translated via ScummSoundMap into TAD indices:
 ;   $FF = no audio, bit 7 set = song (route to LoadSong), else SFX index.
+; Also primes a virtual-sound slot so isSoundRunning returns nonzero for
+; the expected duration, regardless of whether a real backend plays audio.
 op_startSound:
   .ACCU 16
   .INDEX 16
@@ -6903,16 +7076,28 @@ op_startSound:
   phy
   sep #$20
   tax                               ; X = scumm sound id
+  pha                               ; [id on stack for priming below]
   lda.l ScummSoundMap,x             ; A = dispatch byte
   cmp #$FF
-  beq _ss.done                      ; stub / ADL / SPK — silent
+  beq _ss.primeSfx                  ; unmapped — still fake-play so scripts pace
   bit #$80
   bne _ss.song                      ; song-flagged entry, route through LoadSong
   jsl Tad_QueueSoundEffect          ; A = SFX index (0..$7F)
-  bra _ss.done
+  bra _ss.primeSfx
 _ss.song:
   and #$7F                          ; strip song flag -> TAD song index
   jsl Tad_LoadSongIfChanged
+  ; prime as song
+  pla                               ; id
+  ldx #SCUMM_VIRT_TTL_SONG
+  ldy #1
+  jsr _scummvm.virtSound_prime
+  bra _ss.done
+_ss.primeSfx:
+  pla                               ; id
+  ldx #SCUMM_VIRT_TTL_SFX
+  ldy #0
+  jsr _scummvm.virtSound_prime
 _ss.done:
   rep #$31
   ply
@@ -6920,30 +7105,37 @@ _ss.done:
   rts
 
 ; startMusic ($02, $82) -- p8[7] song ID → load song
+; Music is virtually "played" via MSU-1 (real PCM) or TAD (fallback). In
+; either case, prime a virtual slot so isSoundRunning can pace scripts
+; without polling the actual backend.
 op_startMusic:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte
   phy
-  pha                               ; save scumm sound ID (16-bit)
+  sta.l SCUMM.scratch               ; stash scumm id for priming
   lda.w SCUMM.musicMode
   bne _startMusic.msu1
   ; TAD path — translate scumm id to TAD song index.
-  pla
   sep #$20
+  lda.l SCUMM.scratch
   tax                               ; X = scumm sound id
   lda.l ScummSoundMap,x             ; A = dispatch byte
   cmp #$FF
-  beq _sm.done                      ; no audio
+  beq _sm.prime                     ; no audio — still prime so pacing works
   bit #$80
   beq _sm.sfx                       ; SFX-flagged via startMusic — still play it
   and #$7F
   jsl Tad_LoadSongIfChanged
-  bra _sm.done
+  bra _sm.prime
 _sm.sfx:
   jsl Tad_QueueSoundEffect
-_sm.done:
+_sm.prime:
+  lda.l SCUMM.scratch               ; restore id (low byte)
+  ldx #SCUMM_VIRT_TTL_SONG
+  ldy #1
+  jsr _scummvm.virtSound_prime
   rep #$31
   ply
   clc
@@ -6951,17 +7143,28 @@ _sm.done:
 _startMusic.msu1:
   .ACCU 16
   .INDEX 16
-  pla                               ; A = song ID (raw SCUMM id for MSU path)
+  lda.l SCUMM.scratch               ; A = 16-bit song ID
   jsr _scummvm.msu1PlayTrack
+  sep #$20
+  lda.l SCUMM.scratch               ; A = id low byte
+  ldx #SCUMM_VIRT_TTL_SONG
+  ldy #1
+  jsr _scummvm.virtSound_prime
+  rep #$31
   ply
   clc
   rts
 
 ; stopMusic ($20) -- no params → pause music
+; Also drops every virt slot flagged as song so pacing scripts see the
+; music stop immediately.
 op_stopMusic:
   .ACCU 16
   .INDEX 16
   phy
+  sep #$20
+  jsr _scummvm.virtSound_clearAllSongs
+  rep #$31
   lda.w SCUMM.musicMode
   bne _stopMusic.msu1
   ; TAD path
@@ -6983,8 +7186,10 @@ _stopMusic.msu1:
   rts
 
 ; isSoundRunning ($7C, $FC) -- result + p8[7] → check TAD state
-; Routes to SFX vs song check based on ScummSoundMap entry. TAD can't
-; distinguish individual queued SFX, so SFX lookups report "any SFX playing".
+; Priority: virtual slot (duration-based, backend-agnostic) → ScummSoundMap
+; dispatch (Tad_IsSfxPlaying / Tad_IsSongPlaying). Virt check first because
+; it's the truth about what SCUMM "thinks" is playing, independent of
+; MSU-1 vs TAD latency or unmapped sounds.
 op_isSoundRunning:
   .ACCU 16
   .INDEX 16
@@ -6993,7 +7198,12 @@ op_isSoundRunning:
   jsr _scummvm.getVarOrDirectByte    ; A = scumm sound id
   phy
   sep #$20
-  tax
+  tax                                ; X = scumm sound id
+  ; --- virtual check ---
+  txa
+  jsr _scummvm.virtSound_isRunning
+  bcs _isr.playing
+  ; --- real backend check ---
   lda.l ScummSoundMap,x              ; A = dispatch byte
   cmp #$FF
   beq _isr.notPlaying                ; no audio for this ID
@@ -10354,6 +10564,27 @@ _zew.invNames:
   inx
   cpx #512
   bcc _zew.invNames
+
+  ; zero virtual-sound slots — otherwise uninit WRAM ids masquerade as
+  ; live sounds and isSoundRunning(random) starts returning true at boot.
+  sep #$20
+  lda #0
+  ldx #0
+_zew.virtSound:
+  sta.w SCUMM.virtSoundId,x
+  sta.w SCUMM.virtSoundKind,x
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS
+  bcc _zew.virtSound
+  rep #$20
+  lda #0
+  ldx #0
+_zew.virtSoundTtl:
+  sta.w SCUMM.virtSoundTtl,x
+  inx
+  inx
+  cpx #SCUMM_VIRT_SOUND_SLOTS * 2
+  bcc _zew.virtSoundTtl
 
   plp
   rtl

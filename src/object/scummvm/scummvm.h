@@ -196,6 +196,19 @@ SCUMM.cutSceneScript      ds 5    ;5 nesting levels x 1B: slot index running the
 SCUMM.cutSceneData        ds 10   ;5 nesting levels x 2B: associated data word
 .ends
 
+; Virtual sound tracking — gives isSoundRunning a duration-based answer
+; when the backend can't report real playback state. Priming is done in
+; op_startSound / op_startMusic; TTL decrements once per _play tick and
+; the slot clears when it hits 0. 4 slots cover concurrent music + SFX.
+.define SCUMM_VIRT_SOUND_SLOTS 4
+.define SCUMM_VIRT_TTL_SONG    1800    ; ~30s at 60fps (songs)
+.define SCUMM_VIRT_TTL_SFX      180    ;  ~3s at 60fps (SFX / unmapped)
+.ramsection "scumm virt sound" bank 0 slot 1
+SCUMM.virtSoundId    ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = empty
+SCUMM.virtSoundKind  ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = SFX, 1 = song
+SCUMM.virtSoundTtl   ds SCUMM_VIRT_SOUND_SLOTS * 2    ; 2B × 4: frames remaining
+.ends
+
 ; Room script tracking (ENCD/EXCD/LSCR)
 .ramsection "scumm room scripts" bank 0 slot 1
 SCUMM.roomEncdPtr    dw      ; cache offset for ENCD (0 = none)

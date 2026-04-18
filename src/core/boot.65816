@@ -2,17 +2,25 @@
 
 
 ; Dev test harness — SELECT cycles through registered TAD SFX, START toggles
-; script-execution pause. Remove before release.
+; script-execution pause, R shoulder cycles through loaded songs. Remove
+; before release.
 ;
 ; We do our own rising-edge detection on `inputDevice.press` instead of relying
 ; on `inputDevice.trigger`: SCUMM script dispatch reads/consumes trigger bits,
-; which would swallow our SELECT presses before we saw them.
+; which would swallow our presses before we saw them.
 ;
 ; Ramsection lives in bank 0 slot 2 (auto-zeroed by the early ClearWRAM sweep).
-.define N_DEV_SFX 17
+.define N_DEV_SFX 1
+; Song IDs per tad-compiler's Song enum (build/audio/tad-enums.inc):
+;   0 = BLANK (internal blank song, silent)
+;   1 = silence.mml (also silent)
+;   2 = soun_010 (first real song)
+; R cycles 0..N_DEV_SONGS-1. Bump this whenever a new song is added.
+.define N_DEV_SONGS 3
 
 .ramsection "dev_sfx_test" bank 0 slot 2
   dev_sfx_idx     db    ; next SFX index to queue (0..N_DEV_SFX-1)
+  dev_song_idx    db    ; next song index to load (0..N_DEV_SONGS-1)
   dev_paused      db    ; 0 = run SCUMM scripts, 1 = skip them
   dev_prev_press  dw    ; last-frame raw button state (for edge detect)
   dev_curr_press  dw    ; scratch: current raw button state
@@ -155,6 +163,23 @@ _dth_not_sel:
 	    sta.w dev_paused
 	    rep #$20
 _dth_not_start:
+
+	; --- R-shoulder edge: cycle to next loaded song (wraps at N_DEV_SONGS). ---
+	; Tad_LoadSong expects A = song_id (0 = silence).
+	lda.w dev_new_edges
+	and.w #$0010                       ; SNES R-shoulder bit
+	beq _dth_not_r
+	    sep #$20
+	    lda.w dev_song_idx
+	    inc a
+	    cmp.b #N_DEV_SONGS
+	    bcc _dth_song_store
+	        lda.b #0
+_dth_song_store:
+	    sta.w dev_song_idx
+	    jsl Tad_LoadSong
+	    rep #$20
+_dth_not_r:
 	rts
 .ends
 

@@ -1,25 +1,10 @@
 # SCUMM sound IDs registered as TAD SFX.
 # Order controls TAD SFX index (first id -> index 0).
 # Re-run tools/audio/register_sfx.py after editing.
-# Trimmed to fit under TAD common-data max (60828 B).
-
-# --- intro-critical ---
-8   # PCM=591 B (BRR~330 B) soun_008_room010.bin
+#
+# Trimmed to the minimum set — only SCUMM 99 fires during the currently
+# accessible boot/intro path (verified via runtime trace of op_startSound).
+# Every other SFX sat unused in CAD, starving the music samples of budget.
+# Music quality takes precedence over SFX quantity until the game can
+# actually reach rooms where the other SFX would trigger.
 99  # PCM=13246 B (BRR~7417 B) soun_099_room070.bin
-110 # PCM=20891 B (BRR~11698 B) soun_110_room075.bin
-
-# --- other SBL SFX (by size ascending) ---
-104 # PCM=212 B (BRR~118 B) soun_104_room073.bin
-94  # PCM=2274 B (BRR~1273 B) soun_094_room064.bin
-69  # PCM=2500 B (BRR~1400 B) soun_069_room048.bin
-50  # PCM=3720 B (BRR~2083 B) soun_050_room036.bin
-130 # PCM=3910 B (BRR~2189 B) soun_130_room088.bin
-54  # PCM=4119 B (BRR~2306 B) soun_054_room037.bin
-64  # PCM=4220 B (BRR~2363 B) soun_064_room043.bin
-128 # PCM=4648 B (BRR~2602 B) soun_128_room088.bin
-90  # PCM=4869 B (BRR~2726 B) soun_090_room060.bin
-76  # PCM=5145 B (BRR~2881 B) soun_076_room053.bin
-34  # PCM=5192 B (BRR~2907 B) soun_034_room025.bin
-71  # PCM=5515 B (BRR~3088 B) soun_071_room048.bin
-7   # PCM=5630 B (BRR~3152 B) soun_007_room010.bin
-107 # PCM=5757 B (BRR~3223 B) soun_107_room075.bin

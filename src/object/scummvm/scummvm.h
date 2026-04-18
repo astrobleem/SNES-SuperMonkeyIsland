@@ -655,11 +655,13 @@ SCUMM.invNameCount       dw                      ; number of cached names
 .base BSL
 .section "VerbHdmaTable" free
 VerbHdmaTable:
-  .db 128                               ; scanlines 0-127: room area
+  .db $FF                               ; repeat 127 lines (0-126)
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 16                                ; scanlines 128-143: room area continued
+  .db $81                               ; repeat 1 line (127) -- 127+1=128
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 80                                ; scanlines 144-223: verb area
+  .db $90                               ; repeat 16 lines (128-143)
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
+  .db $D0                               ; repeat 80 lines (144-223)
   .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
 

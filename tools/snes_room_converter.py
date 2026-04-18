@@ -59,6 +59,14 @@ HEADER_SIZE = 32
 MAX_TILE_ID = 1024  # 10-bit tile index in SNES tilemap word
 TRANS_COLOR = (0, 0, 0)  # color 0 in every sub-palette
 
+# Reserve SNES palette 0 for SCUMM UI indices (cursor, verb text).
+# Script 6 et al. call setPalColor(idx) for idx in 0..15 expecting those to
+# be UI-only; in original VGA MI1 those slots were reserved from room art.
+# Mapping setPalColor(N) → CGRAM[N*2] only works when no room tile references
+# palette 0, so we quantize tiles into palettes 1..7 and leave 0 empty.
+RESERVED_PALETTES = 1
+ART_SUBPALETTES = NUM_SUBPALETTES - RESERVED_PALETTES  # 7
+
 
 # ---------------------------------------------------------------------------
 # Tile deduplication with flip detection
@@ -714,7 +722,15 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     else:
         all_snes_tiles = bg_snes_tiles
 
-    palettes, all_indexed_tiles, all_tile_pal_ids = build_palettes_tileaware(all_snes_tiles)
+    # Quantize into ART_SUBPALETTES (=7), then shift IDs by RESERVED_PALETTES
+    # so tilemap entries reference palettes 1..7. Palette 0 is prepended empty
+    # and stays reserved for SCUMM UI colors (cursor, verb text overlays).
+    palettes, all_indexed_tiles, all_tile_pal_ids = build_palettes_tileaware(
+        all_snes_tiles, num_palettes=ART_SUBPALETTES
+    )
+    all_tile_pal_ids = all_tile_pal_ids + RESERVED_PALETTES
+    empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
+    palettes = [empty_pal] * RESERVED_PALETTES + list(palettes)
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
 

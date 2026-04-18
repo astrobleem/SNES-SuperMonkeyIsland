@@ -154,10 +154,15 @@ _dth_sel_store:
 	    rep #$20
 _dth_not_sel:
 
-	; --- START edge: toggle SCUMM pause ---
+	; --- SELECT+START edge: toggle SCUMM pause ---
+	; START alone must reach SCUMM's cutscene-abort path, so the dev pause
+	; requires SELECT held at the moment START rises.
 	lda.w dev_new_edges
 	and.w #$1000
 	beq _dth_not_start
+	    lda.w dev_curr_press
+	    and.w #$2000                    ; SELECT currently held?
+	    beq _dth_not_start
 	    sep #$20
 	    lda.w dev_paused
 	    eor.b #1

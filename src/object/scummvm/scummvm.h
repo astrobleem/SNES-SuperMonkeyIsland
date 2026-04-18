@@ -194,6 +194,8 @@ SCUMM.argCount            dw      ;byte count of args in argBuffer
 SCUMM.cutScenePtr         ds 10   ;5 nesting levels x 2B: saved script PC offset
 SCUMM.cutSceneScript      ds 5    ;5 nesting levels x 1B: slot index running the cutscene
 SCUMM.cutSceneData        ds 10   ;5 nesting levels x 2B: associated data word
+SCUMM.pendingCamTarget    dw      ;setCameraAt target stashed while a room load is pending
+SCUMM.pendingCamFlag      db      ;nonzero = pendingCamTarget is live, apply after processRoomChange
 .ends
 
 ; Virtual sound tracking — gives isSoundRunning a duration-based answer
@@ -201,8 +203,8 @@ SCUMM.cutSceneData        ds 10   ;5 nesting levels x 2B: associated data word
 ; op_startSound / op_startMusic; TTL decrements once per _play tick and
 ; the slot clears when it hits 0. 4 slots cover concurrent music + SFX.
 .define SCUMM_VIRT_SOUND_SLOTS 4
-.define SCUMM_VIRT_TTL_SONG    1800    ; ~30s at 60fps (songs)
-.define SCUMM_VIRT_TTL_SFX      180    ;  ~3s at 60fps (SFX / unmapped)
+.define SCUMM_VIRT_TTL_SONG    1800    ; ~30s — songs / unmapped (most intro pacing sounds)
+.define SCUMM_VIRT_TTL_SFX      180    ;  ~3s — mapped SFX (known-short)
 .ramsection "scumm virt sound" bank 0 slot 1
 SCUMM.virtSoundId    ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = empty
 SCUMM.virtSoundKind  ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = SFX, 1 = song

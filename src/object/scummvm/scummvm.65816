@@ -1321,6 +1321,19 @@ _prc.noExitScript2:
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
+
+  ; Apply any setCameraAt target that was stashed while this room change
+  ; was pending — MAX_X is now fresh so the clamp will be correct.
+  sep #$20
+  lda.w SCUMM.pendingCamFlag
+  beq _prc.noPendingCam
+  stz.w SCUMM.pendingCamFlag
+  rep #$20
+  lda.w SCUMM.pendingCamTarget
+  jsl scummvm.setCameraAtImpl
+  bra _prc.skipViewport
+_prc.noPendingCam:
+  rep #$20
 _prc.skipViewport:
 
   ; --- Run entry scripts in ScummVM order ---
@@ -1386,6 +1399,25 @@ _prc.failed:
   sta.w ScreenBrightness
   rep #$20
   rts
+
+;-------------------------------------------------------------------
+; scummvm.processRoomChangeNow — jsl-callable wrapper so opcodes (bank 4
+; dispatch) can flush a pending loadRoom synchronously. This matches
+; ScummVM's startScene(room) behavior: the room is fully loaded before
+; the next opcode runs, so things like setCameraAt(N) right after
+; loadRoom(N) see the new room's VAR_CAMERA_MAX_X.
+; Non-underscore label because `_`-prefixed labels are section-local.
+;-------------------------------------------------------------------
+scummvm.processRoomChangeNow:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.newRoom
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  beq _pcn.noChange
+  jsr _scummvm.processRoomChange
+_pcn.noChange:
+  rtl
 
 ;-------------------------------------------------------------------
 ; _scummvm.assignActorWalkboxes -- scan visible actors, assign walkbox
@@ -6074,6 +6106,20 @@ op_setCameraAt:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; A = target X (center)
   phy                                ; save SCUMM PC
+  ; If a room change is pending (newRoom != currentRoom), the clamp would
+  ; use the outgoing room's VAR_CAMERA_MAX_X and squash the target. Stash
+  ; it and let processRoomChange re-apply once the new room's limits are set.
+  ldx.w SCUMM.newRoom
+  cpx.w SCUMM.currentRoom
+  beq _op_setCameraAt.apply
+  sta.w SCUMM.pendingCamTarget
+  sep #$20
+  lda #1
+  sta.w SCUMM.pendingCamFlag
+  rep #$20
+  ply
+  rts
+_op_setCameraAt.apply:
   jsl scummvm.setCameraAtImpl        ; snap camera instantly
   ply                                ; restore SCUMM PC
   rts
@@ -7075,7 +7121,7 @@ op_startSound:
   pha                               ; [id on stack for priming below]
   lda.l ScummSoundMap,x             ; A = dispatch byte
   cmp #$FF
-  beq _ss.primeSfx                  ; unmapped — still fake-play so scripts pace
+  beq _ss.primeUnmapped             ; unmapped — treat like song for pacing
   bit #$80
   bne _ss.song                      ; song-flagged entry, route through LoadSong
   jsl Tad_QueueSoundEffect          ; A = SFX index (0..$7F)
@@ -7093,6 +7139,14 @@ _ss.primeSfx:
   pla                               ; id
   ldx #SCUMM_VIRT_TTL_SFX
   ldy #0
+  jsr _scummvm.virtSound_prime
+  bra _ss.done
+_ss.primeUnmapped:
+  ; No backend will play this — give it song-length TTL so any pacing
+  ; wait keyed off isSoundRunning gets the full cutscene window.
+  pla                               ; id
+  ldx #SCUMM_VIRT_TTL_SONG
+  ldy #1
   jsr _scummvm.virtSound_prime
 _ss.done:
   rep #$31
@@ -16930,9 +16984,17 @@ _snap.done:
 scummvm.setCameraAtImpl:
   rep #$31
 
+  ; Stash the target (A) before anything else — the old version clobbered
+  ; it with cameraX a moment later and all the clamp/store math ran on the
+  ; wrong value, leaving VAR_CAMERA_POS_X untouched.
+  sta.w SCUMM.scratch2
+
   ; Save old cameraX for snap detection
   lda.w GLOBAL.room.cameraX
   sta.w SCUMM.scratch3
+
+  ; Load target back into A for the clamp
+  lda.w SCUMM.scratch2
 
   ; Clamp to [MIN_X, MAX_X]
   ldx #SCUMM_VAR_CAMERA_MIN_X*2

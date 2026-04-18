@@ -168,51 +168,241 @@ def bass_cycle(n: int = 256) -> list[float]:
     return normalize(filtered)
 
 
+# MI1-specific instrument syntheses. We name them after what each MI1 MIDI
+# channel plays so the MML and project config never need to change — the
+# same `@shakuhachi`, `@glockenspiel`, etc. references keep working whether
+# the sample is synthesized here or dropped in from an SF2 / sample pack.
+
+def shakuhachi_cycle(n: int = 128) -> list[float]:
+    """Breathy bamboo flute.
+
+    Low harmonics with a hint of air-noise for character. One-cycle loop;
+    all harmonics decay faster than fundamental so the sample has a
+    mellow, pure-ish voice."""
+    rng = random.Random(0x5A4B1)
+    out = []
+    for i in range(n):
+        t = i / n
+        # Fundamental + soft harmonics
+        s = math.sin(2 * math.pi * t)
+        s += 0.25 * math.sin(2 * math.pi * 2 * t + 0.3)
+        s += 0.12 * math.sin(2 * math.pi * 3 * t + 0.6)
+        s += 0.05 * math.sin(2 * math.pi * 4 * t + 1.1)
+        # Very light air-noise component modulated by a slow sinusoid
+        air = 0.04 * rng.uniform(-1, 1)
+        out.append(s + air)
+    filtered = onepole_lowpass(out, 3500.0)
+    # Crossfade at loop seam
+    k = 6
+    for i in range(k):
+        a = i / k
+        filtered[i] = a * filtered[i] + (1 - a) * filtered[-(k - i)]
+    return normalize(filtered)
+
+
+def glockenspiel_cycle(n: int = 128) -> list[float]:
+    """FM bell — same structure as the original celesta (1:3.5 ratio).
+
+    Aliased from celesta_cycle so the project can reference
+    `@glockenspiel` instead. MI1 SOUN 010's chord channel is Glockenspiel,
+    which is close enough to celesta timbrally."""
+    return celesta_cycle(n)
+
+
+def acobass_cycle(n: int = 128) -> list[float]:
+    """Acoustic bass — alias for bass_cycle.
+
+    MI1's bass channel (ch5) is labeled Alto Sax in the MIDI but plays in
+    a bass register; we've called it acobass throughout to reflect the
+    role, not the MIDI tag."""
+    return bass_cycle(n)
+
+
+def atmosphere_cycle(n: int = 256) -> list[float]:
+    """Pad / atmosphere — detuned-sines drone for the FX 8 sci-fi slot.
+
+    Three sines at 1× / 1.003× / 0.997× the fundamental produce slow
+    beating that gives the pad motion without being harmonically rich.
+    Low-passed to keep it soft rather than sizzly."""
+    out = []
+    for i in range(n):
+        t = i / n
+        s = math.sin(2 * math.pi * t)
+        s += 0.8 * math.sin(2 * math.pi * 1.003 * t + 0.4)
+        s += 0.8 * math.sin(2 * math.pi * 0.997 * t + 0.8)
+        # A small higher partial for body
+        s += 0.3 * math.sin(2 * math.pi * 2 * t + 1.3)
+        out.append(s)
+    filtered = onepole_lowpass(out, 2200.0)
+    k = 6
+    for i in range(k):
+        a = i / k
+        filtered[i] = a * filtered[i] + (1 - a) * filtered[-(k - i)]
+    return normalize(filtered)
+
+
 # ---------------------------------------------------------------------------
 # Percussion — one-shot decays, no loop
 # ---------------------------------------------------------------------------
+#
+# All drums share the same design philosophy:
+#  * A short broadband transient (2-10 ms) at the start carries the "attack"
+#    character — this is what the ear uses to identify a drum hit. Without it,
+#    drums sound mushy.
+#  * A tonal body below that carries the pitch identity (kick = sub, snare =
+#    shell, conga = tuned head, etc.) with an exponential amplitude decay.
+#  * A post-process one-pole filter carves the overall timbre.
+# These are synthesized at 32 kHz; tad-compiler handles the BRR conversion.
+
+def _attack_click(out: list[float], rng: random.Random, length: int,
+                  amp: float = 0.4, shape: float = 3.0) -> None:
+    """Write a broadband transient click into `out[0:length]`.
+
+    Noise shaped by `(1-t)**shape` envelope — larger shape = punchier click."""
+    for i in range(min(length, len(out))):
+        t = i / length
+        out[i] += amp * ((1.0 - t) ** shape) * rng.uniform(-1.0, 1.0)
+
 
 def kick_oneshot(n: int = 1024) -> list[float]:
-    # Pitch sweep 160 Hz -> 40 Hz over ~30 ms, linear amplitude decay.
-    out = []
+    """Kick drum: transient click + pitch-swept sine body + sub tail.
+
+    Three layers: a noise click (5 ms) for the beater attack, a sine that
+    sweeps exponentially from 150 Hz to 45 Hz for the "thump", and a low
+    fundamental that decays slowly for the body. Post LP at 900 Hz removes
+    any residual hiss leaving a clean thump-sub."""
+    rng = random.Random(0xC1C1)
+    out = [0.0] * n
+    _attack_click(out, rng, length=160, amp=0.3, shape=4.0)
+
     phase = 0.0
     for i in range(n):
         t = i / n
-        freq = 160.0 * math.exp(-4.5 * t) + 40.0 * t  # exp pitch drop
+        freq = 45.0 + 105.0 * math.exp(-5.5 * t)
         phase += 2 * math.pi * freq / SR
-        env = (1.0 - t) ** 2
-        out.append(env * math.sin(phase))
+        # Short ramp-up then exponential decay so the initial click + pitch
+        # sweep fuse into a single "boom".
+        env = (t / 0.03) if t < 0.03 else math.exp(-3.5 * (t - 0.03))
+        out[i] += 0.85 * env * math.sin(phase)
+
+    out = onepole_lowpass(out, 900.0)
     return normalize(out)
 
 
 def snare_oneshot(n: int = 1024) -> list[float]:
-    rng = random.Random(0x5A1AE5)
-    out = []
-    noise_prev = 0.0
-    tone_phase = 0.0
+    """Snare: bandpassed noise crack + detuned tonal shell.
+
+    Previous version was too buzzy (full-band noise). Real snare has a
+    band-limited "crack" centered around 2-4 kHz plus a tonal drum-head that
+    rings briefly. Two detuned sines at 175 and 225 Hz give the shell its
+    "rattle" character."""
+    rng = random.Random(0x5A2E)
+    out = [0.0] * n
+
+    raw = [rng.uniform(-1.0, 1.0) for _ in range(n)]
+    hp = onepole_highpass(raw, 1500.0)
+    noise = onepole_lowpass(hp, 7000.0)
+    for i, s in enumerate(noise):
+        t = i / n
+        env = ((1.0 - t) ** 1.5) * math.exp(-5 * t)
+        out[i] += 0.75 * env * s
+
     for i in range(n):
         t = i / n
-        env_noise = (1.0 - t) ** 1.5
-        env_body = math.exp(-8 * t)
-        # White noise highpassed for snare rattle.
-        raw = rng.uniform(-1.0, 1.0)
-        noise = 0.7 * (raw - noise_prev)  # simple HP
-        noise_prev = raw
-        # Tonal body at ~200 Hz for the drum shell.
-        tone_phase += 2 * math.pi * 200.0 / SR
-        body = math.sin(tone_phase)
-        out.append(0.8 * env_noise * noise + 0.3 * env_body * body)
+        env = math.exp(-9 * t)
+        out[i] += 0.35 * env * math.sin(2 * math.pi * 175.0 * i / SR)
+        out[i] += 0.25 * env * math.sin(2 * math.pi * 225.0 * i / SR)
+
     return normalize(out)
 
 
 def hat_oneshot(n: int = 512) -> list[float]:
-    rng = random.Random(0x8A7)
-    raw = [rng.uniform(-1.0, 1.0) for _ in range(n)]
-    hp = onepole_highpass(raw, 6000.0)
-    out = []
-    for i, s in enumerate(hp):
+    """Closed hi-hat: inharmonic metallic mix with fast decay.
+
+    Five detuned high sines at 2.8/4.2/5.8/7.6/9.4 kHz give the metallic
+    character (vs the original plain white noise which just sounded like
+    hiss). Fast exponential decay and a final HP to clip any rumble."""
+    out = [0.0] * n
+    freqs = [2800.0, 4200.0, 5800.0, 7600.0, 9400.0]
+    for i in range(n):
         t = i / n
-        env = math.exp(-12 * t)
+        env = math.exp(-16 * t)
+        s = 0.0
+        for f in freqs:
+            s += math.sin(2 * math.pi * f * i / SR)
+        out[i] = env * s
+    out = onepole_highpass(out, 2000.0)
+    return normalize(out)
+
+
+def conga_oneshot(n: int, base_freq: float) -> list[float]:
+    """Conga: pitched hand drum, short attack + resonant tonal body.
+
+    Distinct from kick by being higher-pitched and tonal (you can sing
+    along). The pitch "droops" ~15% over the decay — characteristic of a
+    hand hitting a tensioned drumhead. Adds a 2nd harmonic for warmth."""
+    rng = random.Random(int(base_freq) ^ 0xC00A)
+    out = [0.0] * n
+    _attack_click(out, rng, length=40, amp=0.35, shape=3.0)
+
+    phase = 0.0
+    for i in range(n):
+        t = i / n
+        freq = base_freq * (0.85 + 0.15 * math.exp(-6 * t))
+        phase += 2 * math.pi * freq / SR
+        env = math.exp(-5 * t)
+        out[i] += 0.80 * env * math.sin(phase)
+        out[i] += 0.20 * env * math.sin(2 * phase)
+
+    out = onepole_lowpass(out, 2500.0)
+    return normalize(out)
+
+
+def conga_hi_oneshot(n: int = 768) -> list[float]:
+    return conga_oneshot(n, base_freq=340.0)
+
+
+def conga_lo_oneshot(n: int = 1024) -> list[float]:
+    return conga_oneshot(n, base_freq=220.0)
+
+
+def bongo_oneshot(n: int, base_freq: float) -> list[float]:
+    """Bongo: higher than conga, shorter, more click forward."""
+    rng = random.Random(int(base_freq) ^ 0xB0B0)
+    out = [0.0] * n
+    _attack_click(out, rng, length=30, amp=0.45, shape=2.5)
+
+    phase = 0.0
+    for i in range(n):
+        t = i / n
+        freq = base_freq * (0.9 + 0.1 * math.exp(-9 * t))
+        phase += 2 * math.pi * freq / SR
+        env = math.exp(-10 * t)
+        out[i] += 0.7 * env * math.sin(phase)
+
+    out = onepole_lowpass(out, 3500.0)
+    return normalize(out)
+
+
+def bongo_hi_oneshot(n: int = 512) -> list[float]:
+    return bongo_oneshot(n, base_freq=620.0)
+
+
+def bongo_lo_oneshot(n: int = 512) -> list[float]:
+    return bongo_oneshot(n, base_freq=440.0)
+
+
+def claves_oneshot(n: int = 256) -> list[float]:
+    """Claves: a pair of sticks clacked together. Narrow, pitched, brief.
+
+    Basically a very short decaying tone around 2.5-3 kHz, with a 2nd sine
+    an interval above for the characteristic sharp "crack"."""
+    out = []
+    for i in range(n):
+        t = i / n
+        env = math.exp(-22 * t)
+        s = math.sin(2 * math.pi * 2500.0 * i / SR)
+        s += 0.5 * math.sin(2 * math.pi * 3100.0 * i / SR)
         out.append(env * s)
     return normalize(out)
 
@@ -222,16 +412,29 @@ def hat_oneshot(n: int = 512) -> list[float]:
 # ---------------------------------------------------------------------------
 
 INSTRUMENTS = {
-    # Pitched: 128-frame cycles -> 250 Hz base, matches ~B3.
-    # tad-compiler allows ~5 octaves of upward pitch-shift from that base.
-    "celesta": (celesta_cycle, 128, "pitched: 1-cycle bell (FM 1:3.5)"),
-    "sax": (sax_cycle, 128, "pitched: bandlimited saw + 2.5kHz LPF"),
-    "sitar": (sitar_snapshot, 256, "pitched: Karplus-Strong settled buzz"),
-    "bass": (bass_cycle, 128, "pitched: triangle + 3rd harmonic, LPF"),
-    # Percussion: one-shots with lower base; octave range stays narrow.
-    "kick": (kick_oneshot, 1024, "drum: 160->40Hz pitch sweep + env"),
-    "snare": (snare_oneshot, 1024, "drum: HP noise + 200Hz body"),
-    "hat": (hat_oneshot, 512, "drum: HP-filtered noise, fast decay"),
+    # MI1-named melodic synths. Sample filenames match what
+    # `smi.terrificaudio` and `soun_010.mml` reference, so this generator
+    # is a pure drop-in replacement for any extracted-sample source.
+    #
+    # base Hz = 32000 / frame_count  (one cycle per N frames).
+    # Each pitched instrument gets a `_high` variant at half the frame count
+    # (double base Hz). SPC DSP can only pitch a sample ~2 octaves above its
+    # native rate, so songs sitting in an upper register use the `_high`
+    # sample to get the reach without per-channel MML transpose.
+    "shakuhachi":        (shakuhachi_cycle,   128, "MI1 ch1 lead — flute fund+harmonics+air"),
+    "shakuhachi_high":   (shakuhachi_cycle,    64, "shakuhachi at 500Hz base (reaches o7)"),
+    "glockenspiel":      (glockenspiel_cycle, 128, "MI1 ch3 chord — FM 1:3.5 bell"),
+    "glockenspiel_high": (glockenspiel_cycle,  64, "glock at 500Hz base"),
+    "sitar":             (sitar_snapshot,     256, "MI1 ch4 arp — Karplus-Strong buzz"),
+    "sitar_high":        (sitar_snapshot,     128, "sitar at 250Hz base"),
+    "acobass":           (acobass_cycle,      128, "MI1 ch5 bass — triangle + 3rd harmonic"),
+    "atmosphere":        (atmosphere_cycle,   256, "MI1 ch2 FX 8 — detuned-sine pad"),
+    "atmosphere_high":   (atmosphere_cycle,   128, "atmosphere at 250Hz base"),
+
+    # Drums: kick/snare/conga_hi/claves stay as SC-55 extracts (user
+    # confirmed those sound fine). Only bongo_hi is synthesized because
+    # the SC-55 bongo didn't fit the feel we want.
+    "bongo_hi":          (bongo_hi_oneshot,   512, "pitched hand drum, higher than conga"),
 }
 
 

@@ -1,10 +1,11 @@
-; Silence - blank placeholder song
-; This is the default song loaded by TAD to confirm the driver works
+; Silence - blank placeholder song, loaded by TAD at boot to prove the driver
+; works. Uses acobass on a rest chain so the song compiles without needing a
+; dedicated sine sample in the project.
 
 #Title Silence
 #Game Super Monkey Island
 #Author Test
 
-@sine sine
+@bass acobass
 
-A @sine o4 r1 r1 r1 r1
+A @bass o3 r1 r1 r1 r1

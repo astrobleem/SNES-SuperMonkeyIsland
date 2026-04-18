@@ -141,8 +141,8 @@
 .define TAD_LOADER_OFFSET       0
 .define TAD_AUDIO_DRIVER_OFFSET 116
 .define TAD_DATA_TABLE_OFFSET   3366
-.define TAD_DATA_TABLE_SIZE     11  ; 3 entries × u24 + u16 footer (common + silence + soun_010)
-.define TAD_N_DATA_ITEMS        3   ; common + 2 songs (silence, soun_010)
+.define TAD_DATA_TABLE_SIZE     14  ; 4 entries × u24 + u16 footer (common + silence + soun_010 + soun_scummbar)
+.define TAD_N_DATA_ITEMS        4   ; common + 3 songs (silence, soun_010, soun_scummbar)
 
 
 ; ==============

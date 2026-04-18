@@ -1,0 +1,17 @@
+{
+  "dialect": "terrific",
+  "title": "Monkey Island - Scumm Bar",
+  "composer": "Michael Z. Land",
+  "arranger": "Claude",
+  "tempo": 120,
+  "grid": "16th",
+  "assignments": [
+    {"spc": 1, "midi_ch": 1, "reduction": "top"},
+    {"spc": 2, "midi_ch": 2, "reduction": "top"},
+    {"spc": 3, "midi_ch": 3, "reduction": "top"},
+    {"spc": 4, "midi_ch": 3, "reduction": "bottom"},
+    {"spc": 5, "midi_ch": 4, "reduction": "top"},
+    {"spc": 6, "midi_ch": 4, "reduction": "bottom"},
+    {"spc": 8, "midi_ch": 9, "reduction": "drum_string"}
+  ]
+}

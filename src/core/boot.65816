@@ -14,9 +14,10 @@
 ; Song IDs per tad-compiler's Song enum (build/audio/tad-enums.inc):
 ;   0 = BLANK (internal blank song, silent)
 ;   1 = silence.mml (also silent)
-;   2 = soun_010 (first real song)
+;   2 = soun_010 (scummbar-ish / credits)
+;   3 = soun_scummbar (scumm bar theme)
 ; R cycles 0..N_DEV_SONGS-1. Bump this whenever a new song is added.
-.define N_DEV_SONGS 3
+.define N_DEV_SONGS 4
 
 .ramsection "dev_sfx_test" bank 0 slot 2
   dev_sfx_idx     db    ; next SFX index to queue (0..N_DEV_SFX-1)

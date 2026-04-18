@@ -1,0 +1,661 @@
+#Title Monkey Island - Scumm Bar
+#Composer Michael Z. Land
+#Author Claude
+#Tempo 60
+#ZenLen 96
+
+#EchoLength 0
+#EchoFeedback 0
+#EchoVolume 0
+
+; Melodic instruments - MI1-named synth.
+@0 shakuhachi_high   ; A  ch1 pan flute lead
+@1 atmosphere_high   ; C+D+E+F organ/brass pad
+@2 acobass           ; B  ch2 bass
+
+; Drum instruments - SC-55 extracts.
+@drum_kick   kick
+@drum_snare  snare
+@drum_conga  conga_hi
+@drum_claves claves
+
+; SPC Voice 1 -- MIDI ch1 (top) -- role: lead
+A  @0 _M-12 o5 v7 Q7
+A r1
+; bar 2
+A ^1
+; bar 3
+A ^8v9g16r8g16v8a16a+8r16v9a16v8g16>c8r16v9c16r8
+; bar 4
+A c8.<a+16v8a16r16v9g16r16g16v8a8a+16r16v9a16
+; bar 5
+A ^16v8g16v9>d16r8d16r16d2^16
+; bar 6
+A ^4^16r8v10d16r8v9d16d+16v8f8r16v9f16r8
+; bar 7
+A d16r8d16v8d+16v9f16r8f+16r8g8d16
+; bar 8
+A ^16r16d+8.d16v8c16r16v9d8v8c8v9<a+16v8>c8v9<a+16
+; bar 9
+A ^16v8a16g4v7a8v8a+8.r16>c16v9d8v8d+16
+; bar 10
+A d16c8v9<a+16r16g8r16v8>g4v9d16d+8.
+; bar 11
+A v8d16c8v10<a+8v8a8.v9a+16r8g4^16
+; bar 12
+A ^2r2
+; bar 13
+A ^1
+; bar 14
+A ^4^16d8.g16r8g16v8a16a+8r16
+; bar 15
+A v9a16v8g8>c16r16v9c16r8c8.<a+16r16v8a16v9g16r16
+; bar 16
+A g8v8a16a+16r8v9a16v8g16v9>d16r8d16r8d8
+; bar 17
+A ^2^8.r8v10d16r8
+; bar 18
+A v9d16d+8v8f16r16v9f8r16d16r8d16v8d+16v9f8r16
+; bar 19
+A f+16r8g8r16d16r8d+8d16v8c8v9d8
+; bar 20
+A v8c8v9<a+16v8>c8.v9<a+16v8a16g4r16v7a16v8a+8
+; bar 21
+A ^8>c8v9d16v8d+16d16c8v9<a+8r16g16r16v8>g8
+; bar 22
+A ^8v9d8d+8v8d8c16v10<a+8.v8a8v9a+16r16
+; bar 23
+A ^16g2.^16r8
+; bar 24
+A ^1
+; bar 25
+A ^2.d8g8r16
+; bar 26
+A g16v8a8a+16r16v9a8v8g16>c16r8v9c16r8c16
+; bar 27
+A ^8<a+16v8a16v9g16r8g16v8a16a+16r8v9a16v8g16r16v9>d16r16
+; bar 28
+A d16r8d2.
+; bar 29
+A ^16r8.v10d16r16v9d8d+16v8f16r8v9f16r16d16r16
+; bar 30
+A ^16d16v8d+8v9f16r16f+8r16g8r16d16r8d+16
+; bar 31
+A ^8d16v8c16v9d8.v8c16v9<a+16v8>c8.v9<a+16v8a8g16
+; bar 32
+A ^8r16v7a16v8a+4>c8v9d16v8d+8d16c16v9<a+16
+; bar 33
+A ^16r16g16r8v8>g8.v9d8d+8.v8d16c16v10<a+16
+; bar 34
+A ^8v8a8v9a+8r16g2^16
+; bar 35
+A ^4^16r2^8.
+; bar 36
+A ^1
+; bar 37
+A ^8d8.g16r16g8v8a16a+16r8v9a16v8g16>c16r8
+; bar 38
+A v9c16r8c8.<a+16v8a16v9g16r8g16v8a8
+; bar 39
+A a+16r16v9a16v8g8v9>d16r8d16r16d4.
+; bar 40
+A ^4.^16r8.v10d16r8v9d16d+16v8f16r8
+; bar 41
+A v9f16r8d16r16d8v8d+16v9f16r8f+16r8
+
+; SPC Voice 2 -- MIDI ch2 (top) -- role: bass
+B  @2 o2 v8 Q7
+B r1
+; bar 2
+B ^1
+; bar 3
+B ^8v6g8v4<g16r16v7g4^16r4v5>c16r16
+; bar 4
+B v6c8r8d+16r16g8<g16r8v7g4r8
+; bar 5
+B >d16r16v6d16r16d4r16v5<f+8v6g16r16a16
+; bar 6
+B ^16r16a+8.v7>c16r8v6<a+8r16a+16r16a+8.
+; bar 7
+B ^8r8.v7a+8.r8a16r8v6>g16<g16r16
+; bar 8
+B ^16g2r16g16r16g16>d16r8
+; bar 9
+B d16r16g8v5<g16r16v6g16r16g4^16r8.
+; bar 10
+B g8>d8r16d8r16g16v5<g16r8v6g4
+; bar 11
+B ^8.r8>d16r16d16v5g16r8v6g16r16v7<g16r16v6g16r16
+; bar 12
+B g16r16v7g4.r8v6g8>d16r8
+; bar 13
+B v7d16r2.^8.
+; bar 14
+B ^2v6g8v4<g16r16v7g16r16v6g8
+; bar 15
+B ^8r4>c8.r8d+16r8g16<g16r8
+; bar 16
+B v7g4r8>d16r16v6d16r16d16r16d8
+; bar 17
+B ^16r16v5<f+16v6g16r8a16r16a+16r16a+16v7>c16r8v6<a+8r8
+; bar 18
+B a+4.r8.a+8r16v7a+16r16
+; bar 19
+B a16r8v6>g8<g16r16v5g16r16v6g4.r16
+; bar 20
+B ^16g8>d16r8d16r8g16v5<g16r8v6g8.
+; bar 21
+B ^4r8g8.>d16r16d16r16v5d16v6g8
+; bar 22
+B v5<g16r16g16r16v6g4^16r8.>d8v5g16r16
+; bar 23
+B ^16v6g16r8v7<g8r8g4.^16r16
+; bar 24
+B ^16v6g8.>d16r16v7d8r2
+; bar 25
+B ^2.^8v6g8
+; bar 26
+B v4<g16r8v7g4^16r4v6>c8r16c16r16
+; bar 27
+B d+16r8g8<g16r16g16r16v7g8r8.>d16
+; bar 28
+B ^16r8v6d4r16v5<f+16v6g8r16a16r8a+16
+; bar 29
+B ^16v7>c16r8v6<a+8r8a+4.r8
+; bar 30
+B ^16a+8r16v7a+16r16a16r8v6>g8<g16r16v5g16r16v6g16
+; bar 31
+B ^4^16r8g8.>d16r16d16r8g16
+; bar 32
+B ^16v5<g16r16v6g4.^16r8g16r16g16>d16r8
+; bar 33
+B d8g8v5<g16r8v6g4.r16
+; bar 34
+B ^8>d8r16v5g16r16v6g16r8v7<g8.r16g8
+; bar 35
+B ^4^16r8v6g16r16g16>d16r8v7d16r8
+; bar 36
+B ^1
+; bar 37
+B ^4^16v6g16v4<g16r8v7g4^16r8
+; bar 38
+B ^8v6>c8r16c16r8d+16r16g8<g16r16g16r16
+; bar 39
+B v7g8.r8>d8r8v6d4r16v5<f+16v6g16
+; bar 40
+B ^16r16a8r16a+8r16v7>c16r16v6<a+16r16a+16r16a+8
+; bar 41
+B ^4r8.a+16r16v7a+8r8a16r8
+
+; SPC Voice 3 -- MIDI ch3 (top) -- role: pad
+C  @1 _M-12 o4 v5 Q7
+C r1
+; bar 2
+C ^1
+; bar 3
+C ^8.v6g16g16v9>a+16v6<a+16r8v3g16v8>a+16v3<g16r8v4d+16v8>g16
+; bar 4
+C v7>c16v5<<d+16v3>c16v4<g16d+16v6>>c16v5<<g16r16v3>c16<a+16v8>a+16r16v6
+C <a+16r8.
+; bar 5
+C v9>a+16v3<g16r8v4f+16v7>a16v5<f+16r8v3f+16v8>a16r16v5<f+16r16v3f+16v7
+C >>d16r16
+; bar 6
+C v4<<a16v3>d16v6<f+16r16>>d16v5<<a16r8.v7>>d16<f16v4<a+16r8v8>>d16
+; bar 7
+C <f16v4<a+16r16a+16v8>a+16f16v6d16<a+16v5f+16r16v6>>d8<<a16v5>d16v3<g16
+C r16
+; bar 8
+C v9>a+16v6<a+16v4>d16r16v5<a+16v8>a+16v3<a+16v5g16v3>d16r16v9a+16r16v5
+C <g16r16a16r16
+; bar 9
+C v7>a8v8f+16v5<g16r16>g16v4<g16<a+16r16v3>g16v7>g16r16v4<g16r8<a+16
+; bar 10
+C v7>>g16r16v3<g16r16v5<a+16v7>>g16r16v6<g16r16v5a+16r16v7>d16v5<a+16g16
+C r16v3g16
+; bar 11
+C v9>a+16r16v5<g16r16v4f+16r16v8>a16v5<f+16r8v4<a+16v7>>g16v4<g16v5<a+16
+C r16a+16
+; bar 12
+C v7>>g16v9<a+16v6<a+16r16a+16a+16v7>>g16v5<<a+16r8a+16v7>>g16v3<g16
+C <a+16v4>a+16v3d16
+; bar 13
+C v8>g16d16v6<g16r2.^16
+; bar 14
+C ^2^8g16v9>a+16v6<a+16r8v3g16
+; bar 15
+C v8>a+16r16v3<g16r16v4d+16r16v7>>c16v6<<g16v5d+16v3>c16v4<d+16v6>>c16v5
+C <<g16r16v3>c16<a+16
+; bar 16
+C v8>a+16r16v6<a+16r8.v9>a+16v3<g16r8v4f+16v7>a16d16v5<f+16r8
+; bar 17
+C v3f+16v8>a16v5<f+16r8v3f+16v7>>d16v4<<a16r16v3>d16v6<f+16>>d16v5<<a16
+C r8.
+; bar 18
+C v7>>d16<f16v4<a+16r8v9>a+16v8f16v4<a+16r8a+16v8>f16v6d16<a+16v4>f16v5
+C <f+16
+; bar 19
+C v6>>d8<<a16v5>d16r16v3<g16v9>a+16v6<a+16v4>d16r16v5<a+16v8>a+16r16v5
+C <g16v3>d16r16
+; bar 20
+C ^16v9a+16v5<g16r8a16v7>a8v8f+16r16v5<g16>g16v6d16v4<<a+16r16v3>g16r16
+; bar 21
+C v7>g16v4<g16r8<a+16v7>>g16r16v3<g16r16v5<a+16v8>a+16v7>g16v6<g16r8
+; bar 22
+C v5a+16v9>a+16v5<a+16g16r16v3g16r16v9>a+16v5<g16r16v4f+16r16v8>a16v5
+C <a16f+16r16
+; bar 23
+C v4<a+16v7>>g16v5<<a+16a+16r16a+16v9>>d16<a+16v6<a+16r8a+16v7>>g16v5
+C <g16<a+16r16
+; bar 24
+C a+16v7>>g16r16v3<<a+16v4>a+16r16v8>d16d16v6<g16r4.^16
+; bar 25
+C ^1
+; bar 26
+C g16v9>a+16v6<a+16r8v3g16r16v8>a+16v3<g16r8v4d+16v7>>c16v6<<g16v5d+16v3
+C >c16
+; bar 27
+C v4<d+16v6>>c16r16v5<<g16v3>c16v4<g16v3a+16v8>a+16v6<a+16r8.v9>a+16r16
+C v3<g16r16
+; bar 28
+C v4f+16r16v7>d16v5<f+16r8v3f+16v8>a16v5<f+16r8v3f+16v7>>d16v4<<a16r16v3
+C >d16
+; bar 29
+C v6<f+16>>d16v5<<a16r4v7>f16v4<a+16r8.v8>f16v4<a+16r8
+; bar 30
+C a+16v3>>d16v6<<a+16a+16v4>f16v5<f+16v6>a16>d16<<a16v5>d16r16v3<g16v9
+C >a+16v6<a+16g16v4>d16
+; bar 31
+C v5<a+16r16v8>a+16v5<g16v3>d16r8v9a+16v5<a+16g16r16a16v7>a8v8f+16r16
+; bar 32
+C v5<g16v6>d16d16v4<<a+16r8v3>g16v7>g16v4<g16r8v3d16v9>d16v7g16v3<g16r16
+; bar 33
+C ^16v5<a+16v7>>g16v6<g16r8v5a+16v9>a+16v7d16v5<g16r8v3g16v9>a+16v5<g16
+C r16
+; bar 34
+C ^16v4f+16v8>a16v5<a16f+16r16v4<a+16r16v7>>g16v5<<a+16r8a+16v9>a+16v5
+C g16v6<a+16r16
+; bar 35
+C a+16v7>>g16r16v5<<a+16r16v4>d16v7>g16v9<a+16v3<a+16v4>a+16r16v3d16v8
+C >d16v6<g16r16
+; bar 36
+C ^1
+; bar 37
+C ^4.v3a+16v9>a+16r16v5<g16r16a+16v3g16v8>a+16v3<g16r16
+; bar 38
+C ^16v4d+16v7>>c16v5<<d+16d+16v3>c16v4<g16d+16v6>>c16v5<<g16v3>c16r16
+C <a+16v8>a+16v6<a+16r16
+; bar 39
+C ^8.v9>a+16v3<g16r16v4f+16r16v7>a16v5<f+16r8v3f+16v8>a16v5<f+16r16
+; bar 40
+C ^16v3f+16v7>>d16r16v4<<a16v3>d16v6<f+16r16>>d16v5<<a16r8.v7>>d16v4
+C <<a+16a+16r8
+; bar 41
+C v8>>d16v4<<a+16a+16r16a+16v8>a+16f16v6<a+16v4>f16v5<f+16r16v6>>d16
+C <<a16r16
+; bar 42
+C v5d16
+
+; SPC Voice 4 -- MIDI ch3 (bottom) -- role: pad
+D  @1 _M-12 o4 v5 Q7
+D r1
+; bar 2
+D ^1
+; bar 3
+D ^8.v6g16r16v9>a+16v5<g16r8v3g16v8>d16v3<g16r8v4d+16v6>c16
+; bar 4
+D v7>c16v5<<d+16v3>c16v4<d+16r16v6>c16v5<g16r16v3>c16<a+16v7>d16v8a+16v6
+D <a+16r8.
+; bar 5
+D v9>d16v3<g16r8v4f+16v7>d16v5<f+16r8v3f+16v7>d16v8a16v5<f+16r16v3f+16v7
+D >a16
+; bar 6
+D >d16v4<<a16v3>d16v6<f+16r16v7>d16v5<a16r8.v7>f16r16v4<a+16r8v8>f16r16
+; bar 7
+D v4<a+16r16a+16v8>a+16f16v6<a+16r16v5f+16r16v6>d16<a16a16v5>d16v3<g16
+D r16
+; bar 8
+D v9>a+16v6<g16v4>d16r16v5<a+16v7>d16v5<g16r16v3>d16r16v8d16r16v5<g16r16
+D a16r16
+; bar 9
+D v8>f+16v6<f+16v8>f+16v5<g16g16a+16v4<a+16r8v3>g16v7>d16g16v4<g16r8
+D <a+16
+; bar 10
+D v8>a+16v7>g16v3<g16r16v5<a+16v8>a+16v7>g16v6<g16r16v5g16a+16v7>d16v5
+D <g16r8v3g16
+; bar 11
+D v6>d16v9a+16v5<g16r16v4f+16r16v8>a16v5<f+16r8v4<a+16v8>a+16v5<a+16r8
+D a+16
+; bar 12
+D v9>a+16r16v6<a+16r16a+16r16v7>>g16v5<<a+16r8a+16v9>a+16v3d16<a+16v4
+D >a+16v3d16
+; bar 13
+D v9a+16v8>d16v6<g16r2.^16
+; bar 14
+D ^2^8g16v7>d16v5<g16r8v3g16
+; bar 15
+D v8>d16a+16v3<g16r16v4d+16r16v7>>c16v5<<d+16r16v3>c16v4<d+16v6>c16v5
+D <d+16g16v3>c16<a+16
+; bar 16
+D v8>a+16a+16v6<a+16r8.v9>d16v3<g16r8v4f+16v7>d16r16v5<f+16r8
+; bar 17
+D v3f+16v8>a16v5<f+16r8v3f+16v7>>d16v4<<a16r16v3>d16v6<f+16v7>d16v5<a16
+D r8.
+; bar 18
+D v7>f16r16v4<a+16r8v8>f16r16v4<a+16r8a+16v8>f16v6<a+16r16v4>f16v5<f+16
+; bar 19
+D v6>d16f+16<a16v5>d16r16v3<g16v6>d16<g16v4>d16r16v5<a+16v7>d16v8a+16v5
+D <g16v3>d16r16
+; bar 20
+D ^16v8d16v5<g16r8a16v7>d16v6<f+16v8>f+16r16v5<g16a+16v6>d16v4<<a+16r16
+D v3>g16r16
+; bar 21
+D v7a+16v4<a+16>g16r16<a+16v8>a+16v7>g16v3<g16r16v5<a+16v8>a+16v7>g16v6
+D <g16r8
+; bar 22
+D v5a+16v7>d16v5<g16r8v3g16r16v9>a+16v5<g16r16v4f+16r16v7>d16v5<f+16r8
+; bar 23
+D v4<a+16v8>a+16v5<a+16r8a+16v9>>d16<a+16v6<a+16r8a+16v7>>g16v5<<a+16r8
+; bar 24
+D a+16v9>a+16r16v3<a+16v4>a+16r16v8>d16d16v6<g16r4.^16
+; bar 25
+D ^1
+; bar 26
+D g16v7>d16v6<a+16v5g16r16v3g16r16v8>a+16v3<g16r8v4d+16v6>c16v5<d+16r16
+D v3>c16
+; bar 27
+D v4<d+16v6>c16>c16v5<<g16v3>c16v4<g16v3a+16v8>a+16v3<g16v6a+16r8v9>d16
+D a+16v3<g16r16
+; bar 28
+D v4f+16r16v7>d16v5<f+16r8v3f+16v8>a16v5<f+16r8v3f+16v8>d16v4<a16r16v3
+D >d16
+; bar 29
+D v6<f+16v7>d16v5<a16r4v7>f16v4<a+16r8.v8>f16v4<a+16r8
+; bar 30
+D a+16v8>f16v6<a+16r16v4>f16v5<f+16v6>a16d16<f+16v5>d16r16v3<g16v6>d16
+D <g16r16v4>d16
+; bar 31
+D v5<a+16a+16v8>a+16v5<g16v3>d16r8v8d16v5<g16r8a16v7>d16v8f+16f+16r16
+; bar 32
+D v5<g16v6>d16d16v4<<a+16r8v3>g16v7a+16v4g16g16r16<a+16v9>>d16v7g16v3
+D <g16r16
+; bar 33
+D ^16v5<a+16v7>>g16v6<g16r8v5a+16v7>d16r16v5<g16r8v3g16v6>d16v5<g16r16
+; bar 34
+D ^16v4f+16v7>d16v5<f+16r8v4<a+16r16v7>>g16v5<<a+16r8a+16v9>a+16v6<a+16
+D r16
+; bar 35
+D ^16a+16v9>a+16v7>g16v5<<a+16r16a+16v9>a+16r16v3<a+16v4>a+16r16v3d16v8
+D >d16v6<g16r16
+; bar 36
+D ^1
+; bar 37
+D ^4.g16v7>d16v9a+16v5<g16r16a+16v3g16v8>d16v3<g16r16
+; bar 38
+D ^16v4d+16v6>c16v5<d+16r16v3>c16v4<d+16r16v6>c16v5<g16v3>c16r16<a+16v7
+D >d16v6<a+16a+16r8.
+; bar 39
+D v9>a+16v3<g16r16v4f+16r16v7>d16v5<f+16r8v3f+16v7>d16v5<f+16r16
+; bar 40
+D ^16v3f+16v8>d16v7>d16v4<<a16v3>d16v6<f+16r16>>d16v5<<a16r8.v7>f16v4
+D <a+16r16
+; bar 41
+D ^8v8>f16v4<a+16r8a+16v8>f16r16v6<a+16v4>f16v5<f+16r16v6>d16<f+16a16
+; bar 42
+D v5d16
+
+; SPC Voice 5 -- MIDI ch4 (top) -- role: ornament
+E  @1 o4 v6 p72 Q7
+E r1
+; bar 2
+E ^1
+; bar 3
+E ^1
+; bar 4
+E ^8v7c4^16<g16v8a+16r4.^16
+; bar 5
+E ^2.^16v6>d8.
+; bar 6
+E ^4^16<a16a16r16v8>d16r8v7<a+16v8>d16r8.
+; bar 7
+E ^2^8d16v7<a16r16>d8v8<g16r1^2.^16
+; bar 8
+; bar 9
+E v6g16r8
+; bar 10
+E ^16g4v5<a+16r2^8
+; bar 11
+E ^2.^16v7>g16v6d16v5<a+16r16
+; bar 12
+E v7>g4^16r8a+16v6d16r8v7a+4
+; bar 13
+E d16r8v8>d8v7<g16r4v8>d8r16d+8v7<g16r16
+; bar 14
+E v8>d+4<g16r2^8
+; bar 15
+E ^2v7>c4.v8<a+8r1^8.
+; bar 16
+; bar 17
+E v6>d2<a16a16r16v8>d16r16
+; bar 18
+E ^8d16r2.^16
+; bar 19
+E d8v7<a16>d8v8<g16r2^8
+; bar 20
+E ^1
+; bar 21
+E ^4v6g16r8.g8.v5<a+16r4
+; bar 22
+E ^1
+; bar 23
+E ^8.v7>g8v5<a+16r16v7>g4^16r8a+8
+; bar 24
+E v6d16r16v7a+4g16d16r16v8>d8v7<g16r4
+; bar 25
+E ^16v8>d16r16d+8v7<g16r8v8>d+8.<g16r4
+; bar 26
+E ^2.^8v7>c8
+; bar 27
+E ^4v8<a+8r2^8
+; bar 28
+E ^2^16v6>d4.^16
+; bar 29
+E ^8v4d16v6<a16v8>d8r8d8r4.
+; bar 30
+E ^4.d8v7<a16>d8v8<g16r4
+; bar 31
+E ^1
+; bar 32
+E ^2^8v6g16r8.g8
+; bar 33
+E ^8v5<a+16r2.^16
+; bar 34
+E ^2^8v7>g16v5<a+16r8v7>g8
+; bar 35
+E ^8r8.a+16v6d16r16v7d16a+4d16r16v8>d16
+; bar 36
+E ^8v7<g16r4v8>d16r8d+16v7<g16r8v8>d+8
+; bar 37
+E ^8<g16r2.^16
+; bar 38
+E ^4^16v7>c4^16v8<a+8r4
+; bar 39
+E ^1
+; bar 40
+E v6>d2<a16a16v8>d8r8d8r2.^16
+; bar 41
+E d16v7<a16r16
+
+; SPC Voice 6 -- MIDI ch4 (bottom) -- role: ornament
+F  @1 o4 v6 p56 Q7
+F r1
+; bar 2
+F ^1
+; bar 3
+F ^1
+; bar 4
+F ^8v5d+4^16v6d8v8a+16r4.
+; bar 5
+F ^2.^16v5f+8.
+; bar 6
+F ^4.v6a16r16v5f16v8>d16r16v7<f8v8>d16r8
+; bar 7
+F ^2^8v7<f+16a16r16v8g8r16
+; bar 8
+F ^1
+; bar 9
+F ^2.^16v5<a+16v6>g16r16
+; bar 10
+F ^16v5<a+4r2^8.
+; bar 11
+F ^2.^16a+8r16
+; bar 12
+F ^16v7a+4^16>g16r16v6d16r8.v7d4r8.
+; bar 13
+F g8r4^16v8g8>d16v7<g8r16
+; bar 14
+F ^16v8g4r2^8.
+; bar 15
+F ^2v5d+4^16v7g16v6d8
+; bar 16
+F v8a+16r2.^8.
+; bar 17
+F ^8.v5f+2^8v6a16v5f16v8>d16r8
+; bar 18
+F v7<f16v8>d16r2.
+; bar 19
+F v7<f+16a16r16v8g8r2^8.
+; bar 20
+F ^1
+; bar 21
+F ^4v5<a+16v6>g16r8v5<a+4r4
+; bar 22
+F ^1
+; bar 23
+F ^8.a+8r8v7a+4^16>g16r16v6d8r8
+; bar 24
+F v7d4^16r8g8r4^16
+; bar 25
+F ^16v8g16>d16d+16v7<g16r8.v8g8.r4^16
+; bar 26
+F ^2.^8v7>c16v5<d+16
+; bar 27
+F ^8.v7g16v6d8v8a+16r2^16
+; bar 28
+F ^2^16v6a16v5f+4.
+; bar 29
+F ^8.v6a16v5f8v8>d16r16v7<f8v8>d16r4^16
+; bar 30
+F ^4.v7<f+8a16v8g8r4^16
+; bar 31
+F ^1
+; bar 32
+F ^2^8v5<a+16v6>g16r8v5<a+8
+; bar 33
+F ^8r2.^8
+; bar 34
+F ^2^8a+16r8.v7a+8
+; bar 35
+F ^8>g16r8v6d16r8v7d4^16r8g16
+; bar 36
+F ^8r4^16v8g16>d16r16v7<g16r8.v8g8
+; bar 37
+F ^8r2.^8
+; bar 38
+F ^4^16v5d+4^16v6d8v8a+16r8.
+; bar 39
+F ^1
+; bar 40
+F v5f+2^16v6a16v5f8v8>d16r16v7<f8
+; bar 41
+F v8>d16r2.v7<f+16a16r16
+
+; SPC Voice 8 -- MIDI ch9 (drum_string) -- role: drums
+H  o2 v13
+H l16
+H r r r r r r r r r r r r r r r r
+H r r r r r r r r r r r r r r r r
+H r r @drum_kick c c r r r c r @drum_conga c c @drum_snare c r c
+H @drum_conga c @drum_snare c
+H r @drum_claves c @drum_kick c c r @drum_snare c c c @drum_kick c c
+H @drum_snare c r c @drum_kick c @drum_conga c r
+H c c @drum_claves c @drum_conga c c c @drum_claves c @drum_snare c
+H @drum_claves c r r r @drum_snare c @drum_kick c r c
+H r r @drum_claves c @drum_snare c r @drum_kick c c @drum_snare c
+H @drum_kick c c r @drum_snare c r @drum_kick c r r
+H r r @drum_conga c c r c c @drum_snare c r c @drum_kick c @drum_conga c
+H r @drum_kick c c r
+H @drum_conga c @drum_snare c @drum_kick c r r r r r r r r @drum_conga c
+H r @drum_snare c c @drum_kick c
+H r @drum_conga c @drum_kick c r c @drum_conga c @drum_snare c
+H @drum_kick c @drum_claves c r r r r r r r
+H @drum_conga c c @drum_kick c @drum_conga c @drum_kick c r r c c
+H @drum_conga c r @drum_kick c c @drum_snare c r c
+H @drum_claves c r r @drum_conga c r r r c @drum_kick c r @drum_snare c
+H @drum_kick c @drum_conga c @drum_claves c @drum_kick c c
+H @drum_conga c r @drum_kick c c r r r r r r @drum_conga c c r r c
+H @drum_snare c
+H @drum_kick c r @drum_snare c @drum_kick c @drum_snare c r r
+H @drum_kick c @drum_conga c r c @drum_snare c @drum_conga c r
+H @drum_kick c c
+H @drum_snare c @drum_claves c @drum_kick c @drum_snare c c
+H @drum_conga c @drum_kick c @drum_snare c @drum_kick c c r r r c
+H @drum_snare c @drum_conga c
+H c @drum_snare c r c @drum_conga c @drum_snare c r @drum_claves c
+H @drum_kick c r c @drum_snare c c r @drum_kick c c
+H @drum_snare c r c @drum_kick c r @drum_conga c c c r c c c
+H @drum_claves c r @drum_snare c r
+H r r c @drum_kick c r r c r r @drum_claves c @drum_snare c @drum_kick c
+H c @drum_conga c @drum_kick c c
+H r r @drum_snare c @drum_kick c r r r r @drum_conga c r c c c
+H @drum_snare c r c
+H @drum_kick c r @drum_conga c @drum_kick c c r @drum_conga c
+H @drum_snare c @drum_kick c r r r r r r r
+H r @drum_conga c r @drum_snare c c @drum_conga c @drum_kick c
+H @drum_conga c @drum_claves c @drum_kick c c @drum_conga c r
+H @drum_kick c @drum_claves c r
+H r r r r r r @drum_conga c r c @drum_kick c c r r c c r
+H @drum_conga c @drum_kick c c r @drum_snare c c @drum_claves c r r
+H @drum_conga c r r r r @drum_snare c @drum_kick c
+H @drum_snare c @drum_kick c @drum_conga c r @drum_kick c c r
+H @drum_conga c @drum_kick c c r r r r r r
+H @drum_conga c c r r c @drum_snare c @drum_kick c @drum_claves c
+H @drum_snare c @drum_kick c @drum_snare c r r @drum_kick c
+H @drum_conga c c
+H c @drum_snare c r @drum_conga c @drum_kick c c @drum_snare c r
+H @drum_kick c @drum_snare c c r @drum_kick c @drum_snare c r
+H @drum_kick c
+H c r r r c @drum_conga c c r @drum_snare c c @drum_conga c r
+H @drum_snare c @drum_claves c r @drum_kick c
+H c @drum_snare c r c @drum_kick c c r @drum_snare c c @drum_kick c r
+H @drum_conga c c r c c
+H c r c @drum_claves c @drum_snare c r r r c @drum_kick c r r c r r
+H @drum_claves c
+H @drum_snare c @drum_kick c r c c c @drum_conga c r @drum_snare c
+H @drum_kick c r r r r r @drum_conga c
+H c c r c @drum_snare c c @drum_kick c @drum_conga c c @drum_kick c r c
+H @drum_conga c @drum_snare c @drum_conga c @drum_kick c
+H r r r r r r r @drum_conga c r r @drum_snare c c @drum_kick c r
+H @drum_conga c @drum_kick c
+H c r @drum_conga c @drum_kick c @drum_claves c r r r r r r r r
+H @drum_conga c c @drum_kick c
+H c @drum_conga c r @drum_kick c c @drum_claves c @drum_conga c
+H @drum_kick c @drum_conga c @drum_kick c @drum_snare c c r
+H @drum_claves c r @drum_conga c
+H r r r r c @drum_kick c @drum_snare c @drum_kick c @drum_conga c c
+H @drum_kick c r c @drum_conga c @drum_kick c @drum_snare c
+H @drum_kick c r r r r r @drum_conga c c r r c r @drum_snare c
+H @drum_kick c @drum_snare c @drum_kick c
+H r @drum_snare c r @drum_kick c @drum_conga c c c @drum_snare c r
+H @drum_conga c @drum_kick c c r @drum_snare c @drum_kick c
+H @drum_snare c
+H r c @drum_kick c @drum_snare c r @drum_kick c c r r r c @drum_conga c
+H r c @drum_snare c c
+H r @drum_conga c @drum_snare c @drum_claves c r @drum_kick c c r
+H @drum_snare c c @drum_kick c r c @drum_snare c c r
+H @drum_kick c @drum_conga c r c c c r c c @drum_claves c @drum_snare c
+H r r r c r
+H @drum_kick c r c r r @drum_claves c @drum_snare c r @drum_kick c c c r
+H c r @drum_snare c @drum_kick c
+H r r r r r @drum_conga c c c r c @drum_snare c c @drum_conga c
+H @drum_kick c @drum_conga c @drum_kick c

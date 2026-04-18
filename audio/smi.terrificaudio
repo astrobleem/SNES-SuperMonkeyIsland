@@ -176,7 +176,7 @@
       "loop_setting": 2,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 3,
+      "first_octave": 2,
       "last_octave": 5,
       "envelope": "adsr 10 3 6 12",
       "comment": "synth atmosphere_high"
@@ -213,6 +213,10 @@
     {
       "name": "soun_010",
       "source": "songs/soun_010.mml"
+    },
+    {
+      "name": "soun_scummbar",
+      "source": "songs/soun_scummbar.mml"
     }
   ]
 }

@@ -1307,16 +1307,12 @@ _prc.noExitScript2:
   ora.l GLOBAL.room.idx+2
   beq _prc.skipViewport                ; virtual room -- no MSU tile data
 
-  ; Room 10 (logo): skip snapCamera + reloadViewport.
-  ; room.load already DMA'd all 64 columns of tile data to VRAM.
-  ; snapCameraToRoom would snap cam to ego actor (x=0), destroying the
-  ; logo scroll. The bypass (room 90 intercept) handles the viewport.
-  lda.w SCUMM.currentRoom
-  and #$00FF
-  cmp #10
-  beq _prc.skipViewport
-
-  ; Update camera limits + snap to followed actor
+  ; Update camera limits + snap to followed actor.
+  ; Historically room 10 (logo) skipped snap to preserve a cam=256 setup
+  ; done in the room 90 bypass, but that bypass path is now unreachable
+  ; (resolved room != 90 due to resourceMapper). Without this call, the
+  ; previous room's VAR_CAMERA_MAX_X carries over and clamps script 152's
+  ; setCameraAt(480) to a tiny value — logo never visible.
   jsl scummvm.snapCameraToRoom
 
   ; Reload viewport (force-blank DMA of BG tiles)

@@ -112,8 +112,7 @@ _init.zeroBits:
   stz.w SCUMM.bgInitDone
   stz.w SCUMM.gcInProgress
   stz.w SCUMM.egoFixupPending
-  stz.w SCUMM.hdmaChannel          ; zeros both hdmaChannel + hdmaCgramChannel (adjacent db's)
-  stz.w SCUMM.cgramHdmaTable       ; zero first entry so HDMA terminates immediately if read
+  stz.w SCUMM.hdmaChannel
   stz.w SCUMM.roomEncdPtr
   stz.w SCUMM.roomEncdLen
   stz.w SCUMM.roomExcdPtr
@@ -751,9 +750,6 @@ _play.done:
   rts
 
 
-; buildCgramHdmaTable moved to superfree section at end of file
-
-
 ;-------------------------------------------------------------------
 ; _scummvm.processRoomChange -- load new room background
 ; Called when SCUMM.newRoom != SCUMM.currentRoom
@@ -838,44 +834,6 @@ _scummvm.processRoomChange:
     ; Enable this channel in HDMA
     rep #$20
     lda.w SCUMM.hdmaChannel
-    and #$00FF
-    tax
-    sep #$20
-    lda.l dmaBitflagLut,x
-    ora.w GLOBAL.HDMA.CHANNEL.ENABLE
-    sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-+
-  .ACCU 8
-  .INDEX 16
-
-  ; Set up HDMA to write verb palette colors to CGRAM at scanline 144
-  sep #$20
-  jsr core.dma_channel.allocate
-  bcc +
-    sta.w SCUMM.hdmaCgramChannel
-    rep #$31
-    and #$00FF
-    asl a
-    asl a
-    asl a
-    asl a
-    tax
-    ; DMAP: mode 3 = write pp,pp,pp+1,pp+1 (4 bytes per transfer)
-    sep #$20
-    lda #DMAP_2_REG_WRITE_TWICE_EACH
-    sta.l DMAP0,x
-    ; Target register: $21 (low byte of $2121=CGADD, $2122=CGDATA)
-    lda #$21
-    sta.l DMADEST0,x
-    ; Table address (24-bit pointer to WRAM CGRAM HDMA table)
-    lda.b #$7E
-    sta.l DMASRC0B,x
-    rep #$20
-    lda.w #SCUMM.cgramHdmaTable
-    sta.l DMASRC0L,x
-    ; Enable this channel in HDMA
-    rep #$20
-    lda.w SCUMM.hdmaCgramChannel
     and #$00FF
     tax
     sep #$20
@@ -1202,9 +1160,11 @@ _prc.roomLoadOk:
   ; room.load overwrites the font DMA'd during init; force blank is still active
   jsl scummvm.loadDialogFont
 
-  ; Build CGRAM HDMA table with room's palette 7 colors
-  ; (HDMA disabled, force blank active -- CGRAM reads are safe)
-  jsl scummvm.buildCgramHdmaTable
+  ; Overwrite verb-reserved CGRAM slots with static verb colors.
+  ; pal6/pal7 c1-c3 and pal1 c12-c13 are reserved from room art; the converter
+  ; zeroes them in each room's palette file, and this call restores the canonical
+  ; verb/dialog values into live CGRAM + BWRAM shadow.
+  jsl scummvm.writeVerbColors
 
   ; Restore HDMA enable + ScreenBrightness, exit force blank
   ; Stack: roomNum[16], brightness[8], hdmaEnable[8]
@@ -14188,232 +14148,89 @@ _rvb.noInventory:
 .ends
 
 ;-------------------------------------------------------------------
-; scummvm.buildCgramHdmaTable -- fill WRAM CGRAM HDMA table
-; Briefly enters force blank to read room's palette 7 colors 1-3
-; from CGRAM, then writes the full table to SCUMM.cgramHdmaTable.
-; Table restores room colors at scanline 0, sets verb colors at 140.
-; JSL/RTL. DBR=$7E assumed for absolute addressing.
+; scummvm.writeVerbColors -- write canonical verb/highlight palette
+; values into CGRAM pal6 c1-c3 (highlight) and pal7 c1-c3 (normal),
+; and update BWRAM_CGRAM_SHADOW to match. Called after room palette
+; load to restore verb colors (room palette zeroes those slots).
+; pal7 c1=$6318 fill, c2=$294A shadow, c3=$7FFF body (white normal).
+; pal6 c1=$6318 fill, c2=$294A shadow, c3=$03FF body (yellow highlight).
+; JSL/RTL.
 ;-------------------------------------------------------------------
 .bank 5 slot 0
 .base BSL
-.section "ScummVMBuildCgramHdma" free
+.section "ScummVMWriteVerbColors" free
 
-scummvm.buildCgramHdmaTable:
+scummvm.writeVerbColors:
   php
-  rep #$31
-  lda.w #SCUMM.cgramHdmaTable & $FFFF
-  tax
+  rep #$30
+  .ACCU 16
+  .INDEX 16
 
-  ; Enter force blank and disable HDMA to safely read CGRAM.
-  ; Zero GLOBAL.HDMA.CHANNEL.ENABLE so NMI cannot re-enable HDMA
-  ; (NMI is non-maskable -- sei doesn't block it).
+  ; --- CGRAM: pal6 c1-c3 at $61-$63 ---
   sep #$20
-  lda.w GLOBAL.HDMA.CHANNEL.ENABLE
-  pha
-  lda #0
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  sta.l HDMAEN
-  lda.b #INIDSP_FORCE_BLANK
-  sta.l INIDSP
-
-  ; --- Read palette 7 colors 1-3 from CGRAM $71 ---
-  lda #$71
-  sta.l $2121
-
-  ; -- Per-line 8 entries at scanlines 0-7: restore pal7 c1-c3 + pal6 c1-c3 + pal1 c12-c13 --
-  lda #$88
-  sta.w 0,x
-  ; Entry 0: CGRAM[$71] = room pal7 c1
-  lda #$71
-  sta.w 1,x
-  sta.w 2,x
-  lda.l $213B
-  sta.w 3,x
-  lda.l $213B
-  sta.w 4,x
-  ; Entry 1: CGRAM[$72] = room pal7 c2
-  lda #$72
-  sta.w 5,x
-  sta.w 6,x
-  lda.l $213B
-  sta.w 7,x
-  lda.l $213B
-  sta.w 8,x
-  ; Entry 2: CGRAM[$73] = room pal7 c3
-  lda #$73
-  sta.w 9,x
-  sta.w 10,x
-  lda.l $213B
-  sta.w 11,x
-  lda.l $213B
-  sta.w 12,x
-
-  ; --- Read palette 6 colors 1-3 from CGRAM $61 ---
+  .ACCU 8
   lda #$61
-  sta.l $2121
-  ; Entry 3: CGRAM[$61] = room pal6 c1
-  lda #$61
-  sta.w 13,x
-  sta.w 14,x
-  lda.l $213B
-  sta.w 15,x
-  lda.l $213B
-  sta.w 16,x
-  ; Entry 4: CGRAM[$62] = room pal6 c2
-  lda #$62
-  sta.w 17,x
-  sta.w 18,x
-  lda.l $213B
-  sta.w 19,x
-  lda.l $213B
-  sta.w 20,x
-  ; Entry 5: CGRAM[$63] = room pal6 c3
-  lda #$63
-  sta.w 21,x
-  sta.w 22,x
-  lda.l $213B
-  sta.w 23,x
-  lda.l $213B
-  sta.w 24,x
+  sta.l $2121                         ; CGADD = $61
+  lda #$18                            ; $6318 low
+  sta.l $2122
+  lda #$63                            ; $6318 high
+  sta.l $2122
+  lda #$4A                            ; $294A low
+  sta.l $2122
+  lda #$29                            ; $294A high
+  sta.l $2122
+  lda #$FF                            ; $03FF low
+  sta.l $2122
+  lda #$03                            ; $03FF high
+  sta.l $2122
 
-  ; --- Read palette 1 colors 12-13 from CGRAM $1C (= 2bpp pal7 c0-c1) ---
-  lda #$1C
-  sta.l $2121
-  ; Entry 6: CGRAM[$1C] = room pal1 c12 (= 2bpp pal7 c0)
-  lda #$1C
-  sta.w 25,x
-  sta.w 26,x
-  lda.l $213B
-  sta.w 27,x
-  lda.l $213B
-  sta.w 28,x
-  ; Entry 7: CGRAM[$1D] = room pal1 c13 (= 2bpp pal7 c1)
-  lda #$1D
-  sta.w 29,x
-  sta.w 30,x
-  lda.l $213B
-  sta.w 31,x
-  lda.l $213B
-  sta.w 32,x
-
-  ; NOTE: HDMA stays disabled until entire table is built.
-  ; Re-enabling HDMA here would process a partially-written table,
-  ; causing the HDMA to read stale WRAM as bogus count bytes/data
-  ; and corrupt CGRAM entries (pal0[1], [5], [7] zeroed).
-
-  ; -- Scanlines 8-127: 120 lines, harmless CGRAM[$70] = $0000 --
-  lda #120
-  sta.w 33,x
-  lda #$70
-  sta.w 34,x
-  sta.w 35,x
-  stz.w 36,x
-  stz.w 37,x
-
-  ; -- Scanlines 128-134: 7 lines, harmless CGRAM[$70] = $0000 --
-  lda #7
-  sta.w 38,x
-  lda #$70
-  sta.w 39,x
-  sta.w 40,x
-  stz.w 41,x
-  stz.w 42,x
-
-  ; -- Scanlines 135-136: per-line 2, sentence palette (default harmless) --
-  lda #$82
-  sta.w 43,x
-  ; Entry 0: default harmless CGRAM[$70] = $0000
-  lda #$70
-  sta.w 44,x
-  sta.w 45,x
-  stz.w 46,x
-  stz.w 47,x
-  ; Entry 1: default harmless CGRAM[$70] = $0000
-  sta.w 48,x
-  sta.w 49,x
-  stz.w 50,x
-  stz.w 51,x
-
-  ; -- Scanlines 137-143: per-line 7, set verb + highlight colors --
-  lda #$87
-  sta.w 52,x
-  ; Entry 0: CGRAM[$00] = $0000 (backdrop = black)
-  stz.w 53,x
-  stz.w 54,x
-  stz.w 55,x
-  stz.w 56,x
-  ; Entry 1: CGRAM[$73] = $7FFF (white body -- normal verb text)
-  ; Placed first so it's written earliest (scanline 138), maximizing
-  ; margin before sentence text at scanline 146.
-  lda #$73
-  sta.w 57,x
-  sta.w 58,x
-  lda #$FF
-  sta.w 59,x
-  lda #$7F
-  sta.w 60,x
-  ; Entry 2: CGRAM[$71] = $6318 (light grey fill -- normal)
+  ; --- CGRAM: pal7 c1-c3 at $71-$73 ---
   lda #$71
-  sta.w 61,x
-  sta.w 62,x
-  lda #$18
-  sta.w 63,x
-  lda #$63
-  sta.w 64,x
-  ; Entry 3: CGRAM[$72] = $294A (dark shadow -- normal)
-  lda #$72
-  sta.w 65,x
-  sta.w 66,x
-  lda #$4A
-  sta.w 67,x
-  lda #$29
-  sta.w 68,x
-  ; Entry 4: CGRAM[$61] = $6318 (light grey fill -- highlight)
-  lda #$61
-  sta.w 69,x
-  sta.w 70,x
-  lda #$18
-  sta.w 71,x
-  lda #$63
-  sta.w 72,x
-  ; Entry 5: CGRAM[$62] = $294A (dark shadow -- highlight)
-  lda #$62
-  sta.w 73,x
-  sta.w 74,x
-  lda #$4A
-  sta.w 75,x
-  lda #$29
-  sta.w 76,x
-  ; Entry 6: CGRAM[$63] = $03FF (bright yellow body -- highlight)
-  lda #$63
-  sta.w 77,x
-  sta.w 78,x
-  lda #$FF
-  sta.w 79,x
-  lda #$03
-  sta.w 80,x
+  sta.l $2121                         ; CGADD = $71
+  lda #$18                            ; $6318 low
+  sta.l $2122
+  lda #$63                            ; $6318 high
+  sta.l $2122
+  lda #$4A                            ; $294A low
+  sta.l $2122
+  lda #$29                            ; $294A high
+  sta.l $2122
+  lda #$FF                            ; $7FFF low
+  sta.l $2122
+  lda #$7F                            ; $7FFF high
+  sta.l $2122
 
-  ; -- Scanlines 144-223: 80 lines, harmless CGRAM[$70] = $0000 --
-  lda #80
-  sta.w 81,x
-  lda #$70
-  sta.w 82,x
-  sta.w 83,x
-  stz.w 84,x
-  stz.w 85,x
-
-  ; Terminator
-  stz.w 86,x
-
-  ; Restore HDMA enable flag + display AFTER entire table is built.
-  ; Only set GLOBAL.HDMA.CHANNEL.ENABLE -- do NOT write HDMAEN directly.
-  ; Mid-frame HDMA enable corrupts CGRAM. NMI enables HDMA at next VBlank.
-  pla
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  lda.w ScreenBrightness
-  sta.l INIDSP
+  ; --- Shadow: keep BWRAM mirror in sync so setPalColor/buildCgram paths
+  ;     that read from shadow don't see stale room-load values.
+  rep #$20
+  .ACCU 16
+  lda #$6318
+  sta.l BWRAM_CGRAM_SHADOW + $C2      ; pal6 c1
+  sta.l BWRAM_CGRAM_SHADOW + $E2      ; pal7 c1
+  lda #$294A
+  sta.l BWRAM_CGRAM_SHADOW + $C4      ; pal6 c2
+  sta.l BWRAM_CGRAM_SHADOW + $E4      ; pal7 c2
+  lda #$03FF
+  sta.l BWRAM_CGRAM_SHADOW + $C6      ; pal6 c3 (yellow highlight)
+  lda #$7FFF
+  sta.l BWRAM_CGRAM_SHADOW + $E6      ; pal7 c3 (white normal)
 
   plp
+  rtl
+
+.ends
+
+
+; scummvm.buildCgramHdmaTable REMOVED (Option 1 pivot 2026-04-18).
+; Pal6/pal7 c1-c3 are now statically assigned to verb font; converter
+; zeroes them in room palette files, writeVerbColors restores them
+; after every room load. HDMA CH2 for CGRAM double-buffering is gone.
+
+.bank 5 slot 0
+.base BSL
+.section "ScummVMBuildCgramHdma_dead" free
+
+_scummvm_build_cgram_hdma_removed:
   rtl
 
 .ends

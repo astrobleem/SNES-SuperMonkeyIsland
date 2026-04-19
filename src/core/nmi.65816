@@ -26,6 +26,16 @@ core.nmi.play:
 	lda #0
 	sta.l WRIO			;clear iobit
 
+	; Lock CGRAM[$00] (backdrop) to $0000 every VBlank. The old cgramHdmaTable
+	; scheme forced this at scanlines 137-143; without HDMA the backdrop shows
+	; red during mountain fade frames if a script writes pal0 c0. Enforcing
+	; black here matches the verb-area behavior baseline had.
+	lda #$00
+	sta.l CGADD
+	lda #$00
+	sta.l CGDATA
+	sta.l CGDATA
+
     lda.w GLOBAL.HDMA.CHANNEL.ENABLE        ;check which hdma channels need to be activated
     sta.l HDMAEN        ;set hdma channels and disable dma channel
 

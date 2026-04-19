@@ -59,13 +59,19 @@ HEADER_SIZE = 32
 MAX_TILE_ID = 1024  # 10-bit tile index in SNES tilemap word
 TRANS_COLOR = (0, 0, 0)  # color 0 in every sub-palette
 
-# Reserve SNES palette 0 for SCUMM UI indices (cursor, verb text).
-# Script 6 et al. call setPalColor(idx) for idx in 0..15 expecting those to
-# be UI-only; in original VGA MI1 those slots were reserved from room art.
-# Mapping setPalColor(N) → CGRAM[N*2] only works when no room tile references
-# palette 0, so we quantize tiles into palettes 1..7 and leave 0 empty.
-RESERVED_PALETTES = 1
-ART_SUBPALETTES = NUM_SUBPALETTES - RESERVED_PALETTES  # 7
+# Reserved palettes:
+#   - Pal 0: SCUMM UI (cursor, setPalColor idx 0-15 targets). Scripts write here.
+#   - Pal 6: verb highlight font (c1-c3 set by scummvm.writeVerbColors).
+#   - Pal 7: verb normal font (c1-c3 set by scummvm.writeVerbColors).
+# The HDMA CGRAM double-buffering scheme was removed 2026-04-18; pal6/pal7
+# are now statically assigned to verb font, so no room art may reference them.
+# Art quantizes into palettes 1-5 only.
+RESERVED_PALETTES_START = 1      # pal 0 (UI)
+RESERVED_PALETTES_END = 2        # pal 6, pal 7 (verb)
+ART_SUBPALETTES = NUM_SUBPALETTES - RESERVED_PALETTES_START - RESERVED_PALETTES_END  # 5
+# Backwards-compat alias used by legacy code paths; matches the START count since
+# those paths only care about the "prepend" shift. DO NOT add the END reservation.
+RESERVED_PALETTES = RESERVED_PALETTES_START
 
 
 # ---------------------------------------------------------------------------
@@ -722,15 +728,20 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     else:
         all_snes_tiles = bg_snes_tiles
 
-    # Quantize into ART_SUBPALETTES (=7), then shift IDs by RESERVED_PALETTES
-    # so tilemap entries reference palettes 1..7. Palette 0 is prepended empty
-    # and stays reserved for SCUMM UI colors (cursor, verb text overlays).
+    # Quantize into ART_SUBPALETTES (=5), shift IDs by RESERVED_PALETTES_START
+    # so tilemap entries reference palettes 1..5. Pal 0 is prepended empty (UI);
+    # pal 6, 7 are appended empty (verb font — runtime writeVerbColors fills
+    # c1-c3 after every room load).
     palettes, all_indexed_tiles, all_tile_pal_ids = build_palettes_tileaware(
         all_snes_tiles, num_palettes=ART_SUBPALETTES
     )
-    all_tile_pal_ids = all_tile_pal_ids + RESERVED_PALETTES
+    all_tile_pal_ids = all_tile_pal_ids + RESERVED_PALETTES_START
     empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
-    palettes = [empty_pal] * RESERVED_PALETTES + list(palettes)
+    palettes = (
+        [empty_pal] * RESERVED_PALETTES_START
+        + list(palettes)
+        + [empty_pal] * RESERVED_PALETTES_END
+    )
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
 

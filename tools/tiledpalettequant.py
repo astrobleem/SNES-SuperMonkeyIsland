@@ -197,7 +197,7 @@ def _recompute_palette_centroids(palettes_rgb, histograms, assignments):
 
 def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
                              colors_per_palette=DEFAULT_COLORS_PER_PALETTE,
-                             trans_color=None):
+                             trans_color=None, fixed_palettes=None):
     """Build sub-palettes using tile-aware iterative optimization.
 
     Jointly assigns tiles to palettes and recomputes palette colors to minimize
@@ -205,12 +205,18 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
 
     Args:
         snes_tiles: (n_tiles, tile_h, tile_w) uint16 BGR555 pixels
-        num_palettes: number of sub-palettes to generate (default: 8)
+        num_palettes: number of MUTABLE sub-palettes to generate (default: 8)
         colors_per_palette: colors per sub-palette including transparent (default: 16)
         trans_color: BGR555 transparent color value (default: rgb_to_bgr555(0,0,0))
+        fixed_palettes: optional list of lists of BGR555 colors, each of
+            length colors_per_palette. These palettes are prepended to the
+            output and their colors are NEVER modified by the quantizer;
+            tiles may be assigned to them when the match is best. Total output
+            palette count = len(fixed_palettes) + num_palettes.
 
     Returns (palettes, indexed_tiles, tile_pal_ids):
-        palettes:      list of num_palettes lists of colors_per_palette BGR555 values
+        palettes:      list of (num_fixed + num_palettes) lists of
+                       colors_per_palette BGR555 values. Fixed palettes first.
         indexed_tiles: (n_tiles, tile_h, tile_w) uint8 palette-relative indices
         tile_pal_ids:  (n_tiles,) uint8 sub-palette assignments
     """
@@ -223,6 +229,21 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
     pixels_per_tile = tile_h * tile_w
     pal_size = colors_per_palette - 1  # usable colors (index 0 = transparent)
     rng = np.random.RandomState(42)
+
+    # Set up fixed palettes. Each fixed palette is included in assignment
+    # scoring but skipped in centroid recomputation.
+    n_fixed = len(fixed_palettes) if fixed_palettes else 0
+    fixed_rgb = np.zeros((n_fixed, pal_size, 3), dtype=np.float64)
+    for fi, fpal in enumerate(fixed_palettes or []):
+        # fpal is colors_per_palette (16) long; slot 0 = transparent, rest go
+        # into the pal_size (15) slots of palettes_rgb.
+        if len(fpal) != colors_per_palette:
+            raise ValueError(
+                f"fixed_palettes[{fi}] has {len(fpal)} colors, expected {colors_per_palette}")
+        arr = np.array(fpal[1:colors_per_palette], dtype=np.int32)  # skip slot 0
+        fixed_rgb[fi, :, 0] = (arr & 0x1F).astype(np.float64)
+        fixed_rgb[fi, :, 1] = ((arr >> 5) & 0x1F).astype(np.float64)
+        fixed_rgb[fi, :, 2] = ((arr >> 10) & 0x1F).astype(np.float64)
 
     # Build per-tile color histograms
     histograms = _tile_color_histograms(snes_tiles, pixels_per_tile)
@@ -246,7 +267,10 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
     avg_g = (glob_g * glob_w).sum() / ws
     avg_b = (glob_b * glob_w).sum() / ws
 
-    # --- Initialize palettes via splitting ---
+    # --- Initialize MUTABLE palettes via splitting (fixed palettes added after) ---
+    # Build mutable palettes without fixed palettes interfering; fixed palettes
+    # are spliced in afterward so the mutable side doesn't waste split/expand
+    # cycles trying to re-derive colors fixed palettes already supply well.
     palettes_rgb = np.zeros((1, pal_size, 3), dtype=np.float64)
     palettes_rgb[0, 0] = [avg_r, avg_g, avg_b]
 
@@ -345,6 +369,20 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
             for c in range(n_centers, pal_size):
                 palettes_rgb[p, c] = palettes_rgb[p, 0]
 
+    # --- Splice in fixed palettes now that mutable side is initialized ---
+    # From here on, palettes_rgb has n_fixed fixed palettes first, then
+    # num_palettes mutable palettes. Refinement re-assigns tiles across all
+    # palettes but fixed palette colors are restored after every centroid step.
+    if n_fixed > 0:
+        palettes_rgb = np.concatenate([fixed_rgb, palettes_rgb], axis=0)
+
+    total_palettes = n_fixed + num_palettes
+
+    def _protect_fixed(pals):
+        if n_fixed > 0:
+            pals[:n_fixed] = fixed_rgb
+        return pals
+
     # --- Main refinement: alternating assignment + centroid recomputation ---
     best_palettes = palettes_rgb.copy()
     best_error = np.inf
@@ -358,16 +396,22 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
             best_palettes = palettes_rgb.copy()
 
         palettes_rgb = _recompute_palette_centroids(palettes_rgb, histograms, assignments)
+        palettes_rgb = _protect_fixed(palettes_rgb)
 
     # Final assignment with best palettes
     palettes_rgb = best_palettes
     assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
     palettes_rgb = _recompute_palette_centroids(palettes_rgb, histograms, assignments)
+    palettes_rgb = _protect_fixed(palettes_rgb)
     assignments, _ = _assign_tiles_to_palettes(palettes_rgb, histograms)
 
     # --- Quantize to BGR555 and build output ---
+    # Output order: fixed palettes first (verbatim from input), then mutable
+    # palettes quantized from the iterated centroids.
     palettes_out = []
-    for p in range(num_palettes):
+    for fi in range(n_fixed):
+        palettes_out.append(list(fixed_palettes[fi]))
+    for p in range(n_fixed, total_palettes):
         pal = [trans_color]
         bgr_arr = _components_to_bgr555(
             palettes_rgb[p, :, 0], palettes_rgb[p, :, 1], palettes_rgb[p, :, 2]
@@ -394,7 +438,7 @@ def build_palettes_tileaware(snes_tiles, num_palettes=DEFAULT_NUM_PALETTES,
             ((arr >> 10) & 0x1F).astype(np.float64),
         ))
 
-    for p in range(num_palettes):
+    for p in range(total_palettes):
         mask = (assignments == p)
         if not mask.any():
             continue

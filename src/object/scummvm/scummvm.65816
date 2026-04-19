@@ -14166,53 +14166,53 @@ scummvm.writeVerbColors:
   .ACCU 16
   .INDEX 16
 
-  ; --- CGRAM: pal6 c1-c3 at $61-$63 ---
+  ; --- CGRAM: pal6 c1-c3 (verb highlight: fill / shadow / yellow body) ---
   sep #$20
   .ACCU 8
-  lda #$61
+  lda #CGRAM_VERB_HL_FILL
   sta.l $2121                         ; CGADD = $61
-  lda #$18                            ; $6318 low
+  lda #<COLOR_VERB_FILL
   sta.l $2122
-  lda #$63                            ; $6318 high
+  lda #>COLOR_VERB_FILL
   sta.l $2122
-  lda #$4A                            ; $294A low
+  lda #<COLOR_VERB_SHADOW
   sta.l $2122
-  lda #$29                            ; $294A high
+  lda #>COLOR_VERB_SHADOW
   sta.l $2122
-  lda #$FF                            ; $03FF low
+  lda #<COLOR_VERB_HL_BODY
   sta.l $2122
-  lda #$03                            ; $03FF high
+  lda #>COLOR_VERB_HL_BODY
   sta.l $2122
 
-  ; --- CGRAM: pal7 c1-c3 at $71-$73 ---
-  lda #$71
+  ; --- CGRAM: pal7 c1-c3 (verb normal: fill / shadow / white body) ---
+  lda #CGRAM_VERB_FILL
   sta.l $2121                         ; CGADD = $71
-  lda #$18                            ; $6318 low
+  lda #<COLOR_VERB_FILL
   sta.l $2122
-  lda #$63                            ; $6318 high
+  lda #>COLOR_VERB_FILL
   sta.l $2122
-  lda #$4A                            ; $294A low
+  lda #<COLOR_VERB_SHADOW
   sta.l $2122
-  lda #$29                            ; $294A high
+  lda #>COLOR_VERB_SHADOW
   sta.l $2122
-  lda #$FF                            ; $7FFF low
+  lda #<COLOR_VERB_BODY
   sta.l $2122
-  lda #$7F                            ; $7FFF high
+  lda #>COLOR_VERB_BODY
   sta.l $2122
 
-  ; --- Shadow: keep BWRAM mirror in sync so setPalColor/buildCgram paths
-  ;     that read from shadow don't see stale room-load values.
+  ; --- Shadow: keep BWRAM mirror in sync so any future consumer reading the
+  ;     shadow sees the same verb values as CGRAM.
   rep #$20
   .ACCU 16
-  lda #$6318
+  lda #COLOR_VERB_FILL
   sta.l BWRAM_CGRAM_SHADOW + $C2      ; pal6 c1
   sta.l BWRAM_CGRAM_SHADOW + $E2      ; pal7 c1
-  lda #$294A
+  lda #COLOR_VERB_SHADOW
   sta.l BWRAM_CGRAM_SHADOW + $C4      ; pal6 c2
   sta.l BWRAM_CGRAM_SHADOW + $E4      ; pal7 c2
-  lda #$03FF
+  lda #COLOR_VERB_HL_BODY
   sta.l BWRAM_CGRAM_SHADOW + $C6      ; pal6 c3 (yellow highlight)
-  lda #$7FFF
+  lda #COLOR_VERB_BODY
   sta.l BWRAM_CGRAM_SHADOW + $E6      ; pal7 c3 (white normal)
 
   plp

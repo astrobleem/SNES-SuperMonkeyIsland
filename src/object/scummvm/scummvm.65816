@@ -692,9 +692,17 @@ _play.clearDialog:
 _play.noDialog:
   .ACCU 16
   .INDEX 16
-  ; Re-render sentence line if dirty
+  ; Re-render sentence line if dirty — but only when the user is actually
+  ; controlling the game. During cutscenes the "Walk to" hint would bleed
+  ; through into the verb-area scanlines that CutsceneHdmaTable now keeps
+  ; visible (to show tall-room art like the Mountain village).
   lda.w SCUMM.sentenceDirty
   beq _play.noSentence
+  lda.w SCUMM.userPut
+  beq _play.noSentence              ; userPut == 0: no user control, no hint
+  bmi _play.noSentence               ; userPut negative: soft-off stack
+  lda.w SCUMM.cutsceneNest
+  bne _play.noSentence               ; cutscene active: suppress hint
   jsl scummvm.renderSentenceLine
 _play.noSentence:
   .ACCU 16

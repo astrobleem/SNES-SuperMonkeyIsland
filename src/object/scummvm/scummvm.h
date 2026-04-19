@@ -245,6 +245,10 @@ SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
 SCUMM.objectClass    ds SCUMM_MAX_OBJECTS * 2
 .ends
 
+; Color cycling constants + struct are in src/object/scummvm/scummvm_cycle.h
+; (kept out of scummvm.h to avoid re-emitting ramsections when both .65816
+; files include it).
+
 ;---------------------------------------------------------------------------
 ; Per-room object metadata (loaded from MSU-1 .obj data)
 ;---------------------------------------------------------------------------
@@ -525,6 +529,10 @@ SCUMM.dialogX            dw      ; text center X (SCUMM pixel coords)
 SCUMM.dialogY            dw      ; text top Y (SCUMM pixel coords)
 SCUMM.dialogColor        dw      ; text color — SCUMM color index (0-15), 0=default white
 SCUMM.dialogActor        dw      ; actor ID (for positioning)
+SCUMM.dialogCenter       dw      ; nonzero = center-align text horizontally (print sub-op $03)
+SCUMM.dialogOverhead     dw      ; nonzero = render above actor for talking (print sub-op $07)
+SCUMM.dialogCharset      dw      ; charset ID (print sub-op $04, 0 = default)
+SCUMM.dialogMumble       dw      ; nonzero = suppress glyph rendering (print sub-op $08)
 SCUMM.dialogDmaPending   dw      ; nonzero = DMA tilemap to VRAM next VBlank
 SCUMM.dialogBootSuppress dw      ; nonzero = suppress boot dialog DMA (countdown)
 SCUMM.dialogFontNmiPending db    ; nonzero = NMI should DMA font tiles to VRAM

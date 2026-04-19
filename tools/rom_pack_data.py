@@ -36,7 +36,7 @@ BLOCK_ALIGNMENT = 4       # 4-byte alignment (no need for 512B MSU alignment)
 SCRIPT_MAGIC = b"SCPT"
 SCRIPT_VERSION = 1
 SECTION_HEADER_SIZE = 32
-ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr', '.pri')
+ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr', '.cyc', '.pri')
 
 
 def align_to(offset, alignment):
@@ -76,30 +76,45 @@ def load_room_files(rooms_dir):
 
 
 def build_room_data_block(room):
-    # .pri goes LAST. Engine derives its size from room dimensions and
+    # .pri goes LAST — engine derives its size from room dimensions and
     # seeks to (room_start + room_size - pri_size) to read the bitmap.
+    # .cyc sits just before .pri; engine reads it at
+    # (room_start + room_size - pri_size - cyc_size). Header has cyc_size.
     return (room['hdr'] + room['pal'] + room['chr'] + room['map'] +
             room['col'] + room['box'] + room['obj'] + room['ochr'] +
-            room['pri'])
+            room['cyc'] + room['pri'])
 
 
 # ---------------------------------------------------------------------------
 # Script data discovery (from msu1_pack_scripts.py)
 # ---------------------------------------------------------------------------
 
-def discover_global_scripts(data_dir):
+def _resolve(path, override_dir, data_dir):
+    """Return `override_dir/<relative>` if it exists, else the original path."""
+    if override_dir is None:
+        return path
+    try:
+        rel = path.relative_to(data_dir)
+    except ValueError:
+        return path
+    override = override_dir / rel
+    return override if override.exists() else path
+
+
+def discover_global_scripts(data_dir, override_dir=None):
     scripts_dir = data_dir / "scripts"
     scripts = []
     for f in sorted(scripts_dir.glob("scrp_*_room*.bin")):
         parts = f.stem.split("_")
         script_id = int(parts[1])
         room_id = int(parts[2].replace("room", ""))
-        scripts.append((script_id, room_id, f))
+        source = _resolve(f, override_dir, data_dir)
+        scripts.append((script_id, room_id, source))
     scripts.sort(key=lambda x: x[0])
     return scripts
 
 
-def discover_room_scripts(data_dir):
+def discover_room_scripts(data_dir, override_dir=None):
     rooms = {}
     for room_dir in sorted(data_dir.glob("rooms/room_*")):
         parts = room_dir.name.split("_")
@@ -112,15 +127,15 @@ def discover_room_scripts(data_dir):
 
         encd = scripts_dir / "encd.bin"
         if encd.exists():
-            entry['encd'] = encd
+            entry['encd'] = _resolve(encd, override_dir, data_dir)
 
         excd = scripts_dir / "excd.bin"
         if excd.exists():
-            entry['excd'] = excd
+            entry['excd'] = _resolve(excd, override_dir, data_dir)
 
         for f in sorted(scripts_dir.glob("lscr_*.bin")):
             lscr_num = int(f.stem.split("_")[1])
-            entry['lscr'].append((lscr_num, f))
+            entry['lscr'].append((lscr_num, _resolve(f, override_dir, data_dir)))
 
         entry['lscr'].sort(key=lambda x: x[0])
         rooms[room_id] = entry
@@ -166,9 +181,16 @@ def build_room_script_block(room_entry):
 # Main packer
 # ---------------------------------------------------------------------------
 
-def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False):
-    """Build the combined ROM data blob."""
+def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False,
+                  scripts_override_dir=None):
+    """Build the combined ROM data blob.
+
+    If scripts_override_dir is given, per-file patched scripts are read from
+    there when present (mirrors data_dir's layout); missing entries fall back
+    to data_dir.
+    """
     data_dir = Path(data_dir)
+    override_dir = Path(scripts_override_dir) if scripts_override_dir else None
 
     # --- Load room data ---
     rooms = load_room_files(rooms_dir)
@@ -181,8 +203,8 @@ def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False):
     room_index_slots = max(max_room_id + 1, 256)  # cover all possible SCUMM room IDs
 
     # --- Load script data ---
-    global_scripts = discover_global_scripts(data_dir)
-    room_scripts = discover_room_scripts(data_dir)
+    global_scripts = discover_global_scripts(data_dir, override_dir)
+    room_scripts = discover_room_scripts(data_dir, override_dir)
 
     max_global_id = max(sid for sid, _, _ in global_scripts) if global_scripts else 0
     global_slots = max_global_id + 1
@@ -357,6 +379,9 @@ def main():
                         help='Output binary blob path')
     parser.add_argument('--output-inc', default='build/rom_data.inc',
                         help='Output assembly include path')
+    parser.add_argument('--scripts-override-dir', default=None,
+                        help='Optional directory of patched script files; mirrors '
+                             '--data-dir layout, individual files override the original')
     parser.add_argument('--verbose', '-v', action='store_true')
     args = parser.parse_args()
 
@@ -364,6 +389,7 @@ def main():
         args.rooms_dir, args.data_dir,
         args.output_bin, args.output_inc,
         verbose=args.verbose,
+        scripts_override_dir=args.scripts_override_dir,
     )
 
     logging.info("Done. %d bytes across %d ROM banks (starting at bank 64).", total_size, bank_count)

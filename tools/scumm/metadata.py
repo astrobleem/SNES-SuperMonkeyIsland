@@ -132,8 +132,19 @@ def _parse_scal(data: bytes) -> list:
 
 
 def _parse_cycl(data: bytes) -> list:
-    """Parse CYCL: color cycling data.
-    Each entry: index(byte=0 → end), freq(LE16), flags(LE16), start(byte), end(byte).
+    """Parse CYCL: color cycling data (SCUMM v5, non-SMALL_HEADER path).
+
+    Each entry is 9 bytes:
+        1 byte  cycle index (1..16, 0 = terminator)
+        2 bytes skip/unused (ignored by ScummVM)
+        2 bytes BE delay_raw — ScummVM computes delay = 16384 / delay_raw.
+                For ~60 FPS, delay is effectively frames-per-step.
+        2 bytes BE flags (bit 1 = reverse direction)
+        1 byte  PC palette start index (inclusive)
+        1 byte  PC palette end index (inclusive)
+
+    Terminator: single 0x00 byte (index). Extra trailing bytes are padding.
+    Verified against ScummVM initCycl in engines/scumm/palette.cpp.
     """
     cycles = []
     pos = 0
@@ -142,16 +153,25 @@ def _parse_cycl(data: bytes) -> list:
         pos += 1
         if idx == 0:
             break
-        if pos + 6 > len(data):
+        if idx < 1 or idx > 16 or pos + 8 > len(data):
             break
-        freq = struct.unpack_from('>H', data, pos)[0]
-        flags = struct.unpack_from('>H', data, pos + 2)[0]
-        start = data[pos + 4]
-        end = data[pos + 5]
-        pos += 6
+        # 2 bytes skip/unused
+        pos += 2
+        delay_raw = struct.unpack_from('>H', data, pos)[0]
+        pos += 2
+        flags = struct.unpack_from('>H', data, pos)[0]
+        pos += 2
+        start = data[pos]
+        end = data[pos + 1]
+        pos += 2
+        frames_per_step = (16384 // delay_raw) if delay_raw else 0
         cycles.append({
-            'index': idx, 'freq': freq, 'flags': flags,
-            'start': start, 'end': end,
+            'index': idx,
+            'delay_raw': delay_raw,
+            'frames_per_step': frames_per_step,
+            'flags': flags,
+            'start': start,
+            'end': end,
         })
     return cycles
 
@@ -239,10 +259,9 @@ def extract_metadata(room_resource, output_dir: Path, room_name: str = '') -> di
     if scal:
         meta['scaling'] = _parse_scal(scal.data)
 
-    # CYCL color cycling
+    # CYCL color cycling — always emit key (empty list if no cycles)
     cycl = room_resource.get_room_sub('CYCL')
-    if cycl:
-        meta['color_cycling'] = _parse_cycl(cycl.data)
+    meta['color_cycling'] = _parse_cycl(cycl.data) if cycl else []
 
     # TRNS transparent color
     trns = room_resource.get_room_sub('TRNS')

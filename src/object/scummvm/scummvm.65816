@@ -343,6 +343,10 @@ _init.zeroCache:
   stz.w SCUMM.dialogY
   stz.w SCUMM.dialogColor
   stz.w SCUMM.dialogActor
+  stz.w SCUMM.dialogCenter
+  stz.w SCUMM.dialogOverhead
+  stz.w SCUMM.dialogCharset
+  stz.w SCUMM.dialogMumble
   sep #$20
   stz.w SCUMM.dialogFontNmiPending
   nop
@@ -645,6 +649,12 @@ _play.noPendingVerb:
   jsr room.syncScroll
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
+
+  ; Tick color-cycling (rotates ring when fps timer hits 0; NMI flushes to CGRAM)
+  jsl scummvm.cycle.tick
+
+  ; (palManipulate per-frame tick intended here once the target-palette
+  ;  string-resource system is implemented; stubbed stub omitted for now.)
 
   ; If any putActorInRoom since last frame targeted currentRoom, reload
   ; actor costumes now so new actors get their palette+CHR DMA'd to VRAM.
@@ -4229,6 +4239,42 @@ _scummvm.skipP8fromScratch:
 
 
 ;-------------------------------------------------------------------
+; _scummvm.getP16fromScratch -- resolve p16 param using SCUMM.scratch
+; as the flag source (roomOps sub-opcodes carry param-indirection bits
+; in the SUB-op byte, not in the currentOpcode byte).
+; Input: A = flag bitmask (0x80 / 0x40 / 0x20).
+; Output: A = resolved 16-bit value (literal or from SCUMM.globalVars).
+;-------------------------------------------------------------------
+_scummvm.getP16fromScratch:
+  .ACCU 16
+  .INDEX 16
+  and.w SCUMM.scratch
+  beq +
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  jsr _scummvm.fetchWord
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.getP8fromScratch -- resolve p8 param using SCUMM.scratch
+; as flag source. Same contract as getVarOrDirectByte but flag-tested
+; against the stored sub-op byte.
+;-------------------------------------------------------------------
+_scummvm.getP8fromScratch:
+  .ACCU 16
+  .INDEX 16
+  and.w SCUMM.scratch
+  beq +
+    jsr _scummvm.fetchWord
+    jmp _scummvm.readVariable
++
+  jsr _scummvm.fetchByte
+  rts
+
+
+;-------------------------------------------------------------------
 ; _scummvm.skipNullString -- skip bytes until $00 terminator
 ;-------------------------------------------------------------------
 _scummvm.skipNullString:
@@ -7748,25 +7794,39 @@ _roomOps.setScreen:
 _roomOps.palColor:
   .ACCU 16
   .INDEX 16
-  ; sub-op 4: 3x p16(r,g,b) + fetchByte(aux) + p8(palette index)
-  ; ScummVM: getVarOrDirectWord(0x80) x3, fetchScriptByte, getVarOrDirectByte(0x80)
-  jsr _scummvm.fetchWord             ; r (VGA 0-63)
+  ; sub-op 4: 3x p16(r,g,b) + fetchScriptByte(aux) + p8(palette index)
+  ; ScummVM reference (script_v5.cpp:2417):
+  ;   r = getVarOrDirectWord(PARAM_1)   ; bit 0x80 of sub-op
+  ;   g = getVarOrDirectWord(PARAM_2)   ; bit 0x40
+  ;   b = getVarOrDirectWord(PARAM_3)   ; bit 0x20
+  ;   _opcode = fetchScriptByte()       ; new aux opcode
+  ;   d = getVarOrDirectByte(PARAM_1)   ; bit 0x80 of aux = palette index
+  ;
+  ; SCUMM.scratch already holds the sub-op byte (set by op_roomOps
+  ; dispatcher). The intro script scrp_005 stores VGA RGB values in
+  ; vars 0x0179+ and writes the logo sparkle via sub-op $E4 — fetching
+  ; the raw words instead of resolving var refs silently turns every
+  ; sparkle color into near-identical grey.
+
+  lda #$0080                         ; R (p16, flag bit 0x80 of sub-op)
+  jsr _scummvm.getP16fromScratch
   sta.l BWRAM_PALETTE_SCRATCH        ; +0 = r
-  jsr _scummvm.fetchWord             ; g
+
+  lda #$0040                         ; G (p16, flag bit 0x40)
+  jsr _scummvm.getP16fromScratch
   sta.l BWRAM_PALETTE_SCRATCH+2      ; +2 = g
-  jsr _scummvm.fetchWord             ; b
+
+  lda #$0020                         ; B (p16, flag bit 0x20)
+  jsr _scummvm.getP16fromScratch
   sta.l BWRAM_PALETTE_SCRATCH+4      ; +4 = b
-  jsr _scummvm.fetchByte             ; aux opcode
+
+  jsr _scummvm.fetchByte             ; fresh aux opcode
   sta.w SCUMM.scratch
-  lda.w SCUMM.scratch
-  and #$0080
-  beq +
-  jsr _scummvm.fetchWord
-  bra ++
-+
-  jsr _scummvm.fetchByte
-++
+
+  lda #$0080                         ; palette index (p8, flag bit 0x80 of aux)
+  jsr _scummvm.getP8fromScratch
   sta.l BWRAM_PALETTE_SCRATCH+6      ; +6 = palette index
+
   phy                                ; save SCUMM PC
   jsl scummvm.setPalColor_impl
   ply                                ; restore SCUMM PC
@@ -8638,12 +8698,18 @@ op_print:
   sta.w SCUMM.dialogActor            ; save for positioning
   stz.w SCUMM.dialogX                ; reset explicit position
   stz.w SCUMM.dialogY
+  stz.w SCUMM.dialogCenter           ; reset flag sub-ops so consecutive prints start clean
+  stz.w SCUMM.dialogOverhead
+  stz.w SCUMM.dialogCharset
+  stz.w SCUMM.dialogMumble
 _print.subLoop:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchByte
   cmp #$00FF
-  beq _print.done
+  bne +
+    jmp _print.done                  ; terminator sub-op; far jump (beq out of range)
++
   sta.w SCUMM.scratch                ; save sub-opcode for flag testing
   and #$000F                         ; sub-key is low 4 bits
   cmp #$00
@@ -8652,9 +8718,19 @@ _print.subLoop:
   beq _print.color                   ; $01: color (p8[7])
   cmp #$02
   beq _print.clipping                ; $02: clipping (p16)
+  cmp #$03
+  beq _print.erase                   ; $03: SO_ERASE (2x p16, discarded)
+  cmp #$04
+  beq _print.center                  ; $04: SO_CENTER (0 args)
+  cmp #$06
+  beq _print.left                    ; $06: SO_LEFT (0 args, clears center)
+  cmp #$07
+  beq _print.overhead                ; $07: SO_OVERHEAD (0 args)
+  cmp #$08
+  beq _print.sayVoice                ; $08: SO_SAY_VOICE (2x p16, discarded)
   cmp #$0F
-  beq _print.text                    ; $0F: text (print string)
-  ; $03,$04,$06,$07,$08: no params
+  beq _print.text                    ; $0F: SO_TEXTSTRING (terminal)
+  ; unknown sub-op -- defensive no-op
   jmp _print.subLoop
 
 _print.pos:
@@ -8687,6 +8763,40 @@ _print.clipping:
   jsr _scummvm.fetchWord             ; right
   jmp _print.subLoop
 
+_print.center:
+  .ACCU 16
+  .INDEX 16
+  lda #1
+  sta.w SCUMM.dialogCenter
+  jmp _print.subLoop
+
+_print.left:
+  .ACCU 16
+  .INDEX 16
+  stz.w SCUMM.dialogCenter
+  jmp _print.subLoop
+
+_print.overhead:
+  .ACCU 16
+  .INDEX 16
+  lda #1
+  sta.w SCUMM.dialogOverhead
+  jmp _print.subLoop
+
+_print.erase:
+  .ACCU 16
+  .INDEX 16
+  jsr _scummvm.fetchWord             ; erase width  (discarded)
+  jsr _scummvm.fetchWord             ; erase height (discarded)
+  jmp _print.subLoop
+
+_print.sayVoice:
+  .ACCU 16
+  .INDEX 16
+  jsr _scummvm.fetchWord             ; talkie offset (discarded — no voice track)
+  jsr _scummvm.fetchWord             ; talkie delay  (discarded)
+  jmp _print.subLoop
+
 _print.text:
   .ACCU 16
   .INDEX 16
@@ -8711,6 +8821,10 @@ op_printEgo:
   sta.w SCUMM.dialogActor
   stz.w SCUMM.dialogX
   stz.w SCUMM.dialogY
+  stz.w SCUMM.dialogCenter
+  stz.w SCUMM.dialogOverhead
+  stz.w SCUMM.dialogCharset
+  stz.w SCUMM.dialogMumble
   jmp _print.subLoop
 
 
@@ -15368,6 +15482,18 @@ _scummTalkColorLUT:
 .base BSL
 .section "ScummVMDialogRenderer" free
 
+; _ears.clampRow: clamp tile row in A to max 23 (pixel Y 184). Leaves bottom
+; 4 rows for the verb bar. Assumes .ACCU 16 / .INDEX 16; preserves X/Y.
+_ears.clampRow:
+  .ACCU 16
+  .INDEX 16
+  cmp #24
+  bcc _erc.done
+  lda #23
+_erc.done:
+  rts
+
+
 scummvm.extractAndRenderString:
   php
   phx
@@ -15434,6 +15560,8 @@ _ears.scanFF:
 _ears.scanPrintable:
   .ACCU 16
   .INDEX 16
+  cmp #$005E                           ; '^' -- invisible formatting char in MI1 credits
+  beq _ears.scanLoop                   ; skip without counting (renderer skips it too)
   inc.w SCUMM.dialogCharCount
   bra _ears.scanLoop
 _ears.scanDone:
@@ -15441,11 +15569,41 @@ _ears.scanDone:
   .INDEX 16
   ply                                  ; restore Y to start of string
 
+  ; --- Mumble: suppress rendering but keep pacing ---
+  ; Tilemap already cleared above; jump past positioning + render to drain string.
+  ; Timer / dialogActive / VAR_HAVE_MSG still get set so scripts continue to block.
+  lda.w SCUMM.dialogMumble
+  beq +
+    jmp _ears.renderEnd
++
+
   ; --- Determine text position ---
-  ; If dialogY != 0: use explicit position from _print.pos
-  ; Else: derive from actor screen position
+  ; Anonymous-actor cutscene text ($FF actor, no explicit pos): force lower-
+  ; half position so intro credits land below the title logo. Patching every
+  ; print op with a pos sub-op would grow the ops and break SCUMM's relative
+  ; jumps; setting the default here at runtime sidesteps that entirely.
+  lda.w SCUMM.dialogActor
+  and #$00FF
+  cmp #$00FF
+  bne _ears.posCheckOverhead
+  lda.w SCUMM.dialogY
+  bne _ears.posCheckOverhead
+  lda.w SCUMM.cutsceneNest
+  beq _ears.posCheckOverhead
+  lda #160
+  sta.w SCUMM.dialogX
+  lda #152
+  sta.w SCUMM.dialogY                  ; row 19, leaves 9 rows for multi-line credits
+  jmp _ears.useExplicit
+_ears.posCheckOverhead:
+  ; If dialogOverhead: derive from actor regardless of any prior $00 pos.
+  ; Else if dialogY != 0: use explicit position from _print.pos.
+  ; Else: derive from actor screen position (default).
+  lda.w SCUMM.dialogOverhead
+  bne _ears.deriveFromActor
   lda.w SCUMM.dialogY
   bne _ears.useExplicit
+_ears.deriveFromActor:
 
   ; Derive from actor: screenX = actor.x - cameraX, screenY = actor.y - 24
   lda.w SCUMM.dialogActor
@@ -15471,10 +15629,7 @@ _ears.scanDone:
   lsr a
   lsr a
   lsr a                                ; /8 = tile row
-  cmp #17                              ; clamp below verb bar boundary (row 18 = pixel Y 144)
-  bcc +
-  lda #16
-+
+  jsr _ears.clampRow
   sta.w SCUMM.dialogY
   bra _ears.center
 
@@ -15503,10 +15658,7 @@ _ears.div10done:
   lsr a
   lsr a
   lsr a
-  cmp #17                              ; clamp below verb bar boundary (row 18 = pixel Y 144)
-  bcc +
-  lda #16
-+
+  jsr _ears.clampRow
   sta.w SCUMM.dialogY                 ; tile row
 
 _ears.center:
@@ -15618,9 +15770,18 @@ _ears.renderNewline:
   adc #$003F                             ; round up...
   and #$FFC0                             ; ...to next 64-byte boundary
   tax
-  cpx #1152                              ; verb area starts at row 18 (18*64=$0480, pixel Y 144)
-  bcc +                                  ; within gameplay area -- continue
-  jmp _ears.renderEnd                    ; at/past verb area → stop
+  ; Bottom cap: during cutscenes allow up to row 28 (full-screen credits);
+  ; during gameplay stop at row 18 so dialog never bleeds into the verb bar.
+  ; lda sets Z, cpx checks X — order matters so the Z flag survives.
+  lda.w SCUMM.cutsceneNest
+  bne _ears.nlCutsceneCap
+  cpx #1152                              ; gameplay: verb area starts at row 18 ($0480)
+  bcc +
+  jmp _ears.renderEnd
+_ears.nlCutsceneCap:
+  cpx #1792                              ; cutscene: stop past row 28 ($0700, pixel Y 224)
+  bcc +
+  jmp _ears.renderEnd
 +
 
   ; Per-line centering: scan ahead to count chars in the new line
@@ -15662,6 +15823,8 @@ _ears.nlScanFF:
 _ears.nlScanChar:
   .ACCU 16
   .INDEX 16
+  cmp #$005E                             ; '^' -- invisible (matches scanPrintable)
+  beq _ears.nlScanLoop
   inc.w SCUMM.scratch2
   bra _ears.nlScanLoop
 _ears.nlScanDone:
@@ -15717,6 +15880,8 @@ _ears.renderLoopTrap:
 _ears.renderChar:
   .ACCU 16
   .INDEX 16
+  cmp #$005E                           ; '^' -- invisible (matches scan behaviour)
+  beq _ears.renderLoopTrap             ; skip: no tile write, no cursor advance
   ; tile index = char - $20 (ASCII space = tile 0 in font)
   sec
   sbc #$20
@@ -18107,9 +18272,13 @@ _darken.mulDone:
 
 
 ;===================================================================
-; setPalColor_impl -- convert VGA RGB to BGR555, write shadow + CGRAM
-; Params in BWRAM_PALETTE_SCRATCH: +0=r, +2=g, +4=b (VGA 0-63),
-;   +6=palette index
+; setPalColor_impl -- convert 8-bit RGB to BGR555, write shadow + CGRAM
+; Params in BWRAM_PALETTE_SCRATCH: +0=r, +2=g, +4=b (0-255 per channel),
+;   +6=palette index.
+;
+; Note: SCUMM vars hold 8-bit VGA values (not 6-bit). Scripts set vars
+; 0x179+ to RGB bytes like $DF (223) which would saturate if we only
+; shifted right by 1. Correct 8->5-bit shift is `>> 3`.
 ;===================================================================
 .bank 0 slot 0
 .section "ScummVM setPalColor impl" superfree
@@ -18121,13 +18290,17 @@ scummvm.setPalColor_impl:
   .ACCU 16
   .INDEX 16
 
-  ; Convert VGA (0-63) to SNES (0-31): snes_channel = vga >> 1
+  ; Convert 8-bit channel (0-255) to SNES (0-31): snes = byte >> 3
   lda.l BWRAM_PALETTE_SCRATCH       ; r
+  lsr a
+  lsr a
   lsr a
   and #$001F
   sta.l BWRAM_PALETTE_SCRATCH+10    ; SNES R
 
   lda.l BWRAM_PALETTE_SCRATCH+2     ; g
+  lsr a
+  lsr a
   lsr a
   and #$001F
   asl a
@@ -18139,6 +18312,8 @@ scummvm.setPalColor_impl:
   sta.l BWRAM_PALETTE_SCRATCH+10    ; R | (G << 5)
 
   lda.l BWRAM_PALETTE_SCRATCH+4     ; b
+  lsr a
+  lsr a
   lsr a
   and #$001F
   asl a
@@ -18154,21 +18329,26 @@ scummvm.setPalColor_impl:
   ora.l BWRAM_PALETTE_SCRATCH+10    ; R | (G << 5) | (B << 10)
   pha                               ; save BGR555 word
 
-  ; Write to BWRAM_CGRAM_SHADOW at index*2
-  lda.l BWRAM_PALETTE_SCRATCH+6     ; palette index
+  ; Write to CGRAM shadow at byte offset = index * 2. Index is the flat
+  ; SCUMM 0-255 palette slot — which in our port targets pal0..pal7 as a
+  ; single contiguous map. The art palettes 1-5 receive whatever lands
+  ; in their slots; pal0 (UI) slots only get written if a script's index
+  ; happens to be < 16. Tiles that use a specific PC palette index get
+  ; whichever CGRAM slot the quantizer stored that color in, so proper
+  ; targeting needs a per-room PC→CGRAM map (future work).
+  lda.l BWRAM_PALETTE_SCRATCH+6     ; scumm index (0..255)
   asl a
   tax
   pla                               ; BGR555 word
   sta.l BWRAM_CGRAM_SHADOW,x        ; update shadow
 
-  ; Write to CGRAM
   sep #$20
   .ACCU 8
   lda.l BWRAM_PALETTE_SCRATCH+6
   sta.l $2121                       ; CGADD = index
   rep #$20
   .ACCU 16
-  lda.l BWRAM_CGRAM_SHADOW,x        ; re-read BGR555
+  lda.l BWRAM_CGRAM_SHADOW,x
   sep #$20
   .ACCU 8
   sta.l $2122                       ; CGDATA low

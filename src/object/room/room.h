@@ -10,7 +10,7 @@
 .define ROOM_MAX_SLOTS        100      ;max room ID slots in index
 
 ;room data block layout (sequential after index seek)
-.define ROOM_HEADER_SIZE      32       ;bytes
+.define ROOM_HEADER_SIZE      34       ;bytes (grew from 32 for cyc_size)
 .define ROOM_PALETTE_SIZE     256      ;bytes (8 subpalettes x 16 colors x 2 bytes)
 
 ;VRAM layout
@@ -49,7 +49,7 @@
 .define ROOM_BG1_TILEMAP_REG  $71    ;($7000 >> 8) & $FC | 1 = tilemap at $7000, 64x32
 .define ROOM_BG_TILES12_REG   $00    ;BG1 tiles at VRAM $0000
 
-;room header struct (matches snes_room_converter.py output, 32 bytes)
+;room header struct (matches snes_room_converter.py output, 34 bytes)
 .struct roomHeader
   room_id       dw      ;+$00
   width_px      dw      ;+$02
@@ -67,6 +67,7 @@
   col_size_hi   dw      ;+$1A
   box_size      dw      ;+$1C  walkbox data size (bytes, always <64KB)
   ochr_size     dw      ;+$1E  object patch data size (repurposed from box_size_hi)
+  cyc_size      dw      ;+$20  color cycling descriptor size (.cyc blob)
 .endst
 
 ;room index entry struct (8 bytes from MSU-1 index table)

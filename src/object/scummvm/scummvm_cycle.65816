@@ -1,0 +1,574 @@
+;===================================================================
+; SCUMM color cycling engine
+;
+;   scummvm.cycle.reset          — zero all cycle state
+;   scummvm.cycle.load           — read .cyc blob from ROM → cycleStates
+;   scummvm.cycle.tick           — per-frame scheduler (called from play)
+;   scummvm.cycle.writeToCgram   — NMI hook: writes entries to CGRAM
+;
+; Cycle state lives at $7F:4D00+ (aux WRAM). Every entrypoint sets
+; DBR=$7F so `.w` (lower 16 bits) hits the right address.
+;
+; Blob format (see tools/scumm/cycle.py for the writer):
+;   [1]  num_cycles
+;   per cycle:
+;     [1] fps  [1] flags  [1] num_positions
+;     per position:
+;       [2 LE] initial_color  [1] num_slots  [num_slots] cgram_word_addr
+;===================================================================
+
+.include "src/config/config.inc"
+.include "src/object/scummvm/scummvm_cycle.h"
+; Deliberately do NOT include scummvm.h or room.h here — they both
+; define ramsections that only belong to their own .65816 files.
+; room.setRomDataPtrLong is cross-file-linked by the linker.
+
+.base BSL
+.bank 5 slot 0
+.section "scumm color cycle" superfree
+
+;-------------------------------------------------------------------
+; scummvm.cycle.reset — clear numCycles.
+;-------------------------------------------------------------------
+scummvm.cycle.reset:
+  php
+  phb
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb
+  stz.w SCUMM_CYCLE_NUM_LO
+  plb
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; scummvm.cycle.load
+;
+;   Input: A = rom_offset_lo16
+;          X = rom_offset_hi8  (low byte of X)
+;          Y = cyc_size bytes
+;-------------------------------------------------------------------
+scummvm.cycle.load:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  ;stash inputs — DBR change lies ahead
+  pha
+  phx
+  phy
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb
+
+  stz.w SCUMM_CYCLE_NUM_LO
+
+  ;recover Y=cyc_size, X=offset_hi, A=offset_lo (reverse of push order)
+  rep #$20
+  .ACCU 16
+  ply
+  plx
+  pla
+  sep #$20
+  .ACCU 8
+
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  cpy #2                                 ; empty blob (just "00")?
+  bcs +
+    jmp _cycload.exit
++
+
+  jsl room.setRomDataPtrLong             ; tmp+24..26 = 24-bit ROM source
+
+  sep #$20
+  .ACCU 8
+
+  ldy #0
+  lda [tmp+24],y
+  iny
+  cmp #0
+  bne +
+    jmp _cycload.exit
++ cmp #SCUMM_MAX_CYCLES + 1
+  bcc +
+    lda #SCUMM_MAX_CYCLES
++ sta.w SCUMM_CYCLE_NUM_LO
+  sta.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+
+  rep #$20
+  .ACCU 16
+  stz.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+_cycload.cycleLoop:
+  ;---- fps
+  lda [tmp+24],y
+  iny
+  pha
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+  pla
+  sta.w SCUMM_CYCLE_STATES_LO + cycleState.framesLeft, x
+  sta.w SCUMM_CYCLE_STATES_LO + cycleState.fps, x
+
+  ;---- flags
+  lda [tmp+24],y
+  iny
+  sta.w SCUMM_CYCLE_STATES_LO + cycleState.flags, x
+
+  ;---- num_positions (clamp)
+  lda [tmp+24],y
+  iny
+  cmp #SCUMM_CYCLE_MAX_POSITIONS + 1
+  bcc +
+    lda #SCUMM_CYCLE_MAX_POSITIONS
++ sta.w SCUMM_CYCLE_STATES_LO + cycleState.numPositions, x
+  sta.w SCUMM_CYCLE_SCR_POS_COUNT
+
+  stz.w SCUMM_CYCLE_STATES_LO + cycleState.numEntries, x
+  stz.w SCUMM_CYCLE_SCR_POS_IDX
+  stz.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+
+_cycload.posLoop:
+  lda.w SCUMM_CYCLE_SCR_POS_COUNT
+  bne +
+    jmp _cycload.posDone
++
+
+  ;---- read 2-byte color → positionColors[posIdx*2]
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_POS_IDX
+  and #$00FF
+  asl a
+  clc
+  adc.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #cycleState.positionColors
+  tax
+  sep #$20
+  .ACCU 8
+
+  lda [tmp+24],y
+  sta.w SCUMM_CYCLE_STATES_LO, x
+  iny
+  lda [tmp+24],y
+  sta.w SCUMM_CYCLE_STATES_LO + 1, x
+  iny
+
+  ;---- num_slots
+  lda [tmp+24],y
+  iny
+  sta.w SCUMM_CYCLE_SCR_SLOT_COUNT
+
+_cycload.slotLoop:
+  lda.w SCUMM_CYCLE_SCR_SLOT_COUNT
+  bne +
+    jmp _cycload.slotDone
++
+
+  lda [tmp+24],y
+  iny
+  pha                                    ; stash slot byte
+
+  lda.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+  cmp #SCUMM_CYCLE_MAX_ENTRIES
+  bcc _cycload.slotStore
+  pla                                    ; drop — entries full
+  jmp _cycload.slotNext
+
+_cycload.slotStore:
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+  and #$00FF
+  asl a
+  clc
+  adc.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #cycleState.entries
+  tax
+  sep #$20
+  .ACCU 8
+
+  pla
+  sta.w SCUMM_CYCLE_STATES_LO, x          ; byte 0 = cgramSlot
+  lda.w SCUMM_CYCLE_SCR_POS_IDX
+  sta.w SCUMM_CYCLE_STATES_LO + 1, x      ; byte 1 = posIdx
+
+  inc.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+  sta.w SCUMM_CYCLE_STATES_LO + cycleState.numEntries, x
+
+_cycload.slotNext:
+  dec.w SCUMM_CYCLE_SCR_SLOT_COUNT
+  jmp _cycload.slotLoop
+
+_cycload.slotDone:
+  inc.w SCUMM_CYCLE_SCR_POS_IDX
+  dec.w SCUMM_CYCLE_SCR_POS_COUNT
+  jmp _cycload.posLoop
+
+_cycload.posDone:
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #_sizeof_cycleState
+  sta.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+  dec.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+  beq _cycload.exit
+  jmp _cycload.cycleLoop
+
+_cycload.exit:
+  plb
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; scummvm.cycle.tick — decrement framesLeft; on expiry rotate.
+;-------------------------------------------------------------------
+scummvm.cycle.tick:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb
+
+  lda.w SCUMM_CYCLE_NUM_LO
+  bne +
+    jmp _cyctick.exit
++
+
+  sta.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+  rep #$20
+  .ACCU 16
+  stz.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+_cyctick.loop:
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+  dec.w SCUMM_CYCLE_STATES_LO + cycleState.framesLeft, x
+  bne _cyctick.nextCycle
+
+  lda.w SCUMM_CYCLE_STATES_LO + cycleState.fps, x
+  sta.w SCUMM_CYCLE_STATES_LO + cycleState.framesLeft, x
+
+  lda.w SCUMM_CYCLE_STATES_LO + cycleState.numPositions, x
+  cmp #2
+  bcc _cyctick.nextCycle                 ; < 2 → no rotation
+
+  pha
+  lda.w SCUMM_CYCLE_STATES_LO + cycleState.flags, x
+  and #$02
+  beq _cyctick.doForward
+  pla
+  jsr _cyctick.rotateReverse
+  bra _cyctick.nextCycle
+_cyctick.doForward:
+  pla
+  jsr _cyctick.rotateForward
+
+_cyctick.nextCycle:
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #_sizeof_cycleState
+  sta.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+  dec.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+  beq _cyctick.exit
+  jmp _cyctick.loop
+
+_cyctick.exit:
+  plb
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; Rotate positionColors forward: tail (M-1) → head (0).
+; Input: A = numPositions (M, 8-bit), X = cycleOfs (16-bit).
+; Preserves X. Destroys A, Y.
+;-------------------------------------------------------------------
+_cyctick.rotateForward:
+  .ACCU 8
+  .INDEX 16
+
+  rep #$20
+  .ACCU 16
+  txa
+  clc
+  adc #cycleState.positionColors
+  sta.w SCUMM_CYCLE_SCR_SAVE1            ; baseOfs (byte offset into states)
+  sep #$20
+  .ACCU 8
+
+  pha                                    ; save M
+  dec a                                  ; M-1
+  asl a                                  ; (M-1)*2
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  clc
+  adc.w SCUMM_CYCLE_SCR_SAVE1
+  tay                                    ; Y = &colors[M-1]
+  sep #$20
+  .ACCU 8
+
+  lda.w SCUMM_CYCLE_STATES_LO, y
+  sta.w SCUMM_CYCLE_SCR_SAVE0
+  lda.w SCUMM_CYCLE_STATES_LO + 1, y
+  sta.w SCUMM_CYCLE_SCR_SAVE0 + 1
+
+  pla                                    ; M
+  dec a                                  ; iterations = M-1
+
+_cyctick.fwdMove:
+  cmp #0
+  beq _cyctick.fwdPlace
+  pha
+  lda.w SCUMM_CYCLE_STATES_LO - 2, y
+  sta.w SCUMM_CYCLE_STATES_LO, y
+  lda.w SCUMM_CYCLE_STATES_LO - 1, y
+  sta.w SCUMM_CYCLE_STATES_LO + 1, y
+  rep #$20
+  .ACCU 16
+  tya
+  sec
+  sbc #2
+  tay
+  sep #$20
+  .ACCU 8
+  pla
+  dec a
+  bra _cyctick.fwdMove
+
+_cyctick.fwdPlace:
+  ldy.w SCUMM_CYCLE_SCR_SAVE1
+  lda.w SCUMM_CYCLE_SCR_SAVE0
+  sta.w SCUMM_CYCLE_STATES_LO, y
+  lda.w SCUMM_CYCLE_SCR_SAVE0 + 1
+  sta.w SCUMM_CYCLE_STATES_LO + 1, y
+
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_SAVE1
+  sec
+  sbc #cycleState.positionColors
+  tax
+  sep #$20
+  .ACCU 8
+  rts
+
+
+;-------------------------------------------------------------------
+; Rotate positionColors reverse: head (0) → tail (M-1).
+;-------------------------------------------------------------------
+_cyctick.rotateReverse:
+  .ACCU 8
+  .INDEX 16
+
+  rep #$20
+  .ACCU 16
+  txa
+  clc
+  adc #cycleState.positionColors
+  sta.w SCUMM_CYCLE_SCR_SAVE1
+  sep #$20
+  .ACCU 8
+
+  ldy.w SCUMM_CYCLE_SCR_SAVE1
+  lda.w SCUMM_CYCLE_STATES_LO, y
+  sta.w SCUMM_CYCLE_SCR_SAVE0
+  lda.w SCUMM_CYCLE_STATES_LO + 1, y
+  sta.w SCUMM_CYCLE_SCR_SAVE0 + 1
+
+  pha                                    ; M
+  dec a                                  ; M-1
+
+_cyctick.revMove:
+  cmp #0
+  beq _cyctick.revPlace
+  pha
+  lda.w SCUMM_CYCLE_STATES_LO + 2, y
+  sta.w SCUMM_CYCLE_STATES_LO, y
+  lda.w SCUMM_CYCLE_STATES_LO + 3, y
+  sta.w SCUMM_CYCLE_STATES_LO + 1, y
+  rep #$20
+  .ACCU 16
+  tya
+  clc
+  adc #2
+  tay
+  sep #$20
+  .ACCU 8
+  pla
+  dec a
+  bra _cyctick.revMove
+
+_cyctick.revPlace:
+  pla                                    ; M
+  dec a                                  ; M-1
+  asl a                                  ; (M-1)*2
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  clc
+  adc.w SCUMM_CYCLE_SCR_SAVE1
+  tay
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM_CYCLE_SCR_SAVE0
+  sta.w SCUMM_CYCLE_STATES_LO, y
+  lda.w SCUMM_CYCLE_SCR_SAVE0 + 1
+  sta.w SCUMM_CYCLE_STATES_LO + 1, y
+
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_SAVE1
+  sec
+  sbc #cycleState.positionColors
+  tax
+  sep #$20
+  .ACCU 8
+  rts
+
+
+;-------------------------------------------------------------------
+; scummvm.cycle.writeToCgram — called from NMI every VBlank.
+; For each active cycle, walk entries[] and write
+;   CGRAM[entries[i].slot] = positionColors[entries[i].posIdx].
+;-------------------------------------------------------------------
+scummvm.cycle.writeToCgram:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb
+
+  lda.w SCUMM_CYCLE_NUM_LO
+  bne +
+    jmp _cycnmi.exit
++
+
+  sta.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+  rep #$20
+  .ACCU 16
+  stz.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+_cycnmi.cycleLoop:
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+  lda.w SCUMM_CYCLE_STATES_LO + cycleState.numEntries, x
+  beq _cycnmi.nextCycle
+  sta.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #cycleState.entries
+  tay                                    ; Y = &entries[0] for this cycle
+  sep #$20
+  .ACCU 8
+
+_cycnmi.entryLoop:
+  lda.w SCUMM_CYCLE_STATES_LO, y         ; cgramSlot (word addr)
+  sta.l CGADD
+
+  lda.w SCUMM_CYCLE_STATES_LO + 1, y     ; posIdx
+  and #$0F
+  asl a                                  ; *2
+  phy
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  clc
+  adc.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #cycleState.positionColors
+  tay
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM_CYCLE_STATES_LO, y
+  sta.l CGDATA
+  lda.w SCUMM_CYCLE_STATES_LO + 1, y
+  sta.l CGDATA
+  ply
+
+  iny
+  iny
+  dec.w SCUMM_CYCLE_SCR_ENTRY_COUNT
+  bne _cycnmi.entryLoop
+
+_cycnmi.nextCycle:
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  clc
+  adc #_sizeof_cycleState
+  sta.w SCUMM_CYCLE_SCR_CYCLE_OFS
+  sep #$20
+  .ACCU 8
+
+  dec.w SCUMM_CYCLE_SCR_CYCLES_LEFT
+  beq _cycnmi.exit
+  jmp _cycnmi.cycleLoop
+
+_cycnmi.exit:
+  plb
+  plp
+  rtl
+
+.ends

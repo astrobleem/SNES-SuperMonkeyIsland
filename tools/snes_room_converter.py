@@ -41,6 +41,7 @@ from PIL import Image
 # Import tile-aware palette optimizer from standalone module (same directory)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tiledpalettequant import build_palettes_tileaware, rgb_to_bgr555, bgr555_to_rgb
+from scumm.cycle import build_cycle_blob, _read_pc_palette, _read_snes_palette
 
 log = logging.getLogger('snes_room_converter')
 
@@ -324,15 +325,15 @@ def build_column_index(map_data, width_tiles, height_tiles):
 
 def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
                       num_tiles, pal_size, chr_size, map_size, col_size,
-                      box_size=0, ochr_size=0):
-    """Build 32-byte room header.
+                      box_size=0, ochr_size=0, cyc_size=0):
+    """Build 34-byte room header.
 
-    Layout unchanged from the legacy format. The ZP01 priority bitmap
-    lives at end of the room block; engine derives its size from
-    (width_tiles * height_tiles + 7) / 8.
+    Layout: same as the legacy 32-byte format, plus a 2-byte cyc_size
+    trailer at offset $20. The .cyc blob lives between .ochr and .pri
+    in the room block (pri stays last so its offset calc is unchanged).
     """
     box_field_32 = (box_size & 0xFFFF) | ((ochr_size & 0xFFFF) << 16)
-    return struct.pack('<HHHHHHHHIIII',
+    return struct.pack('<HHHHHHHHIIIIH',
         room_id,
         width_px,
         height_px,
@@ -345,6 +346,7 @@ def build_room_header(room_id, width_px, height_px, width_tiles, height_tiles,
         map_size,
         col_size,
         box_field_32,
+        cyc_size,
     )
 
 
@@ -853,6 +855,19 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     # Object patch binary (.ochr)
     ochr_data = _encode_ochr(obj_patches)
 
+    # Color cycling descriptor (.cyc) — uses metadata.json + PC CLUT + final SNES palette
+    cyc_data = b'\x00'
+    meta_path = room_dir / 'metadata.json'
+    pc_pal_path = room_dir / 'palette.bin'
+    if meta_path.exists():
+        with open(meta_path) as f:
+            _meta = json.load(f)
+        _cycles = _meta.get('color_cycling', [])
+        if _cycles and pc_pal_path.exists():
+            pc_pal = _read_pc_palette(pc_pal_path)
+            snes_words = _read_snes_palette(pal_data)
+            cyc_data = build_cycle_blob(_cycles, pc_pal, snes_words)
+
     hdr_data = build_room_header(
         room_id=room_id,
         width_px=width_px,
@@ -866,6 +881,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         col_size=len(col_data),
         box_size=len(box_data),
         ochr_size=len(ochr_data),
+        cyc_size=len(cyc_data),
     )
 
     # Write files
@@ -876,6 +892,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     (output_dir / f"{prefix}.col").write_bytes(col_data)
     (output_dir / f"{prefix}.box").write_bytes(box_data)
     (output_dir / f"{prefix}.ochr").write_bytes(ochr_data)
+    (output_dir / f"{prefix}.cyc").write_bytes(cyc_data)
     (output_dir / f"{prefix}.hdr").write_bytes(hdr_data)
 
     elapsed = time.time() - t0
@@ -914,6 +931,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         'ochr_bytes': len(ochr_data),
         'ochr_objects': len(obj_patches),
         'ochr_patches': obj_patch_count,
+        'cyc_bytes': len(cyc_data),
         'hdr_bytes': len(hdr_data),
         'exceeds_tile_limit': exceeds,
         'time_s': round(elapsed, 2),

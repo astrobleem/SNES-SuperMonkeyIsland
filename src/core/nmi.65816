@@ -36,6 +36,9 @@ core.nmi.play:
 	sta.l CGDATA
 	sta.l CGDATA
 
+	; Flush color-cycling updates to CGRAM (no-op when SCUMM.numCycles == 0)
+	jsl scummvm.cycle.writeToCgram
+
     lda.w GLOBAL.HDMA.CHANNEL.ENABLE        ;check which hdma channels need to be activated
     sta.l HDMAEN        ;set hdma channels and disable dma channel
 
@@ -484,6 +487,10 @@ core.nmi.init:
 	sta.l SCUMM.dialogTilemapNmiPending
 	sta.l SCUMM.verbTilemapNmiPending
 	sta.l GLOBAL.oamUploadFlag
+	;Zero cycle-engine count at $7F:4D00 (ClearWRAM only hits bank $7E;
+	;leaving this garbage makes NMI's writeToCgram iterate bogus state
+	;and blow the stack within a few hundred frames).
+	sta.l $7F4D00
 
     lda.w GLOBAL.interruptFlags
 	ora #NMITIMEN_NMI_ENABLE |	NMITIMEN_AUTO_JOY_READ	;enable screen and nmi, auto joypad

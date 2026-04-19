@@ -5062,6 +5062,21 @@ op_cutscene:
   rep #$20
   .ACCU 16
 
+  ; --- Save userPut and clear it for the duration of the cutscene ---
+  ; ScummVM's beginCutscene stores the user-input state in cutSceneData and
+  ; sets _userPut=0 so the engine treats the scene as non-interactive. That's
+  ; what makes scummvm.renderVerbBarChecked take the _rvbc.skip path →
+  ; CutsceneHdmaTable (no BG1 blank in verb area) so tall-room art like the
+  ; mountain scene's village stays on screen during the intro.
+  ; Stored at cutSceneData[(nest-1)*2], matching op_override's slot choice.
+  lda.w SCUMM.cutsceneNest
+  dec a
+  asl a
+  tax
+  lda.w SCUMM.userPut
+  sta.w SCUMM.cutSceneData,x
+  stz.w SCUMM.userPut
+
   ; --- START abort at cutscene open ---
   ; _play() runs too infrequently to catch cutscenes that open+close within
   ; one iteration. Check here so the override fires immediately.
@@ -5094,6 +5109,18 @@ op_endCutscene:
   ; Clear VAR_OVERRIDE (var 5) = 0
   ldx #5*2
   stz.w SCUMM.globalVars,x
+
+  ; --- Restore userPut from cutSceneData[(nest-1)*2] before decrementing nest ---
+  ; Pairs with the save in op_cutscene; un-silencing user input as the engine
+  ; leaves cutscene mode.
+  lda.w SCUMM.cutsceneNest
+  beq _ec.noRestore
+  dec a
+  asl a
+  tax
+  lda.w SCUMM.cutSceneData,x
+  sta.w SCUMM.userPut
+_ec.noRestore:
 
   ; Decrement cutsceneNest, clamp at 0
   lda.w SCUMM.cutsceneNest

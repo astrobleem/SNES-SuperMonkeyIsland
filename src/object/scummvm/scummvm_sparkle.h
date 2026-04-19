@@ -42,3 +42,8 @@
 
 ; Slot array at $7F:4E00. Engine sets DBR=$7F to reach these with .w.
 .define SPARKLE_STATE_LO        $4E00
+
+; Byte at $7F:4E20 holds a free-running frame counter used to drive the
+; auto-animation. buildOam increments it every call; position index and
+; visibility mask derive from its bits.
+.define SPARKLE_ANIM_COUNTER    $4E20

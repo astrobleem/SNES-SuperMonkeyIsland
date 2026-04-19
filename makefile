@@ -82,9 +82,7 @@ romdatapacker := python3 ./tools/rom_pack_data.py
 
 objroomtable := $(builddir)/obj_room_table.inc
 scummsoundmap := $(builddir)/audio/scumm_sound_map.inc
-sparklechr := $(datadir)/logo_sparkle.chr
-sparklepal := $(datadir)/logo_sparkle.pal
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap) $(sparklechr) $(sparklepal)
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects, then append ROM data
@@ -109,10 +107,6 @@ $(linkobjectfile): $(objects)
 $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles) $(scriptfiles) $(interfacefiles) $(inheritancefiles) $(datafiles) | $(builddirs)
 	$(assembler) $(assemblerflags) $< $@
 
-
-#generate LucasArts logo sparkle OBJ-layer CHR + sub-palette
-$(sparklechr) $(sparklepal): data/scumm_extracted/rooms/room_010_logo/palette.bin tools/convert_sparkle_chr.py
-	python3 ./tools/convert_sparkle_chr.py
 
 #generate object-to-room lookup table (used by loadRoomWithEgo room=0)
 $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)

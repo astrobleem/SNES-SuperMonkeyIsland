@@ -185,8 +185,8 @@ SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
 SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
-SCUMM.hdmaCgramChannel    db      ;allocated HDMA channel id for CGRAM palette swap
-SCUMM.cgramHdmaTable      ds 88   ;WRAM copy of CGRAM HDMA table (pal6 highlight + pal7 normal + sentence)
+SCUMM.hdmaCgramChannel    db      ;UNUSED (CGRAM HDMA scheme removed 2026-04-18); kept for layout stability
+SCUMM._cgramHdmaTableStub ds 88   ;UNUSED reserve (was SCUMM.cgramHdmaTable)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
@@ -655,52 +655,29 @@ SCUMM.invNameCount       dw                      ; number of cached names
 .base BSL
 .section "VerbHdmaTable" free
 VerbHdmaTable:
-  .db 128                               ; scanlines 0-127: room area
+  .db $FF                               ; repeat 127 lines (0-126)
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 16                                ; scanlines 128-143: room area continued
+  .db $81                               ; repeat 1 line (127) -- 127+1=128
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 80                                ; scanlines 144-223: verb area
+  .db $90                               ; repeat 16 lines (128-143)
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
+  .db $D0                               ; repeat 80 lines (144-223)
   .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
 
+; CutsceneHdmaTable: during cutscenes the full 224-scanline screen shows room
+; art, because verb bar is hidden and tall rooms (e.g., Mountain of the Monkey
+; Head — 200 px, village at y=150-185) need the "verb area" scanlines for art.
+; Keep ALL layers enabled for scanlines 144-223 so BG1 renders the village and
+; water. This differs from VerbHdmaTable which turns BG1 off at 144+ to hide
+; room art beneath the gameplay verb bar.
 CutsceneHdmaTable:
   .db 128                               ; scanlines 0-127: room area
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 16                                ; scanlines 128-143: room area continued
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 80                                ; scanlines 144-223: verb area (all disabled)
-  .db 0
-  .db 0                                 ; end of table
-.ends
-
-;---------------------------------------------------------------------------
-; HDMA table: write verb font colors to CGRAM at scanline 144
-; Mode 3 (DMAP_2_REG_WRITE_TWICE_EACH) targeting $21:
-;   writes $2121 (CGADD), $2121, $2122 (CGDATA lo), $2122 (CGDATA hi)
-; During room scanlines, writes to CGRAM[$70] (pal7 color0, always transparent).
-; At scanlines 144-147 (repeat mode), writes verb font palette:
-;   Font pixel mapping: idx3=letter body, idx1=inner highlight, idx2=shadow
-;   - CGRAM[$00] = $0000 (backdrop = black for verb area)
-;   - CGRAM[$71] = $6318 (pal7 color1 = light grey inner fill)
-;   - CGRAM[$72] = $294A (pal7 color2 = dark grey shadow)
-;   - CGRAM[$73] = $7FFF (pal7 color3 = white letter body)
-; Room palette 7 preserved for room area (only color0 touched, always transparent).
-;---------------------------------------------------------------------------
-.bank 5 slot 0
-.base BSL
-.section "VerbCgramHdmaTable" free
-VerbCgramHdmaTable:
-  .db 128                               ; scanlines 0-127: room area
-  .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (pal7 color0, transparent)
-  .db 12                                ; scanlines 128-139: room area continued
-  .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (pal7 color0, transparent)
-  .db $84                               ; repeat 4 lines (scanlines 140-143)
-  .db $00, $00, $00, $00               ;   CGRAM[$00] = $0000 (backdrop = black)
-  .db $71, $71, $18, $63               ;   CGRAM[$71] = $6318 (pal7 color1 = light grey)
-  .db $72, $72, $4A, $29               ;   CGRAM[$72] = $294A (pal7 color2 = dark grey)
-  .db $73, $73, $FF, $7F               ;   CGRAM[$73] = $7FFF (pal7 color3 = white body)
-  .db 80                                ; scanlines 144-223: verb area
-  .db $70, $70, $00, $00               ;   CGRAM[$70] = $0000 (colors already set)
+  .db 80                                ; scanlines 144-223: verb area, BG1+BG2+BG3+OBJ on
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 0                                 ; end of table
 .ends
 

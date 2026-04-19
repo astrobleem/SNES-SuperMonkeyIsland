@@ -59,13 +59,65 @@ HEADER_SIZE = 32
 MAX_TILE_ID = 1024  # 10-bit tile index in SNES tilemap word
 TRANS_COLOR = (0, 0, 0)  # color 0 in every sub-palette
 
-# Reserve SNES palette 0 for SCUMM UI indices (cursor, verb text).
-# Script 6 et al. call setPalColor(idx) for idx in 0..15 expecting those to
-# be UI-only; in original VGA MI1 those slots were reserved from room art.
-# Mapping setPalColor(N) → CGRAM[N*2] only works when no room tile references
-# palette 0, so we quantize tiles into palettes 1..7 and leave 0 empty.
-RESERVED_PALETTES = 1
-ART_SUBPALETTES = NUM_SUBPALETTES - RESERVED_PALETTES  # 7
+# Reserved palettes:
+#   - Pal 0: SCUMM UI (cursor, setPalColor idx 0-15 targets). Scripts write here.
+#   - Pal 6: verb highlight font (c1-c3) + universal art colors (c4-c15).
+#   - Pal 7: verb normal font (c1-c3) + universal art colors (c4-c15).
+# The HDMA CGRAM double-buffering scheme was removed 2026-04-18; pal6/pal7
+# now hold static verb font colors AND "universal" colors the quantizer can
+# assign tiles to as a 6th/7th effective palette (Level 2 optimization).
+RESERVED_PALETTES_START = 1      # pal 0 (UI)
+RESERVED_PALETTES_END = 2        # pal 6, pal 7 (verb + universal)
+ART_SUBPALETTES = NUM_SUBPALETTES - RESERVED_PALETTES_START - RESERVED_PALETTES_END  # 5
+# Backwards-compat alias used by legacy code paths; matches the START count since
+# those paths only care about the "prepend" shift. DO NOT add the END reservation.
+RESERVED_PALETTES = RESERVED_PALETTES_START
+
+# Pal 6 (verb highlight + universal warm/saturated): c0 transparent,
+# c1-c3 are verb highlight colors set by scummvm.writeVerbColors at runtime
+# (fill/shadow/yellow-body), c4-c15 are universal colors any tile may borrow.
+# Any change here must stay in sync with scummvm.writeVerbColors.
+PAL6_VERB_PLUS_UNIVERSAL = [
+    0x0000,  # c0 transparent
+    0x6318,  # c1 verb highlight fill (light grey)
+    0x294A,  # c2 verb highlight shadow (dark grey)
+    0x03FF,  # c3 verb highlight body (yellow)
+    # c4-c15: universal saturated/warm colors
+    0x7FFF,  # c4 pure white
+    0x7C1F,  # c5 magenta
+    0x001F,  # c6 pure red
+    0x03E0,  # c7 pure green
+    0x7C00,  # c8 pure blue
+    0x03FF,  # c9 yellow (dup c3)
+    0x0CA5,  # c10 orange
+    0x2F3F,  # c11 skin tone / tan
+    0x18C6,  # c12 brown
+    0x039F,  # c13 olive
+    0x7FDB,  # c14 pale sky
+    0x0000,  # c15 black (dup c0)
+]
+
+# Pal 7 (verb normal + universal cool/desaturated): c0 transparent,
+# c1-c3 are verb normal colors (fill/shadow/white-body), c4-c15 universal.
+PAL7_VERB_PLUS_UNIVERSAL = [
+    0x0000,  # c0 transparent
+    0x6318,  # c1 verb normal fill (light grey)
+    0x294A,  # c2 verb normal shadow (dark grey)
+    0x7FFF,  # c3 verb normal body (white)
+    # c4-c15: universal cool/neutral colors
+    0x4A52,  # c4 medium grey
+    0x0C63,  # c5 dark grey
+    0x2805,  # c6 dark purple
+    0x1841,  # c7 dark blue
+    0x4E94,  # c8 medium blue
+    0x2A95,  # c9 teal
+    0x0240,  # c10 forest green
+    0x3FC0,  # c11 light green
+    0x001F,  # c12 pure red (dup pal6 c6)
+    0x7C00,  # c13 pure blue (dup pal6 c8)
+    0x0000,  # c14 black (dup c0)
+    0x0000,  # c15 black (dup c0)
+]
 
 
 # ---------------------------------------------------------------------------
@@ -722,15 +774,31 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     else:
         all_snes_tiles = bg_snes_tiles
 
-    # Quantize into ART_SUBPALETTES (=7), then shift IDs by RESERVED_PALETTES
-    # so tilemap entries reference palettes 1..7. Palette 0 is prepended empty
-    # and stays reserved for SCUMM UI colors (cursor, verb text overlays).
-    palettes, all_indexed_tiles, all_tile_pal_ids = build_palettes_tileaware(
-        all_snes_tiles, num_palettes=ART_SUBPALETTES
+    # Quantize with 2 fixed palettes (pal6/pal7 verb+universal) + 5 mutable
+    # (art). Quantizer can assign tiles to any of the 7 palettes; fixed ones
+    # hold verb colors plus a global "universal" set that many tiles may
+    # match, effectively raising the art palette budget above 5.
+    # Quantizer output order: [pal6_fixed, pal7_fixed, art0, art1, art2, art3, art4].
+    # We re-arrange to [pal0_ui, art0-art4, pal6, pal7] for the .pal file.
+    fixed_palettes = [PAL6_VERB_PLUS_UNIVERSAL, PAL7_VERB_PLUS_UNIVERSAL]
+    raw_palettes, all_indexed_tiles, raw_tile_pal_ids = build_palettes_tileaware(
+        all_snes_tiles, num_palettes=ART_SUBPALETTES,
+        fixed_palettes=fixed_palettes
     )
-    all_tile_pal_ids = all_tile_pal_ids + RESERVED_PALETTES
+    # Remap quantizer pal_ids (0..6) -> output pal_ids (0..7 with pal0 reserved)
+    # Quantizer: 0 = fixed_0 (pal6), 1 = fixed_1 (pal7), 2..6 = mutable art.
+    # Output:    0 = UI empty, 1..5 = art, 6 = pal6, 7 = pal7.
+    #   quantizer 0 -> output 6
+    #   quantizer 1 -> output 7
+    #   quantizer 2..6 -> output 1..5
+    remap = np.array([6, 7, 1, 2, 3, 4, 5], dtype=np.uint8)
+    all_tile_pal_ids = remap[raw_tile_pal_ids]
     empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
-    palettes = [empty_pal] * RESERVED_PALETTES + list(palettes)
+    palettes = (
+        [empty_pal]                 # pal 0 (UI)
+        + list(raw_palettes[2:])    # pal 1-5 (art)
+        + list(raw_palettes[0:2])   # pal 6, pal 7 (verb + universal)
+    )
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
 
@@ -896,13 +964,16 @@ def batch_convert(input_dir, output_dir, room_filter=None,
     failures = []
     t0 = time.time()
 
+    skipped = []   # legitimately empty dirs (no background.png) — not real failures
     for room_id, room_dir in rooms:
         try:
             stats = convert_room(room_dir, output_dir, verbose=verbose, verify=verify)
             if stats:
                 results.append(stats)
+            elif (room_dir / "background.png").exists():
+                failures.append(room_id)  # had a bg but convert_room returned None
             else:
-                failures.append(room_id)
+                skipped.append(room_id)   # no bg, normal — just the short-name twin dir
         except Exception as e:
             log.error("Room %d: unhandled error: %s", room_id, e)
             failures.append(room_id)
@@ -929,10 +1000,13 @@ def batch_convert(input_dir, output_dir, room_filter=None,
 
         log.info("")
         log.info("=== Conversion Summary ===")
-        log.info("Rooms: %d converted, %d failed (of %d total)",
-                 len(results), len(failures), len(rooms))
+        log.info("Rooms: %d converted, %d failed, %d skipped (of %d total dirs)",
+                 len(results), len(failures), len(skipped), len(rooms))
         if failures:
             log.warning("Failed rooms: %s", failures)
+        if skipped:
+            log.info("Skipped (no background.png — usually short-name twins): %d dirs",
+                     len(skipped))
         log.info("Avg tiles/room: %.0f   Avg dedup: %.1f%%",
                  avg_tiles, avg_dedup * 100)
         log.info("Total tileset data: %.1f KB", total_chr / 1024)

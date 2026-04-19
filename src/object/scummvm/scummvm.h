@@ -665,13 +665,19 @@ VerbHdmaTable:
   .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
 
+; CutsceneHdmaTable: during cutscenes the full 224-scanline screen shows room
+; art, because verb bar is hidden and tall rooms (e.g., Mountain of the Monkey
+; Head — 200 px, village at y=150-185) need the "verb area" scanlines for art.
+; Keep ALL layers enabled for scanlines 144-223 so BG1 renders the village and
+; water. This differs from VerbHdmaTable which turns BG1 off at 144+ to hide
+; room art beneath the gameplay verb bar.
 CutsceneHdmaTable:
   .db 128                               ; scanlines 0-127: room area
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 16                                ; scanlines 128-143: room area continued
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db 80                                ; scanlines 144-223: verb area (all disabled)
-  .db 0
+  .db 80                                ; scanlines 144-223: verb area, BG1+BG2+BG3+OBJ on
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 0                                 ; end of table
 .ends
 

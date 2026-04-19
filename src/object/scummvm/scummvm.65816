@@ -19,7 +19,7 @@
 
 ;===================================================================
 ; METHOD: init
-; Read MSU-1 script section header, zero all state, start script 1
+; Read packed-ROM script section header, zero all state, start script 1
 ;===================================================================
   METHOD init
   rep #$31
@@ -1338,9 +1338,10 @@ _prc.noEntryScript2:
 
   ; Load costumes for ego + actors already placed.
   ; NOTE: actors placed by LSCR scripts (started by ENCD) won't be found
-  ; until they execute on the next _play tick. Running a scheduler tick here
-  ; would fix this but causes MSU-1 pointer conflicts with the tile streamer.
-  ; TODO: add MSU-1 seek-save/restore around script loading to fix this.
+  ; until those scripts execute on the next _play tick. Running a scheduler
+  ; tick here is the natural fix; the original concern about data-streaming
+  ; pointer reentrancy no longer applies now that scripts + tiles are
+  ; preloaded from ROM (rom_data.bin).
   jsr _scummvm.loadActorCostumes
 
   ; Assign walkboxes for all visible actors in this room
@@ -1465,7 +1466,7 @@ _aaw.skip16:
 
 
 ;===================================================================
-; Script Loader -- MSU-1 -> $7F Cache
+; Script Loader -- ROM -> $7F Cache (packed by tools/rom_pack_data.py)
 ;===================================================================
 
 ;-------------------------------------------------------------------
@@ -1942,7 +1943,7 @@ _reloadGlobal.next:
 
 ;-------------------------------------------------------------------
 ; _scummvm.cacheGC -- garbage-collect script cache
-; Flushes cache and reloads all live scripts from MSU-1.
+; Flushes cache and reloads all live scripts from ROM (rom_data.bin).
 ; Prevents recursion via SCUMM.gcInProgress flag.
 ;-------------------------------------------------------------------
 _scummvm.cacheGC:
@@ -1956,7 +1957,7 @@ _scummvm.cacheGC:
   ; Flush cache
   stz.w SCUMM.cacheWritePtr
 
-  ; Reload room scripts (ENCD/EXCD/LSCR) from MSU-1
+  ; Reload room scripts (ENCD/EXCD/LSCR) from packed ROM data
   lda.w SCUMM.currentRoom
   jsr _scummvm.loadRoomScripts
 
@@ -2049,7 +2050,7 @@ _updateRoomPtrs.next:
 
 
 ;-------------------------------------------------------------------
-; _scummvm.loadRoomScripts -- load ENCD/EXCD/LSCR from MSU-1
+; _scummvm.loadRoomScripts -- load ENCD/EXCD/LSCR from packed ROM data
 ; Input: A = room number
 ; Output: carry set = scripts loaded, carry clear = none
 ; Clobbers: A, X, scratch/scratch2
@@ -5802,7 +5803,8 @@ _systemOps.noRestart:
 
 ; resourceRoutines ($0C, $8C) -- resource preload/cache management
 ; Sub-opcode byte controls flag bits, not the main opcode.
-; Most are no-ops for MSU-1 on-demand loading; just skip params.
+; Most are no-ops — all script/costume/sound resources are preloaded into
+; ROM at build time (rom_data.bin) so there's nothing to load on demand.
 ; Exception: sub-opcode 0x04 (loadRoom) triggers an actual room change.
 op_resourceRoutines:
   .ACCU 16

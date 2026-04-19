@@ -1,13 +1,19 @@
 ;---------------------------------------------------------------------------
-; LucasArts logo sparkle — OBJ-layer sprite effect.
+; LucasArts logo sparkle — OBJ-layer rendering driven by MI1's own costume art.
 ;
-; The MI1 intro drives sparkle animation by calling drawObject(110..114, x, y)
-; at varying positions. Objects 110-114 are 16x32 rectangles entirely filled
-; with color 88 (bright magenta). Our BG tilemap is ill-suited to flashing
-; overlays (tile-cache pressure), so we render them on the OBJ layer instead.
+; cost_005_room010 in MI1 talkie contains 6 "twinkle" frames (5x5, 7x7, 9x9,
+; 11x11, 13x13, 19x19), each a 4-point starburst with bright-yellow center
+; fading through pink to magenta tips. Our CHR converter picks frames
+; 7/9/11/13, centers each in a 16x16 SNES sprite block, and packs them into
+; a 1024-byte CHR (32 tiles, 16 per CHR row so 16x16 hw-sprite addressing
+; hits the right quadrant tiles).
 ;
-; State lives at $7F:4E00 (bank $7F WRAM, after cycle state at $7F:4D00).
-; Engine code sets DBR=$7F and uses .w aliases so inc.w / stz.w / etc. work.
+; Runtime: 5 sparkles cycle through the 4 frames on a grow-hold-shrink
+; schedule, staggered in phase so the logo always has 1-2 sparkles bright
+; while others pulse. Positions are hand-picked on LUCASFILM GAMES letters.
+;
+; Slot state and runtime counter live in bank $7F. Engine sets DBR=$7F for
+; .w access.
 ;---------------------------------------------------------------------------
 
 .define SPARKLE_NUM_SLOTS       5
@@ -15,35 +21,39 @@
 .define SPARKLE_LAST_OBJ_ID     114
 .define SPARKLE_ROOM            10
 
-; VRAM: sprite CHR base is word $6000 (ObjSel=$03). Tile $F0 is the CURSOR
-; tile — avoid. Actors use tile ids 0..$EF. Use tile $F8 for sparkle.
-.define SPARKLE_VRAM_TILE_ID    $F8
-.define SPARKLE_VRAM_DEST_WORD  $6F80
-.define SPARKLE_CHR_BYTES       32             ; 1 solid 8x8 4bpp tile
+; VRAM: sprite CHR base is word $6000 (ObjSel=$03). Room 10 has no actors
+; competing for these tiles; actor costume load in non-logo rooms rewrites
+; them later, which is fine.
+.define SPARKLE_VRAM_DEST_WORD  $6000
+.define SPARKLE_CHR_BYTES       1024           ; 32 tiles * 32 bytes
 
-; CGRAM: OBJ palettes start at byte $100. Pal 5 = cursor; pal 6 is free.
+; OBJ palette 6 is free; pal 5 is the cursor's.
 .define SPARKLE_OBJ_PAL         6
-.define SPARKLE_CGRAM_DEST_BYTE $E0            ; CGADD color index; OBJ pal N = 128 + N*16
+.define SPARKLE_CGRAM_DEST_BYTE $E0             ; CGADD color index = 128+6*16
 .define SPARKLE_PAL_BYTES       32
 
 ; OAM attr byte: priority 3 ($30) + OBJ pal 6 ($0C) = $3C.
 .define SPARKLE_OAM_ATTR        $3C
 
-; Each sparkle = 2 wide x 4 tall grid of 8x8 hw sprites = 8 OAM entries.
-; 5 sparkles * 8 = 40 entries, well under 128 OAM slots.
-.define SPARKLE_ENTRIES_PER     8
+; Frame tile IDs (first of each 16x16 sprite's 2x2 block). The converter
+; lays out frames sequentially on the top CHR row (tiles 0..15) with the
+; bottom halves on CHR row 2 (tiles 16..31). A 16x16 sprite at tile N
+; references N, N+1, N+16, N+17 — exactly the right quadrant tiles.
+.define SPARKLE_FRAME0_TILE     0               ; 7x7   (smallest in active cycle)
+.define SPARKLE_FRAME1_TILE     2               ; 9x9
+.define SPARKLE_FRAME2_TILE     4               ; 11x11
+.define SPARKLE_FRAME3_TILE     6               ; 13x13 (peak)
 
 .struct sparkleSlot
-  visible db                                   ; +$00  0=hidden, 1=visible
-  x_lo    db                                   ; +$01  room-space X low
-  x_hi    db                                   ; +$02  room-space X high
-  y       db                                   ; +$03  screen-space Y
+  visible db                                   ; +$00
+  x_lo    db                                   ; +$01
+  x_hi    db                                   ; +$02
+  y       db                                   ; +$03
 .endst
 
-; Slot array at $7F:4E00. Engine sets DBR=$7F to reach these with .w.
+; Slot state at $7F:4E00 (5 * 4 = 20 bytes).
 .define SPARKLE_STATE_LO        $4E00
 
-; Byte at $7F:4E20 holds a free-running frame counter used to drive the
-; auto-animation. buildOam increments it every call; position index and
-; visibility mask derive from its bits.
+; Free-running animation counter at $7F:4E20 (8-bit). Drives phase and
+; frame selection per slot.
 .define SPARKLE_ANIM_COUNTER    $4E20

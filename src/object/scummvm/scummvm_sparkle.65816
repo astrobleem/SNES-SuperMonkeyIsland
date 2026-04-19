@@ -1,18 +1,19 @@
 ;===================================================================
-; LucasArts logo sparkle — OBJ-layer render path.
+; LucasArts logo sparkle — OBJ-layer render using MI1's own twinkle art.
 ;
-;   scummvm.sparkle.reset     — clear slot state + upload CHR/palette
-;                                (only uploads when currentRoom == 10)
-;   scummvm.sparkle.setPos    — update slot for obj_id in [110..114]
-;                                (caller: SCUMM.scratch=obj_id,
-;                                         SCUMM.scratch2=x, SCUMM.scratch3=y)
-;   scummvm.sparkle.buildOam  — emit OAM entries each frame (only when
-;                                currentRoom == 10)
+;   scummvm.sparkle.reset     — room.load hook: clear state + upload
+;                                CHR/palette when entering room 10.
+;   scummvm.sparkle.setPos    — dormant setXY hook (MI1 scripts don't use it).
+;   scummvm.sparkle.buildOam  — per-frame: advance counter, emit one 16x16
+;                                OAM entry per sparkle slot, set size bits.
 ;
-; Slot state at $7F:4E00. Engine sets DBR=$7F for .w access. Mirrors the
-; pattern established by scummvm_cycle.65816. Deliberately does NOT
-; include scummvm.h — that header owns ramsections which must not be
-; emitted twice.
+; 5 sparkles at hand-picked spots across LUCASFILM GAMES letters. Each
+; slot runs an 8-step phase cycle through tile ids 0,2,4,6 (costume
+; frames 7,9,11,13) then hides for the last step. Slots are staggered
+; by 2 phases so there's always overlap.
+;
+; State/counter at $7F:4E00+. Engine sets DBR=$7F for .w access; all OAM
+; buffer writes use .l because GLOBAL.oamBuffer lives in $7E WRAM.
 ;===================================================================
 
 .include "src/config/config.inc"
@@ -22,12 +23,9 @@
 .bank 5 slot 0
 .section "scumm sparkle engine" superfree
 
+
 ;-------------------------------------------------------------------
 ; scummvm.sparkle.reset
-;
-; Always zeros slot state. If currentRoom == 10, DMA sparkle CHR to
-; VRAM sprite tile $F0 and write sparkle palette to OBJ pal 6.
-; Safe to call from room.load during force blank.
 ;-------------------------------------------------------------------
 scummvm.sparkle.reset:
   php
@@ -48,27 +46,20 @@ scummvm.sparkle.reset:
   inx
   cpx #20
   bne -
+  sta.w SPARKLE_ANIM_COUNTER
 
-
-  ;gate uploads on room being loaded. SCUMM.currentRoom still points to
-  ;the PREVIOUS room at this point in the flow (processRoomChange only
-  ;updates it after room.load returns). room.load stashes the target in
-  ;GLOBAL.room.currentId at its entry.
+  ;gate on room currently being loaded
   lda.l GLOBAL.room.currentId
   and #$00FF
   cmp #SPARKLE_ROOM
   bne _spkreset.exit
 
-  ;--- Zero the animation counter so the first frame picks position 0. ---
-  lda #0
-  sta.w SPARKLE_ANIM_COUNTER
-
-  ;--- CHR DMA: ch7 to VRAM word $6F00 ---
+  ;CHR DMA ch7 → VRAM word $6000 (1024 B)
   lda.b #VMAIN_INCREMENT_MODE
   sta.l VMAIN
-  lda.b #$01                             ; A->B, increment A, 2-register write
+  lda.b #$01
   sta.l DMAP7
-  lda.b #$18                             ; VMDATAL
+  lda.b #$18
   sta.l DMADEST7
   lda.b #:scummvm.sparkle.chr
   sta.l DMASRC7B
@@ -85,12 +76,11 @@ scummvm.sparkle.reset:
   sep #$20
   .ACCU 8
   lda.b #$80
-  sta.l MDMAEN                           ; trigger ch7
+  sta.l MDMAEN
 
-  ;--- palette write: CGADD + 32 CGDATA bytes ---
+  ;palette → OBJ pal 6
   lda.b #SPARKLE_CGRAM_DEST_BYTE
   sta.l CGADD
-
   rep #$10
   .INDEX 16
   ldx #0
@@ -105,77 +95,24 @@ _spkreset.exit:
   plp
   rtl
 
+
 ;-------------------------------------------------------------------
-; scummvm.sparkle.setPos
-;
-; Inputs (in SCUMM state, all word-sized):
-;   SCUMM.scratch   = obj_id
-;   SCUMM.scratch2  = x (room-space pixels)
-;   SCUMM.scratch3  = y
-;
-; Gates on currentRoom == 10. obj_id outside [110..114] → no-op.
+; scummvm.sparkle.setPos — dormant
 ;-------------------------------------------------------------------
 scummvm.sparkle.setPos:
-  php
-  phb
-  rep #$30
-  .ACCU 16
-  .INDEX 16
-
-  lda.l SCUMM.currentRoom
-  and #$00FF
-  cmp #SPARKLE_ROOM
-  beq +
-  jmp _spkset.exit
-+
-
-  lda.l SCUMM.scratch
-  and #$00FF
-  cmp #SPARKLE_FIRST_OBJ_ID
-  bcs +
-  jmp _spkset.exit
-+ cmp #(SPARKLE_LAST_OBJ_ID + 1)
-  bcc +
-  jmp _spkset.exit
-+
-
-  ;X = (obj_id - 110) * 4
-  sec
-  sbc #SPARKLE_FIRST_OBJ_ID
-  asl a
-  asl a
-  tax
-
-  sep #$20
-  .ACCU 8
-  lda #$7F
-  pha
-  plb
-
-  lda #1
-  sta.w SPARKLE_STATE_LO + sparkleSlot.visible, x
-
-  lda.l SCUMM.scratch2
-  sta.w SPARKLE_STATE_LO + sparkleSlot.x_lo, x
-  lda.l SCUMM.scratch2 + 1
-  sta.w SPARKLE_STATE_LO + sparkleSlot.x_hi, x
-
-  lda.l SCUMM.scratch3
-  sta.w SPARKLE_STATE_LO + sparkleSlot.y, x
-
-_spkset.exit:
-  plb
-  plp
   rtl
 
 
 ;-------------------------------------------------------------------
 ; scummvm.sparkle.buildOam
-;
-; Per-frame hook from scummvm.play (after renderActors + cursor). For
-; each visible slot, emit 8 OAM entries (2x4 grid of 8x8 hw sprites
-; = 16x32 sparkle). Applies cameraX offset so sparkles track any
-; logo scroll.
+;-------------------------------------------------------------------
+; tmp usage (all DP-relative, DP = kernel ZP during scummvm.play):
+;   tmp+0  slot index (0..4)
+;   tmp+1  frame id (0..3)
+;   tmp+2  screen X (signed 16 — occupies tmp+2 AND tmp+5, don't overwrite!)
+;   tmp+4  OAM byte offset
+;   tmp+5  slot y byte
+;   tmp+6  position table byte offset
 ;-------------------------------------------------------------------
 scummvm.sparkle.buildOam:
   php
@@ -195,202 +132,147 @@ scummvm.sparkle.buildOam:
   .ACCU 8
   lda #$7F
   pha
-  plb                                    ; DBR = $7F for SPARKLE_STATE_LO
+  plb                                    ; DBR = $7F
 
-  ;--- Advance animation counter and repopulate all 5 slots from the
-  ;position table. Every 4 frames the position index shifts by 1, and
-  ;slots are staggered by 3 entries (mod 16) so they spread across
-  ;the logo. Counter-bit-3 gates visibility per slot so sparkles
-  ;flicker on/off instead of all glowing continuously.
   inc.w SPARKLE_ANIM_COUNTER
 
-  ;--- Populate 5 slots inline. In 8-bit accu / 16-bit index mode; each
-  ;tax is bracketed by rep/sep so X gets a clean 16-bit value (zeros in
-  ;the high byte, not whatever B happens to hold).
-  lda.w SPARKLE_ANIM_COUNTER
-  lsr a
-  lsr a                                  ; base_pos = counter / 4
-  sta.b tmp+6
+  ;Zero the two oamTable1 bytes we manage (slots 0..3 in byte 0, slot 4
+  ;in byte 1). sta.l required because GLOBAL.oamTable1 is in $7E.
+  lda #0
+  sta.l GLOBAL.oamTable1 + 0
+  sta.l GLOBAL.oamTable1 + 1
 
-  ;Slot 0 (shift +0)
-  lda.b tmp+6
-  and #$0F
-  asl a
-  asl a
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  tax
-  sep #$20
-  .ACCU 8
-  lda #1
-  sta.w SPARKLE_STATE_LO + 0
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + 1
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + 2
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + 3
-
-  ;Slot 1 (shift +3)
-  lda.b tmp+6
-  clc
-  adc #3
-  and #$0F
-  asl a
-  asl a
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  tax
-  sep #$20
-  .ACCU 8
-  lda #1
-  sta.w SPARKLE_STATE_LO + 4
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + 5
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + 6
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + 7
-
-  ;Slot 2 (shift +6)
-  lda.b tmp+6
-  clc
-  adc #6
-  and #$0F
-  asl a
-  asl a
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  tax
-  sep #$20
-  .ACCU 8
-  lda #1
-  sta.w SPARKLE_STATE_LO + 8
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + 9
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + 10
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + 11
-
-  ;Slot 3 (shift +9)
-  lda.b tmp+6
-  clc
-  adc #9
-  and #$0F
-  asl a
-  asl a
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  tax
-  sep #$20
-  .ACCU 8
-  lda #1
-  sta.w SPARKLE_STATE_LO + 12
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + 13
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + 14
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + 15
-
-  ;Slot 4 (shift +12)
-  lda.b tmp+6
-  clc
-  adc #12
-  and #$0F
-  asl a
-  asl a
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  tax
-  sep #$20
-  .ACCU 8
-  lda #1
-  sta.w SPARKLE_STATE_LO + 16
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + 17
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + 18
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + 19
-
-  rep #$30
-  .ACCU 16
-  .INDEX 16
-  ldx #0                                 ; X = slot byte offset
+  lda #0
+  sta.b tmp+0                            ; slot = 0
 
 _spkoam.slotLoop:
-  ;visible check (8-bit)
-  sep #$20
-  .ACCU 8
-  lda.w SPARKLE_STATE_LO + sparkleSlot.visible, x
-  beq _spkoam.slotNext
-
-  ;read slot.x (16-bit — x_lo+x_hi are adjacent)
+  ;--- Compute phase and frame for this slot ---
+  lda.w SPARKLE_ANIM_COUNTER
+  lsr a
+  lsr a                                  ; counter / 4 (~15 Hz step)
+  clc
+  adc.b tmp+0                            ; + slot
+  adc.b tmp+0                            ; + slot again → slot*2 offset
+  and #$07                                ; phase 0..7
   rep #$20
   .ACCU 16
-  lda.w SPARKLE_STATE_LO + sparkleSlot.x_lo, x
-  sta.b tmp                              ; tmp = room X
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l _spkoam.phaseFrameTable, x
+  cmp #$FF
+  bne +
+  jmp _spkoam.hideSlot
++
+  sta.b tmp+1                            ; frame id (0..3)
 
-  ;screen_x = room_x - cameraX
+  ;--- Load position from table: byte offset = slot * 4 ---
+  lda.b tmp+0
+  asl a
+  asl a
+  sta.b tmp+6                            ; pos offset byte (0, 4, 8, 12, 16)
+
+  ;screen_x = SparklePosTable[slot].x - cameraX; also stash slot y.
+  rep #$20
+  .ACCU 16
+  lda.b tmp+6
+  and #$00FF
+  tax                                    ; X = pos byte offset
+  lda.l SparklePosTable + 0, x           ; 16-bit x_lo+x_hi
   sec
   sbc.l GLOBAL.room.cameraX
-  sta.b tmp+2                            ; tmp+2 = screen X (signed)
-
-  ;skip if off-screen (screen_x < 0 or >= 240)
-  bpl +
-  jmp _spkoam.slotNext
-+ cmp #240
-  bcc +
-  jmp _spkoam.slotNext
-+
-
-  ;load slot.y into tmp+4 (byte in low, high byte zero)
+  sta.b tmp+2                            ; signed 16 screen x
   sep #$20
   .ACCU 8
-  lda.w SPARKLE_STATE_LO + sparkleSlot.y, x
-  sta.b tmp+4
+  lda.l SparklePosTable + 2, x           ; y byte (use long-abs-X, valid)
+  sta.b tmp+5                            ; stash slot y for OAM write
 
-  ;Reserve fixed OAM slots for sparkles — overwrite whatever renderActors
-  ;placed there. Slot N (0..4) claims OAM entries N*8..N*8+7 = byte offset
-  ;N*32..N*32+31. Room 10 has no actors competing for these slots; cursor
-  ;is rendered at slots we don't touch (core.oam.play clears to y=$F8).
-  rep #$30
-  .ACCU 16
-  .INDEX 16
-  phx                                    ; save sparkle slot byte offset
-  txa                                    ; A = sparkle-slot byte offset (0..16)
-  asl a                                  ; * 2
-  asl a                                  ; * 4  → OAM byte offset base for slot 0..4
-  asl a                                  ; * 8 (sparkle slot 0 -> 0, slot 1 -> 32...)
-  tax                                    ; X = OAM byte offset (0, 32, 64, 96, 128)
-
-  ;emit 8 entries: col 0/8 x row 0/8/16/24
-  jsr _spkoam.emitEntry_col0_row0
-  jsr _spkoam.emitEntry_col8_row0
-  jsr _spkoam.emitEntry_col0_row8
-  jsr _spkoam.emitEntry_col8_row8
-  jsr _spkoam.emitEntry_col0_row16
-  jsr _spkoam.emitEntry_col8_row16
-  jsr _spkoam.emitEntry_col0_row24
-  jsr _spkoam.emitEntry_col8_row24
-
-  plx                                    ; restore sparkle slot byte offset
-
-_spkoam.slotNext:
+  ;Skip if off-screen: screen_x < -16 or >= 256.
   rep #$20
   .ACCU 16
-  txa
+  lda.b tmp+2
   clc
-  adc #4                                 ; sizeof(sparkleSlot)
+  adc #16                                ; shift so [-16, 239] maps to [0, 255]
+  cmp #272
+  bcs _spkoam.hideSlot16
+  sep #$20
+  .ACCU 8
+
+  ;--- Emit OAM entry at slot*4 ---
+  lda.b tmp+0
+  asl a
+  asl a                                  ; slot * 4
+  sta.b tmp+4                            ; OAM byte offset
+  rep #$20
+  .ACCU 16
+  and #$00FF
   tax
-  cpx #20                                ; 5 slots * 4 bytes
+  sep #$20
+  .ACCU 8
+
+  lda.b tmp+2                            ; screen x low byte
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b tmp+5                            ; y byte (stashed earlier)
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b tmp+1                            ; frame id
+  asl a                                  ; * 2 → tile id 0/2/4/6
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b #SPARKLE_OAM_ATTR
+  sta.l GLOBAL.oamBuffer, x
+
+  ;--- Set size bit in oamTable1 ---
+  ;slot N → byte (N/4), bit pos (N%4)*2+1
+  ;Slots 0..3: byte 0, masks $02, $08, $20, $80
+  ;Slot 4:     byte 1, mask $02
+  lda.b tmp+0
+  cmp #4
+  beq _spkoam.size_slot4
+  ;slot 0..3 — need 16-bit clean X for long-absolute-X read of masks table
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l _spkoam.size01Masks, x
+  ora.l GLOBAL.oamTable1 + 0
+  sta.l GLOBAL.oamTable1 + 0
+  jmp _spkoam.slotNext
+_spkoam.size_slot4:
+  lda #$02
+  ora.l GLOBAL.oamTable1 + 1
+  sta.l GLOBAL.oamTable1 + 1
+  jmp _spkoam.slotNext
+
+_spkoam.hideSlot16:
+  sep #$20
+  .ACCU 8
+  ;fall through to hide path
+_spkoam.hideSlot:
+  ;Park this slot's OAM entry off-screen by writing y=$F0.
+  lda.b tmp+0
+  asl a
+  asl a                                  ; slot * 4 OAM byte offset
+  clc
+  adc #1                                 ; +1 = y byte
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax
+  sep #$20
+  .ACCU 8
+  lda #$F0
+  sta.l GLOBAL.oamBuffer, x
+  ;(No size bit set for this slot — oamTable1 byte already zeroed.)
+
+_spkoam.slotNext:
+  inc.b tmp+0
+  lda.b tmp+0
+  cmp #SPARKLE_NUM_SLOTS
   beq _spkoam.done
   jmp _spkoam.slotLoop
 
@@ -402,126 +284,33 @@ _spkoam.exit:
 
 
 ;-------------------------------------------------------------------
-; Entry emitters. Each writes 4 bytes (x, y, tile, attr) at oamBuffer,x
-; and advances X by 4. DBR = $7F on entry (for tmp access). tmp+2 holds
-; screen_x; tmp+4 holds screen_y (low byte). X is the 16-bit OAM offset.
+; Phase → frame id (or $FF for hidden). 8-step cycle.
+; 0=grow, 1=grow, 2=grow, 3=peak, 3=peak, 2=shrink, 1=shrink, FF=off.
 ;-------------------------------------------------------------------
-.macro SPARKLE_EMIT
-  sep #$20
-  .ACCU 8
-  lda.b tmp+2
-  clc
-  adc #\1
-  sta.l GLOBAL.oamBuffer, x
-  inx
-  lda.b tmp+4
-  clc
-  adc #\2
-  sta.l GLOBAL.oamBuffer, x
-  inx
-  lda.b #SPARKLE_VRAM_TILE_ID
-  sta.l GLOBAL.oamBuffer, x
-  inx
-  lda.b #SPARKLE_OAM_ATTR
-  sta.l GLOBAL.oamBuffer, x
-  inx
-  rep #$20
-  .ACCU 16
-.endm
-
-_spkoam.emitEntry_col0_row0:
-  SPARKLE_EMIT 0 0
-  rts
-_spkoam.emitEntry_col8_row0:
-  SPARKLE_EMIT 8 0
-  rts
-_spkoam.emitEntry_col0_row8:
-  SPARKLE_EMIT 0 8
-  rts
-_spkoam.emitEntry_col8_row8:
-  SPARKLE_EMIT 8 8
-  rts
-_spkoam.emitEntry_col0_row16:
-  SPARKLE_EMIT 0 16
-  rts
-_spkoam.emitEntry_col8_row16:
-  SPARKLE_EMIT 8 16
-  rts
-_spkoam.emitEntry_col0_row24:
-  SPARKLE_EMIT 0 24
-  rts
-_spkoam.emitEntry_col8_row24:
-  SPARKLE_EMIT 8 24
-  rts
+_spkoam.phaseFrameTable:
+  .db 0, 1, 2, 3, 3, 2, 1, $FF
 
 
 ;-------------------------------------------------------------------
-; _spkoam.writeSlot
-;   Input:  Y = sparkle-state byte offset (0, 4, 8, 12, 16)
-;           A = fixed table offset for this slot (0, 3, 6, 9, 12)
-;           DBR = $7F, ACCU = 8, INDEX = 16
-;   Output: slot Y populated with visible=1 + x/y from SparklePosTable
-;   Trashes: X, A
+; Size-bit masks for oamTable1 byte 0 (slots 0..3).
+; Slot N's size bit = bit (N*2 + 1).
 ;-------------------------------------------------------------------
-_spkoam.writeSlot:
-  ;pos_idx = ((counter >> 2) + A) & $F    — apply slot offset AFTER dividing
-  ;                                         so slots spread across the 16-entry
-  ;                                         table evenly.
-  sta.b tmp+6                            ; save slot table offset
-  lda.w SPARKLE_ANIM_COUNTER
-  lsr a
-  lsr a                                  ; counter / 4 — position advances every
-                                         ; 4 frames for a gentle drift
-  clc
-  adc.b tmp+6
-  and #$0F
-  asl a
-  asl a                                  ; * 4 (table stride)
-  rep #$30
-  .ACCU 16
-  .INDEX 16
-  and #$00FF
-  tax                                    ; X = byte offset into SparklePosTable
-  sep #$20
-  .ACCU 8
-
-  ;always visible — keep sparkle on every frame, positions drift
-  lda #1
-  sta.w SPARKLE_STATE_LO + sparkleSlot.visible, y
-  lda.l SparklePosTable + 0, x
-  sta.w SPARKLE_STATE_LO + sparkleSlot.x_lo, y
-  lda.l SparklePosTable + 1, x
-  sta.w SPARKLE_STATE_LO + sparkleSlot.x_hi, y
-  lda.l SparklePosTable + 2, x
-  sta.w SPARKLE_STATE_LO + sparkleSlot.y, y
-  rts
+_spkoam.size01Masks:
+  .db $02, $08, $20, $80
 
 
 ;-------------------------------------------------------------------
-; SparklePosTable
-;   16 entries, 4 bytes each: {x_lo, x_hi, y, padding}
-;   Positions scatter across LUCASFILM GAMES letters when cameraX~344.
-;   room_x in [360..510]; y in [48..95] sits on the glyphs.
+; SparklePosTable — 5 entries, 4 bytes each {x_lo, x_hi, y, pad}.
+; x is room_x (sparkle top-left corner of 16x16 sprite — center-8).
+; y is direct OAM y.
 ;-------------------------------------------------------------------
 SparklePosTable:
-  ; top row (LUCASFILM, y=45..65)
-  .db (365 & $FF), (365 >> 8),  50, 0   ; L
-  .db (382 & $FF), (382 >> 8),  55, 0   ; U
-  .db (398 & $FF), (398 >> 8),  48, 0   ; C top
-  .db (418 & $FF), (418 >> 8),  62, 0   ; A
-  .db (438 & $FF), (438 >> 8),  52, 0   ; S
-  .db (455 & $FF), (455 >> 8),  58, 0   ; F
-  .db (470 & $FF), (470 >> 8),  50, 0   ; I/L
-  .db (488 & $FF), (488 >> 8),  60, 0   ; L
-  ; bottom row (GAMES, y=80..100)
-  .db (432 & $FF), (432 >> 8),  90, 0   ; G
-  .db (450 & $FF), (450 >> 8),  85, 0   ; A
-  .db (470 & $FF), (470 >> 8),  92, 0   ; M
-  .db (487 & $FF), (487 >> 8),  86, 0   ; E
-  ; mixed / intercaps
-  .db (405 & $FF), (405 >> 8),  72, 0
-  .db (445 & $FF), (445 >> 8),  68, 0
-  .db (478 & $FF), (478 >> 8),  74, 0
-  .db (505 & $FF), (505 >> 8),  56, 0   ; M in LUCASFILM
+  ; OAM y = sprite top. Sweep: rendering puts OAM y closer to screen top
+  ; than expected (BG has positional offset). Start at y=60 for upper row.
+  .db (364 & $FF), (364 >> 8),  60, 0    ; L in LUCAS
+  .db (402 & $FF), (402 >> 8),  72, 0    ; A in LUCAS
+  .db (448 & $FF), (448 >> 8),  60, 0    ; F in LUCASFILM
+  .db (492 & $FF), (492 >> 8),  72, 0    ; M in LUCASFILM
+  .db (438 & $FF), (438 >> 8), 100, 0    ; M in GAMES
 
 .ends

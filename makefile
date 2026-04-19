@@ -82,7 +82,9 @@ romdatapacker := python3 ./tools/rom_pack_data.py
 
 objroomtable := $(builddir)/obj_room_table.inc
 scummsoundmap := $(builddir)/audio/scumm_sound_map.inc
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap)
+sparklechr := $(datadir)/logo_sparkle.chr
+sparklepal := $(datadir)/logo_sparkle.pal
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap) $(sparklechr) $(sparklepal)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects, then append ROM data
@@ -108,6 +110,10 @@ $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles
 	$(assembler) $(assemblerflags) $< $@
 
 
+#generate LucasArts logo sparkle OBJ-layer CHR + sub-palette
+$(sparklechr) $(sparklepal): data/scumm_extracted/rooms/room_010_logo/palette.bin tools/convert_sparkle_chr.py
+	python3 ./tools/convert_sparkle_chr.py
+
 #generate object-to-room lookup table (used by loadRoomWithEgo room=0)
 $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)
 	python3 ./tools/gen_obj_room_table.py
@@ -116,9 +122,15 @@ $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/met
 $(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) $(tadproject) tools/scumm/gen_audio_map.py | $(builddirs)
 	python3 ./tools/scumm/gen_audio_map.py
 
+#apply SCUMM script patches (text replacements, position overrides) before packing
+patchedscriptsstamp := $(builddir)/scumm_patched_scripts/.stamp
+$(patchedscriptsstamp): tools/patch_scripts.py tools/scumm_patches.json $(wildcard data/scumm_extracted/scripts/scrp_*.bin) | $(builddirs)
+	python3 ./tools/patch_scripts.py --src-dir data/scumm_extracted --out-dir $(builddir)/scumm_patched_scripts --patches tools/scumm_patches.json
+	@touch $@
+
 #pack room + script data into ROM data blob (produces both .bin and .inc)
-$(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) | $(builddirs)
-	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc)
+$(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) $(patchedscriptsstamp) | $(builddirs)
+	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc) --scripts-override-dir $(builddir)/scumm_patched_scripts
 
 # rom_data.inc is produced as a side-effect of rom_data.bin
 $(romdatainc): $(romdatabin)

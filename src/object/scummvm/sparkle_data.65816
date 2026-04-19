@@ -1,0 +1,16 @@
+; LucasArts logo sparkle: CHR tiles + 16-color OBJ sub-palette.
+; Superfree so WLA-DX can place the blobs in any bank with space.
+; Fsize labels carry byte counts that DMA length registers consume directly.
+
+.include "src/config/config.inc"
+
+.base BSL
+.section "sparkle_chr_blob" superfree
+scummvm.sparkle.chr:
+  .incbin "data/logo_sparkle.chr"
+.ends
+
+.section "sparkle_pal_blob" superfree
+scummvm.sparkle.pal:
+  .incbin "data/logo_sparkle.pal"
+.ends

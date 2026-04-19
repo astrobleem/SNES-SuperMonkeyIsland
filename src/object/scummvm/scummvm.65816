@@ -12,6 +12,7 @@
 ;
 
 .include "src/object/scummvm/scummvm.h"
+.include "src/object/scummvm/scummvm_sparkle.h"
 
 .bank 0 slot 0
 .base BSL
@@ -666,6 +667,9 @@ _play.noActorReload:
 
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
+
+  ; Append LucasArts logo sparkle sprites (room 10 only; internal gate)
+  jsl scummvm.sparkle.buildOam
 
   ; Render verb bar if dirty + user input enabled (must run before DMA registration)
   rep #$31
@@ -8658,7 +8662,17 @@ _drawObj.setXY:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.fetchWord             ; xpos
+  sta.w SCUMM.scratch2
   jsr _scummvm.fetchWord             ; ypos
+  sta.w SCUMM.scratch3
+  ;--- sparkle hook: room 10 + obj_id in [110..114] -> OAM sprite path
+  lda.w SCUMM.scratch                ; obj_id (stashed by op_drawObject)
+  cmp #SPARKLE_FIRST_OBJ_ID
+  bcc _drawObj.setXY_done
+  cmp #(SPARKLE_LAST_OBJ_ID + 1)
+  bcs _drawObj.setXY_done
+  jsl scummvm.sparkle.setPos         ; uses scratch/scratch2/scratch3; room-gates internally
+_drawObj.setXY_done:
   clc
   rts
 

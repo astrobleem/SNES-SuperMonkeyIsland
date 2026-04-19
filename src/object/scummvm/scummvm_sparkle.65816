@@ -1,0 +1,340 @@
+;===================================================================
+; LucasArts logo sparkle — OBJ-layer render path.
+;
+;   scummvm.sparkle.reset     — clear slot state + upload CHR/palette
+;                                (only uploads when currentRoom == 10)
+;   scummvm.sparkle.setPos    — update slot for obj_id in [110..114]
+;                                (caller: SCUMM.scratch=obj_id,
+;                                         SCUMM.scratch2=x, SCUMM.scratch3=y)
+;   scummvm.sparkle.buildOam  — emit OAM entries each frame (only when
+;                                currentRoom == 10)
+;
+; Slot state at $7F:4E00. Engine sets DBR=$7F for .w access. Mirrors the
+; pattern established by scummvm_cycle.65816. Deliberately does NOT
+; include scummvm.h — that header owns ramsections which must not be
+; emitted twice.
+;===================================================================
+
+.include "src/config/config.inc"
+.include "src/object/scummvm/scummvm_sparkle.h"
+
+.base BSL
+.bank 5 slot 0
+.section "scumm sparkle engine" superfree
+
+;-------------------------------------------------------------------
+; scummvm.sparkle.reset
+;
+; Always zeros slot state. If currentRoom == 10, DMA sparkle CHR to
+; VRAM sprite tile $F0 and write sparkle palette to OBJ pal 6.
+; Safe to call from room.load during force blank.
+;-------------------------------------------------------------------
+scummvm.sparkle.reset:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb                                    ; DBR = $7F
+
+  ldx #0
+  lda #0
+- sta.w SPARKLE_STATE_LO, x
+  inx
+  cpx #20
+  bne -
+
+
+  ;gate uploads on room being loaded. SCUMM.currentRoom still points to
+  ;the PREVIOUS room at this point in the flow (processRoomChange only
+  ;updates it after room.load returns). room.load stashes the target in
+  ;GLOBAL.room.currentId at its entry.
+  lda.l GLOBAL.room.currentId
+  and #$00FF
+  cmp #SPARKLE_ROOM
+  bne _spkreset.exit
+
+  ;--- Seed slot 0 only (static sparkle for now) ---
+  lda #1
+  sta.w SPARKLE_STATE_LO + 0               ; slot 0 visible
+  lda #(430 & $FF)
+  sta.w SPARKLE_STATE_LO + 1               ; x_lo
+  lda #(430 >> 8)
+  sta.w SPARKLE_STATE_LO + 2               ; x_hi
+  lda #50
+  sta.w SPARKLE_STATE_LO + 3               ; y
+
+  ;--- CHR DMA: ch7 to VRAM word $6F00 ---
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  lda.b #$01                             ; A->B, increment A, 2-register write
+  sta.l DMAP7
+  lda.b #$18                             ; VMDATAL
+  sta.l DMADEST7
+  lda.b #:scummvm.sparkle.chr
+  sta.l DMASRC7B
+
+  rep #$20
+  .ACCU 16
+  lda.w #SPARKLE_VRAM_DEST_WORD
+  sta.l VMADDL
+  lda.w #scummvm.sparkle.chr
+  sta.l DMASRC7L
+  lda.w #SPARKLE_CHR_BYTES
+  sta.l DMALEN7L
+
+  sep #$20
+  .ACCU 8
+  lda.b #$80
+  sta.l MDMAEN                           ; trigger ch7
+
+  ;--- palette write: CGADD + 32 CGDATA bytes ---
+  lda.b #SPARKLE_CGRAM_DEST_BYTE
+  sta.l CGADD
+
+  rep #$10
+  .INDEX 16
+  ldx #0
+- lda.l scummvm.sparkle.pal, x
+  sta.l CGDATA
+  inx
+  cpx #SPARKLE_PAL_BYTES
+  bne -
+
+_spkreset.exit:
+  plb
+  plp
+  rtl
+
+;-------------------------------------------------------------------
+; scummvm.sparkle.setPos
+;
+; Inputs (in SCUMM state, all word-sized):
+;   SCUMM.scratch   = obj_id
+;   SCUMM.scratch2  = x (room-space pixels)
+;   SCUMM.scratch3  = y
+;
+; Gates on currentRoom == 10. obj_id outside [110..114] → no-op.
+;-------------------------------------------------------------------
+scummvm.sparkle.setPos:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  lda.l SCUMM.currentRoom
+  and #$00FF
+  cmp #SPARKLE_ROOM
+  beq +
+  jmp _spkset.exit
++
+
+  lda.l SCUMM.scratch
+  and #$00FF
+  cmp #SPARKLE_FIRST_OBJ_ID
+  bcs +
+  jmp _spkset.exit
++ cmp #(SPARKLE_LAST_OBJ_ID + 1)
+  bcc +
+  jmp _spkset.exit
++
+
+  ;X = (obj_id - 110) * 4
+  sec
+  sbc #SPARKLE_FIRST_OBJ_ID
+  asl a
+  asl a
+  tax
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb
+
+  lda #1
+  sta.w SPARKLE_STATE_LO + sparkleSlot.visible, x
+
+  lda.l SCUMM.scratch2
+  sta.w SPARKLE_STATE_LO + sparkleSlot.x_lo, x
+  lda.l SCUMM.scratch2 + 1
+  sta.w SPARKLE_STATE_LO + sparkleSlot.x_hi, x
+
+  lda.l SCUMM.scratch3
+  sta.w SPARKLE_STATE_LO + sparkleSlot.y, x
+
+_spkset.exit:
+  plb
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; scummvm.sparkle.buildOam
+;
+; Per-frame hook from scummvm.play (after renderActors + cursor). For
+; each visible slot, emit 8 OAM entries (2x4 grid of 8x8 hw sprites
+; = 16x32 sparkle). Applies cameraX offset so sparkles track any
+; logo scroll.
+;-------------------------------------------------------------------
+scummvm.sparkle.buildOam:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  lda.l SCUMM.currentRoom
+  and #$00FF
+  cmp #SPARKLE_ROOM
+  beq +
+  jmp _spkoam.exit
++
+
+  sep #$20
+  .ACCU 8
+  lda #$7F
+  pha
+  plb                                    ; DBR = $7F for SPARKLE_STATE_LO
+
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  ldx #0                                 ; X = slot byte offset
+
+_spkoam.slotLoop:
+  ;visible check (8-bit)
+  sep #$20
+  .ACCU 8
+  lda.w SPARKLE_STATE_LO + sparkleSlot.visible, x
+  beq _spkoam.slotNext
+
+  ;read slot.x (16-bit — x_lo+x_hi are adjacent)
+  rep #$20
+  .ACCU 16
+  lda.w SPARKLE_STATE_LO + sparkleSlot.x_lo, x
+  sta.b tmp                              ; tmp = room X
+
+  ;screen_x = room_x - cameraX
+  sec
+  sbc.l GLOBAL.room.cameraX
+  sta.b tmp+2                            ; tmp+2 = screen X (signed)
+
+  ;skip if off-screen (screen_x < 0 or >= 240)
+  bpl +
+  jmp _spkoam.slotNext
++ cmp #240
+  bcc +
+  jmp _spkoam.slotNext
++
+
+  ;load slot.y into tmp+4 (byte in low, high byte zero)
+  sep #$20
+  .ACCU 8
+  lda.w SPARKLE_STATE_LO + sparkleSlot.y, x
+  sta.b tmp+4
+
+  ;Reserve fixed OAM slots for sparkles — overwrite whatever renderActors
+  ;placed there. Slot N (0..4) claims OAM entries N*8..N*8+7 = byte offset
+  ;N*32..N*32+31. Room 10 has no actors competing for these slots; cursor
+  ;is rendered at slots we don't touch (core.oam.play clears to y=$F8).
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  phx                                    ; save sparkle slot byte offset
+  txa                                    ; A = sparkle-slot byte offset (0..16)
+  asl a                                  ; * 2
+  asl a                                  ; * 4  → OAM byte offset base for slot 0..4
+  asl a                                  ; * 8 (sparkle slot 0 -> 0, slot 1 -> 32...)
+  tax                                    ; X = OAM byte offset (0, 32, 64, 96, 128)
+
+  ;emit 8 entries: col 0/8 x row 0/8/16/24
+  jsr _spkoam.emitEntry_col0_row0
+  jsr _spkoam.emitEntry_col8_row0
+  jsr _spkoam.emitEntry_col0_row8
+  jsr _spkoam.emitEntry_col8_row8
+  jsr _spkoam.emitEntry_col0_row16
+  jsr _spkoam.emitEntry_col8_row16
+  jsr _spkoam.emitEntry_col0_row24
+  jsr _spkoam.emitEntry_col8_row24
+
+  plx                                    ; restore sparkle slot byte offset
+
+_spkoam.slotNext:
+  rep #$20
+  .ACCU 16
+  txa
+  clc
+  adc #_sizeof_sparkleSlot
+  tax
+  cpx #20
+  beq _spkoam.done
+  jmp _spkoam.slotLoop
+
+_spkoam.done:
+_spkoam.exit:
+  plb
+  plp
+  rtl
+
+
+;-------------------------------------------------------------------
+; Entry emitters. Each writes 4 bytes (x, y, tile, attr) at oamBuffer,x
+; and advances X by 4. DBR = $7F on entry (for tmp access). tmp+2 holds
+; screen_x; tmp+4 holds screen_y (low byte). X is the 16-bit OAM offset.
+;-------------------------------------------------------------------
+.macro SPARKLE_EMIT
+  sep #$20
+  .ACCU 8
+  lda.b tmp+2
+  clc
+  adc #\1
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b tmp+4
+  clc
+  adc #\2
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b #SPARKLE_VRAM_TILE_ID
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  lda.b #SPARKLE_OAM_ATTR
+  sta.l GLOBAL.oamBuffer, x
+  inx
+  rep #$20
+  .ACCU 16
+.endm
+
+_spkoam.emitEntry_col0_row0:
+  SPARKLE_EMIT 0 0
+  rts
+_spkoam.emitEntry_col8_row0:
+  SPARKLE_EMIT 8 0
+  rts
+_spkoam.emitEntry_col0_row8:
+  SPARKLE_EMIT 0 8
+  rts
+_spkoam.emitEntry_col8_row8:
+  SPARKLE_EMIT 8 8
+  rts
+_spkoam.emitEntry_col0_row16:
+  SPARKLE_EMIT 0 16
+  rts
+_spkoam.emitEntry_col8_row16:
+  SPARKLE_EMIT 8 16
+  rts
+_spkoam.emitEntry_col0_row24:
+  SPARKLE_EMIT 0 24
+  rts
+_spkoam.emitEntry_col8_row24:
+  SPARKLE_EMIT 8 24
+  rts
+
+.ends

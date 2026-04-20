@@ -10796,6 +10796,14 @@ _lac.clearLoop:
   sta.w SCUMM.renderSlotHeadDirty,x
   sta.w SCUMM.slotScalePending,x
   sta.w SCUMM.renderSlotComposite,x
+  ; Zero the composite-grid metadata cache too — otherwise stale
+  ; slotGridRelY/TilesWide/Tall/RelX from a prior scaled-actor assignment
+  ; can leak through if the new slot occupant gets composite=1 before
+  ; SA-1 has written fresh metadata, producing a top-of-screen grid band.
+  sta.w SCUMM.slotGridTilesWide,x
+  sta.w SCUMM.slotGridTilesTall,x
+  sta.w SCUMM.slotGridRelX,x
+  sta.w SCUMM.slotGridRelY,x
   lda #$FF
   sta.w SCUMM.renderSlotLastPic,x
   sta.w SCUMM.renderSlotLastHead,x

@@ -142,6 +142,15 @@ scummvm.sparkle.buildOam:
   beq +
   jmp _spkoam.exit
 +
+  ; Only run during the LucasArts logo intro — the MI1 mountain title card
+  ; reuses room 10 but as a cutscene, and our actors (cloud sprites 7/8/9)
+  ; land in OAM slots 0-19 where the sparkle's per-frame hide-phase writes
+  ; would clobber their Y bytes to $F0, producing a cloud flicker/chunks-
+  ; vanishing effect. During a cutscene, skip the sparkle entirely.
+  lda.l SCUMM.cutsceneNest
+  beq +
+  jmp _spkoam.exit
++
 
   sep #$20
   .ACCU 8

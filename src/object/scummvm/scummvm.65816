@@ -5079,7 +5079,8 @@ op_delayVariable:
   sec
   rts
 
-; dummy ($A7)
+; dummy ($A7) — INTENTIONAL-NOOP. The v5 opcode table has a gap at $A7;
+; ScummVM's o5_dummy is empty. clc/rts is canonical.
 op_dummy:
   .ACCU 16
   .INDEX 16
@@ -7327,7 +7328,10 @@ _isr.playing:
   clc
   rts
 
-; soundKludge ($4C, $CC) -- iMUSE vararg, consume params (stub)
+; soundKludge ($4C, $CC) — INTENTIONAL-NOOP for MI1 talkie on SNES.
+; ScummVM forwards the $FF-terminated word-arg list to IMuseDigital::doCommand.
+; Our audio path uses MSU-1 + TAD which don't consume iMUSE commands, so
+; consuming the args without dispatch is the correct behavior.
 op_soundKludge:
   .ACCU 16
   .INDEX 16
@@ -9478,15 +9482,20 @@ op_getActorScale:
   rts
 
 ;-------------------------------------------------------------------
-; getAnimCounter -- result + p8[7]=actor → 0 (no backing data)
+; getAnimCounter -- result + p8[7]=actor → actorAnimFrame[actor]
+; MI1 doesn't invoke this opcode (0 uses in opcode_audit.json); real
+; return keeps behavior faithful to ScummVM v5 for any script that does.
 ;-------------------------------------------------------------------
 op_getAnimCounter:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; consume actor param
-  lda #0
+  jsr _scummvm.getVarOrDirectByte    ; A = actor number
+  and #$000F                         ; clamp to walk-slot range 0..15
+  tax
+  lda.w SCUMM.actorAnimFrame,x
+  and #$00FF
   jsr _scummvm.writeVariable
   clc
   rts
@@ -10093,7 +10102,10 @@ _drawBox.done:
   rts
 
 ;-------------------------------------------------------------------
-; oldRoomEffect ($5C, $DC) -- sub-opcode + optional p16, no-op
+; oldRoomEffect ($5C, $DC) — INTENTIONAL-NOOP. Deprecated v3/v4 screen-
+; transition opcode. ScummVM v5's handler only honors sub-op 3 (setScreen:
+; consumes one p16 param), which is exactly what we do; the other sub-ops
+; are dropped. Keeping this as-is matches canonical v5 talkie semantics.
 ;-------------------------------------------------------------------
 op_oldRoomEffect:
   .ACCU 16

@@ -420,6 +420,18 @@ _init.lastFrame:
   cpx #SCUMM_WALK_ACTORS
   bcc _init.lastFrame
 
+  ;--- Init actorTalkPhase + actorIdleLoop to 0 (mouth closed, no idle anim) ---
+  ldx #0
+  lda #0
+_init.animState:
+  .ACCU 8
+  .INDEX 16
+  sta.w SCUMM.actorTalkPhase,x
+  sta.w SCUMM.actorIdleLoop,x
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _init.animState
+
   ;--- Init renderSlotLastScale to $FF (unscaled) ---
   ldx #0
   lda #$FF
@@ -665,6 +677,9 @@ _play.noPendingVerb:
     jsr _scummvm.loadActorCostumes
 _play.noActorReload:
 
+  ; Advance non-walking actor animations (talk phase + idle loop)
+  jsr _scummvm.tickActorAnims
+
   ; Render visible actors to OAM buffer
   jsr _scummvm.renderActors
 
@@ -698,6 +713,16 @@ _play.verbClean:
 _play.clearDialog:
   .ACCU 16
   .INDEX 16
+  ; Reset talking actor's mouth to closed (avoid stale open-mouth after dialog ends)
+  sep #$20
+  lda.w SCUMM.dialogActor
+  cmp #SCUMM_WALK_ACTORS
+  bcs _play.cdSkipTalkReset
+  and #$00FF
+  tax
+  stz.w SCUMM.actorTalkPhase,x
+_play.cdSkipTalkReset:
+  rep #$20
   stz.w SCUMM.dialogActive
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
@@ -2601,6 +2626,98 @@ _scummvm.loadActorCostumes:
 
 _scummvm.renderActors:
   jsl scummvm.renderActors_impl
+  rts
+
+
+;===================================================================
+; _scummvm.tickActorAnims
+; Per-frame tick for non-walking actor animations.
+;  - Talking: toggles actorTalkPhase[dialogActor] on an 8-frame cadence
+;    (when actor is standing, i.e. actorAnimFrame=0 — avoids clobbering
+;    the walk timer).
+;  - Idle loop: advances actorAnimFrame for actors flagged active in
+;    actorIdleLoop (e.g. campfire). Pic count comes from the dispatch
+;    table in costume_data.inc.
+; Called from scummvm.play before renderActors.
+;===================================================================
+_scummvm.tickActorAnims:
+  .ACCU 16
+  .INDEX 16
+  rep #$30
+  sep #$20
+  .ACCU 8
+  .INDEX 16
+
+  ;--- Talk tick (single speaker per frame) ---
+  lda.w SCUMM.dialogActive
+  beq _tta.idleTick
+  lda.w SCUMM.dialogActor
+  cmp #SCUMM_WALK_ACTORS
+  bcs _tta.idleTick                   ; dialogActor >= 16 → no walk slot
+  and #$00FF
+  tax                                 ; X = dialogActor (walk slot)
+  lda.w SCUMM.actorAnimFrame,x
+  bne _tta.idleTick                   ; walking — don't touch timer
+  lda.w SCUMM.actorAnimTimer,x
+  dec a
+  bpl _tta.storeTalkTimer
+  ; Timer expired — toggle phase and reload
+  lda.w SCUMM.actorTalkPhase,x
+  eor #$01
+  sta.w SCUMM.actorTalkPhase,x
+  lda.w SCUMM.actorAnimSpeed,x
+  bne _tta.storeTalkTimer
+  lda #8                              ; default 8 frames per mouth phase
+_tta.storeTalkTimer:
+  sta.w SCUMM.actorAnimTimer,x
+
+_tta.idleTick:
+  ;--- Idle loop tick (all walk-slot actors with actorIdleLoop != 0) ---
+  ; Uses SCUMM.actorTalkAdj and SCUMM.actorHeadPicCur as 1-byte tick
+  ; scratch — both are render-scoped and recomputed per slot during
+  ; renderActors, so tick-time writes are safe.
+  ldx #0
+_tta.idleLoop:
+  .ACCU 8
+  .INDEX 16
+  lda.w SCUMM.actorIdleLoop,x
+  beq _tta.idleNext                   ; slot inactive
+  lda.w SCUMM.actorAnimTimer,x
+  dec a
+  bpl _tta.storeIdleTimer
+  ; Timer expired — look up pic_count + tick_rate from dispatch table
+  phx                                 ; save slot index
+  lda.w SCUMM.actorIdleLoop,x
+  dec a                               ; 1-based → 0-based entry index
+  asl a
+  asl a
+  asl a                               ; entry_idx * 8 (table stride)
+  tax                                 ; X = entry byte offset
+  lda.l CostumeIdleLoops + 3,x        ; pic_count
+  sta.w SCUMM.actorTalkAdj            ; tick scratch: pic_count
+  lda.l CostumeIdleLoops + 7,x        ; tick_rate
+  sta.w SCUMM.actorHeadPicCur         ; tick scratch: tick_rate
+  plx                                 ; restore slot index
+  ; Advance animFrame modulo pic_count
+  lda.w SCUMM.actorAnimFrame,x
+  inc a
+  cmp.w SCUMM.actorTalkAdj            ; pic_count
+  bcc +
+  lda #0                              ; wrap
++
+  sta.w SCUMM.actorAnimFrame,x
+  lda.w SCUMM.actorHeadPicCur         ; tick_rate
+  bne _tta.storeIdleTimer
+  lda #8                              ; default 8 frames per pic
+_tta.storeIdleTimer:
+  sta.w SCUMM.actorAnimTimer,x
+_tta.idleNext:
+  inx
+  cpx #SCUMM_WALK_ACTORS
+  bcc _tta.idleLoop
+
+  rep #$20
+  .ACCU 16
   rts
 
 
@@ -8276,7 +8393,18 @@ _ifNotState.doJump:
 ; Actor stubs -- consume params, no-op
 ;-------------------------------------------------------------------
 
-; animateActor ($11, $51, $91, $D1) -- p8[7]=actor, p8[6]=frame
+; animateActor ($11, $51, $91, $D1) -- p8[7]=actor, p8[6]=anim_id
+;
+; SCUMM v5 anim IDs (low 3 bits of the standard convention):
+;   0-3 = stand in direction (S/E/W/N — direction bits in upper bits)
+;   4-7 = walk in direction
+;   >=8 = named anim / special (talk start, idle loop, etc.)
+;
+; We store the raw anim_id into actor.initFrame for legacy uses, then
+; dispatch to the idle-loop table when anim_id >= 8. A match sets
+; actorIdleLoop[slot] so _scummvm.tickActorAnims cycles the actor through
+; the configured pic list every frame. anim_id < 8 clears any prior idle
+; loop (lets scripts revert to stand/walk cleanly).
 op_animateActor:
   .ACCU 16
   .INDEX 16
@@ -8286,11 +8414,84 @@ op_animateActor:
   stx.w SCUMM.scratch2
 
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectByte    ; animation frame
+  jsr _scummvm.getVarOrDirectByte    ; animation ID (byte)
   ldx.w SCUMM.scratch2
   sep #$20
+  .ACCU 8
   sta.w SCUMM.actors.initFrame,x
+  sta.w SCUMM.scratch                 ; scratch (low byte) = anim_id
+
+  ; Out-of-walk-slot range check done in 16-bit mode so we don't truncate
+  ; actors 16+ (whose struct offsets are >= 256). txa in 8-bit A would
+  ; copy only X's low byte and misidentify them as valid walk slots.
+  cpx #SCUMM_WALK_ACTORS * 16
+  bcs _oaa.doneSep
+  ; Safe: X < 256 now, low byte is the only byte.
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  sta.w SCUMM.scratch3                ; scratch3 (low) = actor_num
+
+  ; anim_id < 8: clear any prior idle loop; normal stand/walk anim resumes
+  lda.w SCUMM.scratch
+  cmp #8
+  bcs _oaa.checkIdle
+  ldx.w SCUMM.scratch3
+  and #$00FF                           ; redundant (8-bit A) but clear
+  stz.w SCUMM.actorIdleLoop,x
+  bra _oaa.doneSep
+
+_oaa.checkIdle:
+  ; anim_id >= 8: only start idle loop if actor isn't walking
+  ldx.w SCUMM.scratch2                ; X = struct offset
+  lda.w SCUMM.actors.moving,x
+  bne _oaa.doneSep                    ; walking → don't override
+  lda.w SCUMM.actors.costume,x
+  sta.w SCUMM.animDispatchCost              ; scratch3 (high) = costume
+
+  ; Scan CostumeIdleLoops dispatch table (X = entry offset, sentinel cost=$FF)
+  ; 65816 has no lda.l abs,Y addressing — must use X for long-indexed loads.
+  ldx #0
+_oaa.scanLoop:
+  .ACCU 8
+  .INDEX 16
+  lda.l CostumeIdleLoops,x            ; entry cost (or $FF sentinel)
+  cmp #$FF
+  beq _oaa.scanMiss
+  cmp.w SCUMM.animDispatchCost              ; match this actor's costume?
+  bne _oaa.scanNext
+  lda.l CostumeIdleLoops + 1,x        ; entry anim_id_lo
+  cmp.w SCUMM.scratch                 ; match anim_id?
+  bne _oaa.scanNext
+  ; MATCH — record (X / 8) + 1 in actorIdleLoop[actor_num]
+  txa
+  lsr a
+  lsr a
+  lsr a                               ; entry index (X / 8)
+  inc a                               ; 1-based (0 = inactive)
+  pha                                  ; save entry_idx+1
+  ldx.w SCUMM.scratch3                ; X = actor_num
+  pla
+  sta.w SCUMM.actorIdleLoop,x
+  stz.w SCUMM.actorAnimFrame,x
+  lda #1                              ; tick timer to 1 → first pic advance next frame
+  sta.w SCUMM.actorAnimTimer,x
+  bra _oaa.doneSep
+_oaa.scanNext:
+  txa
+  clc
+  adc #8
+  tax
+  bra _oaa.scanLoop
+_oaa.scanMiss:
+  ; No table entry — leave the actor in stand (idle loop stays inactive)
+  ldx.w SCUMM.scratch3
+  stz.w SCUMM.actorIdleLoop,x
+_oaa.doneSep:
   rep #$20
+  .ACCU 16
   clc
   rts
 
@@ -11193,8 +11394,45 @@ _ri.slotLoop:
   ; Get actor number for walk array indexing
   lda.w SCUMM.actorOamCount           ; actor number
   and #$00FF
-  tax
+  tax                                  ; X = actor number
   sep #$20
+  .ACCU 8
+
+  ; ** Idle-loop override **: if this actor is flagged (e.g. campfire), pull
+  ; its body pic from the hand-authored CostumeIdleLoops table indexed by
+  ; actorAnimFrame, force head = $FF, and skip the standard walk/head cycle
+  ; path (which would index empty tables for non-walking costumes).
+  lda.w SCUMM.actorIdleLoop,x
+  beq _ri.notIdle
+  ; --- Idle loop path --- A = idleLoop (1-based), X = actor_num
+  pha                                  ; stash idleLoop for entry-offset compute
+  lda.w SCUMM.actorAnimFrame,x
+  tay                                  ; Y (16-bit, hi=0) = animFrame = pic list offset
+  pla                                  ; A = idleLoop
+  dec a                                ; 1-based → 0-based entry index
+  asl a
+  asl a
+  asl a                                ; * 8 = dispatch entry byte offset
+  phx                                  ; save actor_num
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax                                  ; X = entry offset
+  lda.l CostumeIdleLoops + 4,x         ; ptr lo (word)
+  sta.b _costDirPtr
+  sep #$20
+  .ACCU 8
+  lda.l CostumeIdleLoops + 6,x         ; ptr bank
+  sta.b _costDirPtr + 2
+  lda [_costDirPtr],y                  ; pic byte from idle pic table
+  sta.w SCUMM.scratch                  ; body pic index
+  lda #$FF
+  sta.w SCUMM.actorHeadPicCur          ; no head limb for idle-loop actors
+  rep #$20
+  .ACCU 16
+  plx                                  ; restore X = actor_num
+  jmp _ri.checkFrameChanged            ; skip walk/head cycle
+_ri.notIdle:
   .ACCU 8
   lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-6)
   rep #$20
@@ -11221,6 +11459,30 @@ _ri.gotPic:
   and #$00FF
   sta.w SCUMM.scratch                 ; body pic index
 
+  ; --- Talk-mouth override: if this actor is the current dialog speaker AND
+  ;     is standing (animFrame=0), set actorTalkAdj = actorTalkPhase[actor].
+  ;     The adjust is added to the head pic after the lookup, converting
+  ;     closed-head pic (0/6/12) to open (1/7/13) on alternating phases.
+  ;     When walking or not speaking, actorTalkAdj stays 0 (no change). ---
+  sep #$20
+  stz.w SCUMM.actorTalkAdj
+  rep #$20
+  cpx #0                              ; standing? (X = animFrame)
+  bne _ri.headNoTalk
+  lda.w SCUMM.dialogActive
+  beq _ri.headNoTalk
+  lda.w SCUMM.actorOamCount           ; current actor number (word, hi=0)
+  and #$00FF
+  cmp.w SCUMM.dialogActor
+  bne _ri.headNoTalk
+  phx                                 ; save X = animFrame (0)
+  tax                                 ; X = actor number (from A)
+  sep #$20
+  lda.w SCUMM.actorTalkPhase,x
+  sta.w SCUMM.actorTalkAdj
+  rep #$20
+  plx                                 ; restore X = 0 for head lookup
+_ri.headNoTalk:
   ; --- Head pic lookup (X = animFrame, scratch2 = facing) ---
   lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
   beq _ri.headNorth
@@ -11240,12 +11502,14 @@ _ri.headGot:
   and #$00FF
   sep #$20
   .ACCU 8
+  clc
+  adc.w SCUMM.actorTalkAdj           ; +0 closed / +1 open mouth for speaker
   sta.w SCUMM.actorHeadPicCur        ; store head pic ($FF=none)
   rep #$20
   .ACCU 16
 
   plx                                 ; restore actor number
-
+_ri.checkFrameChanged:
   ; --- Check if frame changed -> stage CHR DMA for this slot ---
   sep #$20
   .ACCU 8
@@ -18648,4 +18912,9 @@ scummvm.loadDialogFont:
 ; Multi-actor costume ROM data (auto-generated by gen_costume_rom.py)
 ;===================================================================
 .include "src/data/costumes/costume_data.inc"
+
+;===================================================================
+; Hand-authored idle-loop animation tables (see file header for format)
+;===================================================================
+.include "src/data/costumes/costume_idle_loops.inc"
 

@@ -375,6 +375,57 @@ def _decode_rle(data: bytes, start: int, width: int, height: int,
     return pixels, src - start
 
 
+def export_anim_tables(costume: Costume) -> Tuple[bytes, bytes]:
+    """Serialize the costume's animation dispatch data into ROM-ready blobs.
+
+    Returns a pair (anim_cmds, anim_dispatch):
+      - anim_cmds: the raw per-limb command byte stream (as-is from the costume).
+        Index into this array is what the chore interpreter stores in `curpos`.
+      - anim_dispatch: a single blob containing:
+          * numAnim × uint16 LE "offset-into-this-blob" (0 = no anim for id)
+          * concatenated per-anim records (only for anims that have limb_cmds):
+              uint16 LE  limbMask  (bit 15 = limb 0, bit 14 = limb 1, …)
+              per set bit in limbMask:
+                uint16 LE  cmd_start (offset into anim_cmds;
+                                       0xFFFF = limb disabled for this anim)
+                uint8      extra = (cmd_len & 0x7F) | (post_start_flag << 7)
+                            (only present if cmd_start != 0xFFFF)
+
+    The runtime interpreter fetches offs = anim_dispatch[anim_id*2],
+    dereferences anim_dispatch[offs] for the record. offs==0 → no chore change
+    for this anim_id (matches ScummVM's costumeDecodeData early-return).
+    """
+    import io as _io
+    num_anim = costume.num_anim
+    offsets_size = num_anim * 2
+    # First pass: build records buffer (placed immediately after the offsets
+    # table, i.e. starting at offset = offsets_size).
+    records = _io.BytesIO()
+    offs_table = [0] * num_anim  # 0 = no anim
+    for anim_id, anim in enumerate(costume.animations):
+        if anim is None or not anim.limb_cmds:
+            continue
+        records_offset = offsets_size + records.tell()
+        offs_table[anim_id] = records_offset
+        records.write(struct.pack('<H', anim.limb_mask))
+        for limb in range(NUM_LIMBS):
+            if not (anim.limb_mask & (0x8000 >> limb)):
+                continue
+            lc = anim.limb_cmds.get(limb)
+            if lc is None:
+                # Limb disabled for this anim (mask bit set but value was 0xFFFF).
+                records.write(struct.pack('<H', 0xFFFF))
+                continue
+            cmd_start, cmd_end, looping = lc
+            extra = ((cmd_end - cmd_start) & 0x7F) | (0x80 if looping else 0x00)
+            records.write(struct.pack('<H', cmd_start))
+            records.write(struct.pack('<B', extra))
+
+    offs_bytes = b''.join(struct.pack('<H', offs) for offs in offs_table)
+    dispatch = offs_bytes + records.getvalue()
+    return costume.anim_cmds, dispatch
+
+
 def get_anim_frame_picture(costume: Costume, anim_id: int,
                            frame_idx: int = 0) -> Optional[CostumePicture]:
     """Get the picture for a specific animation + frame.

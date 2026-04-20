@@ -20808,6 +20808,11 @@ Cost058_HeadPic15_ChrEnd:
 Cost058_HeadPic15_Oam:
   .incbin "data/snes_converted/costumes/cost_058/head_pic15.oam"
 
+Cost058_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_058/anim_cmds.bin"
+Cost058_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_058/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -21315,6 +21320,11 @@ Cost059_HeadPic13_ChrEnd:
 Cost059_HeadPic13_Oam:
   .incbin "data/snes_converted/costumes/cost_059/head_pic13.oam"
 
+Cost059_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_059/anim_cmds.bin"
+Cost059_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_059/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -21415,6 +21425,11 @@ Cost060_HeadPic00_Chr:
 Cost060_HeadPic00_ChrEnd:
 Cost060_HeadPic00_Oam:
   .incbin "data/snes_converted/costumes/cost_060/head_pic00.oam"
+
+Cost060_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_060/anim_cmds.bin"
+Cost060_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_060/anim_dispatch.bin"
 
 .ends
 
@@ -43500,6 +43515,661 @@ CostumeHeadDirTable:
   .db 0, 0                          ; costume 126 - no head
   .dw 0
   .db 0, 0                          ; costume 127 - no head
+
+;===================================================================
+; CostumeAnimTable - per-costume anim dispatch (for chore interpreter)
+; 8 bytes per entry: animCmdsPtr(w) + animCmdsBank(b) +
+;                    animDispatchPtr(w) + animDispatchBank(b) +
+;                    numAnim(b) + pad(b)
+; Entry at offset = scumm_costume_id * 8
+;===================================================================
+CostumeAnimTable:
+  ; costume 0 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 1
+  .dw Cost058_AnimCmds
+  .db :Cost058_AnimCmds
+  .dw Cost058_AnimDispatch
+  .db :Cost058_AnimDispatch
+  .db 52
+  .db 0
+  ; costume 2 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 3 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 4 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 5 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 6 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 7 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 8 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 9 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 10 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 11 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 12 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 13 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 14 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 15 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 16 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 17 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 18 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 19 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 20 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 21 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 22 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 23 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 24 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 25 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 26 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 27 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 28 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 29 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 30 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 31 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 32 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 33
+  .dw Cost059_AnimCmds
+  .db :Cost059_AnimCmds
+  .dw Cost059_AnimDispatch
+  .db :Cost059_AnimDispatch
+  .db 23
+  .db 0
+  ; costume 34 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 35 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 36 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 37 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 38 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 39 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 40 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 41 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 42 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 43 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 44 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 45 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 46 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 47 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 48
+  .dw Cost060_AnimCmds
+  .db :Cost060_AnimCmds
+  .dw Cost060_AnimDispatch
+  .db :Cost060_AnimDispatch
+  .db 15
+  .db 0
+  ; costume 49 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 50 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 51 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 52 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 53 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 54 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 55 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 56 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 57 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 58 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 59 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 60 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 61 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 62 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 63 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 64 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 65 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 66 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 67 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 68 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 69 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 70 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 71 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 72 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 73 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 74 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 75 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 76 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 77 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 78 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 79 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 80 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 81 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 82 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 83 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 84 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 85 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 86 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 87 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 88 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 89 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 90 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 91 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 92 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 93 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 94 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 95 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 96 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 97 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 98 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 99 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 100 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 101 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 102 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 103 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 104 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 105 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 106 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 107 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 108 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 109 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 110 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 111 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 112 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 113 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 114 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 115 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 116 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 117 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 118 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 119 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 120 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 121 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 122 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 123 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 124 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 125 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 126 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
+  ; costume 127 - no anim data
+  .dw 0
+  .db 0
+  .dw 0
+  .db 0, 0, 0
 
 .ends
 

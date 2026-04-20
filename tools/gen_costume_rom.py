@@ -14,6 +14,7 @@ Usage:
     python tools/gen_costume_rom.py
 """
 
+import glob
 import json
 import os
 import sys
@@ -25,6 +26,11 @@ PROJECT_ROOT = TOOLS_DIR.parent
 CONVERTED_DIR = PROJECT_ROOT / "data" / "snes_converted" / "costumes"
 OUTPUT_DIR = PROJECT_ROOT / "src" / "data" / "costumes"
 OUTPUT_FILE = OUTPUT_DIR / "costume_data.inc"
+RAW_COSTUMES_DIR = PROJECT_ROOT / "data" / "scumm_extracted" / "costumes"
+
+# Deferred import — scumm_costume_decoder requires numpy at import time but we
+# only need it when loading anim data.
+sys.path.insert(0, str(TOOLS_DIR))
 
 # Max SCUMM costume resource ID (MI1 uses IDs 1-125)
 MAX_COSTUME = 128
@@ -130,6 +136,12 @@ def scan_costumes():
         if not pal_file.exists() or not pics:
             continue
 
+        # --- Anim command tables (for chore interpreter) ---
+        # Load the raw COST binary and export the per-costume (anim_cmds,
+        # dispatch) blobs. Written next to the converted pics so the .inc
+        # can .incbin them directly.
+        anim_info = _load_anim_tables(num, d)
+
         costumes[num] = {
             "dir": d,
             "palette": pal_file,
@@ -139,9 +151,58 @@ def scan_costumes():
             "head_pics": head_pics,
             "num_head_pics": len(head_pics),
             "max_head_idx": max((p["index"] for p in head_pics), default=0) if head_pics else 0,
+            **anim_info,
         }
 
     return costumes
+
+
+# During incremental bring-up of the chore interpreter we only emit anim
+# data for the small set of costumes we actively verify against. Once the
+# interpreter is proven we'll drop this gate and emit for all costumes.
+ANIM_DATA_WHITELIST = {58, 59, 60}   # ext idx 58=Guybrush, 59=old man, 60=flame
+
+
+def _load_anim_tables(extraction_idx: int, converted_dir: Path) -> dict:
+    """Parse the raw COST binary for extraction index N, export its anim
+    dispatch + command-stream blobs to disk, and return metadata dict.
+
+    Falls back to {"num_anim": 0, ...} if the raw bin isn't findable (e.g.
+    synthetic costumes) or the extraction index isn't on the whitelist —
+    the generator emits a zero entry in CostumeAnimTable in that case.
+    """
+    if extraction_idx not in ANIM_DATA_WHITELIST:
+        return {"num_anim": 0, "anim_cmds_path": None, "anim_dispatch_path": None}
+
+    # Raw bin: cost_NNN_roomNNN.bin. Glob since the room suffix varies.
+    matches = sorted(RAW_COSTUMES_DIR.glob(f"cost_{extraction_idx:03d}_room*.bin"))
+    if not matches:
+        return {"num_anim": 0, "anim_cmds_path": None, "anim_dispatch_path": None}
+
+    try:
+        from scumm_costume_decoder import parse_costume, export_anim_tables
+    except ImportError:
+        # numpy not installed or decoder not on path.
+        return {"num_anim": 0, "anim_cmds_path": None, "anim_dispatch_path": None}
+
+    raw = matches[0].read_bytes()
+    try:
+        c = parse_costume(raw)
+    except Exception:
+        return {"num_anim": 0, "anim_cmds_path": None, "anim_dispatch_path": None}
+
+    anim_cmds, dispatch = export_anim_tables(c)
+    cmds_path = converted_dir / "anim_cmds.bin"
+    disp_path = converted_dir / "anim_dispatch.bin"
+    cmds_path.write_bytes(anim_cmds)
+    disp_path.write_bytes(dispatch)
+    return {
+        "num_anim": c.num_anim,
+        "anim_cmds_path": cmds_path,
+        "anim_dispatch_path": disp_path,
+        "anim_cmds_size": len(anim_cmds),
+        "anim_dispatch_size": len(dispatch),
+    }
 
 
 def rel_path(p):
@@ -326,6 +387,17 @@ def generate_assembly(costumes, dcos_remap=None):
                 lines.append(f'  .incbin "{oam_rel}"')
                 lines.append("")
 
+        # --- Anim command tables (for chore interpreter) ---
+        # Only emit if the raw COST binary was parseable and yielded data.
+        if info.get("anim_cmds_path") and info.get("anim_dispatch_path"):
+            cmds_rel = rel_path(info["anim_cmds_path"])
+            disp_rel = rel_path(info["anim_dispatch_path"])
+            lines.append(f"{prefix}_AnimCmds:")
+            lines.append(f'  .incbin "{cmds_rel}"')
+            lines.append(f"{prefix}_AnimDispatch:")
+            lines.append(f'  .incbin "{disp_rel}"')
+            lines.append("")
+
         lines.append(".ends")
         lines.append("")
 
@@ -416,6 +488,42 @@ def generate_assembly(costumes, dcos_remap=None):
         else:
             lines.append(f"  .dw 0")
             lines.append(f"  .db 0, 0                          ; costume {i} - no head")
+
+    lines.append("")
+
+    # --- CostumeAnimTable: per-costume anim dispatch pointers ---
+    # Indexed by SCUMM costume ID (matches CostumeDirTable indexing).
+    # 8 bytes per entry: animCmdsPtr(2) + animCmdsBank(1) + animDispatchPtr(2) +
+    #                    animDispatchBank(1) + numAnim(1) + pad(1)
+    # If a costume has no anim data (0 anims), all fields are 0 — the chore
+    # engine treats that as "no chore, fall back to static rendering".
+    lines.append(";===================================================================")
+    lines.append("; CostumeAnimTable - per-costume anim dispatch (for chore interpreter)")
+    lines.append("; 8 bytes per entry: animCmdsPtr(w) + animCmdsBank(b) +")
+    lines.append(";                    animDispatchPtr(w) + animDispatchBank(b) +")
+    lines.append(";                    numAnim(b) + pad(b)")
+    lines.append("; Entry at offset = scumm_costume_id * 8")
+    lines.append(";===================================================================")
+    lines.append("CostumeAnimTable:")
+    for i in range(MAX_COSTUME):
+        actual = costume_remap.get(i, i) if i in costumes or i in costume_remap else None
+        if (actual is not None and actual in costumes and
+                costumes[actual].get("num_anim", 0) > 0):
+            prefix = f"Cost{actual:03d}"
+            n_anim = costumes[actual]["num_anim"]
+            lines.append(f"  ; costume {i}")
+            lines.append(f"  .dw {prefix}_AnimCmds")
+            lines.append(f"  .db :{prefix}_AnimCmds")
+            lines.append(f"  .dw {prefix}_AnimDispatch")
+            lines.append(f"  .db :{prefix}_AnimDispatch")
+            lines.append(f"  .db {n_anim}")
+            lines.append(f"  .db 0")
+        else:
+            lines.append(f"  ; costume {i} - no anim data")
+            lines.append(f"  .dw 0")
+            lines.append(f"  .db 0")
+            lines.append(f"  .dw 0")
+            lines.append(f"  .db 0, 0, 0")
 
     lines.append("")
     lines.append(".ends")

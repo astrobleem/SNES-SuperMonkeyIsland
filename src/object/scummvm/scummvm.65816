@@ -6173,6 +6173,14 @@ _op_setCameraAt.apply:
   rts
 
 ; lights ($70, $F0) -- p8[7]=value + byte + byte → store to VAR_CURRENT_LIGHTS (var 9)
+;
+; The opcode body itself is complete: it correctly writes the luminance value
+; to VAR_CURRENT_LIGHTS (var 9) matching ScummVM v5 semantics. What's missing
+; is the renderer consumer — ScummVM's Actor::drawActorCostume and room draw
+; path read var 9 to decide normal vs dim vs flashlight rendering. For MI1
+; the vast majority of calls pass `11` (normal). Honoring non-11 values in
+; our renderer is deferred; scenes that set low luminance (dark rooms, etc.)
+; will currently render at full brightness. See feedback_scumm_v5_noop_opcodes.
 op_lights:
   .ACCU 16
   .INDEX 16
@@ -8127,6 +8135,15 @@ _roomOps.palManipulate:
   .ACCU 16
   .INDEX 16
   ; sub-op 15: resID p8[7] + aux + start p8[7] + end p8[6] + aux + time p8[7]
+  ;
+  ; RATIFIED STUB. A byte-scan of MI1's entire script corpus (see stop
+  ; condition in the opcode-completeness plan) found exactly ONE unique
+  ; call site, inside room 82 (Scumm Bar interior). The intro cutscene
+  ; (rooms 10, 96, 38, 33) does not invoke it. Implementing the ScummVM
+  ; LERP-interpolation path requires extracting per-room PAL resources
+  ; and setting up a parallel subsystem to scummvm_cycle.65816 — deferred
+  ; until we need room 82 to animate correctly. For now, the opcode
+  ; consumes its parameters and returns cleanly.
   lda #$0080
   jsr _scummvm.skipP8fromScratch     ; resID
   jsr _scummvm.fetchByte             ; aux opcode 1

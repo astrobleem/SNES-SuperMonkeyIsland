@@ -306,9 +306,6 @@ SCUMM.actorScreenY   dw      ; computed screen Y for current actor
 SCUMM.actorOamCount  dw      ; OAM entry counter
 SCUMM.actorFlipMask  db      ; OAM flag OR mask ($30=normal, $70=H-flip for west facing)
 SCUMM.actorHeadPicCur db     ; current frame's head pic ($FF=none, computed per render)
-SCUMM.actorTalkAdj    db     ; per-render: 0 or 1 added to head pic when talking
-SCUMM.actorIdleLoopCur db    ; per-render: current actor's idle loop slot (0=none)
-SCUMM.animDispatchCost db    ; op_animateActor scratch: target costume id for scan
 SCUMM.actorCurScale  db      ; current actor's computed scale (255=full, 1=tiny)
 SCUMM.chrDmaPending  db      ; LEGACY: kept for single-slot compat (slot 0 only)
 SCUMM.chrDmaSrcLo   dw      ; CHR source ROM address (low 16)
@@ -378,8 +375,6 @@ SCUMM.actorTargetY   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination Y
 SCUMM.actorAnimFrame ds SCUMM_WALK_ACTORS      ; 16B — walk cycle index (0-11)
 SCUMM.actorAnimTimer ds SCUMM_WALK_ACTORS      ; 16B — frame delay countdown
 SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
-SCUMM.actorTalkPhase ds SCUMM_WALK_ACTORS      ; 16B — 0=closed mouth, 1=open (talking)
-SCUMM.actorIdleLoop  ds SCUMM_WALK_ACTORS      ; 16B — idle loop index+1 (0=inactive)
 .ends
 
 ; Walkbox BOXD entry struct (20 bytes per walkbox, matches SCUMM v5 format)

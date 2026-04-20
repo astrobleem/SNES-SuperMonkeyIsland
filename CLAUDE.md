@@ -49,9 +49,11 @@ The Mesen 2 MCP server (`.mcp.json` → `tools/mesen_mcp_server.py`) provides au
 
 **Emulator testing (manual):**
 ```bat
-:: ROM MUST load from distribution/ where .msu/.pcm files live
+:: ROM MUST load from distribution/ where SuperMonkeyIsland.msu sits alongside the .sfc
 cmd.exe /c "cd /d E:\gh\SNES-SuperMonkeyIsland\distribution && E:\gh\SNES-SuperMonkeyIsland\mesen\Mesen.exe --testrunner SuperMonkeyIsland.sfc script.lua > out.txt 2>&1"
 ```
+
+**distribution/SuperMonkeyIsland.msu is REQUIRED for boot** — do not delete it. Rooms + scripts moved to ROM (via `tools/rom_pack_data.py`, appended after link), but the MSU-1 boot handshake still expects the file to exist. `room.msu1Seek` is dead code; the file persists for the hardware/emulator MSU-1 presence check. When MSU-1 PCM audio work resumes, the pipeline regenerates this file plus `.pcm` tracks.
 
 ## Bank 0 Management
 

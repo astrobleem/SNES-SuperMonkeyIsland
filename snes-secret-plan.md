@@ -997,25 +997,33 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 
 **Goal:** Complete the game start to finish.
 
-**Status:** Beach scene renders and Guybrush walks. Cannot yet leave the beach or reach the Scumm Bar. All 105 opcodes implemented but several subsystems need real implementations before game progression is possible.
+**Status (2026-04-19):** LucasArts logo → credits → title card → lookout → Part One card intro flow runs end-to-end. Guybrush + old man + campfire render on lookout. 105 opcodes + beginOverride/freezeScripts/cursorCommand all wired. Remaining frontier: cutscene progression bugs (Part One stall, title-screen rendering flicker, campfire animation, dialog choice selection before player reaches the Scumm Bar).
 
 ---
 
-#### Beach → Scumm Bar Critical Path
+#### Current Frontier (2026-04-19)
 
-This is the near-term roadmap — the minimum work to walk from the beach into the Scumm Bar and talk to the pirates.
+Actual blockers to controllable gameplay right now, in priority order:
 
-| # | Blocker | Status | Why It's Blocking |
-|---|---------|--------|-------------------|
+1. **Part One title card never advances** — room 96 script stalls (wait opcode? timer gate? — needs Aramis trace)
+2. **Part One text not centered** — title text positioning bug in room 96 (or in extractAndRenderString centering)
+3. **Title-screen mountain cloud flicker** — room 38 backdrop rendering defect, not CYCL-driven (metadata confirms)
+4. **Campfire not animating + stray OAM upper-left** during old man intro (room 38)
+5. **Dialog choice selection** — choices render but no d-pad+A cursor-highlight-and-select. Blocks pirate conversations.
+
+Items 1–4 are the current working-plan. Item 5 remains for when gameplay reaches the Scumm Bar.
+
+#### Beach → Scumm Bar Critical Path (historical)
+
+| # | Blocker | Status | Notes |
+|---|---------|--------|-------|
 | 1 | ROM expansion (1MB → 4MB) | **DONE** (2026-03-29) | Costumes didn't fit in 1MB ROM |
-| 2 | Bulk costume conversion (123 costumes) | **DONE** (2026-03-29) | NPCs rendered as Guybrush without their costumes |
-| 3 | Room navigation (door/exit interactions) | NOT STARTED | Can't leave beach without loadRoomWithEgo working on exits |
-| 4 | Dialog choice selection (d-pad + A) | NOT STARTED | Can't talk to pirates — choices display but can't be selected |
-| 5 | beginOverride/endOverride | NOT STARTED | Opening cutscene plays but can't be skipped, may block progression |
-| 6 | freezeScripts | NOT STARTED | Background scripts interfere with cutscene timing (8 MI1 occurrences) |
-| 7 | cursorCommand sub-opcodes | NOT STARTED | User interaction enable/disable during cutscenes |
-
-Items 3-4 are the critical ones — without room navigation and dialog selection, the game cannot progress at all.
+| 2 | Bulk costume conversion (123 costumes) | **DONE** (2026-03-29) | All NPC costumes rendered |
+| 3 | Room navigation (door/exit interactions) | **DONE** | `findObject` + `doSentence` + `startObject` wired Phase 2; walk-to exits work in intro |
+| 4 | Dialog choice selection (d-pad + A) | NOT STARTED | Choices display but selection cursor not implemented |
+| 5 | beginOverride/endOverride | **DONE** (session 4, 2026-04-05) | Cutscene stack + VAR_OVERRIDE + fetchLoop read wired; stillbroken.txt items 13A/B/C |
+| 6 | freezeScripts | **DONE** | `op_freezeScripts` at scummvm.65816:5351 — walks slots, increments/decrements freezeCount |
+| 7 | cursorCommand sub-opcodes | **DONE** | `op_cursorCommand` at scummvm.65816:5651 — dispatches sub-ops 1–14 (cursor on/off, userput on/off, image, hotspot, charset color) |
 
 ---
 

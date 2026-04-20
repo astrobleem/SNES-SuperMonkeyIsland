@@ -8171,8 +8171,8 @@ op_loadRoomWithEgo:
   sta.w SCUMM.newRoom
   bra _loadRoomEgo.roomSet
 _loadRoomEgo.hasRoom:
-  pla                                ; discard saved object ID
-  sta.w SCUMM.newRoom               ; request room change
+  sta.w SCUMM.newRoom               ; A = room byte from getVarOrDirectByte; high byte already masked to 0
+  pla                                ; discard saved object ID (pla clobbers A, so store first)
 _loadRoomEgo.roomSet:
 _loadRoomEgo.noRoom:
   ; Place ego actor at (x, y) from bytecode (ScummVM: a->putActor(x, y, room))
@@ -11126,10 +11126,12 @@ _ri.palBitsLut:
 scummvm.renderActors_impl:
   rep #$31
 
-  ; --- Clear OAM Table 1 (hi bits) for first 80 sprites (20 bytes) ---
+  ; --- Clear all OAM Table 1 (hi bits) — 32 bytes = 128 sprites ---
+  ; Clearing only 20 bytes left sprites 80..127 with stale size=1 bits,
+  ; rendering actor tiles at 16x16 instead of 8x8.
   sep #$20
   lda #0
-  ldx #19
+  ldx #31
 - sta.w GLOBAL.oamTable1,x
   dex
   bpl -
@@ -16777,6 +16779,22 @@ scummvm.moveCamera:
   and #$00FF
   beq _mc.checkPan
 
+  ; Skip follow if actor isn't in the current room — otherwise per-frame
+  ; moveCamera drags the viewport back toward a stale X from a prior room
+  ; (e.g. title card room 96 where ego is still in room 38).
+  pha
+  asl a
+  asl a
+  asl a
+  asl a                              ; * 16 = actor struct offset
+  tax
+  sep #$20
+  lda.w SCUMM.actors,x              ; actor.room (byte at +0)
+  cmp.w SCUMM.currentRoom
+  rep #$20
+  pla
+  bne _mc.checkPan                  ; actor not here -> let dest stay at room-center
+
   ; Compute actor X: actors + actorNum*16 + 2
   asl a
   asl a
@@ -16971,6 +16989,28 @@ scummvm.snapCameraToRoom:
   lda.w SCUMM.cameraFollows
   and #$00FF
   beq _snap.done
+  ; If followed actor is NOT in current room, using their stale X
+  ; (from a previous room) clips the new room's viewport off-center.
+  ; Title cards like room 96 (Part One) show this: no actor is placed
+  ; in the room, but cameraFollows still points at ego (Guybrush) whose
+  ; X is whatever it was in the prior room. Fall back to width/2 center.
+  pha                               ; save actor id
+  asl a
+  asl a
+  asl a
+  asl a                             ; * 16 = actor struct offset
+  tax
+  sep #$20
+  lda.w SCUMM.actors,x              ; actor.room (byte at +0)
+  cmp.w SCUMM.currentRoom
+  rep #$20
+  pla                               ; restore actor id in A
+  beq _snap.followInRoom
+  ; Actor not in this room: use room center.
+  lda.w GLOBAL.room.hdr.width_px
+  lsr a                             ; A = width / 2
+  bra _snap.clamp
+_snap.followInRoom:
   asl a
   asl a
   asl a
@@ -16979,6 +17019,7 @@ scummvm.snapCameraToRoom:
   adc #2
   tax
   lda.w SCUMM.actors,x              ; actor X (e.g. 320)
+_snap.clamp:
   ; Clamp to [VAR_CAMERA_MIN_X, VAR_CAMERA_MAX_X]
   ldx #SCUMM_VAR_CAMERA_MIN_X*2
   cmp.w SCUMM.globalVars,x

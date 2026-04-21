@@ -16848,6 +16848,13 @@ _aao.walk:
   lda #1
   sta.w SCUMM.actors.moving,x
   rep #$20
+
+  ; Seed chore engine with walk anim (matches _walkActorTo.anim)
+  lda.w SCUMM.scratch3
+  and #$00FF
+  ldx #1                                   ; frame = 1 (walk)
+  jsl scummvm.chore.animateActor_impl
+
   rtl
 
 _aao.fail:

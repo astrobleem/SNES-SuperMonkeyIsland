@@ -833,9 +833,6 @@ _room.loadHeaderOk:
   ;load color-cycling descriptor (.cyc lives just before .pri)
   jsl room.loadCycleData
 
-  ;clear sparkle state + upload CHR/pal when entering room 10
-  jsl scummvm.sparkle.reset
-
   ;--- Read room object data from ROM ---
   ;romReadPos needs to be set past walkbox data for object reads
   ;Compute: tileDataRomOfs + chr_size + map_size + col_size + box_size
@@ -1295,6 +1292,7 @@ room.loadCycleData:
 
   ;clear any previous cycle state
   jsl scummvm.cycle.reset
+  jsl scummvm.chore.reset
 
   ;short-circuit when the room has no cycling payload
   lda.w GLOBAL.room.hdr.cyc_size

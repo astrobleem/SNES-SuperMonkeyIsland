@@ -413,6 +413,11 @@ Cost000_HeadPic11_ChrEnd:
 Cost000_HeadPic11_Oam:
   .incbin "data/snes_converted/costumes/cost_000/head_pic11.oam"
 
+Cost000_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_000/anim_cmds.bin"
+Cost000_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_000/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -1152,6 +1157,11 @@ Cost001_HeadPic15_ChrEnd:
 Cost001_HeadPic15_Oam:
   .incbin "data/snes_converted/costumes/cost_001/head_pic15.oam"
 
+Cost001_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_001/anim_cmds.bin"
+Cost001_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_001/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -1340,6 +1350,11 @@ Cost003_Pic14_ChrEnd:
 Cost003_Pic14_Oam:
   .incbin "data/snes_converted/costumes/cost_003/pic14.oam"
 
+Cost003_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_003/anim_cmds.bin"
+Cost003_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_003/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -1395,6 +1410,11 @@ Cost004_Pic02_Chr:
 Cost004_Pic02_ChrEnd:
 Cost004_Pic02_Oam:
   .incbin "data/snes_converted/costumes/cost_004/pic02.oam"
+
+Cost004_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_004/anim_cmds.bin"
+Cost004_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_004/anim_dispatch.bin"
 
 .ends
 
@@ -1500,6 +1520,11 @@ Cost005_Pic07_Chr:
 Cost005_Pic07_ChrEnd:
 Cost005_Pic07_Oam:
   .incbin "data/snes_converted/costumes/cost_005/pic07.oam"
+
+Cost005_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_005/anim_cmds.bin"
+Cost005_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_005/anim_dispatch.bin"
 
 .ends
 
@@ -1832,6 +1857,11 @@ Cost006_Pic27_ChrEnd:
 Cost006_Pic27_Oam:
   .incbin "data/snes_converted/costumes/cost_006/pic27.oam"
 
+Cost006_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_006/anim_cmds.bin"
+Cost006_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_006/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -1876,6 +1906,11 @@ Cost007_Pic01_Chr:
 Cost007_Pic01_ChrEnd:
 Cost007_Pic01_Oam:
   .incbin "data/snes_converted/costumes/cost_007/pic01.oam"
+
+Cost007_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_007/anim_cmds.bin"
+Cost007_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_007/anim_dispatch.bin"
 
 .ends
 
@@ -2043,6 +2078,11 @@ Cost008_Pic12_ChrEnd:
 Cost008_Pic12_Oam:
   .incbin "data/snes_converted/costumes/cost_008/pic12.oam"
 
+Cost008_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_008/anim_cmds.bin"
+Cost008_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_008/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -2142,6 +2182,11 @@ Cost009_Pic06_Chr:
 Cost009_Pic06_ChrEnd:
 Cost009_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_009/pic06.oam"
+
+Cost009_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_009/anim_cmds.bin"
+Cost009_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_009/anim_dispatch.bin"
 
 .ends
 
@@ -2772,6 +2817,11 @@ Cost010_HeadPic19_ChrEnd:
 Cost010_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_010/head_pic19.oam"
 
+Cost010_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_010/anim_cmds.bin"
+Cost010_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_010/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -2871,6 +2921,11 @@ Cost012_Pic06_Chr:
 Cost012_Pic06_ChrEnd:
 Cost012_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_012/pic06.oam"
+
+Cost012_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_012/anim_cmds.bin"
+Cost012_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_012/anim_dispatch.bin"
 
 .ends
 
@@ -3291,6 +3346,11 @@ Cost013_Pic35_ChrEnd:
 Cost013_Pic35_Oam:
   .incbin "data/snes_converted/costumes/cost_013/pic35.oam"
 
+Cost013_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_013/anim_cmds.bin"
+Cost013_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_013/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -3440,6 +3500,11 @@ Cost014_Pic11_ChrEnd:
 Cost014_Pic11_Oam:
   .incbin "data/snes_converted/costumes/cost_014/pic11.oam"
 
+Cost014_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_014/anim_cmds.bin"
+Cost014_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_014/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -3495,6 +3560,11 @@ Cost015_Pic02_Chr:
 Cost015_Pic02_ChrEnd:
 Cost015_Pic02_Oam:
   .incbin "data/snes_converted/costumes/cost_015/pic02.oam"
+
+Cost015_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_015/anim_cmds.bin"
+Cost015_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_015/anim_dispatch.bin"
 
 .ends
 
@@ -3595,6 +3665,11 @@ Cost016_Pic06_Chr:
 Cost016_Pic06_ChrEnd:
 Cost016_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_016/pic06.oam"
+
+Cost016_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_016/anim_cmds.bin"
+Cost016_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_016/anim_dispatch.bin"
 
 .ends
 
@@ -3773,6 +3848,11 @@ Cost017_Pic13_ChrEnd:
 Cost017_Pic13_Oam:
   .incbin "data/snes_converted/costumes/cost_017/pic13.oam"
 
+Cost017_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_017/anim_cmds.bin"
+Cost017_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_017/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -3850,6 +3930,11 @@ Cost018_Pic04_Chr:
 Cost018_Pic04_ChrEnd:
 Cost018_Pic04_Oam:
   .incbin "data/snes_converted/costumes/cost_018/pic04.oam"
+
+Cost018_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_018/anim_cmds.bin"
+Cost018_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_018/anim_dispatch.bin"
 
 .ends
 
@@ -3933,6 +4018,11 @@ Cost019_Pic05_Chr:
 Cost019_Pic05_ChrEnd:
 Cost019_Pic05_Oam:
   .incbin "data/snes_converted/costumes/cost_019/pic05.oam"
+
+Cost019_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_019/anim_cmds.bin"
+Cost019_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_019/anim_dispatch.bin"
 
 .ends
 
@@ -4607,6 +4697,11 @@ Cost020_HeadPic07_ChrEnd:
 Cost020_HeadPic07_Oam:
   .incbin "data/snes_converted/costumes/cost_020/head_pic07.oam"
 
+Cost020_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_020/anim_cmds.bin"
+Cost020_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_020/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -4795,6 +4890,11 @@ Cost021_HeadPic03_Chr:
 Cost021_HeadPic03_ChrEnd:
 Cost021_HeadPic03_Oam:
   .incbin "data/snes_converted/costumes/cost_021/head_pic03.oam"
+
+Cost021_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_021/anim_cmds.bin"
+Cost021_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_021/anim_dispatch.bin"
 
 .ends
 
@@ -5006,6 +5106,11 @@ Cost022_Pic16_ChrEnd:
 Cost022_Pic16_Oam:
   .incbin "data/snes_converted/costumes/cost_022/pic16.oam"
 
+Cost022_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_022/anim_cmds.bin"
+Cost022_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_022/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -5171,6 +5276,11 @@ Cost023_Pic12_Chr:
 Cost023_Pic12_ChrEnd:
 Cost023_Pic12_Oam:
   .incbin "data/snes_converted/costumes/cost_023/pic12.oam"
+
+Cost023_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_023/anim_cmds.bin"
+Cost023_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_023/anim_dispatch.bin"
 
 .ends
 
@@ -5392,6 +5502,11 @@ Cost024_Pic17_Chr:
 Cost024_Pic17_ChrEnd:
 Cost024_Pic17_Oam:
   .incbin "data/snes_converted/costumes/cost_024/pic17.oam"
+
+Cost024_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_024/anim_cmds.bin"
+Cost024_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_024/anim_dispatch.bin"
 
 .ends
 
@@ -5713,6 +5828,11 @@ Cost025_Pic26_ChrEnd:
 Cost025_Pic26_Oam:
   .incbin "data/snes_converted/costumes/cost_025/pic26.oam"
 
+Cost025_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_025/anim_cmds.bin"
+Cost025_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_025/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -6005,6 +6125,11 @@ Cost026_Pic24_ChrEnd:
 Cost026_Pic24_Oam:
   .incbin "data/snes_converted/costumes/cost_026/pic24.oam"
 
+Cost026_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_026/anim_cmds.bin"
+Cost026_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_026/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -6104,6 +6229,11 @@ Cost027_Pic06_Chr:
 Cost027_Pic06_ChrEnd:
 Cost027_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_027/pic06.oam"
+
+Cost027_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_027/anim_cmds.bin"
+Cost027_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_027/anim_dispatch.bin"
 
 .ends
 
@@ -6886,6 +7016,11 @@ Cost028_HeadPic19_ChrEnd:
 Cost028_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_028/head_pic19.oam"
 
+Cost028_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_028/anim_cmds.bin"
+Cost028_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_028/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -7151,6 +7286,11 @@ Cost029_Pic21_ChrEnd:
 Cost029_Pic21_Oam:
   .incbin "data/snes_converted/costumes/cost_029/pic21.oam"
 
+Cost029_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_029/anim_cmds.bin"
+Cost029_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_029/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -7366,6 +7506,11 @@ Cost030_HeadPic04_Chr:
 Cost030_HeadPic04_ChrEnd:
 Cost030_HeadPic04_Oam:
   .incbin "data/snes_converted/costumes/cost_030/head_pic04.oam"
+
+Cost030_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_030/anim_cmds.bin"
+Cost030_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_030/anim_dispatch.bin"
 
 .ends
 
@@ -8127,6 +8272,11 @@ Cost031_HeadPic19_ChrEnd:
 Cost031_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_031/head_pic19.oam"
 
+Cost031_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_031/anim_cmds.bin"
+Cost031_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_031/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -8693,6 +8843,11 @@ Cost033_Pic49_Chr:
 Cost033_Pic49_ChrEnd:
 Cost033_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_033/pic49.oam"
+
+Cost033_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_033/anim_cmds.bin"
+Cost033_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_033/anim_dispatch.bin"
 
 .ends
 
@@ -9465,6 +9620,11 @@ Cost034_HeadPic18_Chr:
 Cost034_HeadPic18_ChrEnd:
 Cost034_HeadPic18_Oam:
   .incbin "data/snes_converted/costumes/cost_034/head_pic18.oam"
+
+Cost034_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_034/anim_cmds.bin"
+Cost034_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_034/anim_dispatch.bin"
 
 .ends
 
@@ -10259,6 +10419,11 @@ Cost035_HeadPic19_ChrEnd:
 Cost035_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_035/head_pic19.oam"
 
+Cost035_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_035/anim_cmds.bin"
+Cost035_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_035/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -10787,6 +10952,11 @@ Cost036_HeadPic17_ChrEnd:
 Cost036_HeadPic17_Oam:
   .incbin "data/snes_converted/costumes/cost_036/head_pic17.oam"
 
+Cost036_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_036/anim_cmds.bin"
+Cost036_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_036/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -11259,6 +11429,11 @@ Cost037_HeadPic16_ChrEnd:
 Cost037_HeadPic16_Oam:
   .incbin "data/snes_converted/costumes/cost_037/head_pic16.oam"
 
+Cost037_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_037/anim_cmds.bin"
+Cost037_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_037/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -11649,6 +11824,11 @@ Cost038_Pic33_Chr:
 Cost038_Pic33_ChrEnd:
 Cost038_Pic33_Oam:
   .incbin "data/snes_converted/costumes/cost_038/pic33.oam"
+
+Cost038_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_038/anim_cmds.bin"
+Cost038_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_038/anim_dispatch.bin"
 
 .ends
 
@@ -12193,6 +12373,11 @@ Cost039_Pic49_ChrEnd:
 Cost039_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_039/pic49.oam"
 
+Cost039_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_039/anim_cmds.bin"
+Cost039_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_039/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -12627,6 +12812,11 @@ Cost040_Pic38_ChrEnd:
 Cost040_Pic38_Oam:
   .incbin "data/snes_converted/costumes/cost_040/pic38.oam"
 
+Cost040_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_040/anim_cmds.bin"
+Cost040_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_040/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -12903,6 +13093,11 @@ Cost041_HeadPic09_Chr:
 Cost041_HeadPic09_ChrEnd:
 Cost041_HeadPic09_Oam:
   .incbin "data/snes_converted/costumes/cost_041/head_pic09.oam"
+
+Cost041_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_041/anim_cmds.bin"
+Cost041_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_041/anim_dispatch.bin"
 
 .ends
 
@@ -13532,6 +13727,11 @@ Cost042_HeadPic19_Chr:
 Cost042_HeadPic19_ChrEnd:
 Cost042_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_042/head_pic19.oam"
+
+Cost042_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_042/anim_cmds.bin"
+Cost042_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_042/anim_dispatch.bin"
 
 .ends
 
@@ -14297,6 +14497,11 @@ Cost043_HeadPic18_ChrEnd:
 Cost043_HeadPic18_Oam:
   .incbin "data/snes_converted/costumes/cost_043/head_pic18.oam"
 
+Cost043_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_043/anim_cmds.bin"
+Cost043_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_043/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -15056,6 +15261,11 @@ Cost044_HeadPic18_ChrEnd:
 Cost044_HeadPic18_Oam:
   .incbin "data/snes_converted/costumes/cost_044/head_pic18.oam"
 
+Cost044_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_044/anim_cmds.bin"
+Cost044_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_044/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -15243,6 +15453,11 @@ Cost045_Pic14_Chr:
 Cost045_Pic14_ChrEnd:
 Cost045_Pic14_Oam:
   .incbin "data/snes_converted/costumes/cost_045/pic14.oam"
+
+Cost045_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_045/anim_cmds.bin"
+Cost045_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_045/anim_dispatch.bin"
 
 .ends
 
@@ -15798,6 +16013,11 @@ Cost046_Pic49_Chr:
 Cost046_Pic49_ChrEnd:
 Cost046_Pic49_Oam:
   .incbin "data/snes_converted/costumes/cost_046/pic49.oam"
+
+Cost046_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_046/anim_cmds.bin"
+Cost046_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_046/anim_dispatch.bin"
 
 .ends
 
@@ -16977,6 +17197,11 @@ Cost048_HeadPic19_ChrEnd:
 Cost048_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_048/head_pic19.oam"
 
+Cost048_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_048/anim_cmds.bin"
+Cost048_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_048/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -17626,6 +17851,11 @@ Cost049_HeadPic19_ChrEnd:
 Cost049_HeadPic19_Oam:
   .incbin "data/snes_converted/costumes/cost_049/head_pic19.oam"
 
+Cost049_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_049/anim_cmds.bin"
+Cost049_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_049/anim_dispatch.bin"
+
 .ends
 
 ;===================================================================
@@ -17858,6 +18088,11 @@ Cost050_HeadPic03_Chr:
 Cost050_HeadPic03_ChrEnd:
 Cost050_HeadPic03_Oam:
   .incbin "data/snes_converted/costumes/cost_050/head_pic03.oam"
+
+Cost050_AnimCmds:
+  .incbin "data/snes_converted/costumes/cost_050/anim_cmds.bin"
+Cost050_AnimDispatch:
+  .incbin "data/snes_converted/costumes/cost_050/anim_dispatch.bin"
 
 .ends
 
@@ -43524,11 +43759,13 @@ CostumeHeadDirTable:
 ; Entry at offset = scumm_costume_id * 8
 ;===================================================================
 CostumeAnimTable:
-  ; costume 0 - no anim data
-  .dw 0
+  ; costume 0
+  .dw Cost000_AnimCmds
+  .db :Cost000_AnimCmds
+  .dw Cost000_AnimDispatch
+  .db :Cost000_AnimDispatch
+  .db 31
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 1
   .dw Cost058_AnimCmds
   .db :Cost058_AnimCmds
@@ -43546,36 +43783,48 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 4 - no anim data
-  .dw 0
+  ; costume 4
+  .dw Cost000_AnimCmds
+  .db :Cost000_AnimCmds
+  .dw Cost000_AnimDispatch
+  .db :Cost000_AnimDispatch
+  .db 31
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 5 - no anim data
-  .dw 0
+  ; costume 5
+  .dw Cost001_AnimCmds
+  .db :Cost001_AnimCmds
+  .dw Cost001_AnimDispatch
+  .db :Cost001_AnimDispatch
+  .db 115
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 6 - no anim data
-  .dw 0
+  ; costume 6
+  .dw Cost028_AnimCmds
+  .db :Cost028_AnimCmds
+  .dw Cost028_AnimDispatch
+  .db :Cost028_AnimDispatch
+  .db 43
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 7 - no anim data
-  .dw 0
+  ; costume 7
+  .dw Cost012_AnimCmds
+  .db :Cost012_AnimCmds
+  .dw Cost012_AnimDispatch
+  .db :Cost012_AnimDispatch
+  .db 10
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 8 - no anim data
-  .dw 0
+  ; costume 8
+  .dw Cost013_AnimCmds
+  .db :Cost013_AnimCmds
+  .dw Cost013_AnimDispatch
+  .db :Cost013_AnimDispatch
+  .db 18
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 9 - no anim data
-  .dw 0
+  ; costume 9
+  .dw Cost033_AnimCmds
+  .db :Cost033_AnimCmds
+  .dw Cost033_AnimDispatch
+  .db :Cost033_AnimDispatch
+  .db 95
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 10 - no anim data
   .dw 0
   .db 0
@@ -43586,36 +43835,46 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 12 - no anim data
-  .dw 0
+  ; costume 12
+  .dw Cost007_AnimCmds
+  .db :Cost007_AnimCmds
+  .dw Cost007_AnimDispatch
+  .db :Cost007_AnimDispatch
+  .db 10
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 13 - no anim data
-  .dw 0
+  ; costume 13
+  .dw Cost044_AnimCmds
+  .db :Cost044_AnimCmds
+  .dw Cost044_AnimDispatch
+  .db :Cost044_AnimDispatch
+  .db 55
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 14 - no anim data
-  .dw 0
+  ; costume 14
+  .dw Cost048_AnimCmds
+  .db :Cost048_AnimCmds
+  .dw Cost048_AnimDispatch
+  .db :Cost048_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 15 - no anim data
-  .dw 0
+  ; costume 15
+  .dw Cost040_AnimCmds
+  .db :Cost040_AnimCmds
+  .dw Cost040_AnimDispatch
+  .db :Cost040_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 16 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 17 - no anim data
-  .dw 0
+  ; costume 17
+  .dw Cost017_AnimCmds
+  .db :Cost017_AnimCmds
+  .dw Cost017_AnimDispatch
+  .db :Cost017_AnimDispatch
+  .db 37
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 18 - no anim data
   .dw 0
   .db 0
@@ -43641,46 +43900,58 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 23 - no anim data
-  .dw 0
+  ; costume 23
+  .dw Cost046_AnimCmds
+  .db :Cost046_AnimCmds
+  .dw Cost046_AnimDispatch
+  .db :Cost046_AnimDispatch
+  .db 25
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 24 - no anim data
-  .dw 0
+  ; costume 24
+  .dw Cost037_AnimCmds
+  .db :Cost037_AnimCmds
+  .dw Cost037_AnimDispatch
+  .db :Cost037_AnimDispatch
+  .db 50
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 25 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 26 - no anim data
-  .dw 0
+  ; costume 26
+  .dw Cost038_AnimCmds
+  .db :Cost038_AnimCmds
+  .dw Cost038_AnimDispatch
+  .db :Cost038_AnimDispatch
+  .db 23
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 27 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 28 - no anim data
-  .dw 0
+  ; costume 28
+  .dw Cost043_AnimCmds
+  .db :Cost043_AnimCmds
+  .dw Cost043_AnimDispatch
+  .db :Cost043_AnimDispatch
+  .db 27
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 29 - no anim data
-  .dw 0
+  ; costume 29
+  .dw Cost015_AnimCmds
+  .db :Cost015_AnimCmds
+  .dw Cost015_AnimDispatch
+  .db :Cost015_AnimDispatch
+  .db 10
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 30 - no anim data
-  .dw 0
+  ; costume 30
+  .dw Cost041_AnimCmds
+  .db :Cost041_AnimCmds
+  .dw Cost041_AnimDispatch
+  .db :Cost041_AnimDispatch
+  .db 31
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 31 - no anim data
   .dw 0
   .db 0
@@ -43698,11 +43969,13 @@ CostumeAnimTable:
   .db :Cost059_AnimDispatch
   .db 23
   .db 0
-  ; costume 34 - no anim data
-  .dw 0
+  ; costume 34
+  .dw Cost034_AnimCmds
+  .db :Cost034_AnimCmds
+  .dw Cost034_AnimDispatch
+  .db :Cost034_AnimDispatch
+  .db 27
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 35 - no anim data
   .dw 0
   .db 0
@@ -43713,11 +43986,13 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 37 - no anim data
-  .dw 0
+  ; costume 37
+  .dw Cost039_AnimCmds
+  .db :Cost039_AnimCmds
+  .dw Cost039_AnimDispatch
+  .db :Cost039_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 38 - no anim data
   .dw 0
   .db 0
@@ -43733,16 +44008,20 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 41 - no anim data
-  .dw 0
+  ; costume 41
+  .dw Cost049_AnimCmds
+  .db :Cost049_AnimCmds
+  .dw Cost049_AnimDispatch
+  .db :Cost049_AnimDispatch
+  .db 82
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 42 - no anim data
-  .dw 0
+  ; costume 42
+  .dw Cost050_AnimCmds
+  .db :Cost050_AnimCmds
+  .dw Cost050_AnimDispatch
+  .db :Cost050_AnimDispatch
+  .db 27
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 43 - no anim data
   .dw 0
   .db 0
@@ -43763,11 +44042,13 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 47 - no anim data
-  .dw 0
+  ; costume 47
+  .dw Cost045_AnimCmds
+  .db :Cost045_AnimCmds
+  .dw Cost045_AnimDispatch
+  .db :Cost045_AnimDispatch
+  .db 31
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 48
   .dw Cost060_AnimCmds
   .db :Cost060_AnimCmds
@@ -43820,16 +44101,20 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 58 - no anim data
-  .dw 0
+  ; costume 58
+  .dw Cost016_AnimCmds
+  .db :Cost016_AnimCmds
+  .dw Cost016_AnimDispatch
+  .db :Cost016_AnimDispatch
+  .db 30
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 59 - no anim data
-  .dw 0
+  ; costume 59
+  .dw Cost004_AnimCmds
+  .db :Cost004_AnimCmds
+  .dw Cost004_AnimDispatch
+  .db :Cost004_AnimDispatch
+  .db 27
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 60 - no anim data
   .dw 0
   .db 0
@@ -43845,76 +44130,100 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 63 - no anim data
-  .dw 0
+  ; costume 63
+  .dw Cost014_AnimCmds
+  .db :Cost014_AnimCmds
+  .dw Cost014_AnimDispatch
+  .db :Cost014_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 64 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 65 - no anim data
-  .dw 0
+  ; costume 65
+  .dw Cost018_AnimCmds
+  .db :Cost018_AnimCmds
+  .dw Cost018_AnimDispatch
+  .db :Cost018_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 66 - no anim data
-  .dw 0
+  ; costume 66
+  .dw Cost019_AnimCmds
+  .db :Cost019_AnimCmds
+  .dw Cost019_AnimDispatch
+  .db :Cost019_AnimDispatch
+  .db 24
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 67 - no anim data
-  .dw 0
+  ; costume 67
+  .dw Cost003_AnimCmds
+  .db :Cost003_AnimCmds
+  .dw Cost003_AnimDispatch
+  .db :Cost003_AnimDispatch
+  .db 47
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 68 - no anim data
-  .dw 0
+  ; costume 68
+  .dw Cost021_AnimCmds
+  .db :Cost021_AnimCmds
+  .dw Cost021_AnimDispatch
+  .db :Cost021_AnimDispatch
+  .db 30
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 69 - no anim data
-  .dw 0
+  ; costume 69
+  .dw Cost024_AnimCmds
+  .db :Cost024_AnimCmds
+  .dw Cost024_AnimDispatch
+  .db :Cost024_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 70 - no anim data
-  .dw 0
+  ; costume 70
+  .dw Cost023_AnimCmds
+  .db :Cost023_AnimCmds
+  .dw Cost023_AnimDispatch
+  .db :Cost023_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 71 - no anim data
-  .dw 0
+  ; costume 71
+  .dw Cost022_AnimCmds
+  .db :Cost022_AnimCmds
+  .dw Cost022_AnimDispatch
+  .db :Cost022_AnimDispatch
+  .db 46
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 72 - no anim data
-  .dw 0
+  ; costume 72
+  .dw Cost030_AnimCmds
+  .db :Cost030_AnimCmds
+  .dw Cost030_AnimDispatch
+  .db :Cost030_AnimDispatch
+  .db 30
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 73 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 74 - no anim data
-  .dw 0
+  ; costume 74
+  .dw Cost029_AnimCmds
+  .db :Cost029_AnimCmds
+  .dw Cost029_AnimDispatch
+  .db :Cost029_AnimDispatch
+  .db 49
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 75 - no anim data
-  .dw 0
+  ; costume 75
+  .dw Cost031_AnimCmds
+  .db :Cost031_AnimCmds
+  .dw Cost031_AnimDispatch
+  .db :Cost031_AnimDispatch
+  .db 38
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 76 - no anim data
-  .dw 0
+  ; costume 76
+  .dw Cost042_AnimCmds
+  .db :Cost042_AnimCmds
+  .dw Cost042_AnimDispatch
+  .db :Cost042_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 77 - no anim data
   .dw 0
   .db 0
@@ -43925,36 +44234,46 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 79 - no anim data
-  .dw 0
+  ; costume 79
+  .dw Cost020_AnimCmds
+  .db :Cost020_AnimCmds
+  .dw Cost020_AnimDispatch
+  .db :Cost020_AnimDispatch
+  .db 47
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 80 - no anim data
-  .dw 0
+  ; costume 80
+  .dw Cost025_AnimCmds
+  .db :Cost025_AnimCmds
+  .dw Cost025_AnimDispatch
+  .db :Cost025_AnimDispatch
+  .db 30
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 81 - no anim data
-  .dw 0
+  ; costume 81
+  .dw Cost026_AnimCmds
+  .db :Cost026_AnimCmds
+  .dw Cost026_AnimDispatch
+  .db :Cost026_AnimDispatch
+  .db 30
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 82 - no anim data
-  .dw 0
+  ; costume 82
+  .dw Cost027_AnimCmds
+  .db :Cost027_AnimCmds
+  .dw Cost027_AnimDispatch
+  .db :Cost027_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 83 - no anim data
   .dw 0
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 84 - no anim data
-  .dw 0
+  ; costume 84
+  .dw Cost010_AnimCmds
+  .db :Cost010_AnimCmds
+  .dw Cost010_AnimDispatch
+  .db :Cost010_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 85 - no anim data
   .dw 0
   .db 0
@@ -43990,11 +44309,13 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 92 - no anim data
-  .dw 0
+  ; costume 92
+  .dw Cost035_AnimCmds
+  .db :Cost035_AnimCmds
+  .dw Cost035_AnimDispatch
+  .db :Cost035_AnimDispatch
+  .db 75
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 93 - no anim data
   .dw 0
   .db 0
@@ -44030,16 +44351,20 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 100 - no anim data
-  .dw 0
+  ; costume 100
+  .dw Cost017_AnimCmds
+  .db :Cost017_AnimCmds
+  .dw Cost017_AnimDispatch
+  .db :Cost017_AnimDispatch
+  .db 37
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 101 - no anim data
-  .dw 0
+  ; costume 101
+  .dw Cost036_AnimCmds
+  .db :Cost036_AnimCmds
+  .dw Cost036_AnimDispatch
+  .db :Cost036_AnimDispatch
+  .db 69
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 102 - no anim data
   .dw 0
   .db 0
@@ -44070,11 +44395,13 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 108 - no anim data
-  .dw 0
+  ; costume 108
+  .dw Cost008_AnimCmds
+  .db :Cost008_AnimCmds
+  .dw Cost008_AnimDispatch
+  .db :Cost008_AnimDispatch
+  .db 10
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 109 - no anim data
   .dw 0
   .db 0
@@ -44085,21 +44412,27 @@ CostumeAnimTable:
   .db 0
   .dw 0
   .db 0, 0, 0
-  ; costume 111 - no anim data
-  .dw 0
+  ; costume 111
+  .dw Cost005_AnimCmds
+  .db :Cost005_AnimCmds
+  .dw Cost005_AnimDispatch
+  .db :Cost005_AnimDispatch
+  .db 11
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 112 - no anim data
-  .dw 0
+  ; costume 112
+  .dw Cost009_AnimCmds
+  .db :Cost009_AnimCmds
+  .dw Cost009_AnimDispatch
+  .db :Cost009_AnimDispatch
+  .db 26
   .db 0
-  .dw 0
-  .db 0, 0, 0
-  ; costume 113 - no anim data
-  .dw 0
+  ; costume 113
+  .dw Cost006_AnimCmds
+  .db :Cost006_AnimCmds
+  .dw Cost006_AnimDispatch
+  .db :Cost006_AnimDispatch
+  .db 37
   .db 0
-  .dw 0
-  .db 0, 0, 0
   ; costume 114 - no anim data
   .dw 0
   .db 0

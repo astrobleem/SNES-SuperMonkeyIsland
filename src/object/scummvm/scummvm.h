@@ -377,6 +377,12 @@ SCUMM.actorAnimTimer ds SCUMM_WALK_ACTORS      ; 16B — frame delay countdown
 SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 .ends
 
+; Per-actor costume chore state — ramsection moved to scummvm_chore.h
+; so only scummvm_chore.65816 emits it (same pattern as scummvm_cycle).
+; SCUMM_CHORE_LIMBS constant duplicated here for callers that want to
+; size iteration loops.
+.define SCUMM_CHORE_LIMBS  4
+
 ; Walkbox BOXD entry struct (20 bytes per walkbox, matches SCUMM v5 format)
 .struct scummBoxEntry
   ulx  dw    ;+$00  upper-left X (signed)

@@ -157,10 +157,18 @@ def scan_costumes():
     return costumes
 
 
-# During incremental bring-up of the chore interpreter we only emit anim
-# data for the small set of costumes we actively verify against. Once the
-# interpreter is proven we'll drop this gate and emit for all costumes.
-ANIM_DATA_WHITELIST = {58, 59, 60}   # ext idx 58=Guybrush, 59=old man, 60=flame
+# Anim-data emission gate. None = emit for every costume that has a raw bin
+# (but this balloons ROM usage and breaks layout during bring-up). Set to a
+# literal set of extraction indices to narrow-scope.
+# ext idx 58 = Guybrush (Cost058), 59 = old man, 60 = room 38 flame (campfire)
+# Safe set: 47 consecutive + {48, 49, 50, 58, 59, 60}. Ext idx 47 emits 15KB
+# of anim data which overflows section-placement budget when combined with
+# preceding 46 costumes (boot breaks with tile corruption). Excluding 47
+# allows 49 other costumes to carry anim data. 2026-04-20 bisect result.
+# Costumes in whitelist get Cost###_AnimCmds + Cost###_AnimDispatch emitted;
+# others get 0,0 in CostumeAnimTable (no-anim). Renderer hybrid falls back
+# to the static walk/head cycle tables for those.
+ANIM_DATA_WHITELIST = (set(range(0, 47)) | {48, 49, 50, 58, 59, 60})
 
 
 def _load_anim_tables(extraction_idx: int, converted_dir: Path) -> dict:
@@ -171,7 +179,7 @@ def _load_anim_tables(extraction_idx: int, converted_dir: Path) -> dict:
     synthetic costumes) or the extraction index isn't on the whitelist —
     the generator emits a zero entry in CostumeAnimTable in that case.
     """
-    if extraction_idx not in ANIM_DATA_WHITELIST:
+    if ANIM_DATA_WHITELIST is not None and extraction_idx not in ANIM_DATA_WHITELIST:
         return {"num_anim": 0, "anim_cmds_path": None, "anim_dispatch_path": None}
 
     # Raw bin: cost_NNN_roomNNN.bin. Glob since the room suffix varies.

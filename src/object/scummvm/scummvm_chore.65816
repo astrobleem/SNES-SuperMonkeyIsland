@@ -1,0 +1,687 @@
+;===================================================================
+; scummvm_chore.65816 — SCUMM v5 costume chore interpreter
+;
+; Port of ScummVM's ClassicCostumeLoader::increaseAnim +
+; costumeDecodeData (engines/scumm/costume.cpp). Each walk-slot actor
+; has per-limb state; a "chore" is a byte-coded command stream loaded
+; from the actor's costume. The interpreter walks the stream each
+; frame, setting the per-limb pic index that the renderer reads.
+; See scummvm_chore.h for the "scumm chore state" ramsection layout.
+;
+; Long-call entry points (jsl):
+;   scummvm.chore.reset              — zero state (call on room change)
+;   scummvm.chore.animateActor_impl  — ScummVM Actor::animateActor port
+;   scummvm.chore.tick               — per-frame advance (call in play)
+;
+; Referenced ROM table (emitted by tools/gen_costume_rom.py):
+;   CostumeAnimTable[cost * 8] = animCmds ptr (3B) + dispatch ptr (3B)
+;                                 + numAnim (1B) + pad (1B)
+;===================================================================
+
+.include "src/config/config.inc"
+.include "src/object/scummvm/scummvm_chore.h"
+; Do NOT include scummvm.h here — same reason scummvm_cycle documents:
+; it re-emits every SCUMM ramsection into this module's .o and blows
+; slot 1. SCUMM_WALK_ACTORS/SCUMM_CHORE_LIMBS come from chore.h.
+
+; Command-byte values (match ScummVM costume.cpp)
+.define CHORE_CMD_SND_LO     $71   ; 0x71..0x78 = sound triggers (deferred)
+.define CHORE_CMD_SND_HI     $78
+.define CHORE_CMD_RUN        $79   ; clear stopped flag
+.define CHORE_CMD_PAUSE      $7A   ; set stopped flag
+.define CHORE_CMD_HIDE       $7B   ; hide limb (pic = $FF)
+.define CHORE_CMD_COUNTER    $7C   ; animCounter++ (deferred)
+
+
+.base BSL
+.bank 5 slot 0
+.section "scummvm chore impl" superfree
+
+
+;===================================================================
+; scummvm.chore.reset
+; Zero all per-actor chore state. Set chorePic to $FF (sentinel =
+; "limb hidden / no pic assigned"); other fields to 0.
+; Called from _scummvm.processRoomChange alongside CYCL reset.
+;===================================================================
+.define CHORE_STATE_ZERO_BYTES (SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS * 2 * 3) + (SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS) + SCUMM_WALK_ACTORS
+                                        ; curpos+start+end (384) + wait (64) + stopped (16) = 464
+
+scummvm.chore.reset:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  .ACCU 8
+  lda #$7E
+  pha
+  plb
+  rep #$20
+  .ACCU 16
+
+  ; chorePic[64] <- $FF (sentinel for renderer: "don't render this limb")
+  ldx #0
+  sep #$20
+  .ACCU 8
+  lda #$FF
+-
+  sta.w SCUMM.chorePic, x
+  inx
+  cpx #SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS
+  bne -
+  rep #$20
+  .ACCU 16
+
+  ; choreCurpos[word, 64 entries] <- $FFFF (sentinel for tick: "limb chore inactive")
+  ; Total word entries = SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS = 64 → 128 bytes @ stride 2.
+  ldx #0
+  lda #$FFFF
+-
+  sta.w SCUMM.choreCurpos, x
+  inx
+  inx
+  cpx #SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS * 2
+  bne -
+
+  ; Zero choreStart (128) + choreEnd (128) + choreWait (64) + choreStopped (16) = 336 bytes
+  ldx #0
+  lda #0
+-
+  sta.w SCUMM.choreStart, x
+  inx
+  inx
+  cpx #(SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS * 2 * 2) + (SCUMM_WALK_ACTORS * SCUMM_CHORE_LIMBS) + SCUMM_WALK_ACTORS
+  bne -
+
+  plb
+  plp
+  rtl
+
+
+;===================================================================
+; scummvm.chore.animateActor_impl
+; Port of ClassicCostumeLoader::costumeDecodeData (engines/scumm/costume.cpp).
+;
+; Input:
+;   A.low = actor_num (0..15; >=16 early-outs)
+;   X.low = frame byte from op_animateActor
+;
+; Seeds chore state for each limb referenced by the anim's limbMask:
+;   choreCurpos = choreStart = cmd_start
+;   choreEnd    = cmd_start + (extra & 0x7F)
+;   choreWait   = 0                ; forces tick() to interpret immediately
+;   chorePic    untouched (tick sets it on first pic command)
+;
+; Walk-slot runtime caps at SCUMM_CHORE_LIMBS (4); limbs >= 4 in the
+; mask still have their record bytes consumed but no state is written.
+;===================================================================
+scummvm.chore.animateActor_impl:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  and #$00FF
+  cmp #SCUMM_WALK_ACTORS
+  bcc +
+    jmp _caa.exit
++ sta.w SCUMM.scratch                    ; actor_num
+
+  txa
+  and #$00FF
+  sta.w SCUMM.scratch2                   ; frame
+
+  sep #$20
+  .ACCU 8
+  lda #$7E
+  pha
+  plb                                     ; DBR = $7E
+  rep #$20
+  .ACCU 16
+
+  ; X = actor struct offset (actor_num * 16)
+  lda.w SCUMM.scratch
+  asl a
+  asl a
+  asl a
+  asl a
+  tax
+
+  ; --- Stage 5 dispatch: chore = 0x3F - (frame >> 2) + 2; dir = frame & 3
+  ;   cmd 2 = stop walking, seed standFrame anim
+  ;   cmd 3 = change direction immediately
+  ;   cmd 4 = turn to direction (MVP: snap like cmd 3)
+  ;   other = fall through to decodeData with raw frame
+  lda.w SCUMM.scratch2                   ; frame
+  lsr a
+  lsr a                                   ; frame >> 2
+  sta.w SCUMM.choreScr_animId             ; tmp (frame >> 2)
+  lda #$3F
+  sec
+  sbc.w SCUMM.choreScr_animId
+  clc
+  adc #2                                  ; cmd = 0x3F - (frame>>2) + 2
+  and #$00FF
+
+  cmp #2
+  beq _caa.cmdStop
+  cmp #3
+  beq _caa.cmdSetDir
+  cmp #4
+  beq _caa.cmdTurnDir
+  bra _caa.decodeDefault                  ; default → decodeData(raw frame)
+
+_caa.cmdSetDir:
+_caa.cmdTurnDir:
+  ; dir = frame & 3 → facing = oldDirToNewDir(dir). MVP snaps for both cmd3/cmd4.
+  lda.w SCUMM.scratch2
+  and #$0003
+  cmp #0
+  bne +
+    lda #90                               ; dir 0 → east
+    bra _caa.applyFacing
++ cmp #1
+  bne +
+    lda #270                              ; dir 1 → west
+    bra _caa.applyFacing
++ cmp #2
+  bne +
+    lda #180                              ; dir 2 → south
+    bra _caa.applyFacing
++ lda #0                                  ; dir 3 → north
+_caa.applyFacing:
+  sta.w SCUMM.actors.facing, x
+  jmp _caa.exit
+
+_caa.cmdStop:
+  ; actor.moving = 0
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.actors.moving, x
+  rep #$20
+  .ACCU 16
+  ; Replace frame with standFrame (MVP: hardcode 2 per ScummVM default _standFrame).
+  lda #2
+  sta.w SCUMM.scratch2
+  ; fall through to decodeData
+
+_caa.decodeDefault:
+
+  ; --- facing → oldDir ----------------------------------------
+  lda.w SCUMM.actors.facing, x
+  cmp #90
+  bne +
+    lda #1
+    bra _caa.dirOk
++ cmp #180
+  bne +
+    lda #2
+    bra _caa.dirOk
++ cmp #270
+  bne +
+    lda #0
+    bra _caa.dirOk
++ lda #3                                   ; default / north
+_caa.dirOk:
+  sta.w SCUMM.choreScr_animId              ; oldDir (temp)
+
+  ; --- anim_id = oldDir + frame*4 -----------------------------
+  lda.w SCUMM.scratch2
+  asl a
+  asl a
+  clc
+  adc.w SCUMM.choreScr_animId
+  sta.w SCUMM.choreScr_animId
+
+  ; --- actor.costume ------------------------------------------
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.costume, x
+  bne +
+    jmp _caa.exit8
++ rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a
+  asl a                                    ; *8
+  tax                                      ; X = CostumeAnimTable offset
+
+  ; --- numAnim bounds check -----------------------------------
+  sep #$20
+  .ACCU 8
+  lda.l CostumeAnimTable+6, x
+  sta.w SCUMM.choreScr_mask                ; stash numAnim (reuses mask slot pre-mask-read)
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.choreScr_animId
+  and #$00FF
+  cmp.w SCUMM.choreScr_mask
+  bcc +
+    jmp _caa.exit
++
+
+  ; --- Store 24-bit CPU-space dispatch pointer directly into tmp+24 ----
+  ; CostumeAnimTable stores CPU-bank addresses via `.db :LABEL` ($C0+).
+  ; room.setRomDataPtr expects PHYSICAL banks (0..$3F) for EXB/FXB windowing;
+  ; passing a CPU bank mangles the pointer into an SA-1 BW-RAM/undefined
+  ; mirror. HiROM CPU banks $C0-$FF are directly [dp],y-addressable, so
+  ; store the pointer ourselves.
+  lda.l CostumeAnimTable+3, x              ; dispatch.lo16
+  sta.b tmp+24
+  sep #$20
+  .ACCU 8
+  lda.l CostumeAnimTable+5, x              ; dispatch.bank (CPU-space)
+  sta.b tmp+24+2
+  rep #$20
+  .ACCU 16
+
+  ; --- read dispatch[anim_id*2] = offs ------------------------
+  lda.w SCUMM.choreScr_animId
+  and #$00FF
+  asl a
+  tay
+  lda [tmp+24], y                          ; 16-bit word read
+  sta.w SCUMM.choreScr_recCur
+  bne +
+    jmp _caa.exit                          ; offs==0 → no chore for this anim
++ tay                                      ; Y = record offset
+
+  ; --- read limbMask word -------------------------------------
+  lda [tmp+24], y                          ; 16-bit
+  sta.w SCUMM.choreScr_mask
+  iny
+  iny                                      ; cursor past limbMask
+  sty.w SCUMM.choreScr_recCur
+
+  ; --- actor base offsets into chore state --------------------
+  lda.w SCUMM.scratch
+  asl a
+  asl a                                    ; *4 = byte base
+  sta.w SCUMM.choreScr_byteBase
+  asl a                                    ; *8 = word base
+  sta.w SCUMM.choreScr_wordBase
+
+  ; --- walk limbs 0..15 ---------------------------------------
+  ldx #0
+_caa.limbLoop:
+  cpx #16
+  bcc +
+    jmp _caa.exit
++ stx.w SCUMM.choreScr_limb
+
+  ; test bit (0x8000 >> X) against mask
+  lda #$8000
+  cpx #0
+  beq _caa.maskReady
+-
+  lsr a
+  dex
+  bne -
+_caa.maskReady:
+  and.w SCUMM.choreScr_mask
+  beq _caa.limbNext                        ; limb not in anim
+
+  ; consume cs word from dispatch record
+  ldy.w SCUMM.choreScr_recCur
+  lda [tmp+24], y                          ; 16-bit
+  sta.w SCUMM.choreScr_csLo
+  iny
+  iny
+  sty.w SCUMM.choreScr_recCur
+  cmp #$FFFF
+  beq _caa.limbNext                        ; disabled — no extra byte
+
+  ; consume extra byte
+  ldy.w SCUMM.choreScr_recCur
+  sep #$20
+  .ACCU 8
+  lda [tmp+24], y
+  sta.w SCUMM.choreScr_extra
+  rep #$20
+  .ACCU 16
+  iny                                      ; advance cursor past extra byte
+  sty.w SCUMM.choreScr_recCur
+
+  ; only seed runtime-tracked limbs
+  ldx.w SCUMM.choreScr_limb
+  cpx #SCUMM_CHORE_LIMBS
+  bcs _caa.limbNext
+
+  ; --- seed chore state for (actor, limb) ---------------------
+  ; word-array idx = wordBase + limb*2
+  txa
+  asl a
+  clc
+  adc.w SCUMM.choreScr_wordBase
+  tax
+  lda.w SCUMM.choreScr_csLo
+  sta.w SCUMM.choreCurpos, x
+  sta.w SCUMM.choreStart, x
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.choreScr_extra
+  and #$7F
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  clc
+  adc.w SCUMM.choreScr_csLo
+  sta.w SCUMM.choreEnd, x
+
+  ; byte-array idx = byteBase + limb
+  lda.w SCUMM.choreScr_limb
+  clc
+  adc.w SCUMM.choreScr_byteBase
+  tax
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.choreWait, x
+  rep #$20
+  .ACCU 16
+
+_caa.limbNext:
+  ldx.w SCUMM.choreScr_limb
+  inx
+  jmp _caa.limbLoop
+
+_caa.exit8:
+  rep #$20
+  .ACCU 16
+_caa.exit:
+  plb
+  plp
+  rtl
+
+
+;===================================================================
+; scummvm.chore.tick
+; Per-frame advance of every walk-slot actor's chore state.
+; Port of ClassicCostumeLoader::increaseAnim (engines/scumm/costume.cpp).
+; Called from scummvm.play before renderActors.
+;
+; For each actor 0..SCUMM_WALK_ACTORS-1 whose actor.room==currentRoom
+; and actor.costume!=0:
+;   Resolve animCmdsPtr (24-bit) via CostumeAnimTable[costume].
+;   For each limb 0..SCUMM_CHORE_LIMBS-1 with chorePic != $FF:
+;     dec choreWait; if non-zero, continue.
+;     Run inner interpreter: curpos=choreCurpos+1 (wrap to start on >end).
+;     Read cmd byte; dispatch:
+;       $00..$6F pic:  chorePic = cmd & $7F
+;                      if cmd & $80: wait = animCmds[++curpos]
+;                      else         wait = 0  (re-tick next frame)
+;                      store curpos; done.
+;       $7B hide:      chorePic = $FF; store curpos; done.
+;       $71..$7A, $7C..$7F: skip (re-advance curpos and read next cmd).
+;===================================================================
+scummvm.chore.tick:
+  php
+  phb
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+
+  sep #$20
+  .ACCU 8
+  lda #$7E
+  pha
+  plb                                      ; DBR = $7E
+  rep #$20
+  .ACCU 16
+
+  ldx #0
+_tck.actorLoop:
+  cpx #SCUMM_WALK_ACTORS
+  bcc +
+    jmp _tck.exit
++ stx.w SCUMM.choreScr_actorIdx
+
+  ; actor struct offset = actor_num * 16
+  txa
+  asl a
+  asl a
+  asl a
+  asl a
+  tax
+
+  ; skip if actor.room != currentRoom
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.room, x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp.w SCUMM.currentRoom
+  beq +
+    jmp _tck.nextActor
++
+
+  ; skip if actor.costume == 0
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.costume, x
+  bne +
+    jmp _tck.nextActor_8
++ rep #$20
+  .ACCU 16
+  and #$00FF                               ; costume id
+  asl a
+  asl a
+  asl a                                    ; *8
+  tax                                      ; X = CostumeAnimTable offset
+
+  ; animCmds ptr at table+0..+2 (24-bit CPU-space). Store into tmp+24
+  ; directly — see animateActor_impl for why we don't use setRomDataPtrLong.
+  lda.l CostumeAnimTable+0, x              ; lo16
+  sta.b tmp+24
+  sep #$20
+  .ACCU 8
+  lda.l CostumeAnimTable+2, x              ; bank
+  sta.b tmp+24+2
+  rep #$20
+  .ACCU 16
+  ; null check: lo16 | (hi_lo16 | bank << 8). If all zero → no anim data.
+  lda.b tmp+24
+  ora.b tmp+24+1
+  bne _tck.haveAnimCmds
+    jmp _tck.nextActor
+_tck.haveAnimCmds:
+
+  ; chore state offsets for this actor
+  lda.w SCUMM.choreScr_actorIdx
+  asl a
+  asl a                                    ; *4 = byte base
+  sta.w SCUMM.choreScr_byteBase
+  asl a                                    ; *8 = word base
+  sta.w SCUMM.choreScr_wordBase
+
+  ; per-limb loop
+  ldx #0
+_tck.limbLoop:
+  cpx #SCUMM_CHORE_LIMBS
+  bcc +
+    jmp _tck.nextActor
++ stx.w SCUMM.choreScr_limb
+
+  ; word-array idx = wordBase + limb*2  (for curpos/start/end reads)
+  lda.w SCUMM.choreScr_limb
+  asl a
+  clc
+  adc.w SCUMM.choreScr_wordBase
+  tay                                      ; Y holds word idx (preserved across rep/sep)
+
+  ; curpos == $FFFF → limb inactive (chore never seeded / ended), skip
+  lda.w SCUMM.choreCurpos, y
+  cmp #$FFFF
+  bne _tck.limbActive
+    jmp _tck.nextLimb
+_tck.limbActive:
+
+  ; byte-array idx for this (actor, limb), kept in X
+  lda.w SCUMM.choreScr_limb
+  clc
+  adc.w SCUMM.choreScr_byteBase
+  tax
+
+  ; decrement wait. If it becomes nonzero (wait was >=2), save and continue.
+  ; If was 0, interpret now. If was 1, dec gives 0 → interpret.
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.choreWait, x
+  beq _tck.runInterp                       ; wait==0 → interpret now
+  dec a
+  sta.w SCUMM.choreWait, x
+  beq _tck.runInterp                       ; just expired → interpret
+  jmp _tck.nextLimb_8                      ; still waiting → skip
+
+_tck.runInterp:
+  rep #$20
+  .ACCU 16
+
+  ; word-array idx = wordBase + limb*2
+  lda.w SCUMM.choreScr_limb
+  asl a
+  clc
+  adc.w SCUMM.choreScr_wordBase
+  tax
+
+  ; load curpos, end, start
+  lda.w SCUMM.choreCurpos, x
+  sta.w SCUMM.choreScr_curpos
+  lda.w SCUMM.choreEnd, x
+  sta.w SCUMM.choreScr_end
+  lda.w SCUMM.choreStart, x
+  sta.w SCUMM.choreScr_start
+
+_tck.advance:
+  ; curpos++, if curpos > end: curpos = start
+  inc.w SCUMM.choreScr_curpos
+  lda.w SCUMM.choreScr_curpos
+  cmp.w SCUMM.choreScr_end
+  bcc _tck.inRange
+  beq _tck.inRange
+  lda.w SCUMM.choreScr_start
+  sta.w SCUMM.choreScr_curpos
+_tck.inRange:
+
+  ; read animCmds[curpos]
+  ldy.w SCUMM.choreScr_curpos
+  sep #$20
+  .ACCU 8
+  lda [tmp+24], y
+  sta.w SCUMM.choreScr_cmd
+  rep #$20
+  .ACCU 16
+
+  ; dispatch
+  lda.w SCUMM.choreScr_cmd
+  and #$007F                               ; strip high bit
+  cmp #$0070
+  bcs _tck.ctrlCmd                         ; cmd & 0x7F >= 0x70 → control/sound
+  ; --- pic command (0x00..0x6F) ---------------------------------
+  ; chorePic[byteIdx] = cmd & 0x7F
+  ldx.w SCUMM.choreScr_limb
+  txa
+  clc
+  adc.w SCUMM.choreScr_byteBase
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.choreScr_cmd
+  and #$7F
+  sta.w SCUMM.chorePic, x
+  ; wait: if high bit of cmd was set, read next byte; else 0
+  lda.w SCUMM.choreScr_cmd
+  bpl _tck.noWaitByte                      ; high bit clear
+  rep #$20
+  .ACCU 16
+  inc.w SCUMM.choreScr_curpos
+  ldy.w SCUMM.choreScr_curpos
+  sep #$20
+  .ACCU 8
+  lda [tmp+24], y
+  bra _tck.storeWait
+_tck.noWaitByte:
+  lda #0
+_tck.storeWait:
+  sta.w SCUMM.choreWait, x                 ; X is still byteIdx
+  rep #$20
+  .ACCU 16
+  jmp _tck.storeCurpos
+
+_tck.ctrlCmd:
+  ; cmd_masked = (cmd & 0x7F), we know >= 0x70
+  cmp #$007B
+  bne +
+    ; --- hide (0x7B): pic = $FF ---------------------------------
+    ldx.w SCUMM.choreScr_limb
+    txa
+    clc
+    adc.w SCUMM.choreScr_byteBase
+    tax
+    sep #$20
+    .ACCU 8
+    lda #$FF
+    sta.w SCUMM.chorePic, x
+    lda #0
+    sta.w SCUMM.choreWait, x
+    rep #$20
+    .ACCU 16
+    jmp _tck.storeCurpos
++
+  ; Per ScummVM ClassicCostumeLoader::increaseAnim: only 0x78 (sound) and
+  ; 0x7C (animCounter) loop within the tick, and only when start != end.
+  ; Everything else (0x70-0x77, 0x79, 0x7A, 0x7D-0x7F) parks curpos on the
+  ; ctrl byte and exits without touching pic. Next tick naturally advances
+  ; past the byte. Prevents livelock when start==end lands on an unhandled
+  ; ctrl code (observed with actor 2 limb 1 / byte $79 at curpos=start=end).
+  cmp #$0078
+  beq _tck.soundOrCounter
+  cmp #$007C
+  beq _tck.soundOrCounter
+  ; parked: just store and exit
+  jmp _tck.storeCurpos
+
+_tck.soundOrCounter:
+  lda.w SCUMM.choreScr_start
+  cmp.w SCUMM.choreScr_end
+  beq _tck.storeCurpos                     ; degenerate cycle: park
+  jmp _tck.advance
+
+_tck.storeCurpos:
+  ; write curpos back to choreCurpos[wordIdx]
+  lda.w SCUMM.choreScr_limb
+  asl a
+  clc
+  adc.w SCUMM.choreScr_wordBase
+  tax
+  lda.w SCUMM.choreScr_curpos
+  sta.w SCUMM.choreCurpos, x
+  jmp _tck.nextLimb
+
+_tck.nextLimb_8:
+  rep #$20
+  .ACCU 16
+_tck.nextLimb:
+  ldx.w SCUMM.choreScr_limb
+  inx
+  jmp _tck.limbLoop
+
+_tck.nextActor_8:
+  rep #$20
+  .ACCU 16
+_tck.nextActor:
+  ldx.w SCUMM.choreScr_actorIdx
+  inx
+  jmp _tck.actorLoop
+
+_tck.exit:
+  plb
+  plp
+  rtl
+
+
+.ends

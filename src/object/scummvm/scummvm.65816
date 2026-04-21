@@ -654,6 +654,12 @@ _play.noPendingVerb:
   ; Tick color-cycling (rotates ring when fps timer hits 0; NMI flushes to CGRAM)
   jsl scummvm.cycle.tick
 
+  ; Tick costume chore interpreter (advances per-actor limb pic state).
+  ; Consumes state seeded by op_animateActor → scummvm.chore.animateActor_impl.
+  ; Renderer doesn't yet read chorePic (Stage 6), so this currently has no
+  ; visible effect except in WRAM.
+  jsl scummvm.chore.tick
+
   ; (palManipulate per-frame tick intended here once the target-palette
   ;  string-resource system is implemented; stubbed stub omitted for now.)
 
@@ -8303,6 +8309,7 @@ op_animateActor:
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor number
+  sta.w SCUMM.scratch3               ; stash raw actor_num
   jsr _scummvm.getActorPtr
   stx.w SCUMM.scratch2
 
@@ -8312,6 +8319,12 @@ op_animateActor:
   sep #$20
   sta.w SCUMM.actors.initFrame,x
   rep #$20
+
+  ; hand raw (actor_num, frame) to the chore engine
+  and #$00FF
+  tax                                 ; X.low = frame
+  lda.w SCUMM.scratch3                ; A.low = actor_num
+  jsl scummvm.chore.animateActor_impl
   clc
   rts
 
@@ -8508,6 +8521,12 @@ _walkActorTo.anim:
   lda #1
   sta.w SCUMM.actors.moving,x
   rep #$20
+
+  ; Seed chore engine with walk anim (ScummVM Actor::startWalkAnim → startAnimActor(_walkFrame=1))
+  lda.w SCUMM.scratch3
+  and #$00FF
+  ldx #1                              ; frame = 1 (walk)
+  jsl scummvm.chore.animateActor_impl
 
   ; Restore SCUMM PC (Y) saved before walkActorTo body
   ply
@@ -10552,6 +10571,13 @@ _ua.fullyArrived:
   sta.w SCUMM.actorLastFrame,x
   rep #$20
   .ACCU 16
+
+  ; Seed chore engine with stand anim (ScummVM Actor::stopActorMoving → startAnimActor(_standFrame=2))
+  lda.w SCUMM.scratch3
+  and #$00FF
+  ldx #2                              ; frame = 2 (stand)
+  jsl scummvm.chore.animateActor_impl
+
   jmp _ua.nextSlot
 
 _ua.notArrived:
@@ -11256,7 +11282,32 @@ _ri.southCycle:
 _ri.gotPic:
   .ACCU 16
   and #$00FF
-  sta.w SCUMM.scratch                 ; body pic index
+  sta.w SCUMM.scratch                 ; default body pic from walk cycle
+
+  ; Override: if the chore engine has seeded limb 0 (body) for this actor,
+  ; use chorePic instead of the static walk cycle. chorePic is kept at $FF
+  ; for limbs not owned by an anim (see scummvm.chore.reset).
+  phx                                 ; save current X (walk-cycle index)
+  lda.w SCUMM.actorOamCount           ; actor number (saved earlier)
+  and #$00FF
+  asl a
+  asl a                                ; actor * SCUMM_CHORE_LIMBS (=4) → limb 0 byte idx
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.chorePic, x
+  cmp #$FF
+  beq _ri.bodyChoreInactive
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  sta.w SCUMM.scratch                 ; override body pic from chore engine
+  bra _ri.bodyPicDone
+_ri.bodyChoreInactive:
+  rep #$20
+  .ACCU 16
+_ri.bodyPicDone:
+  plx                                 ; restore walk-cycle index for head lookup
 
   ; --- Head pic lookup (X = animFrame, scratch2 = facing) ---
   lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
@@ -11277,7 +11328,31 @@ _ri.headGot:
   and #$00FF
   sep #$20
   .ACCU 8
-  sta.w SCUMM.actorHeadPicCur        ; store head pic ($FF=none)
+  sta.w SCUMM.actorHeadPicCur        ; default head pic from head cycle
+
+  ; Override: if the chore engine has seeded limb 1 (head) for this actor,
+  ; use chorePic instead of the static head cycle.
+  phx                                 ; save head-cycle X
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.actorOamCount
+  and #$00FF
+  asl a
+  asl a                                ; actor * 4
+  inc a                                ; + 1 → limb 1 byte idx
+  tax
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.chorePic, x
+  cmp #$FF
+  beq _ri.headChoreInactive
+  sta.w SCUMM.actorHeadPicCur         ; override head pic from chore engine
+_ri.headChoreInactive:
+  rep #$20
+  .ACCU 16
+  plx                                 ; restore X
+  sep #$20
+  .ACCU 8
   rep #$20
   .ACCU 16
 

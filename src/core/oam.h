@@ -30,6 +30,7 @@ GLOBAL.oamTable1 ds 32
 GLOBAL.oamTable1.end ds 0
 GLOBAL.oam.vram.id db
 GLOBAL.oam.vram.start dw
+GLOBAL.oamRotation db
 
 OAM.GLOBAL.END ds 0
 .ends

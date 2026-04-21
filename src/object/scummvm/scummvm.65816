@@ -6385,7 +6385,7 @@ _actorOps.dispatch:
   bne +
     jmp _actorOps.sub_p16
 +
-  ;--- Sub 0x08: init (0 params) -- set facing=180 (south), per ScummVM initActor
+  ;--- Sub 0x08: init (0 params) -- set facing=180 (south), clear zClip
   cmp #$08
   bne +
     phy                              ; save script PC
@@ -6395,6 +6395,18 @@ _actorOps.dispatch:
     tay
     lda #180                         ; south
     sta.w SCUMM.actors,y
+    ; Clear zClip for this actor (prevents stale values from prior room)
+    lda 3,s                          ; actor struct offset
+    lsr a
+    lsr a
+    lsr a
+    lsr a                            ; / 16 = actor number
+    tax
+    sep #$20
+    .ACCU 8
+    stz.w SCUMM.actorZClip,x
+    rep #$20
+    .ACCU 16
     ply                              ; restore script PC
     jmp _actorOps.subLoop
 +
@@ -11326,7 +11338,14 @@ _ri.headGot:
   .ACCU 8
   sta.w SCUMM.actorHeadPicCur        ; default head pic from head cycle
 
-  ; Override: if chore engine seeded slot 1 (head), use it.
+  ; Head override from chore engine.
+  ; Three cases:
+  ;   1. Chore not active (body slot 0 == $FF) → keep default head cycle
+  ;   2. Chore active, limb 1 never decoded (curpos == $FFFF) → no head
+  ;      (costume like campfire that only uses limb 0)
+  ;   3. Chore active, limb 1 decoded, chorePic set → use chore head pic
+  ;   4. Chore active, limb 1 decoded, chorePic==$FF → keep default head
+  ;      (costume like Guybrush where walk anim uses 79/7a control cmds)
   phx                                 ; save head-cycle X
   rep #$20
   .ACCU 16
@@ -11336,14 +11355,37 @@ _ri.headGot:
   asl a
   asl a
   asl a                                ; actor * 16
-  inc a                                ; + 1 → slot 1 (head)
+  sta.w SCUMM.choreScr_animId         ; save actor*16 base
   tax
   sep #$20
   .ACCU 8
-  lda.w SCUMM.chorePic, x
+  lda.w SCUMM.chorePic, x             ; slot 0 (body)
   cmp #$FF
-  beq _ri.headChoreInactive
-  sta.w SCUMM.actorHeadPicCur         ; override head pic from chore engine
+  beq _ri.headChoreInactive           ; case 1: chore not active
+  ; Chore is driving body. Check if limb 1 was ever decoded.
+  inx                                  ; X = actor*16 + 1
+  lda.w SCUMM.chorePic, x             ; slot 1 (head) pic
+  pha                                  ; save head chorePic
+  rep #$20
+  .ACCU 16
+  txa                                  ; actor*16 + 1
+  asl a                                ; * 2 for word array
+  tax
+  lda.w SCUMM.choreCurpos, x
+  cmp #$FFFF
+  sep #$20
+  .ACCU 8
+  pla                                  ; restore head chorePic
+  bne _ri.headLimbDecoded
+  ; case 2: limb 1 never decoded → costume has no head
+  lda #$FF
+  sta.w SCUMM.actorHeadPicCur
+  bra _ri.headChoreInactive
+_ri.headLimbDecoded:
+  ; Limb 1 was decoded. Use chorePic if set, else keep default.
+  cmp #$FF
+  beq _ri.headChoreInactive           ; case 4: keep default head cycle
+  sta.w SCUMM.actorHeadPicCur         ; case 3: use chore head pic
 _ri.headChoreInactive:
   rep #$20
   .ACCU 16
@@ -12005,16 +12047,27 @@ _ri.scaleHookDone:
 _ri.buildOam:
   .ACCU 16
   .INDEX 16
-  ; Compute flip mask: priority 2 + palette bits + optional H-flip
+  ; Compute flip mask: priority + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
-  ; Priority 2 lets BG1 tiles with tilemap-priority-bit set render in
-  ; front of the actor (SCUMM ZP01 zplane masking — loaded per room by
-  ; room.loadPriorityBitmap, applied in the remap loops of room_scroll).
+  ; Priority 2 = default (below BG pri-1 tiles, above BG pri-0).
+  ; Priority 0 = behind all BG (for actors with zClip=1, e.g. clouds).
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3               ; render slot
   lda.l _ri.palBitsLut,x             ; palette bits (PPP << 1)
-  ora #$20                            ; priority 2 (below BG pri-1 tiles)
+  sta.w SCUMM.actorFlipMask          ; save palette bits temporarily
+  lda.w SCUMM.actorOamCount          ; actor number (low byte)
+  tax
+  lda.w SCUMM.actorZClip,x
+  cmp #1
+  bne _ri.normalPriority
+  lda.w SCUMM.actorFlipMask          ; palette bits
+  ora #$00                            ; priority 0: behind all BG layers
+  bra _ri.priorityDone
+_ri.normalPriority:
+  lda.w SCUMM.actorFlipMask          ; palette bits
+  ora #$20                            ; priority 2: normal actor rendering
+_ri.priorityDone:
   sta.w SCUMM.actorFlipMask
 
   ; Check facing: 270 = west = H-flip

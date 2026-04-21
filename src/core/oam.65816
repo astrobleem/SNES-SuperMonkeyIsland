@@ -24,6 +24,7 @@ core.oam.init:
   sep #$20
   stz.w GLOBAL.oamUploadFlag
   stz.w GLOBAL.oamClearFlag
+  stz.w GLOBAL.oamRotation
 
   jsr core.oam.clearTable
 
@@ -65,9 +66,6 @@ core.oam.play:
   jsr ClearWRAM
   rep #$31
   stz.w GLOBAL.currentOamSlot
-  sep #$20
-  lda #1
-  sta.w GLOBAL.oamUploadFlag
   plp
   rts
 

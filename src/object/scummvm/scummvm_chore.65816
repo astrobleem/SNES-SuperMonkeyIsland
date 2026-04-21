@@ -187,11 +187,11 @@ _caa.cmdTurnDir:
   and #$0003
   cmp #0
   bne +
-    lda #90                               ; dir 0 → east
+    lda #270                              ; dir 0 → west
     bra _caa.applyFacing
 + cmp #1
   bne +
-    lda #270                              ; dir 1 → west
+    lda #90                               ; dir 1 → east
     bra _caa.applyFacing
 + cmp #2
   bne +

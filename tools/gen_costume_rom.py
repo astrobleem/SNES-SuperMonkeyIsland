@@ -123,6 +123,8 @@ def scan_costumes():
                 if json_file.exists():
                     with open(json_file) as f:
                         meta = json.load(f)
+                w = meta.get("width", 0)
+                h = meta.get("height", 0)
                 head_pics.append({
                     "index": i,
                     "chr_path": chr_file,

@@ -359,12 +359,12 @@ _nmi.noColWrite:
 	sep #$20
 
 	;--- OAM DMA: upload WRAM oamBuffer → hardware OAM during VBlank ---
-	; Runs at NMI (VBlank start) so hardware OAM is current before scanline 0.
-	; Eliminates stale 8-scanline window that caused corner sprite artifacts.
+	; Priority rotation: cycle OAMADDR base each frame so sprite dropout
+	; distributes evenly instead of the same sprites always vanishing.
 	lda.w GLOBAL.oamUploadFlag
 	beq _nmi.noOamDma
 
-	  stz.w OAMADDL              ; reset OAM address pointer to table 0 start
+	  stz.w OAMADDL              ; DMA writes from OAM address 0
 	  stz.w OAMADDH
 	  lda.b #$00                 ; DMA type: 1-register, auto-increment source
 	  sta.l DMAP7
@@ -382,6 +382,20 @@ _nmi.noColWrite:
 	  .ACCU 8
 	  lda.b #$80                 ; trigger DMA channel 7
 	  sta.l MDMAEN
+
+	  ; Set priority rotation: sprite at oamRotation becomes highest priority.
+	  ; Distributes scanline overflow dropout across all sprites each frame.
+	  lda.w GLOBAL.oamRotation
+	  asl a                      ; sprite index × 2 = word address
+	  sta.w OAMADDL
+	  lda #$80                   ; bit 7 = enable priority rotation
+	  sta.w OAMADDH
+	  lda.w GLOBAL.oamRotation
+	  clc
+	  adc #4                     ; rotate by 4 sprites per frame
+	  and #$7F                   ; wrap at 128
+	  sta.w GLOBAL.oamRotation
+
 	  stz.w GLOBAL.oamUploadFlag
 
 _nmi.noOamDma:

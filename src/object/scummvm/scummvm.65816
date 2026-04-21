@@ -8519,10 +8519,10 @@ _walkActorTo.anim:
   sta.w SCUMM.actors.moving,x
   rep #$20
 
-  ; Seed chore engine with walk anim (ScummVM Actor::startWalkAnim → startAnimActor(_walkFrame=1))
+  ; Seed chore engine with walk anim (ScummVM Actor::startWalkAnim → startAnimActor(_walkFrame))
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #1                              ; frame = 1 (walk)
+  ldx #2                              ; frame = 2 (walk) — v5 default _walkFrame
   jsl scummvm.chore.animateActor_impl
 
   ; Restore SCUMM PC (Y) saved before walkActorTo body
@@ -10562,10 +10562,10 @@ _ua.fullyArrived:
   rep #$20
   .ACCU 16
 
-  ; Seed chore engine with stand anim (ScummVM Actor::stopActorMoving → startAnimActor(_standFrame=2))
+  ; Seed chore engine with stand anim (ScummVM Actor::stopActorMoving → startAnimActor(_standFrame))
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #2                              ; frame = 2 (stand)
+  ldx #3                              ; frame = 3 (stand) — v5 default _standFrame
   jsl scummvm.chore.animateActor_impl
 
   jmp _ua.nextSlot
@@ -11339,18 +11339,7 @@ _ri.headGot:
   .ACCU 8
   lda.w SCUMM.chorePic, x
   cmp #$FF
-  bne _ri.headChoreActive
-  ; Head slot inactive — if body IS chore-driven (slot 0 != $FF), suppress
-  ; the legacy head pic entirely. Prevents 1-limb actors (campfire) from
-  ; rendering a spurious head at (0,0) from the static HeadCycle table.
-  dex                                  ; back to slot 0 (body)
-  lda.w SCUMM.chorePic, x
-  cmp #$FF
-  beq _ri.headChoreInactive            ; body also inactive → keep legacy
-  lda #$FF
-  sta.w SCUMM.actorHeadPicCur          ; suppress head
-  bra _ri.headChoreInactive
-_ri.headChoreActive:
+  beq _ri.headChoreInactive
   sta.w SCUMM.actorHeadPicCur         ; override head pic from chore engine
 _ri.headChoreInactive:
   rep #$20
@@ -16867,7 +16856,7 @@ _aao.walk:
   ; Seed chore engine with walk anim (matches _walkActorTo.anim)
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #1                                   ; frame = 1 (walk)
+  ldx #2                                   ; frame = 2 (walk) — v5 default _walkFrame
   jsl scummvm.chore.animateActor_impl
 
   rtl

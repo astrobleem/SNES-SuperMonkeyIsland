@@ -209,8 +209,8 @@ _caa.cmdStop:
   stz.w SCUMM.actors.moving, x
   rep #$20
   .ACCU 16
-  ; Replace frame with standFrame (MVP: hardcode 2 per ScummVM default _standFrame).
-  lda #2
+  ; Replace frame with standFrame (v5 default _standFrame=3).
+  lda #3
   sta.w SCUMM.scratch2
   ; fall through to decodeData
 

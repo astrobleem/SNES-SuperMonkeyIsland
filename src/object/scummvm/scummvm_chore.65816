@@ -605,7 +605,24 @@ _tck.inRange:
   lda [tmp+24], y
   bra _tck.storeWait
 _tck.noWaitByte:
-  lda #0
+  ; No explicit wait byte on this pic cmd — default to the actor's
+  ; animSpeed. ScummVM handles this outside increaseAnim via
+  ; Actor::animateCostume's _animProgress/_animSpeed gate; we collapse
+  ; it into choreWait here so every tick call is uniform. Without this
+  ; wait=0 → advance every frame → 60Hz anim cycle.
+  ;
+  ; animSpeed defaults to 0 for any actor that hasn't received a
+  ; setActorAnimSpeed call. ScummVM treats that as "advance every
+  ; frame" which runs the campfire at ~15Hz per-pic cycling on
+  ; 60Hz hardware — too fast on SNES. Fall back to the old
+  ; COSTUME_WALK_ANIM_SPEED timer (4 frames/advance) so cycles
+  ; match the prior static walk-cycle speed.
+  phx                                      ; save byteIdx (needed after store)
+  ldx.w SCUMM.choreScr_actorIdx
+  lda.w SCUMM.actorAnimSpeed, x
+  bne +
+  lda #4                                   ; = COSTUME_WALK_ANIM_SPEED
++ plx
 _tck.storeWait:
   sta.w SCUMM.choreWait, x                 ; X is still byteIdx
   rep #$20

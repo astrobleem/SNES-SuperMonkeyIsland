@@ -782,7 +782,20 @@ _play.done:
 _scummvm.processRoomChange:
   rep #$31
 
-  ; Set up PPU for BG1 room display (once)
+  ; Restore PPU register shadows on every room change — OOP background
+  ; objects (losers splash, title_screen) clobber these when they run
+  ; between SCUMM rooms.
+  sep #$20
+  lda.b #$39                        ; BG1 tilemap at word $3800, 64-wide
+  sta.w BG1TilemapVram
+  lda.b #$40                        ; BG1 tiles at $0000, BG2 at $4000
+  sta.w BGTilesVram12
+  lda.w MainScreen
+  ora.b #(T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE)
+  sta.w MainScreen
+  rep #$20
+
+  ; Set up remaining PPU (once)
   lda.w SCUMM.bgInitDone
   beq +
   jmp _prc.bgReady
@@ -791,25 +804,15 @@ _scummvm.processRoomChange:
   .INDEX 16
 
   sep #$20
-  ; Mode 1, BG1 tilemap at $7000 (word $3800), 64 tiles wide
-  lda.b #$39                        ; $38 = tilemap base $3800, +1 = 64-wide
-  sta.w BG1TilemapVram
   ; BG2 tilemap at $9000 (word $4800), 32x32
   lda.b #$48
   sta.w BG2TilemapVram
-  ; Tile data: BG1=$0000, BG2=$4000 (high nibble)
-  lda.b #$40
-  sta.w BGTilesVram12
   ; BG3 tilemap at $9800 (word $4C00), 32x32
   lda.b #$4C
   sta.w BG3TilemapVram
   ; BG3+BG4 tile data: BG3 at word $5000 (byte $A000)
   lda.b #$05
   sta.w BGTilesVram34
-  ; Enable BG1 + BG2 + BG3 on main screen
-  lda.w MainScreen
-  ora.b #(T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE)
-  sta.w MainScreen
   ; Set mode 1 with BG3 priority (bit 3)
   lda.b #(BGMODE_MODE_1 | BGMODE_PRIORITY_LAYER_3)
   sta.w ScreenMode

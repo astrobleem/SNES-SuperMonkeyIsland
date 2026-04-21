@@ -11339,7 +11339,18 @@ _ri.headGot:
   .ACCU 8
   lda.w SCUMM.chorePic, x
   cmp #$FF
+  bne _ri.headChoreActive
+  ; Head slot inactive. If body IS chore-driven, suppress the legacy head —
+  ; 1-limb actors (campfire) don't have a head; the legacy HeadCycle table
+  ; gives them garbage that renders at wrong positions.
+  dex
+  lda.w SCUMM.chorePic, x
+  cmp #$FF
   beq _ri.headChoreInactive
+  lda #$FF
+  sta.w SCUMM.actorHeadPicCur
+  bra _ri.headChoreInactive
+_ri.headChoreActive:
   sta.w SCUMM.actorHeadPicCur         ; override head pic from chore engine
 _ri.headChoreInactive:
   rep #$20

@@ -12096,7 +12096,7 @@ _ri.buildOam:
   cmp #1
   bne _ri.normalPriority
   lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$00                            ; priority 0: behind all BG layers
+  ora #$10                            ; priority 1: behind BG1-pri-1 title, in front of BG1-pri-0 sky
   bra _ri.priorityDone
 _ri.normalPriority:
   lda.w SCUMM.actorFlipMask          ; palette bits

@@ -1294,6 +1294,19 @@ room.loadCycleData:
   jsl scummvm.cycle.reset
   jsl scummvm.chore.reset
 
+  ; Clear all actorZClip entries so stale values from prior room
+  ; don't make actors render behind BG (e.g. cloud actors reused as NPCs)
+  sep #$20
+  .ACCU 8
+  lda #0
+  ldx #0
+- sta.w SCUMM.actorZClip,x
+  inx
+  cpx #16
+  bne -
+  rep #$20
+  .ACCU 16
+
   ;short-circuit when the room has no cycling payload
   lda.w GLOBAL.room.hdr.cyc_size
   bne _rcc.hasData

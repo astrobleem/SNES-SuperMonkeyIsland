@@ -18513,18 +18513,13 @@ scummvm.setPalColor_impl:
   pla                               ; BGR555 word
   sta.l BWRAM_CGRAM_SHADOW,x        ; update shadow
 
+  ; Mark CGRAM dirty so NMI flushes the shadow to hardware during VBlank.
+  ; Direct writes to $2122 during active display race with the PPU and
+  ; produce palette flicker (clouds appearing/disappearing on room 10).
   sep #$20
   .ACCU 8
-  lda.l BWRAM_PALETTE_SCRATCH+6
-  sta.l $2121                       ; CGADD = index
-  rep #$20
-  .ACCU 16
-  lda.l BWRAM_CGRAM_SHADOW,x
-  sep #$20
-  .ACCU 8
-  sta.l $2122                       ; CGDATA low
-  xba
-  sta.l $2122                       ; CGDATA high
+  lda #1
+  sta.l SCUMM.cgramDirty
   rep #$20
   .ACCU 16
 

@@ -39,6 +39,29 @@ core.nmi.play:
 	; Flush color-cycling updates to CGRAM (no-op when SCUMM.numCycles == 0)
 	jsl scummvm.cycle.writeToCgram
 
+	; Flush full CGRAM shadow if setPalColor dirtied it. DMA during VBlank
+	; avoids the PPU race that caused cloud flicker on room 10.
+	lda.w SCUMM.cgramDirty
+	beq _nmi.noCgramFlush
+	stz.w SCUMM.cgramDirty
+	lda.b #$00
+	sta.l CGADD                        ; start at CGRAM index 0
+	lda.b #$00                         ; DMA mode: 1-reg, auto-inc
+	sta.l DMAP7
+	lda.b #$22                         ; B-bus: CGDATA ($2122)
+	sta.l DMADEST7
+	lda.b #$40                         ; BWRAM bank ($408000)
+	sta.l DMASRC7B
+	rep #$20
+	lda.w #$8000                       ; BWRAM offset ($408000)
+	sta.l DMASRC7L
+	lda.w #256                         ; 128 colors x 2B
+	sta.l DMALEN7L
+	sep #$20
+	lda.b #$80                         ; trigger DMA ch7
+	sta.l MDMAEN
+_nmi.noCgramFlush:
+
     lda.w GLOBAL.HDMA.CHANNEL.ENABLE        ;check which hdma channels need to be activated
     sta.l HDMAEN        ;set hdma channels and disable dma channel
 

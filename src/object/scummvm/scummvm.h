@@ -186,7 +186,8 @@ SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaCgramChannel    db      ;UNUSED (CGRAM HDMA scheme removed 2026-04-18); kept for layout stability
-SCUMM._cgramHdmaTableStub ds 88   ;UNUSED reserve (was SCUMM.cgramHdmaTable)
+SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
+SCUMM._cgramHdmaTableStub ds 87   ;UNUSED reserve (was SCUMM.cgramHdmaTable, -1 for cgramDirty)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)

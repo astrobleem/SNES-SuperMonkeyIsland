@@ -123,6 +123,12 @@ scummvm.chore.animateActor_impl:
   rep #$30
   .ACCU 16
   .INDEX 16
+  phy                                     ; preserve Y — caller (op_animateActor)
+                                          ; uses it as the SCUMM PC. Internal
+                                          ; limb loop uses Y as [tmp+24],y index
+                                          ; into CostumeAnimTable and never puts
+                                          ; the PC back, so without this the
+                                          ; fetchLoop resumes on garbage.
 
   and #$00FF
   cmp #SCUMM_WALK_ACTORS
@@ -392,6 +398,8 @@ _caa.exit8:
   rep #$20
   .ACCU 16
 _caa.exit:
+  rep #$30                                 ; INDEX 16 guaranteed before ply
+  ply                                      ; restore caller's Y (SCUMM PC)
   plb
   plp
   rtl

@@ -12090,7 +12090,7 @@ _ri.buildOam:
   ldx.w SCUMM.scratch3               ; render slot
   lda.l _ri.palBitsLut,x             ; palette bits (PPP << 1)
   sta.w SCUMM.actorFlipMask          ; save palette bits temporarily
-  lda.w SCUMM.actorOamCount          ; actor number (low byte)
+  lda.w SCUMM.renderSlotActor,x      ; actor number for this slot
   tax
   lda.w SCUMM.actorZClip,x
   cmp #1

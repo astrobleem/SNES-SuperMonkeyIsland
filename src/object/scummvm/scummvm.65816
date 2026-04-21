@@ -10368,6 +10368,12 @@ _scummvm.updateActors_body:
 _ua.slotLoop:
   .ACCU 16
   .INDEX 16
+  ; Clear facing-changed flag for this slot
+  sep #$20
+  .ACCU 8
+  stz.w SCUMM.uaFacingChanged
+  rep #$20
+  .ACCU 16
   ; Compute actor struct offset: slot * 16
   lda.w SCUMM.scratch3
   and #$00FF
@@ -10527,7 +10533,19 @@ _ua.setFacing:
   .ACCU 16
   .INDEX 16
   ldx.w SCUMM.uaActorStructOfs
+  cmp.w SCUMM.actors.facing,x
+  beq _ua.facingSame
   sta.w SCUMM.actors.facing,x
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.w SCUMM.uaFacingChanged         ; flag: re-seed walk anim at nextSlot
+  rep #$20
+  .ACCU 16
+  bra _ua.facingDone
+_ua.facingSame:
+  sta.w SCUMM.actors.facing,x
+_ua.facingDone:
 
   ; |dy| for distance check
   lda.w SCUMM.scratch2
@@ -10665,8 +10683,22 @@ _ua.animDone:
 _ua.nextSlot:
   .ACCU 16
   .INDEX 16
-  ; Advance to next slot
+  ; Re-seed walk animation if facing changed this frame
   sep #$20
+  .ACCU 8
+  lda.w SCUMM.uaFacingChanged
+  beq _ua.noReseed
+  stz.w SCUMM.uaFacingChanged
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.scratch3                ; walk slot = actor number
+  and #$00FF
+  ldx #2                              ; walkFrame=2
+  jsl scummvm.chore.animateActor_impl
+  sep #$20
+  .ACCU 8
+_ua.noReseed:
+  ; Advance to next slot
   lda.w SCUMM.scratch3
   inc a
   sta.w SCUMM.scratch3

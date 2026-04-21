@@ -469,6 +469,7 @@ SCUMM.oamScratch     ds 80
 ; updateActors scratch (survives across inner subroutine calls)
 .ramsection "scumm updateActors scratch" bank 0 slot 1
 SCUMM.uaActorStructOfs   dw    ; actor struct byte offset (actor * 16)
+SCUMM.uaFacingChanged    db    ; nonzero = facing changed, re-seed walk anim at nextSlot
 .ends
 
 ; Cursor state

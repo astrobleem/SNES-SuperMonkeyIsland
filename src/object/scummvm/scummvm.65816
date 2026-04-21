@@ -11274,14 +11274,17 @@ _ri.gotPic:
   and #$00FF
   sta.w SCUMM.scratch                 ; default body pic from walk cycle
 
-  ; Override: if the chore engine has seeded limb 0 (body) for this actor,
-  ; use chorePic instead of the static walk cycle. chorePic is kept at $FF
-  ; for limbs not owned by an anim (see scummvm.chore.reset).
+  ; Override: if the chore engine has seeded slot 0 (body) for this actor,
+  ; use chorePic instead of the static walk cycle. The limbMask MSB maps to
+  ; slot 0 (decodeData iterates bits MSB-first), so both humanoid (mask bit
+  ; 15) and prop (mask bit 0) body pics land in chorePic[actor*16 + 0].
   phx                                 ; save current X (walk-cycle index)
   lda.w SCUMM.actorOamCount           ; actor number (saved earlier)
   and #$00FF
   asl a
-  asl a                                ; actor * SCUMM_CHORE_LIMBS (=4) → limb 0 byte idx
+  asl a
+  asl a
+  asl a                                ; actor * 16 (SCUMM_CHORE_LIMBS)
   tax
   sep #$20
   .ACCU 8
@@ -11320,16 +11323,17 @@ _ri.headGot:
   .ACCU 8
   sta.w SCUMM.actorHeadPicCur        ; default head pic from head cycle
 
-  ; Override: if the chore engine has seeded limb 1 (head) for this actor,
-  ; use chorePic instead of the static head cycle.
+  ; Override: if chore engine seeded slot 1 (head), use it.
   phx                                 ; save head-cycle X
   rep #$20
   .ACCU 16
   lda.w SCUMM.actorOamCount
   and #$00FF
   asl a
-  asl a                                ; actor * 4
-  inc a                                ; + 1 → limb 1 byte idx
+  asl a
+  asl a
+  asl a                                ; actor * 16
+  inc a                                ; + 1 → slot 1 (head)
   tax
   sep #$20
   .ACCU 8

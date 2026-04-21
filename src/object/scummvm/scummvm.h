@@ -381,7 +381,7 @@ SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 ; so only scummvm_chore.65816 emits it (same pattern as scummvm_cycle).
 ; SCUMM_CHORE_LIMBS constant duplicated here for callers that want to
 ; size iteration loops.
-.define SCUMM_CHORE_LIMBS  4
+.define SCUMM_CHORE_LIMBS  16
 
 ; Walkbox BOXD entry struct (20 bytes per walkbox, matches SCUMM v5 format)
 .struct scummBoxEntry

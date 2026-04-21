@@ -7,11 +7,10 @@
 ; the chore engine via JSL to scummvm.chore.{reset,tick,animateActor_impl}.
 ;---------------------------------------------------------------------------
 
-; 4 limbs × 16 walk-slot actors. Most MI1 costumes drive only limbs 0
-; (body), 1 (head), and occasionally 2-3. Full 16-limb support would
-; need ~2 KB, which doesn't fit in slot 1; widen later if a scene
-; actually references a higher limb.
-.define SCUMM_CHORE_LIMBS  4
+; 16 limbs × 16 walk-slot actors. MI1 costumes use high limb numbers
+; (bits 14/15 in limbMask for body/head). 16 limbs × 16 actors needs
+; ~2 KB total in slot 1 — fits within the ~5 KB remaining headroom.
+.define SCUMM_CHORE_LIMBS  16
 .define SCUMM_WALK_ACTORS  16
 
 .ramsection "scumm chore state" bank 0 slot 1

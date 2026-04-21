@@ -306,9 +306,11 @@ _caa.dirOk:
   ; --- actor base offsets into chore state --------------------
   lda.w SCUMM.scratch
   asl a
-  asl a                                    ; *4 = byte base
+  asl a
+  asl a
+  asl a                                    ; *16 = byte base (SCUMM_CHORE_LIMBS)
   sta.w SCUMM.choreScr_byteBase
-  asl a                                    ; *8 = word base
+  asl a                                    ; *32 = word base
   sta.w SCUMM.choreScr_wordBase
 
   ; --- walk limbs 0..15 ---------------------------------------
@@ -501,9 +503,11 @@ _tck.haveAnimCmds:
   ; chore state offsets for this actor
   lda.w SCUMM.choreScr_actorIdx
   asl a
-  asl a                                    ; *4 = byte base
+  asl a
+  asl a
+  asl a                                    ; *16 = byte base (SCUMM_CHORE_LIMBS)
   sta.w SCUMM.choreScr_byteBase
-  asl a                                    ; *8 = word base
+  asl a                                    ; *32 = word base
   sta.w SCUMM.choreScr_wordBase
 
   ; per-limb loop

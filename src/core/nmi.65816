@@ -230,6 +230,11 @@ _nmi.noTileWrite:
 	sta.l DMAP7
 	lda #VMDATAL & $ff
 	sta.l DMADEST7
+	; ExcFontTiles lives at physical ROM $200638 (2-3MB range).
+	; SA-1 EXB=4 maps $E0-$EF → 4-5MB, so `:ExcFontTiles` ($E0)
+	; reads zeros. Temporarily remap EXB to 2 for the DMA.
+	lda #2
+	sta.l $2222                       ;EXB = 2 → $E0 = 2-3MB
 	lda.b #:ExcFontTiles
 	sta.l DMASRC7B
 	rep #$20
@@ -240,6 +245,8 @@ _nmi.noTileWrite:
 	sep #$20
 	lda #$80                          ;trigger DMA channel 7
 	sta.l MDMAEN
+	lda #4
+	sta.l $2222                       ;EXB = 4 (restore)
 
 _nmi.noFontDma:
 	.ACCU 8

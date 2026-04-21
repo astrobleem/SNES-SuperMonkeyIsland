@@ -11397,7 +11397,7 @@ _ri.headGot:
   ; Chore is driving body. Check if limb 1 was ever decoded.
   inx                                  ; X = actor*16 + 1
   lda.w SCUMM.chorePic, x             ; slot 1 (head) pic
-  pha                                  ; save head chorePic
+  sta.w SCUMM.choreScr_cmd            ; stash head chorePic (no flag dependency)
   rep #$20
   .ACCU 16
   txa                                  ; actor*16 + 1
@@ -11405,19 +11405,21 @@ _ri.headGot:
   tax
   lda.w SCUMM.choreCurpos, x
   cmp #$FFFF
+  beq _ri.headSuppressed              ; case 2: limb 1 never decoded
+  ; Limb 1 was decoded. Use chorePic if set, else keep default.
   sep #$20
   .ACCU 8
-  pla                                  ; restore head chorePic
-  bne _ri.headLimbDecoded
-  ; case 2: limb 1 never decoded → costume has no head
-  lda #$FF
-  sta.w SCUMM.actorHeadPicCur
-  bra _ri.headChoreInactive
-_ri.headLimbDecoded:
-  ; Limb 1 was decoded. Use chorePic if set, else keep default.
+  lda.w SCUMM.choreScr_cmd            ; head chorePic
   cmp #$FF
   beq _ri.headChoreInactive           ; case 4: keep default head cycle
   sta.w SCUMM.actorHeadPicCur         ; case 3: use chore head pic
+  bra _ri.headChoreInactive
+_ri.headSuppressed:
+  ; case 2: limb 1 never decoded → costume has no head
+  sep #$20
+  .ACCU 8
+  lda #$FF
+  sta.w SCUMM.actorHeadPicCur
 _ri.headChoreInactive:
   rep #$20
   .ACCU 16

@@ -11503,11 +11503,15 @@ _ri.frameChanged:
   adc.b _costDirPtr
   sta.b _costDirPtr                   ; -> ChrLen table
 
-  ; Read ChrLen[pic] (word table)
+  ; Read ChrLen[pic] (word table), cap to slot budget
   lda.w SCUMM.scratch                 ; pic index
   asl a
   tay
   lda [_costDirPtr],y                 ; CHR length
+  cmp #$0600                          ; 48 tiles * 32 bytes = 1536 = $600
+  bcc +
+  lda #$0600                          ; cap to slot budget
++
   sta.w SCUMM.scratch2                ; save CHR length
 
   ; Store per-slot DMA params (and original ROM copies for SA-1 re-reads)

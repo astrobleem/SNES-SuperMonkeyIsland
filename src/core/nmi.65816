@@ -311,7 +311,9 @@ _nmi.noVerbFontDma:
 
 	;--- room scroll: write staged tilemap column to VRAM via DMA ch7 ---
 	lda.w GLOBAL.room.nmiColFlag
-	beq _nmi.noColWrite
+	bne _nmi.doColWrite
+	jmp _nmi.noColWrite
+_nmi.doColWrite:
 
 	stz.w GLOBAL.room.nmiColFlag
 
@@ -352,6 +354,48 @@ _nmi.noVerbFontDma:
 
 	lda.b #VMAIN_INCREMENT_MODE
 	sta.l VMAIN
+
+	;--- BG2 z-plane column: write bg2ColStaging to BG2 VRAM tilemap ---
+	lda.w GLOBAL.room.nmiBg2ColFlag
+	beq _nmi.noBg2Col
+
+	stz.w GLOBAL.room.nmiBg2ColFlag
+
+	lda.b #VMAIN_INCREMENT_MODE | VMAIN_INCREMENT_32
+	sta.l VMAIN
+
+	rep #$20
+	.ACCU 16
+	lda.w GLOBAL.room.nmiBg2ColAddr
+	sta.l VMADDL
+
+	sep #$20
+	.ACCU 8
+	lda.b #$01
+	sta.l DMAP7
+	lda.b #$18
+	sta.l DMADEST7
+	lda.b #$7E
+	sta.l DMASRC7B
+	rep #$20
+	.ACCU 16
+	lda #GLOBAL.room.bg2ColStaging & $ffff
+	sta.l DMASRC7L
+	lda.w GLOBAL.room.nmiColRows
+	asl a
+	sta.l DMALEN7L
+	sep #$20
+	.ACCU 8
+	lda.b #$80
+	sta.l MDMAEN
+
+	lda.b #VMAIN_INCREMENT_MODE
+	sta.l VMAIN
+
+_nmi.noBg2Col:
+	.ACCU 8
+	.INDEX 16
+	sep #$20
 
 _nmi.noColWrite:
 	.ACCU 8
@@ -526,6 +570,7 @@ core.nmi.init:
 	lda #0
 	sta.l GLOBAL.room.nmiColFlag
 	sta.l GLOBAL.room.nmiTileFlag
+	sta.l GLOBAL.room.nmiBg2ColFlag
 	sta.l SCUMM.dialogFontNmiPending
 	sta.l SCUMM.verbFontNmiPending
 	sta.l SCUMM.dialogTilemapNmiPending

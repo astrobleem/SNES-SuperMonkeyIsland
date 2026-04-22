@@ -82,6 +82,7 @@ room.initScroll:
 
   sep #$20
   stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiBg2ColFlag
   stz.w GLOBAL.room.nmiTileFlag
   stz.w GLOBAL.room.viewportDirty
   stz.w GLOBAL.room.hasBg2Mask
@@ -608,6 +609,7 @@ room.reloadViewport:
 
   ;clear pending NMI staging (we will overwrite VRAM directly)
   stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiBg2ColFlag
   stz.w GLOBAL.room.nmiTileFlag
   rep #$20
   stz.w GLOBAL.room.nmiTileCount
@@ -670,6 +672,7 @@ room.remapViewport:
 
   ;clear pending NMI staging
   stz.w GLOBAL.room.nmiColFlag
+  stz.w GLOBAL.room.nmiBg2ColFlag
   stz.w GLOBAL.room.nmiTileFlag
   rep #$20
   stz.w GLOBAL.room.nmiTileCount
@@ -1074,6 +1077,61 @@ _stageCol.p2Loop:
 
   lda.w GLOBAL.room.roomHeightTiles
   sta.w GLOBAL.room.nmiColRows
+
+  ;--- Pass 3: stage BG2 column (if hasBg2Mask) ---
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  rep #$20
+  beq _stageCol.noBg2
+
+  ldx.b tmp+12                  ;WRAM source offset (restart)
+  ldy #0
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+14
+_stageCol.p3Loop:
+  lda.l SCROLL_BG2MAP_WRAM,x
+  beq _stageCol.p3Zero
+  sta.b tmp+16
+  pha
+  and.w #$07FF
+  asl a
+  phx
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x
+  sta.b tmp+18
+  plx
+  pla
+  and.w #$C000
+  sta.b tmp+22
+  lda.b tmp+16
+  and.w #$3800
+  lsr a
+  ora.b tmp+18
+  ora.b tmp+22
+  bra _stageCol.p3Store
+_stageCol.p3Zero:
+  lda #0
+_stageCol.p3Store:
+  sta.w GLOBAL.room.bg2ColStaging,y
+  inx
+  inx
+  iny
+  iny
+  dec.b tmp+14
+  bne _stageCol.p3Loop
+
+  ;BG2 VRAM address = BG1 address + $1000
+  lda.w GLOBAL.room.nmiColVramAddr
+  clc
+  adc.w #$1000
+  sta.w GLOBAL.room.nmiBg2ColAddr
+
+  sep #$20
+  lda #1
+  sta.w GLOBAL.room.nmiBg2ColFlag
+  rep #$20
+
+_stageCol.noBg2:
 
   ;set NMI flags
   sep #$20

@@ -204,14 +204,12 @@ def convert_frame(pixels: np.ndarray, width: int, height: int,
         pixels[1:-1, 0],                 # left column (excluding corners)
         pixels[1:-1, -1],               # right column (excluding corners)
     ]) if height > 2 and width > 2 else pixels.ravel()
-    nonzero_border = border[border != 0]
-    if len(nonzero_border) > 0:
-        from collections import Counter
-        counts = Counter(nonzero_border.tolist())
-        bg_color, bg_count = counts.most_common(1)[0]
-        border_total = len(border)
-        if bg_count > border_total * 0.3:
-            pixels[pixels == bg_color] = 0
+    zero_border = np.sum(border == 0)
+    if zero_border > len(border) * 0.5:
+        bg_colors = set(border[border != 0].tolist())
+        if bg_colors:
+            for bg_color in bg_colors:
+                pixels[pixels == bg_color] = 0
             padded[:height, :width] = pixels
 
     # Split into 8x8 tiles and deduplicate

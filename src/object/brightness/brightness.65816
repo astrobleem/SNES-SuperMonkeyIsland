@@ -43,7 +43,7 @@
   ; processRoomChange and _play brightness guard own brightness control.
   ; SCUMM.running is at WRAM $7E:F10A. Must use explicit bank $7E
   ; because linker symbols resolve to bank $00 which doesn't mirror above $2000.
-  lda.l $7EF10A                   ; SCUMM.running (avoid cross-bank symbol issue)
+  lda.w SCUMM.running             ; DBR=$7E in OOP play context
   bne +
   lda this.current
   sta.w ScreenBrightness

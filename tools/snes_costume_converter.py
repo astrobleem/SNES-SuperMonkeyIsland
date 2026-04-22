@@ -192,24 +192,39 @@ def convert_frame(pixels: np.ndarray, width: int, height: int,
     padded = np.zeros((padded_h, padded_w), dtype=np.uint8)
     padded[:height, :width] = pixels
 
-    # Detect and remove costume background color. SCUMM costume frames are
-    # filled with opaque "background" pixels that match the PC's sky/room
-    # color. On SNES OAM, only pixel 0 is transparent, so these opaque
-    # background pixels show as visible rectangles. Detect the background
-    # by sampling the frame border — the most common non-zero value there
-    # is the background color. Remap it to 0 (transparent).
+    # Detect and remove dark "background fill" pixels from costume frames.
+    # SCUMM fills the entire frame with opaque pixels — dark sky-colored
+    # pixels that blend with the PC background but show as visible rectangles
+    # on SNES OAM (where only pixel 0 is transparent).
+    # Only apply to frames whose border is >50% transparent (non-character
+    # costumes like clouds, effects). Character costumes fill their border
+    # with body pixels and are excluded.
     border = np.concatenate([
-        pixels[0, :],                    # top row
-        pixels[-1, :],                   # bottom row
-        pixels[1:-1, 0],                 # left column (excluding corners)
-        pixels[1:-1, -1],               # right column (excluding corners)
+        pixels[0, :], pixels[-1, :],
+        pixels[1:-1, 0], pixels[1:-1, -1],
     ]) if height > 2 and width > 2 else pixels.ravel()
-    zero_border = np.sum(border == 0)
-    if zero_border > len(border) * 0.5:
-        bg_colors = set(border[border != 0].tolist())
-        if bg_colors:
-            for bg_color in bg_colors:
-                pixels[pixels == bg_color] = 0
+    if np.sum(border == 0) > len(border) * 0.5:
+        # Only strip dark pixels from low-diversity palettes (environmental
+        # costumes like clouds). High-diversity palettes (characters with
+        # skin, clothes, hair) are excluded to preserve dark detail pixels.
+        hues = set()
+        for idx in range(1, min(16, len(palette_bgr555))):
+            color = palette_bgr555[idx]
+            r = (color & 0x1F); g = (color >> 5) & 0x1F; b = (color >> 10) & 0x1F
+            mx = max(r, g, b)
+            if mx > 0:
+                dom = 'r' if r == mx else ('g' if g == mx else 'b')
+                hues.add(dom)
+        if len(hues) <= 1:
+            BRIGHTNESS_THRESHOLD = 40
+            for idx in range(1, min(16, len(palette_bgr555))):
+                color = palette_bgr555[idx]
+                r = (color & 0x1F) * 8
+                g = ((color >> 5) & 0x1F) * 8
+                b = ((color >> 10) & 0x1F) * 8
+                brightness = (r + g + b) // 3
+                if brightness < BRIGHTNESS_THRESHOLD:
+                    pixels[pixels == idx] = 0
             padded[:height, :width] = pixels
 
     # Split into 8x8 tiles and deduplicate

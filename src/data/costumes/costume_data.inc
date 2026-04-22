@@ -21563,7 +21563,7 @@ Cost059_AnimDispatch:
 .ends
 
 ;===================================================================
-; Costume 60 - 5 body pics, 1 head pics
+; Costume 60 - 5 body pics
 ;===================================================================
 .section "Cost060_Data" superfree
 
@@ -21637,29 +21637,6 @@ Cost060_Pic04_Chr:
 Cost060_Pic04_ChrEnd:
 Cost060_Pic04_Oam:
   .incbin "data/snes_converted/costumes/cost_060/pic04.oam"
-
-; Head frame CHR lookup (limb 1, sparse: 1 entries)
-Cost060_HeadChrLo:
-  .dw Cost060_HeadPic00_Chr
-
-Cost060_HeadChrHi:
-  .db :Cost060_HeadPic00_Chr
-
-Cost060_HeadChrLen:
-  .dw Cost060_HeadPic00_ChrEnd - Cost060_HeadPic00_Chr
-
-; Head frame OAM lookup (limb 1)
-Cost060_HeadOamLo:
-  .dw Cost060_HeadPic00_Oam
-
-Cost060_HeadOamHi:
-  .db :Cost060_HeadPic00_Oam
-
-Cost060_HeadPic00_Chr:
-  .incbin "data/snes_converted/costumes/cost_060/head_pic00.chr"
-Cost060_HeadPic00_ChrEnd:
-Cost060_HeadPic00_Oam:
-  .incbin "data/snes_converted/costumes/cost_060/head_pic00.oam"
 
 Cost060_AnimCmds:
   .incbin "data/snes_converted/costumes/cost_060/anim_cmds.bin"
@@ -28214,7 +28191,7 @@ Cost081_Pic26_Oam:
 .ends
 
 ;===================================================================
-; Costume 82 - 9 body pics, 4 head pics
+; Costume 82 - 9 body pics, 1 head pics
 ;===================================================================
 .section "Cost082_Data" superfree
 
@@ -28338,61 +28315,38 @@ Cost082_Pic09_ChrEnd:
 Cost082_Pic09_Oam:
   .incbin "data/snes_converted/costumes/cost_082/pic09.oam"
 
-; Head frame CHR lookup (limb 1, sparse: 4 entries)
+; Head frame CHR lookup (limb 1, sparse: 3 entries)
 Cost082_HeadChrLo:
-  .dw Cost082_HeadPic00_Chr
-  .dw Cost082_HeadPic01_Chr
   .dw Cost082_HeadPic02_Chr
-  .dw Cost082_HeadPic03_Chr
+  .dw Cost082_HeadPic02_Chr
+  .dw Cost082_HeadPic02_Chr
 
 Cost082_HeadChrHi:
-  .db :Cost082_HeadPic00_Chr
-  .db :Cost082_HeadPic01_Chr
   .db :Cost082_HeadPic02_Chr
-  .db :Cost082_HeadPic03_Chr
+  .db :Cost082_HeadPic02_Chr
+  .db :Cost082_HeadPic02_Chr
 
 Cost082_HeadChrLen:
-  .dw Cost082_HeadPic00_ChrEnd - Cost082_HeadPic00_Chr
-  .dw Cost082_HeadPic01_ChrEnd - Cost082_HeadPic01_Chr
   .dw Cost082_HeadPic02_ChrEnd - Cost082_HeadPic02_Chr
-  .dw Cost082_HeadPic03_ChrEnd - Cost082_HeadPic03_Chr
+  .dw Cost082_HeadPic02_ChrEnd - Cost082_HeadPic02_Chr
+  .dw Cost082_HeadPic02_ChrEnd - Cost082_HeadPic02_Chr
 
 ; Head frame OAM lookup (limb 1)
 Cost082_HeadOamLo:
-  .dw Cost082_HeadPic00_Oam
-  .dw Cost082_HeadPic01_Oam
   .dw Cost082_HeadPic02_Oam
-  .dw Cost082_HeadPic03_Oam
+  .dw Cost082_HeadPic02_Oam
+  .dw Cost082_HeadPic02_Oam
 
 Cost082_HeadOamHi:
-  .db :Cost082_HeadPic00_Oam
-  .db :Cost082_HeadPic01_Oam
   .db :Cost082_HeadPic02_Oam
-  .db :Cost082_HeadPic03_Oam
-
-Cost082_HeadPic00_Chr:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic00.chr"
-Cost082_HeadPic00_ChrEnd:
-Cost082_HeadPic00_Oam:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic00.oam"
-
-Cost082_HeadPic01_Chr:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic01.chr"
-Cost082_HeadPic01_ChrEnd:
-Cost082_HeadPic01_Oam:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic01.oam"
+  .db :Cost082_HeadPic02_Oam
+  .db :Cost082_HeadPic02_Oam
 
 Cost082_HeadPic02_Chr:
   .incbin "data/snes_converted/costumes/cost_082/head_pic02.chr"
 Cost082_HeadPic02_ChrEnd:
 Cost082_HeadPic02_Oam:
   .incbin "data/snes_converted/costumes/cost_082/head_pic02.oam"
-
-Cost082_HeadPic03_Chr:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic03.chr"
-Cost082_HeadPic03_ChrEnd:
-Cost082_HeadPic03_Oam:
-  .incbin "data/snes_converted/costumes/cost_082/head_pic03.oam"
 
 .ends
 
@@ -32267,7 +32221,7 @@ Cost092_HeadPic19_Oam:
 .ends
 
 ;===================================================================
-; Costume 93 - 7 body pics, 2 head pics
+; Costume 93 - 7 body pics
 ;===================================================================
 .section "Cost093_Data" superfree
 
@@ -32384,44 +32338,10 @@ Cost093_Pic10_ChrEnd:
 Cost093_Pic10_Oam:
   .incbin "data/snes_converted/costumes/cost_093/pic10.oam"
 
-; Head frame CHR lookup (limb 1, sparse: 2 entries)
-Cost093_HeadChrLo:
-  .dw Cost093_HeadPic00_Chr
-  .dw Cost093_HeadPic01_Chr
-
-Cost093_HeadChrHi:
-  .db :Cost093_HeadPic00_Chr
-  .db :Cost093_HeadPic01_Chr
-
-Cost093_HeadChrLen:
-  .dw Cost093_HeadPic00_ChrEnd - Cost093_HeadPic00_Chr
-  .dw Cost093_HeadPic01_ChrEnd - Cost093_HeadPic01_Chr
-
-; Head frame OAM lookup (limb 1)
-Cost093_HeadOamLo:
-  .dw Cost093_HeadPic00_Oam
-  .dw Cost093_HeadPic01_Oam
-
-Cost093_HeadOamHi:
-  .db :Cost093_HeadPic00_Oam
-  .db :Cost093_HeadPic01_Oam
-
-Cost093_HeadPic00_Chr:
-  .incbin "data/snes_converted/costumes/cost_093/head_pic00.chr"
-Cost093_HeadPic00_ChrEnd:
-Cost093_HeadPic00_Oam:
-  .incbin "data/snes_converted/costumes/cost_093/head_pic00.oam"
-
-Cost093_HeadPic01_Chr:
-  .incbin "data/snes_converted/costumes/cost_093/head_pic01.chr"
-Cost093_HeadPic01_ChrEnd:
-Cost093_HeadPic01_Oam:
-  .incbin "data/snes_converted/costumes/cost_093/head_pic01.oam"
-
 .ends
 
 ;===================================================================
-; Costume 94 - 3 body pics, 1 head pics
+; Costume 94 - 3 body pics
 ;===================================================================
 .section "Cost094_Data" superfree
 
@@ -32493,29 +32413,6 @@ Cost094_Pic06_Chr:
 Cost094_Pic06_ChrEnd:
 Cost094_Pic06_Oam:
   .incbin "data/snes_converted/costumes/cost_094/pic06.oam"
-
-; Head frame CHR lookup (limb 1, sparse: 1 entries)
-Cost094_HeadChrLo:
-  .dw Cost094_HeadPic00_Chr
-
-Cost094_HeadChrHi:
-  .db :Cost094_HeadPic00_Chr
-
-Cost094_HeadChrLen:
-  .dw Cost094_HeadPic00_ChrEnd - Cost094_HeadPic00_Chr
-
-; Head frame OAM lookup (limb 1)
-Cost094_HeadOamLo:
-  .dw Cost094_HeadPic00_Oam
-
-Cost094_HeadOamHi:
-  .db :Cost094_HeadPic00_Oam
-
-Cost094_HeadPic00_Chr:
-  .incbin "data/snes_converted/costumes/cost_094/head_pic00.chr"
-Cost094_HeadPic00_ChrEnd:
-Cost094_HeadPic00_Oam:
-  .incbin "data/snes_converted/costumes/cost_094/head_pic00.oam"
 
 .ends
 
@@ -36969,7 +36866,7 @@ Cost105_Pic09_Oam:
 .ends
 
 ;===================================================================
-; Costume 106 - 9 body pics, 5 head pics
+; Costume 106 - 9 body pics, 3 head pics
 ;===================================================================
 .section "Cost106_Data" superfree
 
@@ -37088,42 +36985,32 @@ Cost106_Pic08_ChrEnd:
 Cost106_Pic08_Oam:
   .incbin "data/snes_converted/costumes/cost_106/pic08.oam"
 
-; Head frame CHR lookup (limb 1, sparse: 5 entries)
+; Head frame CHR lookup (limb 1, sparse: 3 entries)
 Cost106_HeadChrLo:
   .dw Cost106_HeadPic00_Chr
   .dw Cost106_HeadPic01_Chr
   .dw Cost106_HeadPic02_Chr
-  .dw Cost106_HeadPic03_Chr
-  .dw Cost106_HeadPic04_Chr
 
 Cost106_HeadChrHi:
   .db :Cost106_HeadPic00_Chr
   .db :Cost106_HeadPic01_Chr
   .db :Cost106_HeadPic02_Chr
-  .db :Cost106_HeadPic03_Chr
-  .db :Cost106_HeadPic04_Chr
 
 Cost106_HeadChrLen:
   .dw Cost106_HeadPic00_ChrEnd - Cost106_HeadPic00_Chr
   .dw Cost106_HeadPic01_ChrEnd - Cost106_HeadPic01_Chr
   .dw Cost106_HeadPic02_ChrEnd - Cost106_HeadPic02_Chr
-  .dw Cost106_HeadPic03_ChrEnd - Cost106_HeadPic03_Chr
-  .dw Cost106_HeadPic04_ChrEnd - Cost106_HeadPic04_Chr
 
 ; Head frame OAM lookup (limb 1)
 Cost106_HeadOamLo:
   .dw Cost106_HeadPic00_Oam
   .dw Cost106_HeadPic01_Oam
   .dw Cost106_HeadPic02_Oam
-  .dw Cost106_HeadPic03_Oam
-  .dw Cost106_HeadPic04_Oam
 
 Cost106_HeadOamHi:
   .db :Cost106_HeadPic00_Oam
   .db :Cost106_HeadPic01_Oam
   .db :Cost106_HeadPic02_Oam
-  .db :Cost106_HeadPic03_Oam
-  .db :Cost106_HeadPic04_Oam
 
 Cost106_HeadPic00_Chr:
   .incbin "data/snes_converted/costumes/cost_106/head_pic00.chr"
@@ -37142,18 +37029,6 @@ Cost106_HeadPic02_Chr:
 Cost106_HeadPic02_ChrEnd:
 Cost106_HeadPic02_Oam:
   .incbin "data/snes_converted/costumes/cost_106/head_pic02.oam"
-
-Cost106_HeadPic03_Chr:
-  .incbin "data/snes_converted/costumes/cost_106/head_pic03.chr"
-Cost106_HeadPic03_ChrEnd:
-Cost106_HeadPic03_Oam:
-  .incbin "data/snes_converted/costumes/cost_106/head_pic03.oam"
-
-Cost106_HeadPic04_Chr:
-  .incbin "data/snes_converted/costumes/cost_106/head_pic04.chr"
-Cost106_HeadPic04_ChrEnd:
-Cost106_HeadPic04_Oam:
-  .incbin "data/snes_converted/costumes/cost_106/head_pic04.oam"
 
 .ends
 
@@ -40933,7 +40808,7 @@ Cost118_Pic05_Oam:
 .ends
 
 ;===================================================================
-; Costume 119 - 16 body pics, 2 head pics
+; Costume 119 - 16 body pics
 ;===================================================================
 .section "Cost119_Data" superfree
 
@@ -41128,40 +41003,6 @@ Cost119_Pic15_Chr:
 Cost119_Pic15_ChrEnd:
 Cost119_Pic15_Oam:
   .incbin "data/snes_converted/costumes/cost_119/pic15.oam"
-
-; Head frame CHR lookup (limb 1, sparse: 2 entries)
-Cost119_HeadChrLo:
-  .dw Cost119_HeadPic00_Chr
-  .dw Cost119_HeadPic01_Chr
-
-Cost119_HeadChrHi:
-  .db :Cost119_HeadPic00_Chr
-  .db :Cost119_HeadPic01_Chr
-
-Cost119_HeadChrLen:
-  .dw Cost119_HeadPic00_ChrEnd - Cost119_HeadPic00_Chr
-  .dw Cost119_HeadPic01_ChrEnd - Cost119_HeadPic01_Chr
-
-; Head frame OAM lookup (limb 1)
-Cost119_HeadOamLo:
-  .dw Cost119_HeadPic00_Oam
-  .dw Cost119_HeadPic01_Oam
-
-Cost119_HeadOamHi:
-  .db :Cost119_HeadPic00_Oam
-  .db :Cost119_HeadPic01_Oam
-
-Cost119_HeadPic00_Chr:
-  .incbin "data/snes_converted/costumes/cost_119/head_pic00.chr"
-Cost119_HeadPic00_ChrEnd:
-Cost119_HeadPic00_Oam:
-  .incbin "data/snes_converted/costumes/cost_119/head_pic00.oam"
-
-Cost119_HeadPic01_Chr:
-  .incbin "data/snes_converted/costumes/cost_119/head_pic01.chr"
-Cost119_HeadPic01_ChrEnd:
-Cost119_HeadPic01_Oam:
-  .incbin "data/snes_converted/costumes/cost_119/head_pic01.oam"
 
 .ends
 
@@ -43590,8 +43431,8 @@ CostumeHeadDirTable:
   .db 0, 0                          ; costume 46 - no head
   .dw 0
   .db 0, 0                          ; costume 47 - no head
-  .dw Cost060_HeadChrLo          ; costume 48
-  .db :Cost060_HeadChrLo, 1
+  .dw 0
+  .db 0, 0                          ; costume 48 - no head
   .dw Cost112_HeadChrLo          ; costume 49
   .db :Cost112_HeadChrLo, 17
   .dw Cost103_HeadChrLo          ; costume 50
@@ -43601,7 +43442,7 @@ CostumeHeadDirTable:
   .dw Cost104_HeadChrLo          ; costume 52
   .db :Cost104_HeadChrLo, 12
   .dw Cost106_HeadChrLo          ; costume 53
-  .db :Cost106_HeadChrLo, 5
+  .db :Cost106_HeadChrLo, 3
   .dw Cost108_HeadChrLo          ; costume 54
   .db :Cost108_HeadChrLo, 16
   .dw 0
@@ -43682,8 +43523,8 @@ CostumeHeadDirTable:
   .db :Cost035_HeadChrLo, 20
   .dw Cost089_HeadChrLo          ; costume 93
   .db :Cost089_HeadChrLo, 5
-  .dw Cost119_HeadChrLo          ; costume 94
-  .db :Cost119_HeadChrLo, 2
+  .dw 0
+  .db 0, 0                          ; costume 94 - no head
   .dw 0
   .db 0, 0                          ; costume 95 - no head
   .dw 0
@@ -43707,7 +43548,7 @@ CostumeHeadDirTable:
   .dw Cost115_HeadChrLo          ; costume 105
   .db :Cost115_HeadChrLo, 10
   .dw Cost106_HeadChrLo          ; costume 106
-  .db :Cost106_HeadChrLo, 5
+  .db :Cost106_HeadChrLo, 3
   .dw Cost095_HeadChrLo          ; costume 107
   .db :Cost095_HeadChrLo, 20
   .dw 0
@@ -43730,8 +43571,8 @@ CostumeHeadDirTable:
   .db 0, 0                          ; costume 116 - no head
   .dw Cost092_HeadChrLo          ; costume 117
   .db :Cost092_HeadChrLo, 20
-  .dw Cost093_HeadChrLo          ; costume 118
-  .db :Cost093_HeadChrLo, 2
+  .dw 0
+  .db 0, 0                          ; costume 118 - no head
   .dw 0
   .db 0, 0                          ; costume 119 - no head
   .dw 0
@@ -43739,13 +43580,13 @@ CostumeHeadDirTable:
   .dw 0
   .db 0, 0                          ; costume 121 - no head
   .dw Cost082_HeadChrLo          ; costume 122
-  .db :Cost082_HeadChrLo, 4
+  .db :Cost082_HeadChrLo, 3
   .dw Cost079_HeadChrLo          ; costume 123
   .db :Cost079_HeadChrLo, 3
   .dw 0
   .db 0, 0                          ; costume 124 - no head
-  .dw Cost094_HeadChrLo          ; costume 125
-  .db :Cost094_HeadChrLo, 1
+  .dw 0
+  .db 0, 0                          ; costume 125 - no head
   .dw 0
   .db 0, 0                          ; costume 126 - no head
   .dw 0

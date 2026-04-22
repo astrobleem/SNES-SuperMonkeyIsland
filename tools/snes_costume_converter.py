@@ -192,6 +192,28 @@ def convert_frame(pixels: np.ndarray, width: int, height: int,
     padded = np.zeros((padded_h, padded_w), dtype=np.uint8)
     padded[:height, :width] = pixels
 
+    # Detect and remove costume background color. SCUMM costume frames are
+    # filled with opaque "background" pixels that match the PC's sky/room
+    # color. On SNES OAM, only pixel 0 is transparent, so these opaque
+    # background pixels show as visible rectangles. Detect the background
+    # by sampling the frame border — the most common non-zero value there
+    # is the background color. Remap it to 0 (transparent).
+    border = np.concatenate([
+        pixels[0, :],                    # top row
+        pixels[-1, :],                   # bottom row
+        pixels[1:-1, 0],                 # left column (excluding corners)
+        pixels[1:-1, -1],               # right column (excluding corners)
+    ]) if height > 2 and width > 2 else pixels.ravel()
+    nonzero_border = border[border != 0]
+    if len(nonzero_border) > 0:
+        from collections import Counter
+        counts = Counter(nonzero_border.tolist())
+        bg_color, bg_count = counts.most_common(1)[0]
+        border_total = len(border)
+        if bg_count > border_total * 0.3:
+            pixels[pixels == bg_color] = 0
+            padded[:height, :width] = pixels
+
     # Split into 8x8 tiles and deduplicate
     tile_data_list = []       # unique tile bytes
     tile_lookup = {}          # tile_bytes -> (tile_id, hflip, vflip)

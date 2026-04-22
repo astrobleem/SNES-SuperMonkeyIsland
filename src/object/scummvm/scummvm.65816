@@ -12167,8 +12167,40 @@ _ri.entryLoop:
   stx.w GLOBAL.currentOamSlot
   jmp _ri.headRender
 _ri.entryInBounds:
+  ; Pre-check: if tile_id (at offset Y+2) exceeds slot budget, skip entry
   rep #$20
   .ACCU 16
+  phy
+  iny
+  iny
+  lda [_oamSrcPtr],y                  ; peek tile_id
+  ply                                 ; restore Y to dx position
+  and #$00FF
+  cmp #$0030                          ; 48 tile budget
+  bcc _ri.entryTileOk
+  ; Skip this entry entirely — advance Y past 4 bytes (dx, dy, tile, flags)
+  iny
+  iny
+  iny
+  iny
+  ; Write hidden OAM entry
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #$F0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  lda #0
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  sta.w GLOBAL.oamBuffer,x
+  inx
+  rep #$20
+  .ACCU 16
+  jmp _ri.nextEntry
+_ri.entryTileOk:
   lda [_oamSrcPtr],y                  ; dx byte
   iny
   and #$00FF

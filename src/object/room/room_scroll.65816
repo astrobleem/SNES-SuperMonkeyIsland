@@ -501,10 +501,11 @@ _initVP.p2Loop:
   rep #$20
   beq _initVP.bg2Skip
 
-  ;BG2 VRAM address = BG1 address + $1000 ($4800 - $3800)
+  ;BG2 VRAM address: $4800 + (column & 31). BG2 is 32-wide (no NT1).
   lda.b tmp+4
+  and.w #$001F                    ;column within 32-wide nametable
   clc
-  adc.w #$1000
+  adc.w #$4800                    ;BG2 tilemap base
   sta.l VMADDL
 
   ;walk the BG2 column from SCROLL_BG2MAP_WRAM at same WRAM offset as BG1
@@ -1120,10 +1121,11 @@ _stageCol.p3Store:
   dec.b tmp+14
   bne _stageCol.p3Loop
 
-  ;BG2 VRAM address = BG1 address + $1000
-  lda.w GLOBAL.room.nmiColVramAddr
+  ;BG2 VRAM address: $4800 + (column & 31). BG2 is 32-wide (no NT1).
+  lda.b tmp+10                    ;column index
+  and.w #$001F
   clc
-  adc.w #$1000
+  adc.w #$4800
   sta.w GLOBAL.room.nmiBg2ColAddr
 
   sep #$20

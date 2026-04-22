@@ -8185,8 +8185,6 @@ _roomOps.palManipulate:
 op_loadRoomWithEgo:
   .ACCU 16
   .INDEX 16
-  lda.w SCUMM.currentOpcode          ; DEBUG: log opcode byte
-  sta.l $7EFD04
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object (p16[7])
   pha                                ; save object ID for room lookup

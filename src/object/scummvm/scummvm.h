@@ -186,8 +186,9 @@ SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaNbaChannel      db      ;allocated HDMA channel id for BG12NBA z-plane switching
+SCUMM.hdmaVofsChannel     db      ;allocated HDMA channel id for BG2VOFS z-plane switching
 SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
-SCUMM._cgramHdmaTableStub ds 87   ;UNUSED reserve (was SCUMM.cgramHdmaTable, -1 for cgramDirty)
+SCUMM._cgramHdmaTableStub ds 86   ;UNUSED reserve (was SCUMM.cgramHdmaTable, shrunk for hdmaVofsChannel)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
@@ -714,6 +715,25 @@ Bg2NbaDefaultTable:
   .db $40                               ; BG1=$0000, BG2=$4000
   .db 96
   .db $40
+  .db 0
+
+; BG2VOFS HDMA: set BG2 Y scroll to 0 in game area, 110 in verb area.
+; Mode 2 (write-twice register $2110): each entry is 2 bytes (lo, hi).
+Bg2VofsHdmaTable:
+  .db 128                               ; scanlines 0-127
+  .dw 0                                 ; yScrollBG2 = 0
+  .db 16                                ; scanlines 128-143
+  .dw 0                                 ; yScrollBG2 = 0
+  .db 80                                ; scanlines 144-223
+  .dw 110                               ; yScrollBG2 = 110 (verb bar offset)
+  .db 0                                 ; end
+
+; Default BG2VOFS table (no z-plane masking): BG2 Y scroll = 110 everywhere.
+Bg2VofsDefaultTable:
+  .db 128
+  .dw 110
+  .db 96
+  .dw 110
   .db 0
 .ends
 

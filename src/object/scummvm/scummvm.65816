@@ -915,6 +915,40 @@ _scummvm.processRoomChange:
   .ACCU 8
   .INDEX 16
 
+  ; Set up HDMA for BG2VOFS ($2110) — sets BG2 Y scroll per scanline region
+  sep #$20
+  jsr core.dma_channel.allocate
+  bcc +
+    sta.w SCUMM.hdmaVofsChannel
+    rep #$31
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tax
+    sep #$20
+    lda #$02                        ;DMAP: mode 2 (write-twice, same register)
+    sta.l DMAP0,x
+    lda #$10                        ;target: $2110 (BG2VOFS)
+    sta.l DMADEST0,x
+    lda.b #:Bg2VofsDefaultTable
+    sta.l DMASRC0B,x
+    rep #$20
+    lda.w #Bg2VofsDefaultTable
+    sta.l DMASRC0L,x
+    rep #$20
+    lda.w SCUMM.hdmaVofsChannel
+    and #$00FF
+    tax
+    sep #$20
+    lda.l dmaBitflagLut,x
+    ora.w GLOBAL.HDMA.CHANNEL.ENABLE
+    sta.w GLOBAL.HDMA.CHANNEL.ENABLE
++
+  .ACCU 8
+  .INDEX 16
+
   rep #$31
   lda #1
   sta.w SCUMM.bgInitDone
@@ -1336,7 +1370,9 @@ _prc.noExitScript2:
   ; Skip camera/viewport for virtual rooms (no tile data)
   lda.l GLOBAL.room.idx
   ora.l GLOBAL.room.idx+2
-  beq _prc.skipViewport                ; virtual room -- no MSU tile data
+  bne _prc.hasViewport
+  jmp _prc.skipViewport                ; virtual room -- no MSU tile data
+_prc.hasViewport:
 
   ; Update camera limits + snap to followed actor.
   ; Historically room 10 (logo) skipped snap to preserve a cam=256 setup
@@ -1353,20 +1389,20 @@ _prc.noExitScript2:
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
 
-  ; BG2 z-plane masking: sync scroll + switch NBA HDMA table
+  ; BG2 z-plane masking: sync scroll + switch HDMA tables
   sep #$20
   lda.w GLOBAL.room.hasBg2Mask
   beq _prc.noBg2Mask
   rep #$20
   lda.w GLOBAL.room.cameraX
   sta.w xScrollBG2
-  ; Switch NBA HDMA to game table (BG2 chr=$0000 in game area)
+  ; Switch NBA HDMA → game table
   lda.w SCUMM.hdmaNbaChannel
   and #$00FF
   asl a
-  asl a
-  asl a
-  asl a
+    asl a
+    asl a
+    asl a
   tax
   sep #$20
   lda.b #:Bg2NbaHdmaTable
@@ -1374,22 +1410,50 @@ _prc.noExitScript2:
   rep #$20
   lda.w #Bg2NbaHdmaTable
   sta.l DMASRC0L,x
+  ; Switch VOFS HDMA → game table (BG2 Y=0 in game area)
+  lda.w SCUMM.hdmaVofsChannel
+  and #$00FF
+  asl a
+    asl a
+    asl a
+    asl a
+  tax
+  sep #$20
+  lda.b #:Bg2VofsHdmaTable
+  sta.l DMASRC0B,x
+  rep #$20
+  lda.w #Bg2VofsHdmaTable
+  sta.l DMASRC0L,x
   bra _prc.bg2MaskDone
 _prc.noBg2Mask:
   rep #$20
-  ; Default table (BG2 chr=$4000 everywhere)
+  ; Default NBA table (BG2 chr=$4000 everywhere)
   lda.w SCUMM.hdmaNbaChannel
   and #$00FF
   asl a
-  asl a
-  asl a
-  asl a
+    asl a
+    asl a
+    asl a
   tax
   sep #$20
   lda.b #:Bg2NbaDefaultTable
   sta.l DMASRC0B,x
   rep #$20
   lda.w #Bg2NbaDefaultTable
+  sta.l DMASRC0L,x
+  ; Default VOFS table (BG2 Y=110 everywhere)
+  lda.w SCUMM.hdmaVofsChannel
+  and #$00FF
+  asl a
+    asl a
+    asl a
+    asl a
+  tax
+  sep #$20
+  lda.b #:Bg2VofsDefaultTable
+  sta.l DMASRC0B,x
+  rep #$20
+  lda.w #Bg2VofsDefaultTable
   sta.l DMASRC0L,x
 _prc.bg2MaskDone:
 

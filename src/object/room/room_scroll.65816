@@ -494,6 +494,62 @@ _initVP.p2Loop:
   dey
   bne _initVP.p2Loop
 
+  ;=== Pass 2b: write BG2 z-plane column to VRAM (if hasBg2Mask) ===
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  rep #$20
+  beq _initVP.bg2Skip
+
+  ;BG2 VRAM address = BG1 address + $1000 ($4800 - $3800)
+  lda.b tmp+4
+  clc
+  adc.w #$1000
+  sta.l VMADDL
+
+  ;walk the BG2 column from SCROLL_BG2MAP_WRAM at same WRAM offset as BG1
+  ;tmp+2 is already advanced past this column; rewind by height_tiles*2
+  lda.b tmp+2
+  sec
+  sbc.w GLOBAL.room.roomHeightTiles
+  sbc.w GLOBAL.room.roomHeightTiles
+  tax                              ;X = start of this column in BG2 WRAM
+  ldy.w GLOBAL.room.roomHeightTiles
+_initVP.bg2Loop:
+  lda.l SCROLL_BG2MAP_WRAM,x
+  beq _initVP.bg2Zero
+  ;remap custom → SNES: tile ID → slot, palette shift, flip; no priority
+  pha                              ;save original word
+  and.w #$07FF                    ;tile ID
+  asl a
+  phx
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x   ;slot
+  sta.b tmp+20                    ;save slot
+  plx
+  pla                              ;restore original word
+  pha
+  and.w #$C000                    ;flip bits
+  sta.b tmp+22
+  pla
+  and.w #$3800                    ;palette
+  lsr a                            ;shift to SNES position
+  ora.b tmp+20                    ;OR slot
+  ora.b tmp+22                    ;OR flip
+  bra _initVP.bg2Write
+_initVP.bg2Zero:
+  lda #0
+_initVP.bg2Write:
+  sep #$20
+  sta.l VMDATAL
+  xba
+  sta.l VMDATAH
+  rep #$20
+  inx
+  inx
+  dey
+  bne _initVP.bg2Loop
+_initVP.bg2Skip:
+
   ;advance VRAM tilemap column address
   lda.b tmp+4
   inc a

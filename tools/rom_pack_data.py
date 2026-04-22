@@ -36,7 +36,7 @@ BLOCK_ALIGNMENT = 4       # 4-byte alignment (no need for 512B MSU alignment)
 SCRIPT_MAGIC = b"SCPT"
 SCRIPT_VERSION = 1
 SECTION_HEADER_SIZE = 32
-ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr', '.cyc', '.pri')
+ROOM_EXTENSIONS = ('.hdr', '.pal', '.chr', '.map', '.col', '.box', '.obj', '.ochr', '.cyc', '.bg2', '.pri')
 
 
 def align_to(offset, alignment):
@@ -65,6 +65,9 @@ def load_room_files(rooms_dir):
         for ext in ROOM_EXTENSIONS:
             path = Path(str(prefix) + ext)
             if not path.exists():
+                if ext == '.bg2':
+                    files['bg2'] = None
+                    continue
                 logging.error('Missing %s for room %d', path.name, rid)
                 sys.exit(1)
             files[ext.lstrip('.')] = path.read_bytes()
@@ -78,11 +81,19 @@ def load_room_files(rooms_dir):
 def build_room_data_block(room):
     # .pri goes LAST — engine derives its size from room dimensions and
     # seeks to (room_start + room_size - pri_size) to read the bitmap.
-    # .cyc sits just before .pri; engine reads it at
-    # (room_start + room_size - pri_size - cyc_size). Header has cyc_size.
+    # .bg2 sits between .cyc and .pri; engine reads it at
+    # (room_start + room_size - pri_size - bg2_size).
+    # bg2_size = width_tiles * height_tiles * 2 (derivable from header).
+    # .cyc sits before .bg2; engine reads it at
+    # (room_start + room_size - pri_size - bg2_size - cyc_size).
+    bg2 = room['bg2']
+    if bg2 is None:
+        w_tiles = struct.unpack_from('<H', room['hdr'], 6)[0]
+        h_tiles = struct.unpack_from('<H', room['hdr'], 8)[0]
+        bg2 = b'\x00' * (w_tiles * h_tiles * 2)
     return (room['hdr'] + room['pal'] + room['chr'] + room['map'] +
             room['col'] + room['box'] + room['obj'] + room['ochr'] +
-            room['cyc'] + room['pri'])
+            room['cyc'] + bg2 + room['pri'])
 
 
 # ---------------------------------------------------------------------------
@@ -232,11 +243,10 @@ def pack_rom_data(rooms_dir, data_dir, output_bin, output_inc, verbose=False,
     room_section_end = current
 
     # Section 2: Script header + indices + data.
-    # Align script section to 1MB (SA-1 FXB block) so all scripts live
-    # in a single FXB window — [tmp+24],y reads can't cross a bank
-    # boundary without FXB changing mid-read, and the engine's copy
-    # loops don't handle that.
-    script_header_offset = align_to(room_section_end, 0x100000)
+    # Align to 64KB bank boundary. setRomDataPtr handles FXB switching
+    # so scripts don't need to fit in a single 1MB block — only each
+    # individual read's [tmp+24],y span must stay within one bank.
+    script_header_offset = align_to(room_section_end, 0x10000)
     global_index_offset = script_header_offset + SECTION_HEADER_SIZE
     room_script_index_offset = global_index_offset + global_slots * INDEX_ENTRY_SIZE
     script_data_offset = align_to(

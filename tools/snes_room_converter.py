@@ -286,6 +286,110 @@ def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
     return bytes(out)
 
 
+def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles):
+    """Load zplane_01.png and return per-pixel boolean array + per-tile classification.
+
+    Returns (zp_tiled, tile_class) or (None, None) if no z-plane.
+    zp_tiled: (h_tiles, 8, w_tiles, 8) uint8 array, 1=foreground 0=background.
+    tile_class: (h_tiles, w_tiles) array: 0=bg, 1=partial, 2=full_fg.
+    """
+    zp01_path = room_dir / "zplane_01.png"
+    if not zp01_path.exists():
+        return None, None
+
+    zp_img = Image.open(zp01_path).convert('1')
+    if zp_img.size != (width_px, height_px):
+        return None, None
+
+    zp_arr = np.array(zp_img, dtype=np.uint8)
+    zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
+    tile_sums = zp_tiled.sum(axis=(1, 3))
+    tile_class = np.zeros((h_tiles, w_tiles), dtype=np.uint8)
+    tile_class[(tile_sums > 0) & (tile_sums < PIXELS_PER_TILE)] = 1  # partial
+    tile_class[tile_sums == PIXELS_PER_TILE] = 2  # fully foreground
+    return zp_tiled, tile_class
+
+
+def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
+                                width_px, height_px, w_tiles, h_tiles,
+                                max_budget=896):
+    """Create masked tile variants for partial z-plane tiles; build BG2 tilemap.
+
+    For partial foreground tiles (some pixels fg, some bg):
+      - BG1 gets a masked copy (non-fg pixels → index 0 = transparent)
+      - BG2 gets the original unmasked tile
+    For fully foreground tiles:
+      - BG1 keeps the original tile (all pixels are opaque anyway)
+      - BG2 gets the original tile (fills behind, harmless)
+    For background tiles:
+      - BG1 unchanged, BG2 = tile 0 word 0 (transparent)
+
+    Returns (bg_entries, unique_tiles, bg2_data):
+      bg_entries: updated list (partial fg tiles remapped to masked variants)
+      unique_tiles: extended list with masked variants appended
+      bg2_data: bytes, column-major tilemap words for BG2 layer (or empty if no z-plane)
+    """
+    zp_tiled, tile_class = _load_zplane_pixels(
+        room_dir, width_px, height_px, w_tiles, h_tiles
+    )
+    num_tile_slots = w_tiles * h_tiles
+    if tile_class is None or not tile_class.any():
+        return bg_entries, unique_tiles, b'\x00' * (num_tile_slots * 2)
+
+    bg_entries = list(bg_entries)
+    unique_tiles = list(unique_tiles)
+    masked_cache = {}
+    bg2_words = []
+    stats_masked = 0
+    stats_overflow = 0
+
+    for col in range(w_tiles):
+        for row in range(h_tiles):
+            idx = row * w_tiles + col
+            tc = tile_class[row, col]
+
+            if tc == 0:
+                bg2_words.append(0)
+                continue
+
+            orig_tid, pal, hf, vf = bg_entries[idx]
+            orig_word = encode_tilemap_word(orig_tid, pal, hf, vf)
+            bg2_words.append(orig_word)
+
+            if tc == 2:
+                continue
+
+            if len(unique_tiles) >= max_budget:
+                stats_overflow += 1
+                continue
+
+            zp_mask = zp_tiled[row, :, col, :]  # (8, 8)
+            if hf:
+                zp_mask = zp_mask[:, ::-1]
+            if vf:
+                zp_mask = zp_mask[::-1, :]
+
+            cache_key = (orig_tid, zp_mask.tobytes())
+            if cache_key in masked_cache:
+                masked_tid = masked_cache[cache_key]
+            else:
+                orig_tile = unique_tiles[orig_tid].copy()
+                orig_tile[zp_mask == 0] = 0
+                masked_tid = len(unique_tiles)
+                unique_tiles.append(orig_tile)
+                masked_cache[cache_key] = masked_tid
+                stats_masked += 1
+
+            bg_entries[idx] = (masked_tid, pal, hf, vf)
+
+    if stats_masked > 0:
+        log.info("  BG2 mask: %d masked variants, %d overflow skipped, %d total tiles",
+                 stats_masked, stats_overflow, len(unique_tiles))
+
+    bg2_data = b''.join(struct.pack('<H', w) for w in bg2_words)
+    return bg_entries, unique_tiles, bg2_data
+
+
 def build_column_index(map_data, width_tiles, height_tiles):
     """Build column streaming index from column-major tilemap data.
 
@@ -831,6 +935,12 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         width_tiles, height_tiles
     )
 
+    # Z-plane masked tile variants + BG2 tilemap for dual-layer masking
+    bg_entries, unique_tiles, bg2_data = build_masked_tiles_and_bg2(
+        bg_entries, unique_tiles, room_dir,
+        width_px, height_px, width_tiles, height_tiles
+    )
+
     # Encode binary outputs
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"room_{room_id:03d}"
@@ -893,6 +1003,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     (output_dir / f"{prefix}.box").write_bytes(box_data)
     (output_dir / f"{prefix}.ochr").write_bytes(ochr_data)
     (output_dir / f"{prefix}.cyc").write_bytes(cyc_data)
+    (output_dir / f"{prefix}.bg2").write_bytes(bg2_data)
     (output_dir / f"{prefix}.hdr").write_bytes(hdr_data)
 
     elapsed = time.time() - t0

@@ -1314,6 +1314,7 @@ room.loadCycleData:
 _rcc.hasData:
 
   ;compute pri_size = (width_tiles * height_tiles + 7) / 8  (same as loadPriorityBitmap)
+  ;also compute bg2_size = width_tiles * height_tiles * 2
   lda.w GLOBAL.room.hdr.width_tiles
   sta.b tmp
   stz.b tmp+2
@@ -1326,6 +1327,9 @@ _rcc.mul:
   sta.b tmp+2
   dex
   bne _rcc.mul
+  lda.b tmp+2                     ;A = tile_count
+  asl a
+  sta.b tmp+8                     ;bg2_size = tile_count * 2
   lda.b tmp+2
   clc
   adc #7
@@ -1337,6 +1341,7 @@ _rcc.mul:
 _rcc.priZero:
   lda #0
   sta.b tmp
+  sta.b tmp+8
 _rcc.priSet:
 
   ;tail = offset + size
@@ -1348,10 +1353,19 @@ _rcc.priSet:
   adc.w GLOBAL.room.idx.size_hi
   sta.b tmp+6
 
-  ;cyc_offset = tail - pri_size - cyc_size
+  ;cyc_offset = tail - pri_size - bg2_size - cyc_size
+  ;bg2_size = width_tiles * height_tiles * 2 (stored in tmp+2 before pri_size calc)
   lda.b tmp+4
   sec
-  sbc.b tmp
+  sbc.b tmp                       ;subtract pri_size
+  sta.b tmp+4
+  lda.b tmp+6
+  sbc #0
+  sta.b tmp+6
+
+  lda.b tmp+4
+  sec
+  sbc.b tmp+8                     ;subtract bg2_size (w*h*2)
   sta.b tmp+4
   lda.b tmp+6
   sbc #0

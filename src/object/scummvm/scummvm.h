@@ -185,7 +185,7 @@ SCUMM.bgInitDone          dw      ;PPU BG1 mode setup done flag
 SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
-SCUMM.hdmaCgramChannel    db      ;UNUSED (CGRAM HDMA scheme removed 2026-04-18); kept for layout stability
+SCUMM.hdmaNbaChannel      db      ;allocated HDMA channel id for BG12NBA z-plane switching
 SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
 SCUMM._cgramHdmaTableStub ds 87   ;UNUSED reserve (was SCUMM.cgramHdmaTable, -1 for cgramDirty)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
@@ -695,5 +695,25 @@ CutsceneHdmaTable:
   .db 80                                ; scanlines 144-223: verb area, BG1+BG2+BG3+OBJ on
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 0                                 ; end of table
+
+; BG12NBA HDMA: switch BG2 chr base mid-screen for dual-layer z-plane masking.
+; Game area (0-143): BG1+BG2 both at chr base $0000 (room tiles).
+; Verb area (144+): BG2 at chr base $4000 (verb font), BG1 stays $0000.
+Bg2NbaHdmaTable:
+  .db 128                               ; scanlines 0-127
+  .db $00                               ; BG1=$0000, BG2=$0000
+  .db 16                                ; scanlines 128-143
+  .db $00                               ; BG1=$0000, BG2=$0000
+  .db 80                                ; scanlines 144-223
+  .db $40                               ; BG1=$0000, BG2=$4000
+  .db 0                                 ; end of table
+
+; Default BG12NBA table (no z-plane masking): BG2 always at verb chr base.
+Bg2NbaDefaultTable:
+  .db 128
+  .db $40                               ; BG1=$0000, BG2=$4000
+  .db 96
+  .db $40
+  .db 0
 .ends
 

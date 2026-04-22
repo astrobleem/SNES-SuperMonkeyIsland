@@ -648,6 +648,15 @@ _play.noPendingVerb:
   stz.w GLOBAL.room.nmiTileStageLen
   ; Sync tile scroll streamer with new camera position
   jsr room.syncScroll
+  ; BG2 scroll must track BG1 for z-plane masking
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  beq +
+  rep #$20
+  lda.w GLOBAL.room.cameraX
+  sta.w xScrollBG2
++
+  rep #$20
   ; Refresh dirty tilemap columns from object patches
   jsr room.refreshObjectColumns
 
@@ -862,6 +871,40 @@ _scummvm.processRoomChange:
     ; Enable this channel in HDMA
     rep #$20
     lda.w SCUMM.hdmaChannel
+    and #$00FF
+    tax
+    sep #$20
+    lda.l dmaBitflagLut,x
+    ora.w GLOBAL.HDMA.CHANNEL.ENABLE
+    sta.w GLOBAL.HDMA.CHANNEL.ENABLE
++
+  .ACCU 8
+  .INDEX 16
+
+  ; Set up HDMA for BG12NBA ($210B) — switches BG2 chr base mid-screen
+  sep #$20
+  jsr core.dma_channel.allocate
+  bcc +
+    sta.w SCUMM.hdmaNbaChannel
+    rep #$31
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tax
+    sep #$20
+    lda #$00                        ;DMAP: direct, 1-register
+    sta.l DMAP0,x
+    lda #$0B                        ;target: $210B (BG12NBA)
+    sta.l DMADEST0,x
+    lda.b #:Bg2NbaDefaultTable
+    sta.l DMASRC0B,x
+    rep #$20
+    lda.w #Bg2NbaDefaultTable       ;default: BG2=$4000 everywhere
+    sta.l DMASRC0L,x
+    rep #$20
+    lda.w SCUMM.hdmaNbaChannel
     and #$00FF
     tax
     sep #$20
@@ -1309,6 +1352,46 @@ _prc.noExitScript2:
   lda.w GLOBAL.room.cameraX
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
+
+  ; BG2 z-plane masking: sync scroll + switch NBA HDMA table
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  beq _prc.noBg2Mask
+  rep #$20
+  lda.w GLOBAL.room.cameraX
+  sta.w xScrollBG2
+  ; Switch NBA HDMA to game table (BG2 chr=$0000 in game area)
+  lda.w SCUMM.hdmaNbaChannel
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  tax
+  sep #$20
+  lda.b #:Bg2NbaHdmaTable
+  sta.l DMASRC0B,x
+  rep #$20
+  lda.w #Bg2NbaHdmaTable
+  sta.l DMASRC0L,x
+  bra _prc.bg2MaskDone
+_prc.noBg2Mask:
+  rep #$20
+  ; Default table (BG2 chr=$4000 everywhere)
+  lda.w SCUMM.hdmaNbaChannel
+  and #$00FF
+  asl a
+  asl a
+  asl a
+  asl a
+  tax
+  sep #$20
+  lda.b #:Bg2NbaDefaultTable
+  sta.l DMASRC0B,x
+  rep #$20
+  lda.w #Bg2NbaDefaultTable
+  sta.l DMASRC0L,x
+_prc.bg2MaskDone:
 
   ; Apply any setCameraAt target that was stashed while this room change
   ; was pending — MAX_X is now fresh so the clamp will be correct.

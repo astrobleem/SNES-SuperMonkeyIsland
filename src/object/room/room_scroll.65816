@@ -84,6 +84,8 @@ room.initScroll:
   stz.w GLOBAL.room.nmiColFlag
   stz.w GLOBAL.room.nmiTileFlag
   stz.w GLOBAL.room.viewportDirty
+  stz.w GLOBAL.room.hasBg2Mask
+  stz.w GLOBAL.room.nmiBg2ColFlag
   rep #$20
 
   stz.w GLOBAL.room.refreshIdx

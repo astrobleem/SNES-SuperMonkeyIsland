@@ -7,6 +7,7 @@
 .define ROOM_TILEMAP_VRAM_WORD   $3800
 .define ROOM_TILE_BYTES          32
 .define SCROLL_TILEMAP_WRAM      $7F0000
+.define SCROLL_BG2MAP_WRAM       $7F1600
 .define SCROLL_PRIORITY_WRAM     $7F2C00
 
 ;VRAM tile cache defines (must match room.h)

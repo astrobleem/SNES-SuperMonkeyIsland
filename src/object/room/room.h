@@ -30,6 +30,11 @@
 ;bank $7F buffer addresses (long-addressed)
 .define SCROLL_TILEMAP_WRAM      $7F0000  ;full room tilemap (max ~6.3KB)
 
+;BG2 tilemap for dual-layer z-plane masking (column-major, same format as BG1)
+;Foreground tile positions hold original (unmasked) tilemap word;
+;background positions hold 0 (transparent). Loaded alongside BG1 tilemap.
+.define SCROLL_BG2MAP_WRAM       $7F1600  ;max ~5.5KB (up to ~2800 tiles)
+
 ;ZP01 per-tile priority bitmap: 1 bit/tile, column-major matching
 ;SCROLL_TILEMAP_WRAM. 1024 bytes covers 8192 tiles (max 128x64 room).
 ;Priority-set tiles get SNES bit 13 OR'd into the VRAM tilemap word at
@@ -108,6 +113,10 @@ GLOBAL.room.nmiTileStageLen dw                ;bytes of tile data in staging buf
 GLOBAL.room.refreshIdx     dw                 ;background refresh column offset (0-31)
 GLOBAL.room.viewportDirty  db                 ;nonzero = remap VRAM tilemap before next syncScroll
 GLOBAL.room.vpTileStaging  ds 32              ;loadInitialViewport tile staging (32B, one 4bpp tile)
+GLOBAL.room.hasBg2Mask     db                 ;nonzero = current room has BG2 z-plane mask layer
+GLOBAL.room.nmiBg2ColFlag  db                 ;nonzero = NMI should write BG2 column
+GLOBAL.room.nmiBg2ColAddr  dw                 ;VRAM word address for BG2 column write
+GLOBAL.room.bg2ColStaging  ds 50              ;BG2 NMI column staging buffer (25 rows * 2 bytes)
 .ends
 
 ;room object metadata limits (must match scummvm.h defines)

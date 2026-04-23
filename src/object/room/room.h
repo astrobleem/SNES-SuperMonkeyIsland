@@ -50,11 +50,6 @@
 .define ROOM_TILE_NOT_CACHED     $FFFF
 .define ROOM_MAX_LOOKUP_TILES    2048     ;max tile IDs in lookup table
 
-;BG2 room tilemap at VRAM $7000 (separate from verb tilemap at $4800)
-;With yScrollBG2=110, game area starts at tilemap row 13 (110/8).
-.define ROOM_BG2_TILEMAP_VRAM    $7000    ;VRAM word address for room BG2 tilemap
-.define ROOM_BG2_ROW_OFFSET      13       ;starting row for game area (110/8)
-
 ;BG1 register config values for room display
 .define ROOM_BG1_TILEMAP_REG  $71    ;($7000 >> 8) & $FC | 1 = tilemap at $7000, 64x32
 .define ROOM_BG_TILES12_REG   $00    ;BG1 tiles at VRAM $0000

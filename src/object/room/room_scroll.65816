@@ -466,6 +466,131 @@ _initVP.p1End:
   ;save advanced WRAM offset for next column
   stx.b tmp+2
 
+  ;=== Pass 1b: BG2 tile cache-miss handling (if hasBg2Mask) ===
+  ;Walk the BG2 column; allocate + ROM-load any BG2 tile IDs that BG1 Pass 1
+  ;didn't already seed. Without this, Pass 2b looks up $FFFF from the tile
+  ;cache and writes garbage slot indices, producing black rectangles at mask
+  ;holes. Safe to run during force blank; uses VMAIN=1 for tile writes.
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  bne _initVP.p1bEnter
+    rep #$20
+    jmp _initVP.p1bDone
+_initVP.p1bEnter:
+  rep #$20
+
+  ;rewind to start of this BG2 column: tmp+2 just got advanced
+  lda.b tmp+2
+  sec
+  sbc.w GLOBAL.room.roomHeightTiles
+  sbc.w GLOBAL.room.roomHeightTiles
+  tax                               ;X = WRAM offset, start of this column
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+8                       ;row counter
+
+_initVP.p1bLoop:
+  .ACCU 16
+  .INDEX 16
+  lda.l SCROLL_BG2MAP_WRAM,x
+  beq _initVP.p1bNext               ;tile 0 = transparent, skip
+  and.w #$07FF                      ;tile ID (11-bit custom format)
+  sta.b tmp+12
+
+  ;check cache: tileIdToSlot[tileId]
+  asl a
+  phx                                ;save WRAM offset
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x
+  cmp.w #ROOM_TILE_NOT_CACHED
+  beq _initVP.p1bMiss
+  plx                                ;cached — restore, skip
+  bra _initVP.p1bNext
+
+_initVP.p1bMiss:
+  .ACCU 16
+  .INDEX 16
+  ;allocate slot
+  lda.b tmp+12                      ;tileId
+  jsr room.allocCacheSlot            ;returns slot in A (clobbers X, Y)
+  sta.b tmp+14                      ;allocated slot
+
+  ;compute ROM address: tileDataRomOfs + tileId * 32
+  lda.b tmp+12
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                              ;A = tileId * 32
+  clc
+  adc.w GLOBAL.room.tileDataRomOfs_lo
+  sta.b tmp+16
+  lda.w #0
+  adc.w GLOBAL.room.tileDataRomOfs_hi
+  tax
+  lda.b tmp+16
+  jsr room.setRomDataPtr             ;tmp+24 = 24-bit CPU address
+
+  ;VMAIN increment-by-1 for tile data write
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+
+  ;VRAM word address = slot * 16
+  lda.b tmp+14
+  asl a
+  asl a
+  asl a
+  asl a
+  sta.l VMADDL
+
+  ;read 32 bytes from ROM into staging buffer
+  ldx #0
+  ldy #0
+_initVP.p1bStage:
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  lda [tmp+24],y
+  sta.w GLOBAL.room.vpTileStaging,x
+  rep #$20
+  iny
+  inx
+  cpx #32
+  bne _initVP.p1bStage
+
+  ;write 16 words from staging to VRAM
+  ldx #0
+  ldy #16
+_initVP.p1bWrite:
+  .ACCU 16
+  .INDEX 16
+  lda.w GLOBAL.room.vpTileStaging,x
+  sep #$20
+  sta.l VMDATAL
+  xba
+  sta.l VMDATAH
+  rep #$20
+  inx
+  inx
+  dey
+  bne _initVP.p1bWrite
+
+  plx                                ;restore WRAM offset
+
+_initVP.p1bNext:
+  .ACCU 16
+  .INDEX 16
+  inx
+  inx
+  dec.b tmp+8
+  beq _initVP.p1bDone
+  jmp _initVP.p1bLoop
+
+_initVP.p1bDone:
+  .ACCU 16
+  .INDEX 16
+
   ;=== Pass 2: write remapped tilemap column to VRAM ===
   ;handle nametable wrapping: NT0→NT1 or NT1→NT0
   lda.b tmp+4

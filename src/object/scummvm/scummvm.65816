@@ -648,13 +648,26 @@ _play.noPendingVerb:
   stz.w GLOBAL.room.nmiTileStageLen
   ; Sync tile scroll streamer with new camera position
   jsr room.syncScroll
-  ; BG2 scroll must track BG1 for z-plane masking
+  ; BG2 scroll must track BG1 for z-plane masking; verb area forced to 0
+  ; via BG2HOFS HDMA (see hdmaHofsChannel setup in _prc bg2Mask branch).
   sep #$20
   lda.w GLOBAL.room.hasBg2Mask
   beq +
   rep #$20
   lda.w GLOBAL.room.cameraX
-  sta.w xScrollBG2
+  sta.w xScrollBG2                  ;fallback for pre-HDMA scanline 0
+  ; Update BG2HOFS HDMA table cameraX bytes (regions A and B) so scroll
+  ; tracks the camera per frame during game-area scanlines.
+  sep #$20
+  ldy #1
+  sta.w SCUMM.bg2HofsHdmaTable,y    ;region A lo (A still holds cameraX lo)
+  ldy #4
+  sta.w SCUMM.bg2HofsHdmaTable,y    ;region B lo
+  xba                                ;swap to hi byte
+  ldy #2
+  sta.w SCUMM.bg2HofsHdmaTable,y    ;region A hi
+  ldy #5
+  sta.w SCUMM.bg2HofsHdmaTable,y    ;region B hi
 +
   rep #$20
   ; Refresh dirty tilemap columns from object patches
@@ -915,7 +928,7 @@ _scummvm.processRoomChange:
   .ACCU 8
   .INDEX 16
 
-  ; Set up HDMA for BG2VOFS ($2110) — sets BG2 Y scroll per scanline region
+  ; Set up HDMA for BG2SC ($2108) — switches BG2 tilemap address mid-screen
   sep #$20
   jsr core.dma_channel.allocate
   bcc +
@@ -946,6 +959,69 @@ _scummvm.processRoomChange:
     ora.w GLOBAL.HDMA.CHANNEL.ENABLE
     sta.w GLOBAL.HDMA.CHANNEL.ENABLE
 +
+  .ACCU 8
+  .INDEX 16
+
+  ; Set up HDMA for BG2HOFS ($210F) — verb bar has scroll=0, game area uses cameraX.
+  ; Required because BG2 is shared between room z-plane mask and verb tilemap;
+  ; syncing BG2 scroll to BG1 (for z-plane pixel alignment) wraps verb text.
+  ; Mode 2 writes 2 bytes per scanline to $210F (low, high). Table lives in
+  ; WRAM so bytes 1-2 and 4-5 can be updated with cameraX each frame.
+  sep #$20
+  jsr core.dma_channel.allocate
+  bcs _bgInit.hofsOk
+    jmp _bgInit.hofsSkip
+_bgInit.hofsOk:
+    sta.w SCUMM.hdmaHofsChannel
+    rep #$31
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tax
+    ; Seed table with static values; bytes 1-2 and 4-5 updated per frame.
+    ; Line counts must be <= 127 (bit 7 reserved for repeat flag). 144 game
+    ; scanlines → split 127+17; 80 verb scanlines fits in one entry.
+    sep #$20
+    ldy #0
+    lda #127
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;region A: 127 game lines
+    iny
+    lda #0
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;cameraX lo (updated per frame)
+    iny
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;cameraX hi (updated per frame)
+    iny
+    lda #17
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;region B: remaining 17 game lines
+    iny
+    lda #0
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;cameraX lo (updated per frame)
+    iny
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;cameraX hi (updated per frame)
+    iny
+    lda #80
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;region C: 80 verb lines
+    iny
+    lda #0
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;scroll=0 lo
+    iny
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;scroll=0 hi
+    iny
+    sta.w SCUMM.bg2HofsHdmaTable,y  ;terminator
+    ; DMAP: mode 2 = write 2 bytes to same register (no auto-increment)
+    lda #$02
+    sta.l DMAP0,x
+    lda #$0F                        ;target: $210F (BG2HOFS)
+    sta.l DMADEST0,x
+    lda #$7E                        ;WRAM bank (ramsection symbols resolve to bank 0)
+    sta.l DMASRC0B,x
+    rep #$20
+    lda.w #SCUMM.bg2HofsHdmaTable
+    sta.l DMASRC0L,x
+    ; Leave channel disabled at init; play-loop enables it when hasBg2Mask set.
+_bgInit.hofsSkip:
   .ACCU 8
   .INDEX 16
 
@@ -1389,13 +1465,14 @@ _prc.hasViewport:
   sta.w GLOBAL.room.cameraXOld
   sta.w xScrollBG1
 
-  ; BG2 z-plane masking: sync scroll + switch HDMA tables
+  ; BG2 z-plane masking: switch HDMA tables + enable BG2HOFS HDMA.
+  ; BG2 scroll (cameraX for game area, 0 for verb) comes from HDMA channel on
+  ; BG2HOFS — can't use xScrollBG2 alone because verb tilemap shares BG2 and
+  ; must stay at scroll=0 or it wraps horizontally.
   sep #$20
   lda.w GLOBAL.room.hasBg2Mask
   beq _prc.noBg2Mask
   rep #$20
-  lda.w GLOBAL.room.cameraX
-  sta.w xScrollBG2
   ; Switch NBA HDMA → game table
   lda.w SCUMM.hdmaNbaChannel
   and #$00FF
@@ -1410,7 +1487,7 @@ _prc.hasViewport:
   rep #$20
   lda.w #Bg2NbaHdmaTable
   sta.l DMASRC0L,x
-  ; Switch VOFS HDMA → game table (BG2 Y=0 in game area)
+  ; Switch BG2SC HDMA → game table
   lda.w SCUMM.hdmaScChannel
   and #$00FF
   asl a
@@ -1424,6 +1501,25 @@ _prc.hasViewport:
   rep #$20
   lda.w #Bg2ScHdmaTable
   sta.l DMASRC0L,x
+  ; Update BG2HOFS HDMA table with current cameraX (bytes 1-2)
+  rep #$20
+  lda.w GLOBAL.room.cameraX       ;A = 16-bit cameraX
+  sep #$20
+  ldy #1
+  sta.w SCUMM.bg2HofsHdmaTable,y  ;lo byte
+  iny
+  xba                              ;swap to hi byte
+  sta.w SCUMM.bg2HofsHdmaTable,y  ;hi byte
+  ; Enable BG2HOFS HDMA channel (16-bit A for tax + #$00FF immediate)
+  rep #$20
+  lda.w SCUMM.hdmaHofsChannel
+  and #$00FF
+  tax
+  sep #$20
+  lda.l dmaBitflagLut,x
+  ora.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  rep #$20
   bra _prc.bg2MaskDone
 _prc.noBg2Mask:
   rep #$20
@@ -1441,7 +1537,7 @@ _prc.noBg2Mask:
   rep #$20
   lda.w #Bg2NbaDefaultTable
   sta.l DMASRC0L,x
-  ; Default VOFS table (BG2 Y=110 everywhere)
+  ; Default BG2SC table (verb tilemap everywhere)
   lda.w SCUMM.hdmaScChannel
   and #$00FF
   asl a
@@ -1455,6 +1551,17 @@ _prc.noBg2Mask:
   rep #$20
   lda.w #Bg2ScDefaultTable
   sta.l DMASRC0L,x
+  ; Disable BG2HOFS HDMA channel (let xScrollBG2 via NMI control scroll)
+  rep #$20
+  lda.w SCUMM.hdmaHofsChannel
+  and #$00FF
+  tax
+  sep #$20
+  lda.l dmaBitflagLut,x
+  eor #$FF                          ;invert mask
+  and.w GLOBAL.HDMA.CHANNEL.ENABLE
+  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
+  rep #$20
 _prc.bg2MaskDone:
 
   ; Apply any setCameraAt target that was stashed while this room change

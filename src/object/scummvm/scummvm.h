@@ -187,8 +187,10 @@ SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recur
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaNbaChannel      db      ;allocated HDMA channel id for BG12NBA z-plane switching
 SCUMM.hdmaScChannel       db      ;allocated HDMA channel id for BG2SC tilemap switching
+SCUMM.hdmaHofsChannel     db      ;allocated HDMA channel id for BG2HOFS verb/game split
 SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
-SCUMM._cgramHdmaTableStub ds 86   ;UNUSED reserve (was SCUMM.cgramHdmaTable, shrunk for hdmaVofsChannel)
+SCUMM.bg2HofsHdmaTable    ds 10   ;HDMA mode 2 table: {127+17}@cameraX, 80@0. Line count capped at 127 per HDMA spec.
+SCUMM._cgramHdmaTableStub ds 75   ;UNUSED reserve (was SCUMM.cgramHdmaTable, shrunk for hdmaVofsChannel + bg2HofsHdmaTable)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)

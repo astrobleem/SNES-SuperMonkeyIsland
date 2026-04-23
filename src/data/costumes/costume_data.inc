@@ -2,31 +2,11 @@
 ; Costume ROM data for multi-actor rendering
 
 ;===================================================================
-; Walk cycle tables (ROM pic index per animation step)
-; Index 0 = stand frame, indices 1-6 = walk cycle (costume 1)
+; Legacy CostumeWalkCycle / CostumeHeadCycle tables removed —
+; the chore engine now drives body + head pic selection per limb.
 ;===================================================================
-.section "CostumeWalkCycle" superfree
-CostumeWalkCycleNorth:                  ; north/rear (stand=pic21, walk=pics15-20)
-  .db 21, 15, 16, 17, 18, 19, 20
-CostumeWalkCycleSide:                   ; east-west/side (stand=pic8, walk=pics9-14)
-  .db 8, 9, 10, 11, 12, 13, 14
-CostumeWalkCycleFront:                  ; south/front (stand=pic0, walk=pics2-7)
-  .db 0, 2, 3, 4, 5, 6, 7
-
-; Head cycle tables (limb 1 pic index per step, $FF = no head)
-; Index 0 = stand head, indices 1-6 = $FF (walk has head baked in)
-CostumeHeadCycleNorth:                  ; rear head (talkStop W = head pic 12)
-  .db 12, $FF, $FF, $FF, $FF, $FF, $FF
-CostumeHeadCycleSide:                   ; side head (talkStop E = head pic 6)
-  .db 6, $FF, $FF, $FF, $FF, $FF, $FF
-CostumeHeadCycleFront:                  ; front head (talkStop S = head pic 0)
-  .db 0, $FF, $FF, $FF, $FF, $FF, $FF
-
-.define COSTUME_WALK_CYCLE_LEN 7
-.define COSTUME_WALK_ANIM_SPEED 4
 .define COSTUME_HEAD_TILE_OFFSET $18   ; head tiles start 24 tiles after body base
 .define COSTUME_HEAD_VRAM_OFFSET $300  ; head VRAM = body VRAM + $300 bytes
-.ends
 
 ;===================================================================
 ; Costume 0 - 20 body pics, 12 head pics

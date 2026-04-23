@@ -237,42 +237,16 @@ def generate_assembly(costumes, dcos_remap=None):
     print(f"Generating ROM data for {len(costume_nums)} costumes: {costume_nums}")
 
     # --- Body walk cycle tables ---
-    # Costume 1 (SCUMM ID 1) = standard Guybrush. 6-step walk per direction.
-    # ROM pic index = SCUMM pic index (NULLs at 1,22 exist as files, not skipped):
-    #   South/front: stand=pic0, walk=pics2-7 (pic1 is NULL, skipped in table)
-    #   East/side:   stand=pic8, walk=pics9-14
-    #   North/rear:  stand=pic21, walk=pics15-20 (pic22 is NULL, not in table)
-    #   West = East H-flipped by renderer
+    # Legacy hand-authored walk/head cycle tables were removed when the chore
+    # engine became the single source of truth for per-limb animation state
+    # (see scummvm_chore.65816). The renderer now reads body/head pics from
+    # SCUMM.chorePic directly; no static cycle tables are needed.
     lines.append(";===================================================================")
-    lines.append("; Walk cycle tables (ROM pic index per animation step)")
-    lines.append("; Index 0 = stand frame, indices 1-6 = walk cycle (costume 1)")
+    lines.append("; Legacy CostumeWalkCycle / CostumeHeadCycle tables removed —")
+    lines.append("; the chore engine drives per-limb pic selection.")
     lines.append(";===================================================================")
-    lines.append(".section \"CostumeWalkCycle\" superfree")
-    lines.append("CostumeWalkCycleNorth:                  ; north/rear (stand=pic21, walk=pics15-20)")
-    lines.append("  .db 21, 15, 16, 17, 18, 19, 20")
-    lines.append("CostumeWalkCycleSide:                   ; east-west/side (stand=pic8, walk=pics9-14)")
-    lines.append("  .db 8, 9, 10, 11, 12, 13, 14")
-    lines.append("CostumeWalkCycleFront:                  ; south/front (stand=pic0, walk=pics2-7)")
-    lines.append("  .db 0, 2, 3, 4, 5, 6, 7")
-    lines.append("")
-
-    # --- Head cycle tables (parallel to body, $FF = no head needed) ---
-    # talkStop defaults: N=head12 (rear), E=head6 (side), S=head0 (front)
-    # Walk frames have head baked in, so $FF during walk
-    lines.append("; Head cycle tables (limb 1 pic index per step, $FF = no head)")
-    lines.append("; Index 0 = stand head, indices 1-6 = $FF (walk has head baked in)")
-    lines.append("CostumeHeadCycleNorth:                  ; rear head (talkStop W = head pic 12)")
-    lines.append("  .db 12, $FF, $FF, $FF, $FF, $FF, $FF")
-    lines.append("CostumeHeadCycleSide:                   ; side head (talkStop E = head pic 6)")
-    lines.append("  .db 6, $FF, $FF, $FF, $FF, $FF, $FF")
-    lines.append("CostumeHeadCycleFront:                  ; front head (talkStop S = head pic 0)")
-    lines.append("  .db 0, $FF, $FF, $FF, $FF, $FF, $FF")
-    lines.append("")
-    lines.append(".define COSTUME_WALK_CYCLE_LEN 7")
-    lines.append(".define COSTUME_WALK_ANIM_SPEED 4")
     lines.append(".define COSTUME_HEAD_TILE_OFFSET $18   ; head tiles start 24 tiles after body base")
     lines.append(".define COSTUME_HEAD_VRAM_OFFSET $300  ; head VRAM = body VRAM + $300 bytes")
-    lines.append(".ends")
     lines.append("")
 
     # --- Per-costume data sections ---

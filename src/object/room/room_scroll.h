@@ -9,6 +9,8 @@
 .define SCROLL_TILEMAP_WRAM      $7F0000
 .define SCROLL_BG2MAP_WRAM       $7F1600
 .define SCROLL_PRIORITY_WRAM     $7F2C00
+.define ROOM_BG2_TILEMAP_VRAM    $7000
+.define ROOM_BG2_ROW_OFFSET      13
 
 ;VRAM tile cache defines (must match room.h)
 .define SCROLL_TILE2SLOT_WRAM    $7F3000

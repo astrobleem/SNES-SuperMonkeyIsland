@@ -1,0 +1,104 @@
+r010_lucasarts — arrangement thesis
+====================================
+
+What this actually is
+---------------------
+Despite the `room_010_logo` filename, this is NOT the LucasArts fanfare —
+this is the Secret of Monkey Island *main theme* that plays over the title
+screen / attract mode. Source is `soun_005.bin` in the logo room, presumably
+stashed there because the LucasArts logo intro runs into the MI title sequence
+without a room transition.
+
+Source character
+----------------
+  * 11.87 measures, 4/4, TPB 480
+  * 8 MIDI channels active + drums on ch9 (822 hits — dense)
+  * Only 0.3% of melodic onsets land on a 16th grid → deeply iMUSE-performed
+  * Instruments (GM program, voice count):
+      ch1  186  Shakuhachi      (lead)
+      ch2  240  FX 8 (sci-fi)   (atmospheric wash)
+      ch3  640  Glockenspiel    (twinkle harmony, highest note count)
+      ch4  549  Sitar           (plucked ornament)
+      ch5  192  Alto Sax        (low D1-G2 — original bass voice)
+      ch6   42  Acoustic Bass   (walking bass — primary)
+      ch7   51  Fiddle          (countermelody)
+      ch9  822  Drums           (Side Stick / Kick / Conga Open+Mute / Claves)
+
+Mood / palette intent
+---------------------
+Mystical pirate reggae. Tropical, adventurous, slightly wistful. The tribal
+percussion (kick + side stick + hi conga alternation) drives the reggae
+pocket; shakuhachi + glockenspiel + sitar layer the harmony; acoustic bass
+walks underneath; fiddle weaves in and out as a melodic counterpoint.
+
+Arrangement decisions
+---------------------
+  * Grid: 32nd + tolerance 1 MML tick. The 0.3% 16th alignment rules out
+    snap-everything without flattening the performance. 32nd preserves the
+    shuffle feel; tolerance 1 collapses near-grid near-misses so the output
+    stays readable.
+  * Playback clock: `#Timer 256` at `#ZenLen 192`. Source MIDI reads 30 BPM
+    meta but iMUSE tempo metas are noisy — matching the existing
+    hand-arranged `audio/songs/soun_010.mml` clock gives ~1:14 playback,
+    which sounds right against the reference.
+  * Voice allocation (8 of 8 voices, structure follows the prior
+    `soun_010_plan.json` that produced recognizable output):
+      A  lead @shakuhachi_high     (ch1 top)       _M-1
+      B  pad  @glockenspiel_high   (ch3 top — bell chord top)
+      C  pad  @glockenspiel_high   (ch3 bottom — bell chord bottom)
+      D  arp  @sitar_high          (ch4 top)       _M-18
+      E  bass @acobass             (ch5 top — "Alto Sax" prog IS the bass)
+      F  doubler @atmosphere_high  (ch2 top — FX 8 as the pad)          _M-13
+      G  ornament @shakuhachi      (ch7 top — fiddle countermelody)     _M-17
+      H  drums @kick/snare/conga_hi/claves/bongo_hi                     (ch9)
+  * ch6 "Acoustic Bass" is NOT the bass line — its MIDI range F#4-D5 is
+    a mid-register plucked part. The actual bass line is ch5 "Alto Sax"
+    (D1-G2). This was a lesson learned: GM program names in iMUSE MIDI
+    don't reliably tag musical role.
+
+Palette — SUPERGUYBRUSH soundbank (ADL FM patches rendered to BRR)
+-------------------------------------------------------------------
+The SOUN resource ships THREE parallel music streams bundled in one
+container: ROL (Roland MT-32 GM MIDI), GMD (General MIDI), and ADL
+(AdLib). The ADL stream has identical note content and channel layout
+to the ROL version, but instead of `program_change` events it ships
+inline `F0 7D 10 <ch> <26-byte patch> F7` sysex messages carrying the
+2-op FM instrument definitions (modulator/carrier ADSR, waveform,
+multiplier, feedback, connection).
+
+We decode those patches (`tools/adl_patches.py`) and render each by
+driving a REAL OPL2 emulator (the pyopl binding to MAME's OPL2/OPL3
+chip emulation). The 26-byte patch becomes a direct register-write
+sequence — AM/VIB/KSR/Mult, KSL/TL, Waveform, FB/Connection — with
+the envelope bytes overridden to force a stable sustained spectrum
+(EG-type=sustained, AR=15, DR=0, SL=0, RR=0). Envelope timing stays
+in TAD's per-note ADSR. Output is trimmed to an integer number of
+periods with phase-matched loop endpoints so BRR loops click-free.
+Drums (ch9) are rendered as band-filtered noise bursts per drum role
+(kick/snare/hat/crash/tom/conga/claves/cowbell/woodblock/triangle/shaker).
+
+The result: every SNES voice on this track plays a tone derived
+directly from the data MI1 fed to real AdLib hardware in 1990. No
+orchestral-sample emulation, no shared instrument bank — a
+one-of-a-kind FM palette unique to this song, forged from its own
+source bytes.
+
+Samples (8 channels, all in `samples/`):
+  r010_fm_ch1  additive,  mod×1 car×7  FB=4  → lead (shakuhachi-equivalent)
+  r010_fm_ch2  FM,        mod×1 car×1  FB=1  → FX 8 pad (doubler slot)
+  r010_fm_ch3  FM,        mod×1 car×3  FB=0  → glockenspiel (bright 1:3 bell)
+  r010_fm_ch4  FM,        mod×1 car×1  FB=0  → sitar (arp)
+  r010_fm_ch5  additive,  mod×1 car×0.5 FB=6 → bass
+  r010_fm_ch6  additive,  mod×1 car×9  FB=0  → (unused; ch6 acoustic-bass is a mid-pluck line we dropped)
+  r010_fm_ch7  additive,  mod×1 car×7  FB=4  → fiddle (ornament)
+  r010_fm_drum noise burst + carrier envelope → drum kit (all GM drums map to this single patch)
+
+No per-song synth.py; the FM rendering is driven by
+`tools/adl_patches.py <mid> --out-dir samples/` and is reproducible
+from the source .mid alone.
+
+Triplets / swing
+----------------
+The source has reggae-adjacent rhythmic displacement but no triplet figures
+detected in a quick scan (no notable onset cluster at tpb/3 = 160 ticks).
+Handle via grid tolerance, not triplet bracket notation.

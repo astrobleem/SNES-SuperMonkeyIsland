@@ -1,0 +1,234 @@
+{
+  "_about": {
+    "file_type": "Terrific Audio Driver project file",
+    "version": "0.2.0-beta.2",
+    "_comment": "SUPERGUYBRUSH bank \u2014 per-channel FM timbres decoded from the SCUMM ADL stream's sysex instrument patches. Integer-period rendering (base freq 262.295 Hz) so loop restarts are phase-aligned."
+  },
+  "instruments": [
+    {
+      "name": "r010_fm_ch1",
+      "source": "samples/r010_fm_ch1.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 7,
+      "envelope": "adsr 15 2 7 10",
+      "comment": "ADL ch1 (additive, car\u00d77, FB=4) \u2014 lead; envelope derived from patch AR/DR/SL/RR+EG-type"
+    },
+    {
+      "name": "r010_fm_ch2",
+      "source": "samples/r010_fm_ch2.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 7,
+      "envelope": "adsr 15 3 7 12",
+      "comment": "ADL ch2 (FM, car\u00d71, FB=1) \u2014 envelope from patch"
+    },
+    {
+      "name": "r010_fm_ch3",
+      "source": "samples/r010_fm_ch3.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 7,
+      "envelope": "adsr 15 7 7 28",
+      "comment": "ADL ch3 (FM, car\u00d73) \u2014 bright 1:3 bell/arp pad; patch's DR=14 gives fast decay (plucked character)"
+    },
+    {
+      "name": "r010_fm_ch4",
+      "source": "samples/r010_fm_ch4.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 7,
+      "envelope": "adsr 15 1 7 4",
+      "comment": "ADL ch4 (FM, car\u00d71) \u2014 arp; slow-decay sustained character per patch DR=2"
+    },
+    {
+      "name": "r010_fm_ch5",
+      "source": "samples/r010_fm_ch5.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 7,
+      "envelope": "adsr 15 5 7 20",
+      "comment": "ADL ch5 (additive, car\u00d70.5, FB=6) \u2014 bass; freq declared at modulator rate (262) so TAD pitch-shift reaches bass register; envelope derived from patch DR=10"
+    },
+    {
+      "name": "r010_fm_ch7",
+      "source": "samples/r010_fm_ch7.wav",
+      "freq": 1032.258,
+      "loop": "dupe_block_hack_filter_1",
+      "loop_setting": 2,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 7,
+      "envelope": "adsr 15 2 7 10",
+      "comment": "ADL ch7 (additive, car\u00d77, FB=4) \u2014 ornament; same decay profile as ch1 lead"
+    },
+    {
+      "name": "r010_fm_drum_kick",
+      "source": "samples/r010_fm_drum_kick.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "low noise 40-180 Hz + sub-sine glide"
+    },
+    {
+      "name": "r010_fm_drum_snare",
+      "source": "samples/r010_fm_drum_snare.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "250-4k Hz noise + 2 kHz body sine"
+    },
+    {
+      "name": "r010_fm_drum_hat",
+      "source": "samples/r010_fm_drum_hat.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "very short 5-11 kHz closed hi-hat"
+    },
+    {
+      "name": "r010_fm_drum_crash",
+      "source": "samples/r010_fm_drum_crash.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "320 ms 2-14 kHz bright cymbal decay"
+    },
+    {
+      "name": "r010_fm_drum_tom",
+      "source": "samples/r010_fm_drum_tom.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "80-350 Hz + pitched sine glide"
+    },
+    {
+      "name": "r010_fm_drum_conga",
+      "source": "samples/r010_fm_drum_conga.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "180-600 Hz hand-drum (noise + mid body sine)"
+    },
+    {
+      "name": "r010_fm_drum_claves",
+      "source": "samples/r010_fm_drum_claves.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "~2.8 kHz pure-tone short pop"
+    },
+    {
+      "name": "r010_fm_drum_cowbell",
+      "source": "samples/r010_fm_drum_cowbell.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "~1.1 kHz pitched metallic pop"
+    },
+    {
+      "name": "r010_fm_drum_woodblock",
+      "source": "samples/r010_fm_drum_woodblock.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "~2.5 kHz bright wood pop"
+    },
+    {
+      "name": "r010_fm_drum_triangle",
+      "source": "samples/r010_fm_drum_triangle.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "long 3.5-9 kHz ring"
+    },
+    {
+      "name": "r010_fm_drum_shaker",
+      "source": "samples/r010_fm_drum_shaker.wav",
+      "freq": 47.46,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "brief 4-10 kHz shaker/tambourine texture"
+    }
+  ],
+  "samples": [],
+  "default_sfx_flags": {
+    "one_channel": true,
+    "interruptible": true
+  },
+  "high_priority_sound_effects": [],
+  "sound_effects": [],
+  "low_priority_sound_effects": [],
+  "sound_effect_file": "",
+  "songs": [
+    {
+      "name": "r010_lucasarts",
+      "source": "r010_lucasarts.mml"
+    }
+  ]
+}

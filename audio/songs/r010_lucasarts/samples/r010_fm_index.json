@@ -1,0 +1,138 @@
+[
+  {
+    "name": "r010_fm_ch1",
+    "file": "r010_fm_ch1.wav",
+    "kind": "additive",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 7,
+    "feedback": 4,
+    "tad_envelope": "adsr 15 2 7 10"
+  },
+  {
+    "name": "r010_fm_ch2",
+    "file": "r010_fm_ch2.wav",
+    "kind": "FM",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 1,
+    "feedback": 1,
+    "tad_envelope": "adsr 15 3 7 12"
+  },
+  {
+    "name": "r010_fm_ch3",
+    "file": "r010_fm_ch3.wav",
+    "kind": "FM",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 3,
+    "feedback": 0,
+    "tad_envelope": "adsr 15 7 7 28"
+  },
+  {
+    "name": "r010_fm_ch4",
+    "file": "r010_fm_ch4.wav",
+    "kind": "FM",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 1,
+    "feedback": 0,
+    "tad_envelope": "adsr 15 1 7 4"
+  },
+  {
+    "name": "r010_fm_ch5",
+    "file": "r010_fm_ch5.wav",
+    "kind": "additive",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 0.5,
+    "feedback": 6,
+    "tad_envelope": "adsr 15 5 7 20"
+  },
+  {
+    "name": "r010_fm_ch6",
+    "file": "r010_fm_ch6.wav",
+    "kind": "additive",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 9,
+    "feedback": 0,
+    "tad_envelope": "adsr 15 7 7 30"
+  },
+  {
+    "name": "r010_fm_ch7",
+    "file": "r010_fm_ch7.wav",
+    "kind": "additive",
+    "freq": 1032.258064516129,
+    "mod_mult": 1,
+    "car_mult": 7,
+    "feedback": 4,
+    "tad_envelope": "adsr 15 2 7 10"
+  },
+  {
+    "name": "r010_fm_drum_kick",
+    "file": "r010_fm_drum_kick.wav",
+    "kind": "drum",
+    "role": "kick"
+  },
+  {
+    "name": "r010_fm_drum_snare",
+    "file": "r010_fm_drum_snare.wav",
+    "kind": "drum",
+    "role": "snare"
+  },
+  {
+    "name": "r010_fm_drum_hat",
+    "file": "r010_fm_drum_hat.wav",
+    "kind": "drum",
+    "role": "hat"
+  },
+  {
+    "name": "r010_fm_drum_crash",
+    "file": "r010_fm_drum_crash.wav",
+    "kind": "drum",
+    "role": "crash"
+  },
+  {
+    "name": "r010_fm_drum_tom",
+    "file": "r010_fm_drum_tom.wav",
+    "kind": "drum",
+    "role": "tom"
+  },
+  {
+    "name": "r010_fm_drum_conga",
+    "file": "r010_fm_drum_conga.wav",
+    "kind": "drum",
+    "role": "conga"
+  },
+  {
+    "name": "r010_fm_drum_claves",
+    "file": "r010_fm_drum_claves.wav",
+    "kind": "drum",
+    "role": "claves"
+  },
+  {
+    "name": "r010_fm_drum_woodblock",
+    "file": "r010_fm_drum_woodblock.wav",
+    "kind": "drum",
+    "role": "woodblock"
+  },
+  {
+    "name": "r010_fm_drum_cowbell",
+    "file": "r010_fm_drum_cowbell.wav",
+    "kind": "drum",
+    "role": "cowbell"
+  },
+  {
+    "name": "r010_fm_drum_triangle",
+    "file": "r010_fm_drum_triangle.wav",
+    "kind": "drum",
+    "role": "triangle"
+  },
+  {
+    "name": "r010_fm_drum_shaker",
+    "file": "r010_fm_drum_shaker.wav",
+    "kind": "drum",
+    "role": "shaker"
+  }
+]

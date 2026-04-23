@@ -1,0 +1,160 @@
+SUPERGUYBRUSH — next session handoff
+=====================================
+
+What we built today
+-------------------
+A pipeline that converts MI1's AdLib (ADL) FM music data into SNES BRR
+samples by running the 1990 2-op FM patches through a real OPL2 emulator.
+Every SNES voice plays a tone derived byte-for-byte from the same
+instrument definitions MI1's AdLib-driver players heard on OPL2 chips —
+rendered once at C6, looped by BRR, pitch-shifted + enveloped by TAD
+for each note.
+
+One song is built end-to-end:
+
+  audio/songs/r010_lucasarts/
+    r010_lucasarts.mid             extracted ADL stream (standard SMF)
+    r010_lucasarts.plan.json       arrangement (voice allocation, roles)
+    r010_lucasarts.terrificaudio   self-contained per-song TAD project
+    r010_lucasarts.mml             generated MML via the skill
+    r010_lucasarts.spc             compiled — play in any SPC player
+    thesis.txt                     arrangement intent + lessons
+    samples/*.wav                  18 BRR-ready samples:
+        r010_fm_ch1..7             7 FM melodic voices (pyopl-rendered)
+        r010_fm_drum_{kick,snare,  11 drum roles:
+          hat,crash,tom,             5 via OPL2 rhythm mode (BD/SD/HH/TCY/TOM)
+          conga,claves,cowbell,      6 hand-rolled for non-OPL-native roles
+          woodblock,triangle,
+          shaker}
+        r010_fm_index.json         synthesis log (freq, mults, FB, ADSR)
+
+Compile any bundle with:
+  python tools/audition_song.py r010_lucasarts [--open]
+
+Tooling we added this session
+-----------------------------
+  tools/adl_patches.py    AdLib sysex decoder + pyopl FM renderer + OPL2
+                          rhythm-mode drum renderer + TAD ADSR derivation.
+                          One stop for everything ADL → BRR.
+  tools/synth_samples.py  Pure-numpy waveform toolkit (saw, square, FM,
+                          noise, ADSR, loop-tail). Used for hand-rolled
+                          samples when a song wants a bespoke palette.
+  tools/audition_song.py  Wrapper around `tad-compiler song2spc` keyed on
+                          bundle slug; drops .spc next to the MML.
+
+Skill-side changes (C:\\Users\\chad\\.claude\\skills\\midi-to-snes-mml\\):
+  * `extract_scumm.py` — handles ADL variant + `--variant` flag; knows
+    SOU files bundle ROL/GMD/ADL together and picks by preference.
+  * `convert.py` — finer defaults (32nd grid default, 64th option,
+    `grid_tolerance` knob, tick-clock `timer`/`zenlen` overrides) plus
+    per-song dials (`role`, `transpose`, `instruments` dict). Fixed
+    TAD-vs-standard octave convention (offset +1 on emit), proper
+    drum-channel `o2` default, better mfvi rejection path.
+
+State of r010_lucasarts
+-----------------------
+Plays as the MI1 main theme with authentic AdLib-derived FM character.
+Recognizable but imperfect. What's still not right last we checked:
+
+  * Mix balance — heavy-feedback patches (ch1/ch5/ch7 FB=4-6) can
+    dominate. Try lowering their `v` in the channel header by 1-2 steps.
+  * Drum weight — OPL2 rhythm-mode drums are authentic but quiet next to
+    melodic voices; bump drum channel volume or the drum samples' gain.
+  * TAD envelope mapping (patch AR=0 → TAD A=15) might be too snappy
+    for the sustained-type patches (ch4). Try A=10-12 for ch4.
+  * C6 render pitch — timbral character is preserved (OPL2 FM is
+    ratio-based) but feedback has a weak absolute-freq dependency.
+    A/B against a C4 render could be worth doing.
+
+Where to pick up
+----------------
+1. (15 min) Polish pass on r010_lucasarts: adjust per-channel volumes,
+   drum gain, and ch4 envelope based on listening. Confirm it's "good
+   enough for a 1990-AdLib-on-SNES reference".
+
+2. (4-6 hr) Roll the pipeline across the other 19 ROL-bundled songs:
+
+     room_002_monkey-1/soun_001
+     room_019_sh-deck/soun_003
+     room_028_bar/soun_001        (Scumm Bar — already hand-arranged as
+                                   audio/songs/soun_scummbar.mml; redo
+                                   as SUPERGUYBRUSH bundle)
+     room_034_high-stre/soun_002
+     room_038_lookout/soun_001
+     room_041_kitchen/soun_004
+     room_051_circus-te/soun_003
+     room_053_foyer/soun_004
+     room_058_damnfores/soun_004
+     room_059_stans/soun_000
+     room_060_gym/soun_001        (note: sub=0x00 vol=96, not 127)
+     room_070_hellcliff/soun_002
+     room_075_gh-hull/soun_000
+     room_077_gh-deck/soun_002
+     room_078_church/soun_001
+     room_083_cu-dock/soun_004
+     room_083_cu-dock/soun_005
+     room_085_melee/soun_001
+     room_096_part1/soun_001
+
+   Per-song recipe:
+     a) mkdir audio/songs/<slug>/ && cp the source .bin, extract --variant adl
+     b) python tools/adl_patches.py <slug>.mid --out-dir samples/ --prefix <slug>_fm
+     c) Hand-write plan.json (voice allocation — look at analyze_midi output
+        and the ROL programs to decide lead/bass/pad/arp/ornament roles)
+     d) Hand-write .terrificaudio — copy r010's as a template, update
+        sample names/envelopes from samples/*_index.json
+     e) Run convert.py → compile → audition_song.py
+
+3. (3-5 hr) Stinger harvest — the other 70+ ADL-only SOUN files (rooms
+   008, 010 soun_001-009, 011, 014, 015, 019, 025, 029, 030, 031, 035,
+   036, 037, 041, 043, 045, 048, 051, 053, 058, 064, 069, 071, 073,
+   075, 081, 088) — short cues, stingers, effects. Not full songs.
+   Could become SFX bank entries or hook-triggered music events.
+
+4. (feature work) Plan a runtime swap mechanism. User wants songs
+   swappable at runtime per their comment early in the session: each
+   per-song .terrificaudio bundle should compile to its own audio-data
+   blob, and the SNES driver swaps which blob is loaded. Needs build
+   integration we haven't designed yet.
+
+Key lessons learned (don't repeat these mistakes)
+--------------------------------------------------
+  * TAD's MML `oN` convention = MIDI octave N-1. `o7 c` = MIDI 84.
+    `convert.py` now applies `octave_offset=+1` for terrific dialect.
+    If you see notes playing an octave low, check this.
+
+  * TAD pitch-table ceiling for an instrument caps `last_octave` based
+    on the sample's declared `freq`. freq=262 → max 5. freq=524 → max
+    6. freq=1046 → max 7. MI1 source notes reach MIDI 89 — we render
+    at C6 (1046 Hz) to allow last_octave=7 without needing per-channel
+    transposes that throw the intro an octave off.
+
+  * MI1 ADL patches have `AR=0` universally. Real OPL2 treats AR=0 as
+    "silent" but SCUMM's driver re-keys. In pyopl rendering we force
+    EG-sustained and override AR/DR/SL/RR to get a steady FM tone;
+    the per-note envelope happens in TAD (derived from the patch's
+    original bytes via `patch_to_tad_adsr`).
+
+  * `_M-N` channel-transpose in plan.json compounds with sample freq
+    choices. If you change the sample's rendered pitch, re-verify all
+    transposes. Generally aim for transpose=0 by widening octave
+    range instead — it's less fragile.
+
+  * Sub=0x00 / 0x02 / 0x17 / 0x30 sysex in the ADL stream — SURVEYED,
+    no hidden timbre data. 0x17 never emitted by MI1; 0x00 carries
+    only per-part init (volume/pan/transpose are all defaults across
+    97 streams except `room_060_gym_soun_001` and
+    `room_081_cu-bar-2_soun_000` which set volume=96).
+
+  * SBL PCM data bundled in SOUN files is SFX, not instrument source.
+    Not useful as a melodic sample library. AdLib FM patches from the
+    ADL chunks are the SNES-authentic instrument source for this game.
+
+Files to read first next session
+---------------------------------
+  music_nexttime.txt (this file) — the handoff
+  audio/songs/r010_lucasarts/thesis.txt — arrangement rationale
+  tools/adl_patches.py — the meat of the FM pipeline
+  tools/audition_song.py — compile + play
+  C:\\Users\\chad\\.claude\\skills\\midi-to-snes-mml\\scripts\\convert.py
+    — the MIDI→MML converter (lives in the skill dir, not the repo)

@@ -1,0 +1,45 @@
+{
+  "dialect": "terrific",
+  "title": "Secret of Monkey Island — Main Theme (SUPERGUYBRUSH)",
+  "composer": "Michael Z. Land",
+  "arranger": "Claude (SMI SNES port, ADL-derived FM patches)",
+  "timer": 256,
+  "zenlen": 192,
+  "grid": "32nd",
+  "grid_tolerance": 1,
+  "instruments": {
+    "lead":     "r010_fm_ch1",
+    "doubler":  "r010_fm_ch2",
+    "bass":     "r010_fm_ch5",
+    "pad":      "r010_fm_ch3",
+    "arp":      "r010_fm_ch4",
+    "ornament": "r010_fm_ch7",
+    "drums": {
+      "drum_kick":    "r010_fm_drum_kick",
+      "drum_snare":   "r010_fm_drum_snare",
+      "drum_hat":     "r010_fm_drum_hat",
+      "drum_hat_open":"r010_fm_drum_crash",
+      "drum_crash":   "r010_fm_drum_crash",
+      "drum_ride":    "r010_fm_drum_hat",
+      "drum_tom":     "r010_fm_drum_tom",
+      "drum_timbale": "r010_fm_drum_tom",
+      "drum_conga":   "r010_fm_drum_conga",
+      "drum_bongo":   "r010_fm_drum_conga",
+      "drum_claves":  "r010_fm_drum_claves",
+      "drum_cowbell": "r010_fm_drum_cowbell",
+      "drum_wood":    "r010_fm_drum_woodblock",
+      "drum_triangle":"r010_fm_drum_triangle",
+      "drum_shaker":  "r010_fm_drum_shaker"
+    }
+  },
+  "assignments": [
+    {"spc": 1, "midi_ch": 1, "reduction": "top",         "role": "lead"},
+    {"spc": 2, "midi_ch": 3, "reduction": "top",         "role": "pad"},
+    {"spc": 3, "midi_ch": 3, "reduction": "bottom",      "role": "pad"},
+    {"spc": 4, "midi_ch": 4, "reduction": "top",         "role": "arp"},
+    {"spc": 5, "midi_ch": 5, "reduction": "top",         "role": "bass"},
+    {"spc": 6, "midi_ch": 2, "reduction": "top",         "role": "doubler"},
+    {"spc": 7, "midi_ch": 7, "reduction": "top",         "role": "ornament"},
+    {"spc": 8, "midi_ch": 9, "reduction": "drum_string", "role": "drums"}
+  ]
+}

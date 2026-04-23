@@ -10935,12 +10935,18 @@ _ua.animDone:
 _ua.nextSlot:
   .ACCU 16
   .INDEX 16
-  ; Re-seed walk animation if facing changed this frame
+  ; Re-seed walk animation if facing changed this frame AND actor still moving.
+  ; Without the moving-check, a final-waypoint arrival would set moving=0 and
+  ; seed stand, then this block would re-seed walk again — actor never stops.
   sep #$20
   .ACCU 8
   lda.w SCUMM.uaFacingChanged
   beq _ua.noReseed
   stz.w SCUMM.uaFacingChanged
+  ; Skip re-seed if fullyArrived cleared moving this frame
+  ldx.w SCUMM.uaActorStructOfs
+  lda.w SCUMM.actors.moving,x
+  beq _ua.noReseed
   rep #$20
   .ACCU 16
   lda.w SCUMM.scratch3                ; walk slot = actor number

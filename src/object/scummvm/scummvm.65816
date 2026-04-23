@@ -11572,147 +11572,45 @@ _ri.slotLoop:
   sta.w SCUMM.scratch2                ; save for walk cycle + flip
   ply                                 ; restore Y = struct base
 
-  ; --- Determine current pic index from walk cycle ---
-  ; Get actor number for walk array indexing
+  ; --- Body pic from chore engine (single source of truth) ---
+  ; Legacy CostumeWalkCycle / CostumeHeadCycle tables are gone; actor anim
+  ; is driven entirely by chore.animateActor_impl seeding + chore.tick
+  ; decoding. chorePic[actor*16 + 0] = body pic, +1 = head pic; $FF = hide.
   lda.w SCUMM.actorOamCount           ; actor number
   and #$00FF
+  phx                                 ; preserve outer X (unused here but parity)
+  asl a
+  asl a
+  asl a
+  asl a                                ; actor * SCUMM_CHORE_LIMBS (16)
   tax
   sep #$20
   .ACCU 8
-  lda.w SCUMM.actorAnimFrame,x       ; walk cycle step (0-6)
-  rep #$20
-  .ACCU 16
-  and #$00FF
-  phx                                 ; save actor number
-  tax
-  ; Select walk cycle table based on facing direction
-  lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
-  beq _ri.northCycle                  ; facing=0 → north
-  cmp #180
-  beq _ri.southCycle
-  lda.l CostumeWalkCycleSide,x       ; east/west: side view
-  bra _ri.gotPic
-_ri.northCycle:
-  .ACCU 16
-  lda.l CostumeWalkCycleNorth,x      ; north: rear view
-  bra _ri.gotPic
-_ri.southCycle:
-  .ACCU 16
-  lda.l CostumeWalkCycleFront,x      ; south: front view
-_ri.gotPic:
-  .ACCU 16
-  and #$00FF
-  sta.w SCUMM.scratch                 ; default body pic from walk cycle
-
-  ; Override: if the chore engine has seeded slot 0 (body) for this actor,
-  ; use chorePic instead of the static walk cycle. The limbMask MSB maps to
-  ; slot 0 (decodeData iterates bits MSB-first), so both humanoid (mask bit
-  ; 15) and prop (mask bit 0) body pics land in chorePic[actor*16 + 0].
-  phx                                 ; save current X (walk-cycle index)
-  lda.w SCUMM.actorOamCount           ; actor number (saved earlier)
-  and #$00FF
-  asl a
-  asl a
-  asl a
-  asl a                                ; actor * 16 (SCUMM_CHORE_LIMBS)
-  tax
-  sep #$20
-  .ACCU 8
-  lda.w SCUMM.chorePic, x
+  lda.w SCUMM.chorePic, x             ; slot 0: body pic
   cmp #$FF
-  beq _ri.bodyChoreInactive
+  bne _ri.haveBodyPic
+  ; Body chore hasn't been seeded (shouldn't happen with setCostume seed).
+  ; Skip this actor rather than render garbage.
+  rep #$20
+  .ACCU 16
+  plx
+  jmp _ri.nextSlot
+_ri.haveBodyPic:
   rep #$20
   .ACCU 16
   and #$00FF
-  sta.w SCUMM.scratch                 ; override body pic from chore engine
-  bra _ri.bodyPicDone
-_ri.bodyChoreInactive:
-  rep #$20
-  .ACCU 16
-_ri.bodyPicDone:
-  plx                                 ; restore walk-cycle index for head lookup
+  sta.w SCUMM.scratch                 ; body pic
 
-  ; --- Head pic lookup (X = animFrame, scratch2 = facing) ---
-  lda.w SCUMM.scratch2               ; facing (0=N, 90=E, 180=S, 270=W)
-  beq _ri.headNorth
-  cmp #180
-  beq _ri.headSouth
-  lda.l CostumeHeadCycleSide,x       ; east/west: side head
-  bra _ri.headGot
-_ri.headNorth:
-  .ACCU 16
-  lda.l CostumeHeadCycleNorth,x      ; north: rear head
-  bra _ri.headGot
-_ri.headSouth:
-  .ACCU 16
-  lda.l CostumeHeadCycleFront,x      ; south: front head
-_ri.headGot:
-  .ACCU 16
-  and #$00FF
-  sep #$20
-  .ACCU 8
-  sta.w SCUMM.actorHeadPicCur        ; default head pic from head cycle
-
-  ; Head override from chore engine.
-  ; Three cases:
-  ;   1. Chore not active (body slot 0 == $FF) → keep default head cycle
-  ;   2. Chore active, limb 1 never decoded (curpos == $FFFF) → no head
-  ;      (costume like campfire that only uses limb 0)
-  ;   3. Chore active, limb 1 decoded, chorePic set → use chore head pic
-  ;   4. Chore active, limb 1 decoded, chorePic==$FF → keep default head
-  ;      (costume like Guybrush where walk anim uses 79/7a control cmds)
-  phx                                 ; save head-cycle X
-  rep #$20
-  .ACCU 16
-  lda.w SCUMM.actorOamCount
-  and #$00FF
-  asl a
-  asl a
-  asl a
-  asl a                                ; actor * 16
-  sta.w SCUMM.choreScr_animId         ; save actor*16 base
-  tax
-  sep #$20
-  .ACCU 8
-  lda.w SCUMM.chorePic, x             ; slot 0 (body)
-  cmp #$FF
-  beq _ri.headChoreInactive           ; case 1: chore not active
-  ; Chore is driving body. Check if limb 1 was ever decoded.
+  ; --- Head pic from chore engine ---
   inx                                  ; X = actor*16 + 1
-  lda.w SCUMM.chorePic, x             ; slot 1 (head) pic
-  sta.w SCUMM.choreScr_cmd            ; stash head chorePic (no flag dependency)
-  rep #$20
-  .ACCU 16
-  txa                                  ; actor*16 + 1
-  asl a                                ; * 2 for word array
-  tax
-  lda.w SCUMM.choreCurpos, x
-  cmp #$FFFF
-  beq _ri.headSuppressed              ; case 2: limb 1 never decoded
-  ; Limb 1 was decoded. Use chorePic if set, else keep default.
   sep #$20
   .ACCU 8
-  lda.w SCUMM.choreScr_cmd            ; head chorePic
-  cmp #$FF
-  beq _ri.headChoreInactive           ; case 4: keep default head cycle
-  sta.w SCUMM.actorHeadPicCur         ; case 3: use chore head pic
-  bra _ri.headChoreInactive
-_ri.headSuppressed:
-  ; case 2: limb 1 never decoded → costume has no head
-  sep #$20
-  .ACCU 8
-  lda #$FF
+  lda.w SCUMM.chorePic, x             ; slot 1: head pic ($FF = no head)
   sta.w SCUMM.actorHeadPicCur
-_ri.headChoreInactive:
-  rep #$20
-  .ACCU 16
-  plx                                 ; restore X
-  sep #$20
-  .ACCU 8
   rep #$20
   .ACCU 16
 
-  plx                                 ; restore actor number
+  plx                                 ; restore outer X (actor number)
 
   ; --- Check if frame changed -> stage CHR DMA for this slot ---
   sep #$20

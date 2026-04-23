@@ -376,8 +376,6 @@ SCUMM.resourceMapper    ds 256
 .ramsection "scumm actor walk" bank 0 slot 1
 SCUMM.actorTargetX   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination X
 SCUMM.actorTargetY   ds SCUMM_WALK_ACTORS * 2  ; 32B — walk destination Y
-SCUMM.actorAnimFrame ds SCUMM_WALK_ACTORS      ; 16B — walk cycle index (0-11)
-SCUMM.actorAnimTimer ds SCUMM_WALK_ACTORS      ; 16B — frame delay countdown
 SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 .ends
 

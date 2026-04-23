@@ -216,15 +216,11 @@ _init.zeroWalk:
   bcc _init.zeroWalk
   ldx #0
   sep #$20
-  lda #0
 _init.zeroWalk2:
   .ACCU 8
   .INDEX 16
-  sta.w SCUMM.actorAnimFrame,x
-  sta.w SCUMM.actorAnimTimer,x
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
-  lda #0
   inx
   cpx #SCUMM_WALK_ACTORS
   bcc _init.zeroWalk2
@@ -8795,18 +8791,9 @@ _walkActorTo.direct:
 _walkActorTo.anim:
   .ACCU 16
   .INDEX 16
-  ; Initialize animation state for this actor
-  lda.w SCUMM.scratch3
-  and #$000F
-  tax
-  lda #COSTUME_WALK_ANIM_SPEED
-  sep #$20
-  sta.w SCUMM.actorAnimTimer,x
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-
   ; Set actor.moving = 1
   ldx.w SCUMM.scratch2
+  sep #$20
   lda #1
   sta.w SCUMM.actors.moving,x
   rep #$20
@@ -9800,20 +9787,18 @@ op_getActorScale:
   rts
 
 ;-------------------------------------------------------------------
-; getAnimCounter -- result + p8[7]=actor → actorAnimFrame[actor]
-; MI1 doesn't invoke this opcode (0 uses in opcode_audit.json); real
-; return keeps behavior faithful to ScummVM v5 for any script that does.
+; getAnimCounter -- result + p8[7]=actor → 0
+; MI1 doesn't invoke this opcode (0 uses in opcode_audit.json). The old
+; legacy walk cycle counter is gone; chore engine drives anim entirely.
+; Stub returns 0 for script compatibility.
 ;-------------------------------------------------------------------
 op_getAnimCounter:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.getResultPos
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; A = actor number
-  and #$000F                         ; clamp to walk-slot range 0..15
-  tax
-  lda.w SCUMM.actorAnimFrame,x
-  and #$00FF
+  jsr _scummvm.getVarOrDirectByte    ; A = actor number (discarded)
+  lda #0
   jsr _scummvm.writeVariable
   clc
   rts
@@ -10866,7 +10851,6 @@ _ua.fullyArrived:
   ldx.w SCUMM.uaActorStructOfs
   stz.w SCUMM.actors.moving,x
   ldx.w SCUMM.scratch3
-  stz.w SCUMM.actorAnimFrame,x
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
   rep #$20
@@ -10936,23 +10920,9 @@ _ua.dyPos:
   adc.w SCUMM.actors.y,x
   sta.w SCUMM.actors.y,x
 
-  ; Advance walk animation
+  ; Walk-cycle advance now lives in chore.tick (per-limb wait/curpos logic).
+  ; Legacy actorAnimFrame / actorAnimTimer removed — no advance needed here.
   sep #$20
-  ldx.w SCUMM.scratch3
-  lda.w SCUMM.actorAnimTimer,x
-  dec a
-  sta.w SCUMM.actorAnimTimer,x
-  bne _ua.animDone
-  lda #COSTUME_WALK_ANIM_SPEED
-  sta.w SCUMM.actorAnimTimer,x
-  lda.w SCUMM.actorAnimFrame,x
-  inc a
-  cmp #COSTUME_WALK_CYCLE_LEN
-  bcc +
-  lda #1                              ; wrap to walk start (skip stand at 0)
-+
-  sta.w SCUMM.actorAnimFrame,x
-_ua.animDone:
   .ACCU 8
   .INDEX 16
   rep #$20
@@ -11471,9 +11441,6 @@ _lac.dmaLoop:
   .ACCU 8
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-  sta.w SCUMM.actorAnimTimer,x
   rep #$20
   .ACCU 16
 
@@ -15111,16 +15078,7 @@ _uc.walkDone:
   .ACCU 16
   .INDEX 16
 
-  ; Init walk animation
-  ldx #1                              ; actor 1 byte index
-  sep #$20
-  lda #COSTUME_WALK_ANIM_SPEED
-  sta.w SCUMM.actorAnimTimer,x
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-  rep #$20
-
-  ; Set actor.moving = 1
+  ; Set actor.moving = 1 (chore engine drives animation from here)
   sep #$20
   lda #1
   sta.w SCUMM.actors.2.moving
@@ -17143,19 +17101,9 @@ _aao.walk:
   lda.w SCUMM.scratch3
   jsl scummvm.buildWalkPath_long
 
-  ; Init animation
-  lda.w SCUMM.scratch3
-  and #$000F
-  tax
-  .ACCU 16
-  lda #COSTUME_WALK_ANIM_SPEED
-  sep #$20
-  sta.w SCUMM.actorAnimTimer,x
-  lda #0
-  sta.w SCUMM.actorAnimFrame,x
-
-  ; Set actor.moving = 1
+  ; Set actor.moving = 1 (chore engine drives animation from here)
   ldx.w SCUMM.scratch2
+  sep #$20
   lda #1
   sta.w SCUMM.actors.moving,x
   rep #$20

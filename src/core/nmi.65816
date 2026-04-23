@@ -486,7 +486,7 @@ _nmi.noDialogTilemap:
 	lda.b #VMAIN_INCREMENT_MODE
 	sta.l VMAIN
 	rep #$20
-	lda #$4800 + (18 * 32)            ;BG2 tilemap, skip rows 0-17 (room BG2)
+	lda #$4800                        ;BG2 tilemap word address (byte $9000)
 	sta.l VMADDL
 	sep #$20
 	lda #$01                          ;2-reg write ($2118/$2119)
@@ -496,9 +496,9 @@ _nmi.noDialogTilemap:
 	lda #$7E                          ;source bank: WRAM
 	sta.l DMASRC7B
 	rep #$20
-	lda #(SCUMM.verbTilemap + 18 * 32 * 2) & $ffff
+	lda #SCUMM.verbTilemap & $ffff
 	sta.l DMASRC7L
-	lda #(14 * 32 * 2)               ;rows 18-31 only (14 rows)
+	lda #2048                         ;VERB_TILEMAP_SIZE
 	sta.l DMALEN7L
 	sep #$20
 	lda #$80                          ;trigger DMA channel 7

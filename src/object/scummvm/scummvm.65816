@@ -827,8 +827,8 @@ _scummvm.processRoomChange:
   sta.w ScreenMode
   rep #$20
 
-  ; BG2 Y scroll = 0 (shared tilemap: rows 0-17 = room BG2, rows 18+ = verbs)
-  lda #0
+  ; Set BG2 Y scroll
+  lda #110
   sta.w yScrollBG2
   stz.w xScrollBG2
   ; BG3 scroll = 0,0 (text layer, no scrolling)
@@ -14411,8 +14411,8 @@ scummvm.renderVerbBar:
   plb
   rep #$31
 
-  ; Clear verb rows (18-31) of tilemap buffer, preserving rows 0-17 (room BG2)
-  ldx #(18 * 32 * 2)
+  ; Clear verb tilemap buffer (2048 bytes = 1024 words)
+  ldx #0
   lda #0
 -
   sta.w SCUMM.verbTilemap,x
@@ -14462,9 +14462,11 @@ _rvb.verbLoop:
 
   lda.w SCUMM.verbs.1.y,x
   and #$00FF
-  ; Y is stored as SCUMM pixel coord; convert to tile row in BG2 tilemap.
-  ; With yScrollBG2=0, tilemap row = screen_y / 8.
-  ; tile_y = y / 8 (absolute tilemap row, not relative to verb area)
+  ; Y is stored as SCUMM pixel coord; convert to tile row in verb area
+  ; verb area starts at SCUMM y=144, BG2 tilemap row 0 = screen y=144
+  ; tile_y = (y - 144) / 8
+  sec
+  sbc #144
   lsr a
   lsr a
   lsr a
@@ -16385,8 +16387,8 @@ scummvm.clearVerbTilemap:
   plb
   rep #$31
 
+  ldx #0
   lda #0
-  ldx #(18 * 32 * 2)
 _cvt.clearLoop:
   .ACCU 16
   .INDEX 16

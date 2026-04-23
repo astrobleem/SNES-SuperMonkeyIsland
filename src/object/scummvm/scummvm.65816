@@ -6818,6 +6818,31 @@ _asc.noSlot:
   pla                                ; pop costume (1 byte)
   plx                                ; pop actor offset (2 bytes)
   rep #$20
+
+  ; Seed chore engine with stand anim for the new costume. Without this,
+  ; an actor whose costume gets set via setActorCostume (without triggering
+  ; a walk) has choreCurpos stuck at $FFFF, so chore.tick never fires and
+  ; chorePic stays $FF — forcing the renderer into the legacy CostumeWalkCycle
+  ; fallback. ScummVM does this via Actor::setActorCostume → startAnimActor.
+  ; Skip if costume was set to 0 (actor being cleared).
+  lda.w SCUMM.actors.costume,x        ;X still = actor offset
+  and #$00FF
+  beq _asc.noSeed
+  ; actor number = offset / 16
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  cmp #SCUMM_WALK_ACTORS              ;chore engine caps at 16 walk slots
+  bcs _asc.noSeed
+  phy                                 ;preserve SCUMM PC
+  pha                                 ;save actor number
+  ldx #3                              ;frame = 3 (stand) — v5 _standFrame
+  pla                                 ;A = actor number
+  jsl scummvm.chore.animateActor_impl
+  ply
+_asc.noSeed:
   jmp _actorOps.subLoop
 
 _actorOps.sub_initFrame:

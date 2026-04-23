@@ -1152,6 +1152,116 @@ _stageCol.p1Done:
   lda.b tmp+6
   sta.w GLOBAL.room.nmiTileStageLen
 
+  ;--- Pass 1b: BG2 tile cache-miss staging (if hasBg2Mask) ---
+  ;Mirror of loadInitialViewport Pass 1b: BG2 tile IDs are disjoint from BG1
+  ;because the converter replaced BG1 tilemap with masked-variant IDs. Without
+  ;this, new scroll-in columns' BG2 tiles resolve to $FFFF in the cache and
+  ;Pass 3 emits garbage slot indices → black rectangles during horizontal
+  ;scroll in z-masked rooms. Uses the same NMI tile queue as BG1.
+  sep #$20
+  lda.w GLOBAL.room.hasBg2Mask
+  bne _stageCol.p1bEnter
+    rep #$20
+    jmp _stageCol.p1bDone
+_stageCol.p1bEnter:
+  rep #$20
+
+  ldx.b tmp+12                  ;X = WRAM source offset, start of this column
+  lda.w GLOBAL.room.roomHeightTiles
+  sta.b tmp+14                  ;row counter
+
+_stageCol.p1bLoop:
+  .ACCU 16
+  .INDEX 16
+  lda.l SCROLL_BG2MAP_WRAM,x
+  beq _stageCol.p1bNext         ;tile 0 = transparent, skip
+  and.w #$07FF                  ;tileId
+  sta.b tmp+16
+
+  ;check cache
+  asl a
+  phx                            ;save WRAM offset
+  tax
+  lda.l SCROLL_TILE2SLOT_WRAM,x
+  cmp.w #ROOM_TILE_NOT_CACHED
+  beq _stageCol.p1bMiss
+  plx                            ;cached — restore, skip
+  bra _stageCol.p1bNext
+
+_stageCol.p1bMiss:
+  .ACCU 16
+  .INDEX 16
+  ;allocate slot
+  lda.b tmp+16                  ;tileId
+  jsr room.allocCacheSlot        ;returns slot in A (clobbers X, Y)
+  sta.b tmp+18                  ;slot
+
+  ;record VRAM word address for NMI: slot * 16
+  asl a
+  asl a
+  asl a
+  asl a
+  ldx.b tmp+8                   ;X = VRAM addr array offset (long,Y not supported)
+  sta.l SCROLL_NMI_SLOTS_WRAM,x
+  inx
+  inx
+  stx.b tmp+8
+
+  ;ROM read: tileDataRomOfs + tileId * 32
+  lda.b tmp+16                  ;tileId
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a                          ;tileId * 32
+  clc
+  adc.w GLOBAL.room.tileDataRomOfs_lo
+  pha                            ;push ROM addr low
+  lda.w #0
+  adc.w GLOBAL.room.tileDataRomOfs_hi
+  tax                            ;X = ROM addr high
+  pla                            ;A = ROM addr low
+  jsr room.setRomDataPtr         ;tmp+24 = 24-bit CPU address
+
+  ;copy 32 bytes to tile staging buffer
+  ldx.b tmp+6                   ;staging byte offset
+  ldy #0
+_stageCol.p1bTileRead:
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  lda [tmp+24],y
+  sta.l SCROLL_TILE_STAGE_WRAM,x
+  rep #$20
+  iny
+  inx
+  cpy #32
+  bne _stageCol.p1bTileRead
+  stx.b tmp+6
+
+  ;increment tile count
+  lda.w GLOBAL.room.nmiTileCount
+  inc a
+  sta.w GLOBAL.room.nmiTileCount
+
+  plx                            ;restore WRAM offset
+_stageCol.p1bNext:
+  .ACCU 16
+  .INDEX 16
+  inx
+  inx
+  dec.b tmp+14
+  beq _stageCol.p1bSave
+  jmp _stageCol.p1bLoop
+
+_stageCol.p1bSave:
+  ;re-save staging length (grew with BG2 tiles added)
+  lda.b tmp+6
+  sta.w GLOBAL.room.nmiTileStageLen
+_stageCol.p1bDone:
+  .ACCU 16
+  .INDEX 16
+
   ;--- Pass 2: remap all tilemap entries, store to colStaging ---
   ldx.b tmp+12                  ;WRAM source offset (restart)
   ldy #0                        ;staging buffer offset

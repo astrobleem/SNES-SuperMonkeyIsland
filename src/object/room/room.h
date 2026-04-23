@@ -30,6 +30,10 @@
 ;bank $7F buffer addresses (long-addressed)
 .define SCROLL_TILEMAP_WRAM      $7F0000  ;full room tilemap (max ~6.3KB)
 
+;BG2 room tilemap in VRAM (separate from verb tilemap at $4800)
+.define ROOM_BG2_TILEMAP_VRAM_WORD  $5800   ;unused VRAM between dialog font and OBJ
+.define ROOM_BG2_ROW_OFFSET         13      ;yScrollBG2=110 → row 110/8=13
+
 ;BG2 tilemap for dual-layer z-plane masking (column-major, same format as BG1)
 ;Foreground tile positions hold original (unmasked) tilemap word;
 ;background positions hold 0 (transparent). Loaded alongside BG1 tilemap.

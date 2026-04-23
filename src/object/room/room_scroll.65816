@@ -226,6 +226,24 @@ room.loadInitialViewport:
   php
   rep #$31
 
+  ;clear BG2 room tilemap at VRAM $5800 (1024 words = 32x32)
+  ;prevents stale z-plane data from previous room
+  sep #$20
+  lda.b #VMAIN_INCREMENT_MODE
+  sta.l VMAIN
+  rep #$20
+  lda.w #ROOM_BG2_TILEMAP_VRAM_WORD
+  sta.l VMADDL
+  ldx #1024
+  sep #$20
+  lda #0
+_initVP.clearBg2:
+  sta.l VMDATAL
+  sta.l VMDATAH
+  dex
+  bne _initVP.clearBg2
+  rep #$20
+
   ;how many columns to load: min(widthTiles, 32)
   lda.w GLOBAL.room.roomWidthTiles
   cmp.w #ROOM_VIEWPORT_TILES + 1
@@ -501,11 +519,11 @@ _initVP.p2Loop:
   rep #$20
   beq _initVP.bg2Skip
 
-  ;BG2 VRAM address: $4800 + (column & 31). BG2 is 32-wide (no NT1).
+  ;BG2 VRAM address: room tilemap at $5800 + row 13 offset (yScroll=110)
   lda.b tmp+4
-  and.w #$001F                    ;column within 32-wide nametable
+  and.w #$001F
   clc
-  adc.w #$4800                    ;BG2 tilemap base
+  adc.w #ROOM_BG2_TILEMAP_VRAM_WORD + (ROOM_BG2_ROW_OFFSET * 32)
   sta.l VMADDL
 
   ;walk the BG2 column from SCROLL_BG2MAP_WRAM at same WRAM offset as BG1
@@ -1121,11 +1139,11 @@ _stageCol.p3Store:
   dec.b tmp+14
   bne _stageCol.p3Loop
 
-  ;BG2 VRAM address: $4800 + (column & 31). BG2 is 32-wide (no NT1).
+  ;BG2 VRAM address: room tilemap at $5800 + row 13 offset (yScroll=110)
   lda.b tmp+10                    ;column index
   and.w #$001F
   clc
-  adc.w #$4800
+  adc.w #ROOM_BG2_TILEMAP_VRAM_WORD + (ROOM_BG2_ROW_OFFSET * 32)
   sta.w GLOBAL.room.nmiBg2ColAddr
 
   sep #$20

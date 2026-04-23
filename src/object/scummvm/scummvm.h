@@ -186,7 +186,7 @@ SCUMM.musicMode           dw      ;0=SPC700/TAD, 1=MSU-1 PCM
 SCUMM.gcInProgress        dw      ;nonzero = cache GC in progress (prevent recursion)
 SCUMM.hdmaChannel         db      ;allocated HDMA channel id for verb area split
 SCUMM.hdmaNbaChannel      db      ;allocated HDMA channel id for BG12NBA z-plane switching
-SCUMM.hdmaVofsChannel     db      ;allocated HDMA channel id for BG2VOFS z-plane switching
+SCUMM.hdmaScChannel       db      ;allocated HDMA channel id for BG2SC tilemap switching
 SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
 SCUMM._cgramHdmaTableStub ds 86   ;UNUSED reserve (was SCUMM.cgramHdmaTable, shrunk for hdmaVofsChannel)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
@@ -717,23 +717,24 @@ Bg2NbaDefaultTable:
   .db $40
   .db 0
 
-; BG2VOFS HDMA: set BG2 Y scroll to 0 in game area, 110 in verb area.
-; Mode 2 (write-twice register $2110): each entry is 2 bytes (lo, hi).
-Bg2VofsHdmaTable:
+; BG2SC HDMA: switch BG2 tilemap address mid-screen for z-plane masking.
+; Game area (0-143): BG2SC=$58 → tilemap at word $5800 (room BG2 fill).
+; Verb area (144+): BG2SC=$48 → tilemap at word $4800 (verb text).
+Bg2ScHdmaTable:
   .db 128                               ; scanlines 0-127
-  .dw 0                                 ; yScrollBG2 = 0
+  .db $58                               ; room BG2 tilemap at $5800, 32x32
   .db 16                                ; scanlines 128-143
-  .dw 0                                 ; yScrollBG2 = 0
+  .db $58
   .db 80                                ; scanlines 144-223
-  .dw 110                               ; yScrollBG2 = 110 (verb bar offset)
-  .db 0                                 ; end
+  .db $48                               ; verb tilemap at $4800, 32x32
+  .db 0
 
-; Default BG2VOFS table (no z-plane masking): BG2 Y scroll = 110 everywhere.
-Bg2VofsDefaultTable:
+; Default BG2SC table (no z-plane masking): verb tilemap everywhere.
+Bg2ScDefaultTable:
   .db 128
-  .dw 110
+  .db $48
   .db 96
-  .dw 110
+  .db $48
   .db 0
 .ends
 

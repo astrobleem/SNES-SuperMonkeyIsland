@@ -919,7 +919,7 @@ _scummvm.processRoomChange:
   sep #$20
   jsr core.dma_channel.allocate
   bcc +
-    sta.w SCUMM.hdmaVofsChannel
+    sta.w SCUMM.hdmaScChannel
     rep #$31
     and #$00FF
     asl a
@@ -928,17 +928,17 @@ _scummvm.processRoomChange:
     asl a
     tax
     sep #$20
-    lda #$02                        ;DMAP: mode 2 (write-twice, same register)
+    lda #$00                        ;DMAP: mode 0 (1 byte, direct)
     sta.l DMAP0,x
-    lda #$10                        ;target: $2110 (BG2VOFS)
+    lda #$08                        ;target: $2108 (BG2SC)
     sta.l DMADEST0,x
-    lda.b #:Bg2VofsDefaultTable
+    lda.b #:Bg2ScDefaultTable
     sta.l DMASRC0B,x
     rep #$20
-    lda.w #Bg2VofsDefaultTable
+    lda.w #Bg2ScDefaultTable
     sta.l DMASRC0L,x
     rep #$20
-    lda.w SCUMM.hdmaVofsChannel
+    lda.w SCUMM.hdmaScChannel
     and #$00FF
     tax
     sep #$20
@@ -1411,7 +1411,7 @@ _prc.hasViewport:
   lda.w #Bg2NbaHdmaTable
   sta.l DMASRC0L,x
   ; Switch VOFS HDMA → game table (BG2 Y=0 in game area)
-  lda.w SCUMM.hdmaVofsChannel
+  lda.w SCUMM.hdmaScChannel
   and #$00FF
   asl a
     asl a
@@ -1419,10 +1419,10 @@ _prc.hasViewport:
     asl a
   tax
   sep #$20
-  lda.b #:Bg2VofsHdmaTable
+  lda.b #:Bg2ScHdmaTable
   sta.l DMASRC0B,x
   rep #$20
-  lda.w #Bg2VofsHdmaTable
+  lda.w #Bg2ScHdmaTable
   sta.l DMASRC0L,x
   bra _prc.bg2MaskDone
 _prc.noBg2Mask:
@@ -1442,7 +1442,7 @@ _prc.noBg2Mask:
   lda.w #Bg2NbaDefaultTable
   sta.l DMASRC0L,x
   ; Default VOFS table (BG2 Y=110 everywhere)
-  lda.w SCUMM.hdmaVofsChannel
+  lda.w SCUMM.hdmaScChannel
   and #$00FF
   asl a
     asl a
@@ -1450,10 +1450,10 @@ _prc.noBg2Mask:
     asl a
   tax
   sep #$20
-  lda.b #:Bg2VofsDefaultTable
+  lda.b #:Bg2ScDefaultTable
   sta.l DMASRC0B,x
   rep #$20
-  lda.w #Bg2VofsDefaultTable
+  lda.w #Bg2ScDefaultTable
   sta.l DMASRC0L,x
 _prc.bg2MaskDone:
 

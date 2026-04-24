@@ -207,7 +207,15 @@ SCUMM.pendingCamFlag      db      ;nonzero = pendingCamTarget is live, apply aft
 ; op_startSound / op_startMusic; TTL decrements once per _play tick and
 ; the slot clears when it hits 0. 4 slots cover concurrent music + SFX.
 .define SCUMM_VIRT_SOUND_SLOTS 4
-.define SCUMM_VIRT_TTL_SONG    1800    ; ~30s — songs / unmapped (most intro pacing sounds)
+; Default TTL for unmapped sounds. 30s was too long — MI1's Part One title
+; card plays an unmapped title-chord via op_startSound(104), then waits on
+; isSoundRunning() to return 0 before advancing. At 1800 frames the card
+; stalls for 30s (and the user always skipped it with START instead of
+; waiting). Vanilla MI1 transitions these title cards in ~3s. 300 frames
+; (~5s) is a reasonable cutscene-pacing default while still covering
+; genuinely-slow unmapped music cues. Real songs backed by Tad / MSU-1
+; don't use this — they're polled via Tad_IsSongPlaying in op_isSoundRunning.
+.define SCUMM_VIRT_TTL_SONG     300    ;  ~5s — songs / unmapped pacing default
 .define SCUMM_VIRT_TTL_SFX      180    ;  ~3s — mapped SFX (known-short)
 .ramsection "scumm virt sound" bank 0 slot 1
 SCUMM.virtSoundId    ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = empty

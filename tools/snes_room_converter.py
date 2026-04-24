@@ -130,6 +130,62 @@ def _tile_key(indexed_tile):
     return indexed_tile.tobytes()
 
 
+def dedup_bgr555(raw_tiles):
+    """Collapse identical 8x8 BGR555 tiles across 4 flip variants.
+
+    Runs BEFORE palette quantization so the quantizer sees every visual
+    pattern exactly once. Without this pass, `build_palettes_tileaware`
+    can assign two copies of an identical BGR555 pattern to different
+    sub-palettes; the indexed pixel bytes then differ (palette-relative
+    indices) and the later `dedup_tiles` pass cannot collapse them. Each
+    such split inflates the unique-tile count by one and eats into the
+    11-bit tilemap tile-ID budget (rooms 33/53/58/59 visibly corrupted).
+
+    Args:
+        raw_tiles: (N, 8, 8) uint16 BGR555 tiles in positional order.
+
+    Returns:
+        unique_raw:         (M, 8, 8) uint16, M <= N, one entry per
+                            distinct visual pattern (modulo H/V flip).
+        position_to_unique: list of M-indices, length N.
+        flip_flags:         list of (hflip, vflip) per position; apply
+                            these flips to unique_raw[position_to_unique[i]]
+                            to reconstruct raw_tiles[i].
+    """
+    unique = []
+    lookup = {}  # tile_bytes -> unique_id
+    position_to_unique = []
+    flip_flags = []
+
+    for i in range(len(raw_tiles)):
+        tile = raw_tiles[i]
+        variants = [
+            (tile, False, False),
+            (tile[:, ::-1], True, False),
+            (tile[::-1, :], False, True),
+            (tile[::-1, ::-1], True, True),
+        ]
+
+        found = False
+        for var, hf, vf in variants:
+            key = var.tobytes()
+            if key in lookup:
+                position_to_unique.append(lookup[key])
+                flip_flags.append((hf, vf))
+                found = True
+                break
+
+        if not found:
+            uid = len(unique)
+            unique.append(tile.copy())
+            lookup[tile.tobytes()] = uid
+            position_to_unique.append(uid)
+            flip_flags.append((False, False))
+
+    unique_arr = np.array(unique, dtype=np.uint16) if unique else np.zeros((0, 8, 8), dtype=np.uint16)
+    return unique_arr, position_to_unique, flip_flags
+
+
 def dedup_tiles(indexed_tiles, tile_pal_ids, max_tiles=MAX_TILE_ID):
     """Deduplicate tiles checking all 4 flip variants.
 
@@ -880,15 +936,23 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     else:
         all_snes_tiles = bg_snes_tiles
 
+    # Pre-quantization BGR555 dedup: collapse identical visual patterns
+    # before the quantizer sees them. Without this, identical raw tiles
+    # can be scattered across different sub-palettes and the later
+    # indexed-byte dedup cannot collapse them (different palette ->
+    # different index representation). See dedup_bgr555 docstring.
+    unique_raw, pos_to_unique, flip_flags = dedup_bgr555(all_snes_tiles)
+
     # Quantize with 2 fixed palettes (pal6/pal7 verb+universal) + 5 mutable
     # (art). Quantizer can assign tiles to any of the 7 palettes; fixed ones
     # hold verb colors plus a global "universal" set that many tiles may
     # match, effectively raising the art palette budget above 5.
     # Quantizer output order: [pal6_fixed, pal7_fixed, art0, art1, art2, art3, art4].
     # We re-arrange to [pal0_ui, art0-art4, pal6, pal7] for the .pal file.
+    # Operates on unique_raw (M <= N tiles), not the positional all_snes_tiles.
     fixed_palettes = [PAL6_VERB_PLUS_UNIVERSAL, PAL7_VERB_PLUS_UNIVERSAL]
-    raw_palettes, all_indexed_tiles, raw_tile_pal_ids = build_palettes_tileaware(
-        all_snes_tiles, num_palettes=ART_SUBPALETTES,
+    raw_palettes, unique_indexed, raw_unique_pal_ids = build_palettes_tileaware(
+        unique_raw, num_palettes=ART_SUBPALETTES,
         fixed_palettes=fixed_palettes
     )
     # Remap quantizer pal_ids (0..6) -> output pal_ids (0..7 with pal0 reserved)
@@ -898,7 +962,7 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     #   quantizer 1 -> output 7
     #   quantizer 2..6 -> output 1..5
     remap = np.array([6, 7, 1, 2, 3, 4, 5], dtype=np.uint8)
-    all_tile_pal_ids = remap[raw_tile_pal_ids]
+    unique_pal_ids = remap[raw_unique_pal_ids]
     empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
     palettes = (
         [empty_pal]                 # pal 0 (UI)
@@ -908,19 +972,29 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
 
-    # Separate background and object indexed tiles
+    # Dedup the M unique indexed tiles (catches residual same-palette flip
+    # equivalences the BGR555 pass cannot see — e.g. two distinct raw
+    # patterns that quantize to identical indexed bytes under one palette).
+    final_unique_tiles, unique_entries = dedup_tiles(
+        list(unique_indexed), list(unique_pal_ids)
+    )
+
+    # Expand M unique entries back to N positional entries, composing
+    # the pre-dedup raw flips with the post-dedup flips via XOR. Both
+    # are independent involutions on their respective axes, so XOR is
+    # the correct composition.
+    all_entries = []
+    for i in range(len(all_snes_tiles)):
+        u = pos_to_unique[i]
+        tid, pal, hf_post, vf_post = unique_entries[u]
+        hf_raw, vf_raw = flip_flags[i]
+        all_entries.append((tid, pal, hf_post ^ hf_raw, vf_post ^ vf_raw))
+
+    unique_tiles = final_unique_tiles
+
+    # Split entries back into background and object groups (same split as
+    # before, now operating on the N positional entries).
     bg_count = len(bg_snes_tiles)
-    bg_indexed = all_indexed_tiles[:bg_count]
-    bg_pal_ids = all_tile_pal_ids[:bg_count]
-    obj_indexed = all_indexed_tiles[bg_count:]
-    obj_pal_ids = all_tile_pal_ids[bg_count:]
-
-    # Deduplicate combined tileset (bg + object tiles together)
-    all_indexed_combined = list(bg_indexed) + list(obj_indexed)
-    all_pal_combined = list(bg_pal_ids) + list(obj_pal_ids)
-    unique_tiles, all_entries = dedup_tiles(all_indexed_combined, all_pal_combined)
-
-    # Split entries back
     bg_entries = all_entries[:bg_count]
     obj_entries = all_entries[bg_count:]
 

@@ -584,11 +584,44 @@ def _parse_via(spec: str) -> list[Leg]:
     return legs
 
 
+def run_batch(
+    room_ids: list[int],
+    timeout: int,
+    out_dir: str,
+    boot_min: int = 500,
+) -> int:
+    """Load each room from a fresh boot and snapshot it.
+
+    Saves screenshots as {out_dir}/room_NNN_batch.png. Each room spawns a
+    fresh Mesen subprocess (~30s each), so this is slow — use for CI
+    regression or once-per-session health checks, not per-edit feedback.
+    """
+    out_path = DIST / out_dir
+    out_path.mkdir(parents=True, exist_ok=True)
+    ok = 0
+    fail = 0
+    for rid in room_ids:
+        out_png = f"{out_dir}/room_{rid:03d}_batch.png"
+        rc = run(
+            [(rid, 160, 100, 0)], 300, out_png, timeout,
+            force_cutscene=0, natural_mode=False, shot_at_frame=0,
+            zero_ego=False, boot_min_frames=boot_min, force_cam=0,
+        )
+        if rc == 0:
+            ok += 1
+        else:
+            fail += 1
+    print(f"batch: {ok} ok, {fail} fail, out={out_path}")
+    return 0 if fail == 0 else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Load a room (or sequence of rooms) and capture state + screenshot."
     )
-    ap.add_argument("room", type=int, help="target room number")
+    ap.add_argument("room", type=str,
+        help='target room number, or a range like "1-20", or "all" for 1-99'
+    )
     ap.add_argument("-x", type=int, default=160, help="Guybrush x (default 160)")
     ap.add_argument("-y", type=int, default=100, help="Guybrush y (default 100)")
     ap.add_argument(
@@ -623,7 +656,7 @@ def main() -> int:
         help="natural mode: frame to capture state + screenshot (default 13400)."
     )
     ap.add_argument(
-        "--boot-min", type=int, default=2500,
+        "--boot-min", type=int, default=500,
         help="minimum frame count before harness starts poking. Higher = "
              "more intro progression before pokes. Lower = faster boot."
     )
@@ -634,14 +667,34 @@ def main() -> int:
              "rendering bugs. 0 = leave camera alone."
     )
     ap.add_argument("--out", default=None, help="output PNG name (default room_NNN_harness.png)")
+    ap.add_argument(
+        "--batch-out", default="batch",
+        help="batch mode: output directory under distribution/ (default 'batch')"
+    )
     ap.add_argument("--timeout", type=int, default=300, help="Mesen timeout (s)")
     args = ap.parse_args()
 
+    # Batch / range mode: a CSV or range replaces single target.
+    room_arg = args.room.strip()
+    if room_arg == "all":
+        room_ids = list(range(1, 100))
+    elif "-" in room_arg:
+        lo, hi = room_arg.split("-", 1)
+        room_ids = list(range(int(lo), int(hi) + 1))
+    elif "," in room_arg:
+        room_ids = [int(t) for t in room_arg.split(",") if t]
+    else:
+        room_ids = [int(room_arg)]
+
+    if len(room_ids) > 1:
+        return run_batch(room_ids, args.timeout, args.batch_out, args.boot_min)
+
+    target = room_ids[0]
     route: list[Leg] = _parse_via(args.via)
     # Final leg is the target room; leg_settle here is ignored (--settle covers it).
-    route.append((args.room, args.x, args.y, 0))
+    route.append((target, args.x, args.y, 0))
 
-    out_png = args.out or f"room_{args.room:03d}_harness.png"
+    out_png = args.out or f"room_{target:03d}_harness.png"
     return run(
         route, args.settle, out_png, args.timeout, args.cutscene,
         natural_mode=args.natural, shot_at_frame=args.shot_at,

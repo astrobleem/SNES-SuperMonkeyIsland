@@ -36,6 +36,8 @@ SCUMM.choreScr_curpos    dw    ; tick: working curpos offset into animCmds
 SCUMM.choreScr_end       dw    ; tick: working end offset
 SCUMM.choreScr_start     dw    ; tick: working start offset (loop anchor)
 SCUMM.choreScr_cmd       dw    ; tick: current command byte (low 8 bits)
+SCUMM.choreScr_preserve  dw    ; animateActor: nonzero = skip limbs already seeded
+SCUMM.choreScr_highflag  dw    ; tick: bit 15 of curpos (one-shot vs loop)
 .ends
 
 ; JSL entry points (body in scummvm_chore.65816):

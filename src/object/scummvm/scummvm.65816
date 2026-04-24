@@ -6644,6 +6644,7 @@ _actorOps.dispatch:
     adc #6                           ; +6 = facing field
     tay
     lda #180                         ; south
+_actorOps.sub_init_writeFacing:
     sta.w SCUMM.actors,y
     ; Clear zClip for this actor (prevents stale values from prior room)
     lda 3,s                          ; actor struct offset
@@ -6815,11 +6816,16 @@ _asc.noSlot:
   plx                                ; pop actor offset (2 bytes)
   rep #$20
 
-  ; Seed chore engine with stand anim for the new costume. Without this,
-  ; an actor whose costume gets set via setActorCostume (without triggering
-  ; a walk) has choreCurpos stuck at $FFFF, so chore.tick never fires and
-  ; chorePic stays $FF — forcing the renderer into the legacy CostumeWalkCycle
-  ; fallback. ScummVM does this via Actor::setActorCostume → startAnimActor.
+  ; Seed chore engine with init then stand anims. Costumes split two ways:
+  ;   * Most (Guybrush cost 1, lookout cost 33): init seeds body+head
+  ;     cleanly; stand is a single-pic body override.
+  ;   * Cost 48 campfire and similar animated props: init is empty or a
+  ;     static single pic; the multi-pic animation lives on stand.
+  ; Running init first then stand gives us: init seeds missing limbs
+  ; (head especially), then stand overrides the body with its looping
+  ; data. Stand writes use the "preserve" flag so a head limb seeded by
+  ; init isn't stomped by a stand anim that disables head ($FFFF cmd)
+  ; or lacks a head bit in its mask.
   ; Skip if costume was set to 0 (actor being cleared).
   lda.w SCUMM.actors.costume,x        ;X still = actor offset
   and #$00FF
@@ -6832,10 +6838,20 @@ _asc.noSlot:
   lsr a
   cmp #SCUMM_WALK_ACTORS              ;chore engine caps at 16 walk slots
   bcs _asc.noSeed
-  phy                                 ;preserve SCUMM PC
+  phy                                 ;preserve SCUMM PC (Y = SCUMM PC)
+  ; pass 1: init (frame=1). Seeds body + head for costumes that have init
+  ; data (Guybrush, old man); no-op for costumes whose init dispatch is
+  ; empty (campfire).
   pha                                 ;save actor number
-  ldx #3                              ;frame = 3 (stand) — v5 _standFrame
-  pla                                 ;A = actor number
+  ldx #1                              ;frame = 1 (init)
+  pla
+  pha                                 ;re-save for pass 2
+  jsl scummvm.chore.animateActor_impl
+  ; pass 2: stand (frame=3) with preserve. Seeds body for costumes whose
+  ; animation lives on stand (campfire body loop); preserve-mode skips
+  ; limbs already seeded by init, so we don't stomp the init head back.
+  ldx #$0103                          ;X.low=3 stand, X.high=1 preserve
+  pla
   jsl scummvm.chore.animateActor_impl
   ply
 _asc.noSeed:
@@ -8613,19 +8629,48 @@ op_animateActor:
   clc
   rts
 
-; faceActor ($09, $49, $89, $C9) -- p8[7]=actor, p16[6]=direction
+; faceActor ($09, $49, $89, $C9) -- p8[7]=actor, p16[6]=target object/actor
+; ScummVM o5_faceActor: a->faceToObject(b). faceToObject reads target's
+; (x, y) via getObjectOrActorXY and picks east (90) or west (270) based
+; on whether target.x > actor.x. MI1 intro calls faceActor(Guybrush, OldMan)
+; to turn Guybrush toward the old man during the lookout dialog — if we
+; store the raw target-ID value as a facing angle (old behaviour), we end
+; up with facing=2 instead of 270, and Guybrush keeps staring at the camera.
 op_faceActor:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
-  jsr _scummvm.getVarOrDirectByte    ; actor number
+  jsr _scummvm.getVarOrDirectByte    ; source actor number
   jsr _scummvm.getActorPtr
-  stx.w SCUMM.scratch2
+  stx.w SCUMM.scratch2              ; source actor struct offset
+  lda.w SCUMM.actors.x,x
+  sta.w SCUMM.scratch               ; source x
 
   lda #SCUMM_FLAG_BIT6
-  jsr _scummvm.getVarOrDirectWord    ; direction
-  ldx.w SCUMM.scratch2
+  jsr _scummvm.getVarOrDirectWord    ; target object/actor id
+  sta.w SCUMM.scratch3              ; stash target id
+
+  ; MVP: only support actor-to-actor (typical MI1 actor id range 1..31).
+  ; For object targets we'd need getObjectOrActorXY's object-list scan; if
+  ; the id is out of the actor range, leave facing alone (preserves the
+  ; walk-direction facing from updateActors).
+  cmp #32
+  bcs +++                            ; target id >= 32 → treat as object, skip
+  and #$00FF
+  jsr _scummvm.getActorPtr           ; X = target actor struct offset
+  bcc +++                            ; invalid actor → skip
+  lda.w SCUMM.actors.x,x            ; target x
+  cmp.w SCUMM.scratch                ; target.x - source.x
+  ldx.w SCUMM.scratch2              ; reload source struct offset
+  bcc _opFaceActor.west              ; target.x < source.x → west
+  lda #90                            ; target.x >= source.x → east
   sta.w SCUMM.actors.facing,x
+  clc
+  rts
+_opFaceActor.west:
+  lda #270
+  sta.w SCUMM.actors.facing,x
++++
   clc
   rts
 
@@ -10763,7 +10808,23 @@ _ua.walkSpeedOk:
   rep #$20
   .ACCU 16
 
-  ; Update facing ALWAYS (before arrival check so standing frame is correct)
+  ; Update facing ALWAYS (before arrival check so standing frame is correct).
+  ; BUT: when the delta to the waypoint is dx=0 AND dy=0 (actor already
+  ; sitting on the waypoint), the direction is undefined and the default
+  ; fall-through is south (180). That snaps the facing back to the camera
+  ; every frame the actor is stopped on a waypoint, clobbering whatever
+  ; direction the previous walk step set. Preserve the prior facing in
+  ; that case so walkActorToActor leaves the actor facing its last
+  ; movement direction (toward the target).
+  lda.w SCUMM.scratch2
+  bpl +
+  eor #$FFFF
+  inc a
++                                      ; A = |dy|
+  ora.w SCUMM.actorOamCount           ; |dy| | |dx|: 0 iff both are 0
+  bne _ua.facingCalc
+  jmp _ua.facingDone
+_ua.facingCalc:
   lda.w SCUMM.scratch2
   bpl +
   eor #$FFFF
@@ -11449,6 +11510,36 @@ _lac.dmaNext:
   jmp _lac.dmaLoop
 
 _lac.dmaDone:
+  ; --- Room-entry chore seed (init, preserve-mode) ---
+  ; Port of ScummVM showActor → startAnimActor(_initFrame). For every
+  ; occupied render slot, run init with preserve so actors carried across
+  ; rooms (Guybrush: costume set at boot, never re-set) get their head
+  ; chore seeded. Preserve-mode skips limbs whose chore is already
+  ; running, so ENCD-placed actors' setActorCostume seeds aren't stomped.
+  stz.w SCUMM.scratch3
+_lac.seedLoop:
+  ldx.w SCUMM.scratch3
+  cpx #SCUMM_MAX_RENDER_SLOTS
+  bcs _lac.seedDone
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotActor,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  beq _lac.seedNext                   ; empty slot
+  cmp #SCUMM_WALK_ACTORS              ; chore engine caps at 16 walk actors
+  bcs _lac.seedNext
+  phx                                 ; save slot index
+  pha                                 ; save actor num
+  ldx #$0101                          ; X.low=1 init, X.high=1 preserve
+  pla
+  jsl scummvm.chore.animateActor_impl
+  plx
+_lac.seedNext:
+  inc.w SCUMM.scratch3
+  jmp _lac.seedLoop
+_lac.seedDone:
   rtl
 
 .ends
@@ -11543,9 +11634,27 @@ _ri.slotLoop:
   ; Legacy CostumeWalkCycle / CostumeHeadCycle tables are gone; actor anim
   ; is driven entirely by chore.animateActor_impl seeding + chore.tick
   ; decoding. chorePic[actor*16 + 0] = body pic, +1 = head pic; $FF = hide.
+  ; choreStopped[actor] is a bitmask (bit N = limb N stopped); a limb with
+  ; its bit set is treated as hidden regardless of chorePic. ScummVM sets
+  ; that bit at seed time when an anim's cs byte is $79 (pause) / $7A
+  ; (resume); the underlying chore keeps ticking and updating chorePic
+  ; so the limb resumes cleanly when the bit clears.
   lda.w SCUMM.actorOamCount           ; actor number
   and #$00FF
   phx                                 ; preserve outer X (unused here but parity)
+
+  ; Fetch choreStopped[actor] into SCUMM.actorHeadPicCur (temp — actual
+  ; actorHeadPicCur assignment happens below after head pic is read).
+  sep #$20
+  .ACCU 8
+  tax                                 ; X = actor num (low byte)
+  lda.w SCUMM.choreStopped, x
+  sta.w SCUMM.actorHeadPicCur         ; scratch: stopped bitmask
+  rep #$20
+  .ACCU 16
+
+  lda.w SCUMM.actorOamCount
+  and #$00FF
   asl a
   asl a
   asl a
@@ -11555,13 +11664,17 @@ _ri.slotLoop:
   .ACCU 8
   lda.w SCUMM.chorePic, x             ; slot 0: body pic
   cmp #$FF
-  bne _ri.haveBodyPic
-  ; Body chore hasn't been seeded (shouldn't happen with setCostume seed).
-  ; Skip this actor rather than render garbage.
-  rep #$20
-  .ACCU 16
-  plx
-  jmp _ri.nextSlot
+  beq _ri.bodyHidden
+  ; body stopped bit? (bit 0 of stopped mask)
+  pha                                 ; save body pic
+  lda.w SCUMM.actorHeadPicCur         ; stopped mask
+  lsr a                               ; bit 0 → carry
+  bcc _ri.bodyNotStopped
+    pla                               ; discard body pic
+    bra _ri.bodyHidden                ; stopped → hide actor
+_ri.bodyNotStopped:
+  pla                                 ; restore body pic (A still 8-bit)
+
 _ri.haveBodyPic:
   rep #$20
   .ACCU 16
@@ -11573,11 +11686,29 @@ _ri.haveBodyPic:
   sep #$20
   .ACCU 8
   lda.w SCUMM.chorePic, x             ; slot 1: head pic ($FF = no head)
+  pha                                 ; save head pic
+  lda.w SCUMM.actorHeadPicCur         ; stopped mask (still there)
+  and #$02                            ; bit 1 = head
+  beq _ri.headNotStopped
+    pla                               ; discard head pic
+    lda #$FF                          ; force hidden
+    bra _ri.headDone
+_ri.headNotStopped:
+  pla                                 ; restore head pic
+_ri.headDone:
   sta.w SCUMM.actorHeadPicCur
   rep #$20
   .ACCU 16
 
   plx                                 ; restore outer X (actor number)
+  bra _ri.bodyContinue
+_ri.bodyHidden:
+  ; Body chore not seeded OR body stopped bit set. Skip this actor.
+  rep #$20
+  .ACCU 16
+  plx
+  jmp _ri.nextSlot
+_ri.bodyContinue:
 
   ; --- Check if frame changed -> stage CHR DMA for this slot ---
   sep #$20

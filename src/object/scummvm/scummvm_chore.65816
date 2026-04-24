@@ -136,6 +136,10 @@ scummvm.chore.animateActor_impl:
     jmp _caa.exit
 + sta.w SCUMM.scratch                    ; actor_num
 
+  ; X.low = frame, X.high = preserve flag (nonzero = skip already-seeded limbs)
+  txa
+  and #$FF00
+  sta.w SCUMM.choreScr_preserve
   txa
   and #$00FF
   sta.w SCUMM.scratch2                   ; frame
@@ -156,21 +160,26 @@ scummvm.chore.animateActor_impl:
   asl a
   tax
 
-  ; --- Stage 5 dispatch: chore = 0x3F - (frame >> 2) + 2; dir = frame & 3
-  ;   cmd 2 = stop walking, seed standFrame anim
-  ;   cmd 3 = change direction immediately
-  ;   cmd 4 = turn to direction (MVP: snap like cmd 3)
-  ;   other = fall through to decodeData with raw frame
+  ; --- ScummVM v5 dispatch: cmd = frame >> 2; dir = frame & 3.
+  ; ScummVM Actor::animateActor (engines/scumm/actor.cpp ~720) switches on
+  ; cmd. We handle the cases that matter for MI1's intro:
+  ;   cmd 2 (anim 8-11)  = start walking — caller is startWalkAnim seeding,
+  ;                         no facing change here (walk update handles it).
+  ;   cmd 3 (anim 12-15) = stop walking / stand in direction `dir` → this
+  ;                         is where "stand south" (anim 14) legitimately
+  ;                         sets facing=180. MI1 intro uses 12 (stand west)
+  ;                         to keep Guybrush facing the old man during the
+  ;                         lookout dialog.
+  ;   cmd 4 (anim 16-19) = talk-start (MVP: snap direction like cmd 3).
+  ; Any other cmd (init=anim 1, arbitrary seeds from loadActorCostumes,
+  ; etc.) falls through to decodeDefault, which seeds the requested anim
+  ; without touching facing. The earlier formula (0x3F - (frame>>2) + 2)
+  ; was a transcription error — it mapped frame 248..251 to cmd 3, causing
+  ; a spurious "setDir south" every time any caller passed a ~250 value.
   lda.w SCUMM.scratch2                   ; frame
-  lsr a
-  lsr a                                   ; frame >> 2
-  sta.w SCUMM.choreScr_animId             ; tmp (frame >> 2)
-  lda #$3F
-  sec
-  sbc.w SCUMM.choreScr_animId
-  clc
-  adc #2                                  ; cmd = 0x3F - (frame>>2) + 2
   and #$00FF
+  lsr a
+  lsr a                                   ; cmd = frame >> 2
 
   cmp #2
   beq _caa.cmdStop
@@ -284,6 +293,17 @@ _caa.dirOk:
   sta.b tmp+24+2
   rep #$20
   .ACCU 16
+  ; Also stash animCmds pointer at tmp+27..+29 so the per-limb cs-byte
+  ; peek below can read animCmds[cs] without trashing the dispatch ptr
+  ; at tmp+24 that the mask/cs-walk loop depends on.
+  lda.l CostumeAnimTable+0, x              ; animCmds.lo16
+  sta.b tmp+27
+  sep #$20
+  .ACCU 8
+  lda.l CostumeAnimTable+2, x              ; animCmds.bank
+  sta.b tmp+27+2
+  rep #$20
+  .ACCU 16
 
   ; --- read dispatch[anim_id*2] = offs ------------------------
   lda.w SCUMM.choreScr_animId
@@ -331,7 +351,9 @@ _caa.limbLoop:
   bne -
 _caa.maskReady:
   and.w SCUMM.choreScr_mask
-  beq _caa.limbNext                        ; limb not in anim
+  bne +                                     ; limb in anim → process
+    jmp _caa.limbNext                       ; limb not in anim (long branch)
++
 
   ; consume cs word from dispatch record
   ldy.w SCUMM.choreScr_recCur
@@ -341,7 +363,9 @@ _caa.maskReady:
   iny
   sty.w SCUMM.choreScr_recCur
   cmp #$FFFF
-  beq _caa.limbNext                        ; disabled — no extra byte
+  bne _caa.haveCs
+    jmp _caa.limbNext                      ; disabled — no extra byte
+_caa.haveCs:
 
   ; consume extra byte
   ldy.w SCUMM.choreScr_recCur
@@ -357,8 +381,38 @@ _caa.maskReady:
   ; only seed runtime-tracked limbs
   ldx.w SCUMM.choreScr_limb
   cpx #SCUMM_CHORE_LIMBS
-  bcs _caa.limbNext
+  bcc +
+    jmp _caa.limbNext
++
+  ; Peek animCmds[cs] — ScummVM costume.cpp ~line 773-778. When cs points
+  ; at $79 (pause) or $7A (resume), the seed DOES NOT touch the chore
+  ; state; it only flips the per-actor/per-limb "stopped" bit. The
+  ; previously-seeded chore keeps ticking underneath; the renderer
+  ; honours the stopped bit to suppress drawing. This is the clean way:
+  ; when walk's head cs=$79 sets the bit, then stop's head cs=$7A clears
+  ; it, the chore state the init frame left behind (and its chorePic)
+  ; comes right back without needing to re-derive anything.
+  ldy.w SCUMM.choreScr_csLo
+  sep #$20
+  .ACCU 8
+  lda [tmp+27], y                          ; peek animCmds[cs]
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  cmp #$0079
+  beq _caa.stopSetBit
+  cmp #$007A
+  beq _caa.stopClearBit
+  bra _caa.doReseed                        ; normal pic/ctrl byte → seed
 
+_caa.stopSetBit:
+  jsr _caa.setStoppedBit
+  jmp _caa.limbNext
+_caa.stopClearBit:
+  jsr _caa.clearStoppedBit
+  jmp _caa.limbNext
+
+_caa.doReseed:
   ; --- seed chore state for (actor, limb) ---------------------
   ; word-array idx = wordBase + limb*2
   txa
@@ -366,9 +420,43 @@ _caa.maskReady:
   clc
   adc.w SCUMM.choreScr_wordBase
   tax
+  ; Preserve-mode: if this limb is already running (curpos != $FFFF) and
+  ; the caller set the preserve flag, skip re-seeding. Used by the
+  ; loadActorCostumes room-entry pass so init can fill $FFFF (unseeded)
+  ; head chores without clobbering a walk/stand body chore already set
+  ; by setActorCostume (e.g. the campfire's multi-pic body loop).
+  lda.w SCUMM.choreScr_preserve
+  beq _caa.doSeed
+    lda.w SCUMM.choreCurpos, x
+    cmp #$FFFF
+    beq _caa.doSeed
+      jmp _caa.limbNext
+_caa.doSeed:
   lda.w SCUMM.choreScr_csLo
-  sta.w SCUMM.choreCurpos, x
   sta.w SCUMM.choreStart, x
+  ; ScummVM costume.cpp ~line 781: if (extra & 0x80) curpos |= 0x8000 — the
+  ; "highflag" bit 15 switches increaseAnim from loop (wrap end→start) to
+  ; one-shot (advance until end, then freeze). Walk anims typically seed
+  ; the head limb as a one-shot ending on a frozen pic (or a disable); if
+  ; we miss the highflag the chore loops and the head keeps oscillating
+  ; through pic → (next byte) → pic, producing the "two heads" ghost
+  ; during walk that collides with the walking-body's embedded head.
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.choreScr_extra
+  bpl _caa.csNoHighflag
+    rep #$20
+    .ACCU 16
+    lda.w SCUMM.choreScr_csLo
+    ora #$8000
+    sta.w SCUMM.choreCurpos, x
+    bra _caa.csDone
+_caa.csNoHighflag:
+    rep #$20
+    .ACCU 16
+    lda.w SCUMM.choreScr_csLo
+    sta.w SCUMM.choreCurpos, x
+_caa.csDone:
   sep #$20
   .ACCU 8
   lda.w SCUMM.choreScr_extra
@@ -405,6 +493,84 @@ _caa.exit:
   plb
   plp
   rtl
+
+
+;-------------------------------------------------------------------
+; Stopped-bit helpers.
+;   choreStopped[SCUMM_WALK_ACTORS]: one byte per actor.
+;   bit N = limb N stopped (runtime-tracked limbs 0..7 only).
+; Preconditions (from animateActor_impl call site):
+;   ACCU 16, INDEX 16
+;   SCUMM.scratch = actor_num (low byte)
+;   SCUMM.choreScr_limb = limb index (0..SCUMM_CHORE_LIMBS-1)
+; Preserves X and Y. DBR = $7E.
+;-------------------------------------------------------------------
+_caa.setStoppedBit:
+  .ACCU 16
+  .INDEX 16
+  phx
+  phy
+  ldx.w SCUMM.choreScr_limb
+  cpx #8
+  bcs _caa.ssb_exit                        ; limb >= 8: no runtime tracking
+  lda #$0001
+_caa.ssb_shift:
+  cpx #0
+  beq _caa.ssb_apply
+  asl a
+  dex
+  bra _caa.ssb_shift
+_caa.ssb_apply:
+  and #$00FF                               ; mask = 1 << limb (byte)
+  sep #$20
+  .ACCU 8
+  pha                                      ; save mask.low
+  lda.w SCUMM.scratch                      ; actor_num
+  and #$FF
+  tax
+  pla                                      ; mask
+  ora.w SCUMM.choreStopped, x
+  sta.w SCUMM.choreStopped, x
+  rep #$20
+  .ACCU 16
+_caa.ssb_exit:
+  ply
+  plx
+  rts
+
+_caa.clearStoppedBit:
+  .ACCU 16
+  .INDEX 16
+  phx
+  phy
+  ldx.w SCUMM.choreScr_limb
+  cpx #8
+  bcs _caa.csb_exit
+  lda #$0001
+_caa.csb_shift:
+  cpx #0
+  beq _caa.csb_apply
+  asl a
+  dex
+  bra _caa.csb_shift
+_caa.csb_apply:
+  and #$00FF                               ; mask = 1 << limb
+  eor #$00FF                               ; invert → clear-mask
+  sep #$20
+  .ACCU 8
+  pha
+  lda.w SCUMM.scratch
+  and #$FF
+  tax
+  pla
+  and.w SCUMM.choreStopped, x
+  sta.w SCUMM.choreStopped, x
+  rep #$20
+  .ACCU 16
+_caa.csb_exit:
+  ply
+  plx
+  rts
 
 
 ;===================================================================
@@ -560,8 +726,15 @@ _tck.runInterp:
   adc.w SCUMM.choreScr_wordBase
   tax
 
-  ; load curpos, end, start
+  ; load curpos, end, start. Split curpos into highflag (bit 15) + i
+  ; (bits 0..14). Highflag comes from extra&0x80 at seed time; bit 15
+  ; switches advance between loop (wrap) and one-shot (freeze at end).
   lda.w SCUMM.choreCurpos, x
+  pha
+  and #$8000
+  sta.w SCUMM.choreScr_highflag
+  pla
+  and #$7FFF
   sta.w SCUMM.choreScr_curpos
   lda.w SCUMM.choreEnd, x
   sta.w SCUMM.choreScr_end
@@ -569,7 +742,9 @@ _tck.runInterp:
   sta.w SCUMM.choreScr_start
 
 _tck.advance:
-  ; curpos++, if curpos > end: curpos = start
+  lda.w SCUMM.choreScr_highflag
+  bne _tck.advanceOneShot
+  ; loop: curpos++, if curpos > end wrap to start
   inc.w SCUMM.choreScr_curpos
   lda.w SCUMM.choreScr_curpos
   cmp.w SCUMM.choreScr_end
@@ -577,6 +752,13 @@ _tck.advance:
   beq _tck.inRange
   lda.w SCUMM.choreScr_start
   sta.w SCUMM.choreScr_curpos
+  bra _tck.inRange
+_tck.advanceOneShot:
+  ; one-shot: advance only if not at end, else freeze
+  lda.w SCUMM.choreScr_curpos
+  cmp.w SCUMM.choreScr_end
+  beq _tck.inRange
+  inc.w SCUMM.choreScr_curpos
 _tck.inRange:
 
   ; read animCmds[curpos]
@@ -664,14 +846,13 @@ _tck.ctrlCmd:
   ; Per ScummVM ClassicCostumeLoader::increaseAnim: only 0x78 (sound) and
   ; 0x7C (animCounter) loop within the tick, and only when start != end.
   ; Everything else (0x70-0x77, 0x79, 0x7A, 0x7D-0x7F) parks curpos on the
-  ; ctrl byte and exits without touching pic. Next tick naturally advances
-  ; past the byte. Prevents livelock when start==end lands on an unhandled
-  ; ctrl code (observed with actor 2 limb 1 / byte $79 at curpos=start=end).
+  ; ctrl byte and exits without touching pic. Stopped-bit updates happen
+  ; at seed time in animateActor_impl; the renderer gates drawing on the
+  ; bit, so chorePic keeps reflecting the underlying chore's last pic.
   cmp #$0078
   beq _tck.soundOrCounter
   cmp #$007C
   beq _tck.soundOrCounter
-  ; parked: just store and exit
   jmp _tck.storeCurpos
 
 _tck.soundOrCounter:
@@ -681,13 +862,14 @@ _tck.soundOrCounter:
   jmp _tck.advance
 
 _tck.storeCurpos:
-  ; write curpos back to choreCurpos[wordIdx]
+  ; write curpos back to choreCurpos[wordIdx] with highflag re-OR'd in
   lda.w SCUMM.choreScr_limb
   asl a
   clc
   adc.w SCUMM.choreScr_wordBase
   tax
   lda.w SCUMM.choreScr_curpos
+  ora.w SCUMM.choreScr_highflag
   sta.w SCUMM.choreCurpos, x
   jmp _tck.nextLimb
 

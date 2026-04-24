@@ -155,6 +155,80 @@ local function rvramByte(addr)
   return emu.read(addr, emu.memType.videoRam)
 end
 
+local function dumpWramTilemap()
+  -- SCROLL_TILEMAP_WRAM @ $7F0000, column-major. For a 1008×144 room:
+  -- 126 cols × 18 rows × 2B = 4536 bytes. Stride per col = 18×2 = 36 bytes.
+  -- Dump col 47 (where the corrupt camera sits) row 0..17.
+  local base = 0x7F0000 + 47 * 36
+  local line = "[harness] wram-col47 rows:"
+  for row = 0, 17 do
+    local lo = emu.read(base + row * 2, emu.memType.snesMemory)
+    local hi = emu.read(base + row * 2 + 1, emu.memType.snesMemory)
+    line = line .. string.format(" %04x", (hi << 8) | lo)
+  end
+  print(line)
+end
+
+local function dumpRing()
+  -- SCROLL_SLOT2TILE_WRAM @ $7F4000. Each slot = 2 bytes (tile ID, $FFFF = free).
+  -- Check: how many slots are occupied? How many holes? What's the tile ID at
+  -- the highest occupied slot?
+  local free = 0
+  local holes_before_first_free = 0
+  local seen_free = false
+  for slot = 0, 895 do
+    local lo = emu.read(0x7F4000 + slot * 2, emu.memType.snesMemory)
+    local hi = emu.read(0x7F4000 + slot * 2 + 1, emu.memType.snesMemory)
+    local tid = (hi << 8) | lo
+    if tid == 0xFFFF then
+      free = free + 1
+      seen_free = true
+    else
+      if seen_free then
+        holes_before_first_free = holes_before_first_free + 1
+      end
+    end
+  end
+  print(string.format("[harness] ring: %d/896 free, %d occupied-after-first-free",
+    free, holes_before_first_free))
+end
+
+local function dumpCgram()
+  -- 16 palettes × 16 colors × 2 bytes = 512 bytes CGRAM
+  -- BG1 room art typically uses palettes 1..5 (pal 0 = UI reserved)
+  for pal = 0, 7 do
+    local line = string.format("[harness] pal%d:", pal)
+    for c = 0, 7 do
+      local lo = emu.read(pal * 32 + c * 2, emu.memType.cgRam)
+      local hi = emu.read(pal * 32 + c * 2 + 1, emu.memType.cgRam)
+      line = line .. string.format(" %04x", (hi << 8) | lo)
+    end
+    print(line)
+  end
+end
+
+local function dumpBg3Sample()
+  -- BG3 tilemap at VRAM word $4C00 = byte $9800. Dump first 16 entries.
+  -- Dialog text (when visible) populates this as 16-bit tilemap words.
+  local line = "[harness] bg3tm[row0]:"
+  for col = 0, 15 do
+    local lo = emu.read(0x9800 + col * 2, emu.memType.videoRam)
+    local hi = emu.read(0x9800 + col * 2 + 1, emu.memType.videoRam)
+    line = line .. string.format(" %04x", (hi << 8) | lo)
+  end
+  print(line)
+  -- Also dump the WRAM-side source (SCUMM.dialogTilemap @ $7EAB9E) so we
+  -- can tell whether the problem is "source data wrong" or "source=zero
+  -- but DMA did not fire". WRAM reads are reliable.
+  local wl = "[harness] bg3src[row0]:"
+  for col = 0, 15 do
+    wl = wl .. string.format(" %04x", r16(0x7EAB9E + col * 2))
+  end
+  print(wl)
+  print(string.format("[harness] bg3dma: pending=%d nmiPending=%d",
+    r8(0x7EAB95), r8(0x7EAB9A)))
+end
+
 local function dumpTilemapSample()
   -- BG1 tilemap lives at VRAM word $1800 (= byte $3000). Each word is a
   -- tilemap entry for a specific (col, row). Dump first 16 columns of
@@ -184,14 +258,15 @@ local function dumpTilemapSample()
 end
 
 local function dumpState(tag)
-  print(string.format("[harness] %s curRoom=%d new=%d cut=%d VAR_EGO=%d cam=%d xSc=%d ySc=%d",
+  print(string.format("[harness] %s curRoom=%d new=%d cut=%d VAR_EGO=%d cam=%d xSc=%d ySc=%d cacheNextSlot=%d cacheMiss=%d",
     tag,
     r8(CURRENT_ROOM), r8(NEW_ROOM), r8(CUTSCENE_NEST),
     r8(GLOBAL_VARS + 1 * 2),
     r16(0x7EFA1F),   -- GLOBAL.room.cameraX
     r16(0x7EFD54),   -- xScrollBG1
-    r16(0x7EFD56)))  -- yScrollBG1
-  dumpTilemapSample()
+    r16(0x7EFD56),   -- yScrollBG1
+    r16(0x7EFA60),   -- GLOBAL.room.cacheNextSlot
+    r16(0x7EFA62)))  -- GLOBAL.room.cacheMissCount
   for ai = 1, 4 do
     local base = ACTOR1 + (ai - 1) * 16
     print(string.format("  a%d: rm=%d cos=%d x=%d y=%d fac=%d vis=%d",
@@ -199,6 +274,10 @@ local function dumpState(tag)
       r8(base + 0), r8(base + 1),
       r16(base + 2), r16(base + 4), r16(base + 6), r8(base + 11)))
   end
+  dumpCgram()
+  dumpRing()
+  dumpWramTilemap()
+  dumpBg3Sample()
 end
 
 emu.addEventCallback(function()
@@ -414,6 +493,7 @@ def run(
         elif ln.startswith("  a") and ": rm=" in ln:
             keep.append(ln)
     print("\n".join(keep))
+    (out_txt.parent / "_room_harness_full.txt").write_text(text)
 
 
     # Extract ARGB frame buffer dump -> PNG. Protocol matches MCP take_screenshot.

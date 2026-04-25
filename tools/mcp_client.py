@@ -52,6 +52,7 @@ class McpSession:
         self._sock: socket.socket | None = None
         self._buf = b""
         self._next_id = 1
+        self._notifications: list[dict] = []
 
     def __enter__(self) -> "McpSession":
         self._proc = subprocess.Popen(
@@ -99,6 +100,8 @@ class McpSession:
         raise McpError(f"connect to 127.0.0.1:{self._port} timed out: {last_err}")
 
     def call(self, method: str, params: dict | None = None) -> dict:
+        """Send a request, stash any notifications that arrive while we
+        wait for the matching response, return the response."""
         if self._sock is None:
             raise McpError("session not open")
         msg_id = self._next_id
@@ -107,16 +110,22 @@ class McpSession:
         if params is not None:
             msg["params"] = params
         self._sock.sendall((json.dumps(msg, separators=(",", ":")) + "\n").encode())
-        while b"\n" not in self._buf:
-            chunk = self._sock.recv(65536)
-            if not chunk:
-                raise McpError("server closed connection mid-call")
-            self._buf += chunk
-        line, self._buf = self._buf.split(b"\n", 1)
-        resp = json.loads(line)
-        if "error" in resp:
-            raise McpError(f"{method}: {resp['error']}")
-        return resp
+        while True:
+            while b"\n" not in self._buf:
+                chunk = self._sock.recv(65536)
+                if not chunk:
+                    raise McpError("server closed connection mid-call")
+                self._buf += chunk
+            line, self._buf = self._buf.split(b"\n", 1)
+            resp = json.loads(line)
+            if "id" in resp and resp["id"] == msg_id:
+                if "error" in resp:
+                    raise McpError(f"{method}: {resp['error']}")
+                return resp
+            if "method" in resp:
+                self._notifications.append(resp)
+                continue
+            # Out-of-order response ID — drop it and keep waiting.
 
     def tool(self, name: str, args: dict | None = None) -> Any:
         resp = self.call("tools/call", {"name": name, "arguments": args or {}})
@@ -198,3 +207,54 @@ class McpSession:
 
     def get_ppu_state(self) -> dict:
         return self.tool("get_ppu_state")
+
+    # --- hooks -----------------------------------------------------------
+
+    def add_exec_hook(self, address: int, end_address: int | None = None,
+                      cpu_type: str = "Snes") -> int:
+        """Register an exec hook; returns the handle. Every time the CPU
+        executes an instruction whose PC is in [address, end_address],
+        the server pushes a notifications/mesen/hookFired message on the
+        socket. Call drain_notifications() to collect them."""
+        args: dict = {"address": address, "cpuType": cpu_type}
+        if end_address is not None:
+            args["endAddress"] = end_address
+        return self.tool("add_exec_hook", args)["handle"]
+
+    def remove_hook(self, handle: int) -> bool:
+        return bool(self.tool("remove_hook", {"handle": handle})["removed"])
+
+    def list_hooks(self) -> list[dict]:
+        return self.tool("list_hooks")["hooks"]
+
+    def hook_diag(self) -> dict:
+        return self.tool("hook_diag")
+
+    def drain_notifications(self, timeout: float = 0.1) -> list[dict]:
+        """Read any pending notifications without blocking long. MCP
+        notifications have no `id`, so call() stashes them in
+        self._notifications; this empties that queue plus any in the
+        socket buffer."""
+        got = list(self._notifications)
+        self._notifications.clear()
+        if self._sock is None:
+            return got
+        deadline = time.time() + timeout
+        self._sock.settimeout(0.05)
+        try:
+            while time.time() < deadline:
+                try:
+                    while b"\n" not in self._buf:
+                        chunk = self._sock.recv(65536)
+                        if not chunk:
+                            return got
+                        self._buf += chunk
+                except (socket.timeout, TimeoutError):
+                    break
+                line, self._buf = self._buf.split(b"\n", 1)
+                r = json.loads(line)
+                if "method" in r:
+                    got.append(r)
+        finally:
+            self._sock.settimeout(self._socket_timeout)
+        return got

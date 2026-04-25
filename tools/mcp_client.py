@@ -288,6 +288,40 @@ class McpSession:
             "hookHandle": hook_handle,
         })
 
+    def crop_screenshot(self, x: int, y: int, width: int, height: int,
+                        format: str = "path") -> dict:
+        return self.tool("crop_screenshot", {
+            "x": x, "y": y, "width": width, "height": height,
+            "format": format,
+        })
+
+    def save_state_slot(self, slot: int) -> dict:
+        return self.tool("save_state_slot", {"slot": slot})
+
+    def load_state_slot(self, slot: int) -> dict:
+        return self.tool("load_state_slot", {"slot": slot})
+
+    def read_dma_state(self) -> list[dict]:
+        return self.tool("read_dma_state")["channels"]
+
+    def add_frame_hook(self, every_n: int = 1, cpu_type: str = "Snes") -> int:
+        return self.tool("add_frame_hook", {
+            "everyN": every_n,
+            "cpuType": cpu_type,
+        })["handle"]
+
+    def reset_emulator(self) -> dict:
+        return self.tool("reset_emulator")
+
+    def record_audio(self, path: str | Path) -> dict:
+        return self.tool("record_audio", {"path": str(path)})
+
+    def stop_audio(self) -> dict:
+        return self.tool("stop_audio")
+
+    def get_audio_state(self) -> dict:
+        return self.tool("get_audio_state")
+
     def remove_hook(self, handle: int) -> bool:
         return bool(self.tool("remove_hook", {"handle": handle})["removed"])
 

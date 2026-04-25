@@ -55,13 +55,32 @@ class McpSession:
         self._notifications: list[dict] = []
 
     def __enter__(self) -> "McpSession":
+        # We want to *capture* stderr (uninit warnings, [mcp] log lines) for
+        # post-mortem visibility, but never block Mesen on a full pipe. So
+        # drain stderr in a daemon thread and stash everything in
+        # self._stderr_lines. If stderr isn't drained, Mesen's
+        # Console.Error.WriteLine inside the MCP handler blocks the very
+        # thread that's supposed to be processing our requests, and
+        # initialize hangs.
         self._proc = subprocess.Popen(
             [self._mesen, "--mcp", f"--mcp-port={self._port}", self._rom],
             cwd=str(_ROOT / "distribution"),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
-            text=True,
         )
+        self._stderr_lines: list[bytes] = []
+        import threading
+        def _drain():
+            try:
+                for line in iter(self._proc.stderr.readline, b""):
+                    if not line:
+                        break
+                    self._stderr_lines.append(line)
+            except Exception:
+                pass
+        self._stderr_thread = threading.Thread(target=_drain, daemon=True)
+        self._stderr_thread.start()
+
         time.sleep(self._boot_wait)
         self._sock = self._connect()
         self.call("initialize", {})
@@ -81,8 +100,8 @@ class McpSession:
                     self._proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     self._proc.kill()
-                if self._stderr_log and self._proc.stderr:
-                    Path(self._stderr_log).write_text(self._proc.stderr.read() or "")
+                if self._stderr_log:
+                    Path(self._stderr_log).write_bytes(b"".join(getattr(self, "_stderr_lines", [])))
 
     # --- raw JSON-RPC ----------------------------------------------------
 
@@ -210,16 +229,64 @@ class McpSession:
 
     # --- hooks -----------------------------------------------------------
 
-    def add_exec_hook(self, address: int, end_address: int | None = None,
-                      cpu_type: str = "Snes") -> int:
-        """Register an exec hook; returns the handle. Every time the CPU
-        executes an instruction whose PC is in [address, end_address],
-        the server pushes a notifications/mesen/hookFired message on the
-        socket. Call drain_notifications() to collect them."""
+    def _add_hook(self, tool_name: str, address: int,
+                  end_address: int | None = None,
+                  cpu_type: str = "Snes",
+                  match_value: int = 0,
+                  match_value_mask: int = 0) -> int:
         args: dict = {"address": address, "cpuType": cpu_type}
         if end_address is not None:
             args["endAddress"] = end_address
-        return self.tool("add_exec_hook", args)["handle"]
+        if match_value_mask != 0:
+            args["matchValue"] = match_value
+            args["matchValueMask"] = match_value_mask
+        return self.tool(tool_name, args)["handle"]
+
+    def add_exec_hook(self, address: int, end_address: int | None = None,
+                      cpu_type: str = "Snes",
+                      match_value: int = 0, match_value_mask: int = 0) -> int:
+        """Register an exec hook; returns the handle. Each time the CPU
+        executes an instruction in [address, end_address], the server
+        pushes a notifications/mesen/hookFired message. Call
+        drain_notifications() to collect them. match_value_mask=0 disables
+        the value filter (every hit fires)."""
+        return self._add_hook("add_exec_hook", address, end_address,
+                              cpu_type, match_value, match_value_mask)
+
+    def add_read_hook(self, address: int, end_address: int | None = None,
+                      cpu_type: str = "Snes",
+                      match_value: int = 0, match_value_mask: int = 0) -> int:
+        """Same shape as add_exec_hook, but fires on memory reads. value
+        in the notification is the byte read."""
+        return self._add_hook("add_read_hook", address, end_address,
+                              cpu_type, match_value, match_value_mask)
+
+    def add_write_hook(self, address: int, end_address: int | None = None,
+                       cpu_type: str = "Snes",
+                       match_value: int = 0, match_value_mask: int = 0) -> int:
+        """Same shape as add_exec_hook, but fires on memory writes."""
+        return self._add_hook("add_write_hook", address, end_address,
+                              cpu_type, match_value, match_value_mask)
+
+    def lookup_symbol(self, sym_file: str, pattern: str, max_results: int = 64) -> dict:
+        return self.tool("lookup_symbol", {
+            "symFile": sym_file,
+            "pattern": pattern,
+            "maxResults": max_results,
+        })
+
+    def disassemble(self, address: int, count: int = 16, cpu_type: str = "Snes") -> list[dict]:
+        return self.tool("disassemble", {
+            "address": address,
+            "count": count,
+            "cpuType": cpu_type,
+        })["lines"]
+
+    def run_until(self, max_frames: int = 600, hook_handle: int = 0) -> dict:
+        return self.tool("run_until", {
+            "maxFrames": max_frames,
+            "hookHandle": hook_handle,
+        })
 
     def remove_hook(self, handle: int) -> bool:
         return bool(self.tool("remove_hook", {"handle": handle})["removed"])

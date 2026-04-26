@@ -230,7 +230,7 @@ def run_lua_snippet(lua_code: str, timeout: int = 60) -> str:
         timeout: Max seconds to wait.
     """
     script_path = SFC_DIR / "_mcp_snippet.lua"
-    script_path.write_text(lua_code)
+    script_path.write_text(lua_code, encoding="utf-8")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -331,7 +331,7 @@ def _capture_frame(
     lua_code = lua_code.replace("{lua_preamble}", lua_preamble)
 
     script_path = SFC_DIR / "_mcp_screenshot.lua"
-    script_path.write_text(lua_code)
+    script_path.write_text(lua_code, encoding="utf-8")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -1012,7 +1012,7 @@ def _run_boot_test(sym_path: Path) -> str:
     )
 
     script_path = SFC_DIR / "_mcp_boot_test.lua"
-    script_path.write_text(lua_code)
+    script_path.write_text(lua_code, encoding="utf-8")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -1218,7 +1218,7 @@ emu.addEventCallback(function()
 {user_lua}
 end, emu.eventType.endFrame)
 
--- Multi-frame capture (capture_frames=[...]). Empty list → no-op.
+-- Multi-frame capture (capture_frames=[...]). Empty list -> no-op.
 local _captureFramesList = { {capture_frames_list} }
 local _captureFramesDone = {}
 emu.addEventCallback(function()
@@ -1415,7 +1415,7 @@ def run_with_input(
 
     # Write and execute
     script_path = SFC_DIR / "_mcp_run_with_input.lua"
-    script_path.write_text(lua)
+    script_path.write_text(lua, encoding="utf-8")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -1596,7 +1596,7 @@ def step_until_pc(
     lua = lua.replace("{max_frame}", str(max_frames))
 
     script_path = SFC_DIR / "_step_until_pc.lua"
-    script_path.write_text(lua)
+    script_path.write_text(lua, encoding="utf-8")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (

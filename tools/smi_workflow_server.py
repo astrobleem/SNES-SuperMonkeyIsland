@@ -1541,7 +1541,96 @@ def run_with_input(
     return output
 
 
-_STEP_UNTIL_PC_LUA = r"""
+def _parse_pc_arg(pc) -> int | str:
+    """Parse a 24-bit PC argument: accepts int or hex string ('$C08055',
+    '0xC08055', 'C08055'). Returns the int PC (auto-prefixes $C0 for
+    PCs < 0x010000), or a string starting with 'ERROR' on failure."""
+    if isinstance(pc, str):
+        s = pc.strip().lower()
+        if s.startswith("$"):
+            s = s[1:]
+        if s.startswith("0x"):
+            s = s[2:]
+        try:
+            target_pc = int(s, 16) if any(c in s for c in "abcdef") else int(s, 0)
+        except ValueError:
+            return f"ERROR: cannot parse pc={pc!r} as integer or hex"
+    else:
+        target_pc = int(pc)
+    if target_pc < 0x010000:
+        target_pc |= 0xC00000
+    return target_pc
+
+
+def _build_input_injection_preamble(
+    input_schedule: list[dict],
+    sym_path: Path,
+) -> tuple[str, str | None]:
+    """Build the Lua preamble that hooks _checkInputDevice's RTS and
+    overrides press/trigger/old WRAM at the scheduled frame ranges.
+
+    Returns (preamble_lua, None) on success, ("", error_msg) on failure.
+    The returned preamble defines `rd8`/`rd16`/`rd16s` helpers and registers
+    the input-injection memory callback. Callers append their own hooks.
+    """
+    check_input_addr = _lookup_sym_address(sym_path, "_checkInputDevice")
+    if check_input_addr is None:
+        return "", "ERROR: _checkInputDevice not found in sym file."
+    hook_addr = check_input_addr + 0x1E
+
+    press_off = _lookup_wram_offset(sym_path, "inputDevice.press")
+    trigger_off = _lookup_wram_offset(sym_path, "inputDevice.trigger")
+    old_off = _lookup_wram_offset(sym_path, "inputDevice.old")
+    if None in (press_off, trigger_off, old_off):
+        return "", "ERROR: inputDevice.press/trigger/old not found in sym file."
+
+    schedule_lines: list[str] = []
+    for entry in input_schedule:
+        frames = entry.get("frames", [0, 0])
+        buttons = entry.get("buttons", "")
+        mask = _parse_buttons(buttons)
+        if mask == 0:
+            continue
+        start_f, end_f = int(frames[0]), int(frames[1])
+        schedule_lines.append(f"  {{{start_f}, {end_f}, 0x{mask:04X}}},")
+
+    preamble = (
+        "local function rd8(a)  return emu.read(a, emu.memType.snesMemory, false) end\n"
+        "local function rd16(a)\n"
+        "  return emu.read(a, emu.memType.snesMemory, false)\n"
+        "       + emu.read(a+1, emu.memType.snesMemory, false) * 256\n"
+        "end\n"
+        "local function rd16s(a)\n"
+        "  local v = rd16(a)\n"
+        "  if v >= 32768 then v = v - 65536 end\n"
+        "  return v\n"
+        "end\n"
+        "local _schedule = {\n"
+        + "\n".join(schedule_lines) + "\n"
+        "}\n"
+        "local _lastButtons = 0\n"
+        "local function _wr16(addr, val)\n"
+        "  emu.write(addr,     val        & 0xFF, emu.memType.snesWorkRam)\n"
+        "  emu.write(addr + 1, (val >> 8) & 0xFF, emu.memType.snesWorkRam)\n"
+        "end\n"
+        f"emu.addMemoryCallback(function()\n"
+        f"  local frame = emu.getState()[\"ppu.frameCount\"]\n"
+        f"  local buttons = 0\n"
+        f"  for _, e in ipairs(_schedule) do\n"
+        f"    if frame >= e[1] and frame <= e[2] then buttons = buttons | e[3] end\n"
+        f"  end\n"
+        f"  if buttons ~= 0 then\n"
+        f"    _wr16(0x{press_off:04X}, buttons)\n"
+        f"    _wr16(0x{trigger_off:04X}, buttons & (~_lastButtons & 0xFFFF))\n"
+        f"    _wr16(0x{old_off:04X}, buttons)\n"
+        f"  end\n"
+        f"  _lastButtons = buttons\n"
+        f"end, emu.callbackType.exec, 0x{hook_addr:06X})\n"
+    )
+    return preamble, None
+
+
+_STEP_UNTIL_PC_HOOK_LUA = r"""
 -- step_until_pc rig: hook target PC, run frames, capture CPU snapshot.
 -- State vars MUST be globals (no `local`) — Mesen's callback context
 -- runs in a sandbox that can't read script-scope locals.
@@ -1596,6 +1685,7 @@ def step_until_pc(
     pc: int | str,
     max_frames: int = 600,
     timeout: int = 60,
+    input_schedule: list[dict] | None = None,
 ) -> str:
     """Run the ROM until the CPU executes at the given 24-bit PC, then
     return a CPU register snapshot at that moment.
@@ -1613,34 +1703,32 @@ def step_until_pc(
                     isn't hit before this many frames pass. Default 600
                     (~10 sec at 60Hz).
         timeout: Max wall-clock seconds for the Mesen subprocess.
+        input_schedule: Optional list of {"frames": [start, end],
+                    "buttons": "right+a"} entries. Used identically to
+                    run_with_input — hooks _checkInputDevice's RTS to
+                    inject button presses across the cold-boot run, so
+                    PCs gated behind intro-skip / dialog advance / verb
+                    selection are reachable. None or [] = cold boot only.
 
     Returns:
         On hit: "STEP_UNTIL_HIT frame=N pc=$BB:OOOO a=... x=... y=... ..."
         On timeout: "STEP_UNTIL_TIMEOUT frame=N max=M (no hit)".
-
-    Known limitation:
-        Cold-boot only — does not accept input_schedule, so PCs that
-        only execute after intro skip / button presses will time out.
-        For those, use run_with_input + register the exec hook in lua_init.
     """
-    if isinstance(pc, str):
-        s = pc.strip().lower()
-        if s.startswith("$"):
-            s = s[1:]
-        if s.startswith("0x"):
-            s = s[2:]
-        try:
-            target_pc = int(s, 16) if any(c in s for c in "abcdef") else int(s, 0)
-        except ValueError:
-            return f"ERROR: cannot parse pc={pc!r} as integer or hex"
-    else:
-        target_pc = int(pc)
-    if target_pc < 0x010000:
-        target_pc |= 0xC00000
+    target_pc = _parse_pc_arg(pc)
+    if isinstance(target_pc, str):
+        return target_pc  # error message
     if max_frames < 1 or max_frames > 1_000_000:
         return "ERROR: max_frames must be 1..1000000"
 
-    lua = _STEP_UNTIL_PC_LUA
+    preamble = ""
+    if input_schedule:
+        if not SYM_FILE.exists():
+            return "ERROR: sym file not found. Run build_rom() first."
+        preamble, err = _build_input_injection_preamble(input_schedule, SYM_FILE)
+        if err:
+            return err
+
+    lua = preamble + _STEP_UNTIL_PC_HOOK_LUA
     lua = lua.replace("{target_pc}", f"0x{target_pc:06X}")
     lua = lua.replace("{max_frame}", str(max_frames))
 

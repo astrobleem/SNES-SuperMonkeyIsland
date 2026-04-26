@@ -873,6 +873,10 @@ def _extract_capture_blocks(text: str, prefix: str) -> tuple[str, list[str]]:
     return "\n".join(out_lines), summaries
 
 
+_PASSTHROUGH_BLOCK_STARTS = ("SCREENSHOT_ARGB_START", "CAPTURE_ARGB_START")
+_PASSTHROUGH_BLOCK_ENDS = ("SCREENSHOT_ARGB_END", "CAPTURE_ARGB_END")
+
+
 def _dedupe_consecutive(text: str) -> str:
     """Collapse runs of identical consecutive lines.
 
@@ -883,6 +887,11 @@ def _dedupe_consecutive(text: str) -> str:
     identical lines and overflows the MCP token limit. This collapser
     is a safety net — same line repeated more than 3× becomes
     "<line>  [x N]" so a flooded run still returns useful output.
+
+    Pixel ARGB blocks (between SCREENSHOT_ARGB_START..END or
+    CAPTURE_ARGB_START..END) are passed through untouched — repeated
+    rows of identical pixels there are real data, not log noise, and
+    collapsing them breaks the screenshot/capture parser.
     """
     lines = text.split("\n")
     if not lines:
@@ -890,22 +899,36 @@ def _dedupe_consecutive(text: str) -> str:
     out: list[str] = []
     prev = None
     count = 0
+    in_block = False
+
+    def flush():
+        nonlocal prev, count
+        if prev is not None:
+            if count > 3:
+                out.append(f"{prev}  [x {count}]")
+            else:
+                out.extend([prev] * count)
+        prev = None
+        count = 0
+
     for line in lines:
+        if not in_block and any(line.startswith(s) for s in _PASSTHROUGH_BLOCK_STARTS):
+            flush()
+            in_block = True
+            out.append(line)
+            continue
+        if in_block:
+            out.append(line)
+            if any(line.startswith(s) for s in _PASSTHROUGH_BLOCK_ENDS):
+                in_block = False
+            continue
         if line == prev:
             count += 1
         else:
-            if prev is not None:
-                if count > 3:
-                    out.append(f"{prev}  [x {count}]")
-                else:
-                    out.extend([prev] * count)
+            flush()
             prev = line
             count = 1
-    if prev is not None:
-        if count > 3:
-            out.append(f"{prev}  [x {count}]")
-        else:
-            out.extend([prev] * count)
+    flush()
     return "\n".join(out)
 
 

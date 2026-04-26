@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "mesen": {
+    "mesen-inproc": {
       "command": "python",
-      "args": ["tools/mesen_mcp_server.py"]
+      "args": ["tools/mesen_inproc_bridge.py"]
+    },
+    "smi-workflow": {
+      "command": "python",
+      "args": ["tools/smi_workflow_server.py"]
     }
   }
 }

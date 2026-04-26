@@ -58,7 +58,8 @@ The `tools/` directory contains Python tools that convert MI1 data into SNES-nat
 | `fxpak_push.py` | Push ROM to FXPAK Pro via QUsb2Snes |
 | `fxpak_debug.py` | Live WRAM inspector for FXPAK Pro debugging |
 | `fxpak_crash_dump.py` | Post-crash memory dump from FXPAK Pro |
-| `mesen_mcp_server.py` | MCP server for Mesen 2 automation: symbol lookup, build, test, screenshots |
+| `smi_workflow_server.py` | Project-scoped MCP server (`smi-workflow` namespace): build, validate, run_test, screenshot, sym lookup |
+| `mesen_inproc_bridge.py` | Bridge to Mesen2 `--mcp` long-lived debugger MCP server (`mesen-inproc` namespace) |
 | `tad/tad-compiler.exe` | Terrific Audio Driver compiler — MML + WAV → SPC700 binary blob |
 
 ## Legal Model

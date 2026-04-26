@@ -36,7 +36,8 @@ Install Python dependencies with `pip install -r requirements.txt`.
 | `fxpak_debug.py` | Read SNES memory via QUsb2Snes: OOP stack, allocations, crash diagnostics |
 | `fxpak_crash_dump.py` | Quick WRAM capture for post-crash analysis |
 | **Testing & Automation** | |
-| `mesen_mcp_server.py` | MCP server for Mesen automation: symbol lookup, build, test, screenshots |
+| `smi_workflow_server.py` | Project-scoped MCP server: build, validate, run_test, screenshot, sym lookup (testrunner) |
+| `mesen_inproc_bridge.py` | Stdio↔TCP bridge to Mesen2 `--mcp` long-lived debugger MCP server |
 | **Shared Helpers** | |
 | `userOptions.py` | CLI option parser (used by gracon, animationWriter, msu1pcmwriter) |
 | `paths.py` | Shared path resolution for Python tools |
@@ -116,9 +117,12 @@ python tools/fxpak_crash_dump.py
 
 ## Testing & Automation
 
-### mesen_mcp_server.py
+### smi_workflow_server.py
 
-FastMCP-based automation server for Mesen 2 emulator. Provides tools for:
+Project-scoped FastMCP automation server (namespace `smi-workflow`).
+Each tool spawns a one-shot Mesen `--testrunner` invocation; for live
+debugger access (hooks, frame stepping, screenshots of running state)
+use the separate `mesen-inproc` server. Provides tools for:
 - `lookup_symbol` / `lookup_symbols` — auto-calculates `$C0xxxx` Mesen addresses from `.sym` file
 - `build_rom` — trigger WSL build from Windows (incremental by default, `clean=True` for full rebuild)
 - `run_test` — execute a Mesen Lua test script and return results
@@ -472,5 +476,5 @@ python tools/tiledpalettequant.py input.png -o output.pal -v
 
 - Python tooling requires **Python 3.10+** with Pillow and NumPy (`pip install -r requirements.txt`)
 - Build tools run under **WSL** (Ubuntu); FXPAK tools run on **Windows Python**
-- `mesen_mcp_server.py` runs on Windows Python, delegates WSL for builds
+- `smi_workflow_server.py` and `mesen_inproc_bridge.py` run on Windows Python; the workflow server delegates WSL for builds
 - Audio scripts use the standard library (`wave`); no external encoders required

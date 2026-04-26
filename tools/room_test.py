@@ -114,7 +114,7 @@ local last_inp = 0
 local leg = 1                -- current ROUTE index (1-based)
 
 -- Hook the RTS of _checkInputDevice to inject controller state via WRAM.
--- Mirrors the mechanism in tools/mesen_mcp_server.py run_with_input.
+-- Mirrors the mechanism in tools/smi_workflow_server.py run_with_input.
 emu.addMemoryCallback(function()
   -- In natural mode, inject START throughout to drive script transitions.
   -- In poke mode, only inject during boot to reach the SCUMM VM ready state.

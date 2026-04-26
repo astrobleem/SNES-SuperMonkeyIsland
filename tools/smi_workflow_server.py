@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Mesen MCP Server — automates sym lookup, build, test execution, and screenshots.
+"""SMI Workflow MCP Server — project-scoped build / test / sym workflow.
+
+This is *not* the generic Mesen-MCP toolchain — that lives in the
+Mesen2 fork's --mcp mode and is exposed via tools/mesen_inproc_bridge.py
+under the `mesen-inproc` namespace.
+
+This server is the SuperMonkeyIsland project's own one-shot workflow:
+  - build_rom / validate_rom (wsl make + bank-0 / BRK / boot smoke)
+  - run_test / run_lua_snippet (Mesen --testrunner mode, one-shot Lua)
+  - run_with_input (input injection via testrunner)
+  - take_screenshot / crop_screenshot (testrunner one-shot capture)
+  - visual_regression_check (PNG diff against reference)
+  - lookup_symbol / lookup_symbols (WLA-DX .sym scan)
+
+Why a separate server: testrunner mode runs Mesen for a fixed number of
+frames and exits, which is incompatible with the long-lived TCP MCP
+mode. Both serve different debugging needs.
 
 Runs on Windows Python (NOT WSL). Calls into WSL only for make.
 """
@@ -19,7 +35,7 @@ SFC_DIR = DISTRIBUTION
 SYM_FILE = PROJECT / "build" / "SuperMonkeyIsland.sym"
 MESEN = PROJECT / "mesen" / "Mesen.exe"
 
-mcp = FastMCP("mesen")
+mcp = FastMCP("smi-workflow")
 
 
 def _parse_sym_line(line: str):

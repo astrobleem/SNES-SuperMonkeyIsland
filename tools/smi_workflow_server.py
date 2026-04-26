@@ -1517,5 +1517,111 @@ def run_with_input(
     return output
 
 
+_STEP_UNTIL_PC_LUA = r"""
+-- step_until_pc rig: hook target PC, run frames, capture CPU snapshot.
+local _hit = false
+local _hitFrame = -1
+local _hitState = nil
+local _frame = 0
+
+emu.addMemoryCallback(function()
+  if _hit then return end
+  _hit = true
+  _hitFrame = emu.getState()["ppu.frameCount"]
+  local s = emu.getState()
+  _hitState = {
+    a  = s["cpu.a"],  x  = s["cpu.x"],  y  = s["cpu.y"],
+    pc = s["cpu.pc"], k  = s["cpu.k"],  sp = s["cpu.sp"],
+    p  = s["cpu.p"],  db = s["cpu.db"], d  = s["cpu.d"],
+    cycle = s["ppu.cycle"], scanline = s["ppu.scanline"],
+  }
+end, emu.callbackType.exec, {target_pc})
+
+emu.addEventCallback(function()
+  _frame = emu.getState()["ppu.frameCount"]
+  if _hit then
+    local s = _hitState
+    print(string.format(
+      "STEP_UNTIL_HIT frame=%d pc=$%02X:%04X a=$%04X x=$%04X y=$%04X "
+      .. "sp=$%04X p=$%02X db=$%02X d=$%04X k=$%02X scanline=%d cycle=%d",
+      _hitFrame, s.k, s.pc, s.a, s.x, s.y, s.sp, s.p, s.db, s.d, s.k,
+      s.scanline or -1, s.cycle or -1
+    ))
+    emu.stop()
+    return
+  end
+  if _frame >= {max_frame} then
+    print(string.format("STEP_UNTIL_TIMEOUT frame=%d max=%d (no hit)", _frame, {max_frame}))
+    emu.stop()
+  end
+end, emu.eventType.endFrame)
+"""
+
+
+@mcp.tool()
+def step_until_pc(
+    pc: int,
+    max_frames: int = 600,
+    timeout: int = 60,
+) -> str:
+    """Run the ROM until the CPU executes at the given 24-bit PC, then
+    return a CPU register snapshot at that moment.
+
+    Wraps the addMemoryCallback(exec) + run_frames + remove_hook recipe
+    that's otherwise 30+ lines of lua_init. Spawns a fresh Mesen
+    testrunner each call (cold boot to target PC).
+
+    Args:
+        pc: 24-bit CPU address (e.g. 0xC51D4E for scummvm.lookupObjectWalkTo
+            entry, or 0xC00A83 for the sta inside finalizeEgoSpawn). Will
+            be auto-prefixed with $C0 if pc < 0x010000 (matches
+            lookup_symbol's romCpuAddr return convention for HiROM bank 0).
+        max_frames: Frame budget. Returns "STEP_UNTIL_TIMEOUT" if the PC
+                    isn't hit before this many frames pass. Default 600
+                    (~10 sec at 60Hz).
+        timeout: Max wall-clock seconds for the Mesen subprocess.
+
+    Returns:
+        On hit: "STEP_UNTIL_HIT frame=N pc=$BB:OOOO a=... x=... y=... ..."
+        On timeout: "STEP_UNTIL_TIMEOUT frame=N max=M (no hit)".
+    """
+    target_pc = int(pc)
+    if target_pc < 0x010000:
+        target_pc |= 0xC00000
+    if max_frames < 1 or max_frames > 1_000_000:
+        return "ERROR: max_frames must be 1..1000000"
+
+    lua = _STEP_UNTIL_PC_LUA
+    lua = lua.replace("{target_pc}", f"0x{target_pc:06X}")
+    lua = lua.replace("{max_frame}", str(max_frames))
+
+    script_path = SFC_DIR / "_step_until_pc.lua"
+    script_path.write_text(lua)
+
+    out_file = SFC_DIR / "out.txt"
+    cmd = (
+        f'cd /d "{SFC_DIR}" && "{MESEN}" --testrunner '
+        f'SuperMonkeyIsland.sfc _step_until_pc.lua > out.txt 2>NUL'
+    )
+    try:
+        subprocess.run(
+            f'cmd.exe /c "{cmd}"', shell=True, timeout=timeout,
+            stdin=subprocess.DEVNULL,
+        )
+    except subprocess.TimeoutExpired:
+        return f"MESEN TIMEOUT (>{timeout}s)"
+
+    try:
+        text = _strip_uninit_lines(out_file.read_text())
+    except Exception:
+        return "ERROR: could not read Mesen output"
+    text = _dedupe_consecutive(text)
+
+    for line in text.split("\n"):
+        if line.startswith("STEP_UNTIL_HIT") or line.startswith("STEP_UNTIL_TIMEOUT"):
+            return line
+    return f"NO_HIT (Mesen exited without a hit/timeout marker)\n\n{text[-2000:]}"
+
+
 if __name__ == "__main__":
     mcp.run()

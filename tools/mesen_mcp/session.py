@@ -27,6 +27,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .validate import MesenBuildError, validate_mesen_build
+
 
 class McpError(RuntimeError):
     pass
@@ -88,6 +90,10 @@ class McpSession:
     # ---------------------------------------------------------------
 
     def __enter__(self) -> "McpSession":
+        try:
+            validate_mesen_build(self._mesen)
+        except MesenBuildError as exc:
+            raise McpError(str(exc)) from exc
         # We *capture* stderr (uninit warnings, [mcp] log lines) for
         # post-mortem visibility, but never block Mesen on a full pipe.
         # Drain in a daemon thread; if stderr isn't drained, Mesen's

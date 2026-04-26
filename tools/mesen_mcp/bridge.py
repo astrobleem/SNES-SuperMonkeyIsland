@@ -34,6 +34,8 @@ import time
 import zlib
 from pathlib import Path
 
+from .validate import validate_mesen_build
+
 # Boot/connect/shutdown timing knobs.
 _BOOT_WAIT_SECS = 3.0
 _CONNECT_TIMEOUT = 15.0
@@ -66,8 +68,7 @@ def _resolve_config() -> tuple[Path, Path, Path, int]:
 
 
 def _spawn_mesen(mesen: Path, rom: Path, cwd: Path, port: int) -> subprocess.Popen:
-    if not mesen.exists():
-        raise RuntimeError(f"Mesen.exe not found at {mesen}")
+    validate_mesen_build(mesen)
     if not rom.exists():
         raise RuntimeError(f"ROM not found at {rom}")
     _log(f"spawning {mesen.name} --mcp --mcp-port={port} {rom.name}")

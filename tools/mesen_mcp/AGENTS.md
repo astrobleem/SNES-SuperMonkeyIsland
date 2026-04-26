@@ -5,6 +5,9 @@ working on has `mesen_mcp` installed. This file is your reference for
 what's available and how to use it. Read it once at session start;
 afterwards, treat it like a man page.
 
+In this repo, this onboarding document is `python/AGENTS.md`; the package
+source is `python/mesen_mcp/`.
+
 ## What this gives you
 
 A live, paused-by-default debugger for an SNES (or any Mesen 2-supported
@@ -25,8 +28,9 @@ The two are equivalent — same tool set, same return shapes.
 
 ## First call protocol
 
-**Always start by listing the surface and pausing the emulator.** This
-gives you a coherent state to read against.
+**Always start by listing the surface and pausing the emulator.** Run
+`mesen-mcp-tools` before each session for discovery, then pause so reads
+are coherent.
 
 ```python
 from mesen_mcp import McpSession
@@ -183,10 +187,31 @@ The Python session and bridge both read three env vars:
 Set them once in your project's `.envrc` / `Makefile` / `.mcp.json`
 `env:` block and forget about them.
 
+## Fresh Windows build checklist
+
+For a fresh `astrobleem/Mesen2` checkout, build both the native core and
+the managed UI:
+
+```powershell
+msbuild Mesen.sln /p:Configuration=Release /p:Platform=x64 /m
+dotnet build UI/UI.csproj -c Release -p:SolutionDir="$PWD\"
+python -m pip install -e python
+```
+
+`dotnet build UI/UI.csproj -c Release` by itself is not enough when the
+native `MesenCore.dll` has not been built yet. Also pass `SolutionDir`
+when building `UI/UI.csproj` directly; otherwise output can land in a
+drive-level `E:\bin\...` folder instead of this repo's
+`bin\win-x64\Release\`.
+
+Point `MESEN_EXE` at the folder containing a matched `Mesen.exe`,
+`Mesen.dll`, and `MesenCore.dll`. Stale publish folders can launch and
+then time out without opening the MCP port.
+
 ## Wiring into a fresh project
 
-Copy `tools/mesen_mcp/` into the new project's `tools/` directory (or
-`pip install -e tools/mesen_mcp/`). Add to the project's `.mcp.json`:
+Install the package from the fork with `python -m pip install -e
+path/to/Mesen2/python`. Add to the project's `.mcp.json`:
 
 ```json
 {
@@ -194,8 +219,9 @@ Copy `tools/mesen_mcp/` into the new project's `tools/` directory (or
     "mesen-inproc": {
       "command": "mesen-mcp-bridge",
       "env": {
-        "MESEN_EXE": "C:/Mesen/Mesen.exe",
-        "MESEN_ROM": "C:/games/yourgame.sfc"
+        "MESEN_EXE": "C:/Mesen2/bin/win-x64/Release/Mesen.exe",
+        "MESEN_ROM": "C:/games/yourgame.sfc",
+        "MESEN_CWD": "C:/games/your-project"
       }
     }
   }
@@ -212,7 +238,9 @@ mesen_mcp import McpSession` directly.
 
 - **"connect timed out"**: Mesen didn't open the TCP listener in time.
   Make sure `Mesen.exe` is the `astrobleem/Mesen2` fork build, not stock
-  Mesen — only the fork has `--mcp` mode.
+  Mesen - only the fork has `--mcp` mode. Also make sure the sibling
+  `Mesen.dll` includes `McpRunner` and the sibling `MesenCore.dll` exports
+  `McpDrainEvents`; rebuild native `Release|x64` plus UI if they do not.
 - **"sym file not found"**: pass the absolute path. Relative paths
   resolve against Mesen's cwd, which is `MESEN_CWD` (= ROM dir by
   default), not your project root.

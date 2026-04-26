@@ -1015,11 +1015,17 @@ def _parse_buttons(button_str: str) -> int:
 # Placeholders: {hook_addr}, {press_wram}, {trigger_wram}, {old_wram},
 #               {schedule_entries}, {user_lua}, {screenshot_logic}, {stop_frame}
 _RUN_WITH_INPUT_LUA = r"""
--- Helpers available to user lua_code
-local rd8 = function(a) return emu.read(a, emu.memType.snesWorkRam, false) end
+-- Helpers available to user lua_code.
+-- Use emu.memType.snesMemory so callers pass the full $7Exxxx CPU address
+-- (matching what lookup_symbol returns). Reading through the SNES bus
+-- routes through SnesMemoryManager::Peek, which short-circuits $7E/$7F
+-- direct to _workRam — so SA-1 ROMs get correct WRAM bytes too. Passing
+-- a $7Exxxx address to memType.snesWorkRam silently misreads (it expects
+-- a 0..$1FFFF offset into the 128KB WRAM array, not a CPU address).
+local rd8 = function(a) return emu.read(a, emu.memType.snesMemory, false) end
 local rd16 = function(a)
-  return emu.read(a, emu.memType.snesWorkRam, false)
-       + emu.read(a+1, emu.memType.snesWorkRam, false) * 256
+  return emu.read(a, emu.memType.snesMemory, false)
+       + emu.read(a+1, emu.memType.snesMemory, false) * 256
 end
 local rd16s = function(a)
   local v = rd16(a)
@@ -1036,6 +1042,10 @@ local _schedule = {
 local _lastButtons = 0
 
 local function _wr16(addr, val)
+  -- Internal-only. The press_wram / trigger_wram placeholders are
+  -- pre-stripped to 0..$1FFFF offsets by Python's _lookup_wram_offset,
+  -- so memType.snesWorkRam is correct here. Do NOT switch to snesMemory
+  -- without converting addr to a $7Exxxx CPU form.
   emu.write(addr, val & 0xFF, emu.memType.snesWorkRam)
   emu.write(addr + 1, (val >> 8) & 0xFF, emu.memType.snesWorkRam)
 end

@@ -802,6 +802,113 @@ def _strip_uninit_lines(text: str) -> str:
     )
 
 
+def _extract_capture_blocks(text: str, prefix: str) -> tuple[str, list[str]]:
+    """Pull all CAPTURE_ARGB_START/END blocks out of `text`, write each
+    as a separate PNG file under SFC_DIR, return (residual_text, summaries).
+
+    Block format from _RUN_WITH_INPUT_LUA:
+        CAPTURE_ARGB_START <index> <width> <height>
+        <ARGB hex words, 16 per line>
+        CAPTURE_ARGB_END <index>
+
+    Each saved as `<prefix>_NNN.png` (NNN = 3-digit 1-based index).
+    """
+    summaries: list[str] = []
+    out_lines: list[str] = []
+    lines = text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("CAPTURE_ARGB_START"):
+            parts = line.split()
+            try:
+                idx = int(parts[1])
+                w = int(parts[2])
+                h = int(parts[3])
+            except (IndexError, ValueError):
+                out_lines.append(line)
+                i += 1
+                continue
+            # Collect ARGB lines until END marker.
+            argb_lines: list[str] = []
+            j = i + 1
+            end_marker = f"CAPTURE_ARGB_END {idx}"
+            while j < len(lines) and lines[j].strip() != end_marker:
+                argb_lines.append(lines[j])
+                j += 1
+            # Skip past END line (or just stop if EOF).
+            try:
+                pixels: list[int] = []
+                for argb_line in argb_lines:
+                    for hex_val in argb_line.strip().split():
+                        if hex_val:
+                            pixels.append(int(hex_val, 16))
+                # Strip overscan rows (matches take_screenshot path).
+                actual_h = h
+                if h == 239:
+                    pixels = pixels[7 * w : len(pixels) - 8 * w]
+                    actual_h = 224
+                elif h == 478:
+                    pixels = pixels[14 * w : len(pixels) - 16 * w]
+                    actual_h = 448
+                argb_text: list[str] = []
+                line_vals: list[str] = []
+                for p in pixels:
+                    line_vals.append(f"{p:08X}")
+                    if len(line_vals) >= 16:
+                        argb_text.append(" ".join(line_vals))
+                        line_vals = []
+                if line_vals:
+                    argb_text.append(" ".join(line_vals))
+                png_bytes = _argb_to_png(w, actual_h, argb_text)
+                png_path = SFC_DIR / f"{prefix}_{idx:03d}.png"
+                png_path.write_bytes(png_bytes)
+                summaries.append(f"{png_path} ({len(png_bytes)} bytes)")
+            except Exception as e:
+                summaries.append(f"<capture {idx} failed: {e}>")
+            i = j + 1
+            continue
+        out_lines.append(line)
+        i += 1
+    return "\n".join(out_lines), summaries
+
+
+def _dedupe_consecutive(text: str) -> str:
+    """Collapse runs of identical consecutive lines.
+
+    Mesen prints a "Registered memory callback from $X to $Y" line for
+    every addMemoryCallback registration. If the user puts the
+    registration in lua_code (which runs every frame) instead of
+    lua_init (one-shot), the output gets flooded with thousands of
+    identical lines and overflows the MCP token limit. This collapser
+    is a safety net — same line repeated more than 3× becomes
+    "<line>  [x N]" so a flooded run still returns useful output.
+    """
+    lines = text.split("\n")
+    if not lines:
+        return text
+    out: list[str] = []
+    prev = None
+    count = 0
+    for line in lines:
+        if line == prev:
+            count += 1
+        else:
+            if prev is not None:
+                if count > 3:
+                    out.append(f"{prev}  [x {count}]")
+                else:
+                    out.extend([prev] * count)
+            prev = line
+            count = 1
+    if prev is not None:
+        if count > 3:
+            out.append(f"{prev}  [x {count}]")
+        else:
+            out.extend([prev] * count)
+    return "\n".join(out)
+
+
 def _read_out_file(path: Path, head: int | None = None) -> str:
     """Safely read an output file. Returns full contents, or first `head` chars if specified."""
     try:
@@ -1013,25 +1120,51 @@ def _parse_buttons(button_str: str) -> int:
 
 # Lua template for run_with_input.
 # Placeholders: {hook_addr}, {press_wram}, {trigger_wram}, {old_wram},
-#               {schedule_entries}, {user_lua}, {screenshot_logic}, {stop_frame}
+#               {schedule_entries}, {lua_init}, {user_lua}, {screenshot_logic},
+#               {stop_frame}
 _RUN_WITH_INPUT_LUA = r"""
--- Helpers available to user lua_code.
+-- Helpers available to user lua_code AND lua_init.
 -- Use emu.memType.snesMemory so callers pass the full $7Exxxx CPU address
 -- (matching what lookup_symbol returns). Reading through the SNES bus
 -- routes through SnesMemoryManager::Peek, which short-circuits $7E/$7F
 -- direct to _workRam — so SA-1 ROMs get correct WRAM bytes too. Passing
 -- a $7Exxxx address to memType.snesWorkRam silently misreads (it expects
 -- a 0..$1FFFF offset into the 128KB WRAM array, not a CPU address).
-local rd8 = function(a) return emu.read(a, emu.memType.snesMemory, false) end
-local rd16 = function(a)
+local function rd8(a) return emu.read(a, emu.memType.snesMemory, false) end
+local function rd16(a)
   return emu.read(a, emu.memType.snesMemory, false)
        + emu.read(a+1, emu.memType.snesMemory, false) * 256
 end
-local rd16s = function(a)
+local function rd16s(a)
   local v = rd16(a)
   if v >= 32768 then v = v - 65536 end
   return v
 end
+
+-- CPU + PPU snapshot helpers. emu.getState() returns a FLAT dictionary
+-- with dotted keys ("cpu.a", not nested cpu.a) — these wrap that surprise.
+-- Use inside hook callbacks or every-frame lua_code.
+local function cpu()
+  local s = emu.getState()
+  return {
+    a  = s["cpu.a"],  x  = s["cpu.x"],  y  = s["cpu.y"],
+    pc = s["cpu.pc"], k  = s["cpu.k"],  sp = s["cpu.sp"],
+    p  = s["cpu.p"],  db = s["cpu.db"], d  = s["cpu.d"],
+  }
+end
+local function ppu()
+  local s = emu.getState()
+  return {
+    frameCount = s["ppu.frameCount"],
+    cycle      = s["ppu.cycle"],
+    scanline   = s["ppu.scanline"],
+  }
+end
+
+-- Address-formatting convenience for trace prints.
+local function fmtA(v) return string.format("$%04X", v & 0xFFFF) end
+local function fmt24(v) return string.format("$%06X", v & 0xFFFFFF) end
+
 local frameCount = 0
 
 -- Input schedule: list of {startFrame, endFrame, buttonMask}
@@ -1070,6 +1203,11 @@ emu.addMemoryCallback(function()
   _lastButtons = buttons
 end, emu.callbackType.exec, {hook_addr})
 
+-- One-shot init: runs ONCE, before the frame loop starts. Use this for
+-- emu.addMemoryCallback / emu.addEventCallback registrations that must
+-- not fire every frame. Anything in lua_code (below) runs every frame.
+{lua_init}
+
 -- Update frameCount FIRST (registered before user code so it fires first)
 emu.addEventCallback(function()
   frameCount = emu.getState()["ppu.frameCount"]
@@ -1078,6 +1216,36 @@ end, emu.eventType.endFrame)
 -- User-supplied Lua code (runs each frame in endFrame callback)
 emu.addEventCallback(function()
 {user_lua}
+end, emu.eventType.endFrame)
+
+-- Multi-frame capture (capture_frames=[...]). Empty list → no-op.
+local _captureFramesList = { {capture_frames_list} }
+local _captureFramesDone = {}
+emu.addEventCallback(function()
+  for i, f in ipairs(_captureFramesList) do
+    if not _captureFramesDone[i] and frameCount >= f then
+      _captureFramesDone[i] = true
+      local buf = emu.getScreenBuffer()
+      if buf and #buf > 0 then
+        local size = emu.getScreenSize()
+        local w = size.width or 256
+        local h = size.height or 224
+        print(string.format("CAPTURE_ARGB_START %d %d %d", i, w, h))
+        local line = {}
+        for j = 1, #buf do
+          line[#line + 1] = string.format("%08X", buf[j])
+          if #line >= 16 then
+            print(table.concat(line, " "))
+            line = {}
+          end
+        end
+        if #line > 0 then
+          print(table.concat(line, " "))
+        end
+        print(string.format("CAPTURE_ARGB_END %d", i))
+      end
+    end
+  end
 end, emu.eventType.endFrame)
 
 -- Screenshot + stop logic
@@ -1120,29 +1288,58 @@ _SCREENSHOT_CAPTURE_LUA = r"""
 def run_with_input(
     input_schedule: list[dict],
     lua_code: str = "",
+    lua_init: str = "",
     screenshot_frame: int = 0,
+    capture_frames: list[int] | None = None,
+    capture_prefix: str = "capture",
     stop_frame: int = 0,
     timeout: int = 120,
 ) -> str:
     """Run the ROM with scheduled input injection and optional screenshot.
 
     Hooks _checkInputDevice RTS to inject button presses at specific frame
-    ranges.  Auto-resolves hook and WRAM addresses from the sym file.
+    ranges. Auto-resolves hook and WRAM addresses from the sym file.
 
     Args:
         input_schedule: List of {"frames": [start, end], "buttons": "right+a"}.
                         Button names: a, b, x, y, l, r, up, down, left, right,
-                        start, select.  Combine with '+'.
-        lua_code: Optional Lua code with access to rd8/rd16/rd16s/frameCount
-                  globals.  Runs inside the endFrame callback context.
+                        start, select. Combine with '+'.
+        lua_code: Optional Lua code that runs EVERY FRAME inside an
+                  emu.eventType.endFrame callback. Has access to
+                  rd8/rd16/rd16s/cpu()/ppu()/fmtA/fmt24 helpers and the
+                  `frameCount` global. Use this for per-frame state probes
+                  ("if frameCount == 2200 then print(...) end").
+        lua_init: Optional Lua code that runs EXACTLY ONCE before the frame
+                  loop starts. Use this for emu.addMemoryCallback /
+                  emu.addEventCallback registrations — putting them in
+                  lua_code re-registers every frame and floods the output
+                  with "Registered memory callback" lines (and creates
+                  duplicate hooks).
         screenshot_frame: If >0, capture a screenshot at this frame.
-        stop_frame: Frame at which to stop.  Defaults to screenshot_frame+10,
-                    or last scheduled frame+200 if no screenshot.
+        capture_frames: If non-empty, capture a screenshot at each frame in
+                  the list within ONE Mesen run. Useful for filmstrip /
+                  visual_compare workflows that want N frames without N
+                  Mesen invocations. Each PNG is named
+                  `<capture_prefix>_NNN.png` (NNN = 1-based index, 3-digit).
+        capture_prefix: Filename prefix for capture_frames PNGs. Default
+                  "capture" produces capture_001.png, capture_002.png, ...
+        stop_frame: Frame at which to stop. Defaults to (max of
+                    screenshot_frame, last capture_frame, last input frame)
+                    + 10..200 padding.
         timeout: Max seconds to wait for Mesen.
 
     Returns:
-        Printed output from the Lua script.  If screenshot_frame is set,
-        returns the saved PNG path (same as take_screenshot).
+        Printed output from the Lua script. If screenshot_frame is set,
+        returns the saved PNG path (same as take_screenshot). Mesen's
+        boilerplate "Registered memory callback" lines are deduplicated
+        in the returned text — same line repeated N times collapses to
+        "<line>  [x N]".
+
+    Reading register state at hook time:
+        Inside an emu.addMemoryCallback (registered via lua_init), use the
+        cpu() helper for a typed snapshot: `local r = cpu(); print(r.a, r.pc)`.
+        emu.getState() returns a FLAT dict with dotted keys ("cpu.a") — not
+        nested tables. cpu()/ppu() wrap that surprise.
     """
     sym_path = SYM_FILE
     if not sym_path.exists():
@@ -1175,12 +1372,25 @@ def run_with_input(
         schedule_lines.append(f"  {{{start_f}, {end_f}, 0x{mask:04X}}},")
         last_frame = max(last_frame, end_f)
 
-    # Compute stop frame
+    # Normalize capture_frames into a sorted unique list; reject huge sets
+    # (every captured frame writes ~400KB of ARGB to stdout).
+    capture_list: list[int] = sorted(set(int(f) for f in (capture_frames or []) if int(f) > 0))
+    if len(capture_list) > 16:
+        return f"ERROR: capture_frames has {len(capture_list)} entries; max 16 per call."
+
+    # Compute stop frame: pad past whichever capture/screenshot fires last.
     if stop_frame <= 0:
-        if screenshot_frame > 0:
-            stop_frame = screenshot_frame + 10
-        else:
+        latest = max(
+            screenshot_frame,
+            capture_list[-1] if capture_list else 0,
+            last_frame,
+        )
+        if latest == 0:
+            stop_frame = 200
+        elif latest == last_frame and screenshot_frame == 0 and not capture_list:
             stop_frame = last_frame + 200
+        else:
+            stop_frame = latest + 10
 
     # Build screenshot logic
     if screenshot_frame > 0:
@@ -1197,8 +1407,10 @@ def run_with_input(
     lua = lua.replace("{trigger_wram}", f"0x{trigger_off:04X}")
     lua = lua.replace("{old_wram}", f"0x{old_off:04X}")
     lua = lua.replace("{schedule_entries}", "\n".join(schedule_lines))
+    lua = lua.replace("{lua_init}", lua_init)
     lua = lua.replace("{user_lua}", lua_code)
     lua = lua.replace("{screenshot_logic}", ss_lua)
+    lua = lua.replace("{capture_frames_list}", ", ".join(str(f) for f in capture_list))
     lua = lua.replace("{stop_frame}", str(stop_frame))
 
     # Write and execute
@@ -1221,15 +1433,27 @@ def run_with_input(
     except Exception as e:
         return f"MESEN ERROR: {e}"
 
-    # Read full output when screenshot expected (pixel data can be >500KB);
-    # truncated read otherwise to keep MCP responses small.
-    if screenshot_frame > 0:
+    # Read full output when screenshot or capture_frames expected (pixel
+    # data can be >500KB per frame); truncated read otherwise to keep
+    # MCP responses small.
+    if screenshot_frame > 0 or capture_list:
         try:
             output = _strip_uninit_lines(out_file.read_text())
         except Exception:
             output = ""
     else:
         output = _read_out_file(out_file)
+
+    # Extract any CAPTURE_ARGB blocks into per-index PNG files. Strip
+    # them from `output` so the dedup/return path sees a clean text body.
+    capture_results: list[str] = []
+    if capture_list:
+        output, capture_results = _extract_capture_blocks(output, capture_prefix)
+
+    # Collapse repeated lines (e.g. Mesen's "Registered memory callback"
+    # spam if the user accidentally puts addMemoryCallback in lua_code
+    # instead of lua_init).
+    output = _dedupe_consecutive(output)
 
     # If screenshot was requested, extract PNG same as take_screenshot
     if screenshot_frame > 0 and "SCREENSHOT_ARGB_START" in output and "SCREENSHOT_ARGB_END" in output:
@@ -1281,10 +1505,15 @@ def run_with_input(
             clean_output = output[:output.index("SCREENSHOT_ARGB_START")].strip()
             if clean_output:
                 msg += clean_output
+            if capture_results:
+                msg += "\n\nCaptures (capture_frames):\n  " + "\n  ".join(capture_results)
             return msg
         except Exception as e:
             return f"ERROR converting screenshot: {e}\n\nRaw output:\n{output[-2000:]}"
 
+    if capture_results:
+        head = "Captures (capture_frames):\n  " + "\n  ".join(capture_results)
+        return head + ("\n\n" + output if output.strip() else "")
     return output
 
 

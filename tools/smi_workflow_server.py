@@ -1143,20 +1143,21 @@ end
 
 -- CPU + PPU snapshot helpers. emu.getState() returns a FLAT dictionary
 -- with dotted keys ("cpu.a", not nested cpu.a) — these wrap that surprise.
--- Use inside hook callbacks or every-frame lua_code.
+-- Mesen's actual keys are cpu.dbr (not cpu.db) and cpu.ps (not cpu.p);
+-- aliased here so callers can write the obvious .p / .db / .pb names.
+-- ppu has no .cycle field; drop it.
 local function cpu()
   local s = emu.getState()
   return {
-    a  = s["cpu.a"],  x  = s["cpu.x"],  y  = s["cpu.y"],
-    pc = s["cpu.pc"], k  = s["cpu.k"],  sp = s["cpu.sp"],
-    p  = s["cpu.p"],  db = s["cpu.db"], d  = s["cpu.d"],
+    a  = s["cpu.a"],   x  = s["cpu.x"],   y  = s["cpu.y"],
+    pc = s["cpu.pc"],  k  = s["cpu.k"],   sp = s["cpu.sp"],
+    p  = s["cpu.ps"], db = s["cpu.dbr"], d  = s["cpu.d"],
   }
 end
 local function ppu()
   local s = emu.getState()
   return {
     frameCount = s["ppu.frameCount"],
-    cycle      = s["ppu.cycle"],
     scanline   = s["ppu.scanline"],
   }
 end
@@ -1521,39 +1522,47 @@ _STEP_UNTIL_PC_LUA = r"""
 -- step_until_pc rig: hook target PC, run frames, capture CPU snapshot.
 -- State vars MUST be globals (no `local`) — Mesen's callback context
 -- runs in a sandbox that can't read script-scope locals.
+-- Mesen's getState keys are cpu.dbr / cpu.ps (NOT cpu.db / cpu.p) and
+-- there is no ppu.cycle field — using the wrong names returns nil and
+-- crashes the format on every endFrame, which prevents emu.stop and
+-- looks like a hung emulator from outside.
 _step_hit = false
+_step_done = false
 _step_hitFrame = -1
 _step_hitState = nil
 
 emu.addMemoryCallback(function()
   if _step_hit then return end
   _step_hit = true
-  _step_hitFrame = emu.getState()["ppu.frameCount"]
   local s = emu.getState()
+  _step_hitFrame = s["ppu.frameCount"]
   _step_hitState = {
-    a  = s["cpu.a"],  x  = s["cpu.x"],  y  = s["cpu.y"],
-    pc = s["cpu.pc"], k  = s["cpu.k"],  sp = s["cpu.sp"],
-    p  = s["cpu.p"],  db = s["cpu.db"], d  = s["cpu.d"],
-    cycle = s["ppu.cycle"], scanline = s["ppu.scanline"],
+    a  = s["cpu.a"],   x  = s["cpu.x"],   y  = s["cpu.y"],
+    pc = s["cpu.pc"],  k  = s["cpu.k"],   sp = s["cpu.sp"],
+    p  = s["cpu.ps"], db = s["cpu.dbr"], d  = s["cpu.d"],
+    scanline = s["ppu.scanline"] or -1,
   }
 end, emu.callbackType.exec, {target_pc})
 
 emu.addEventCallback(function()
-  local frame = emu.getState()["ppu.frameCount"]
+  if _step_done then return end
   if _step_hit then
+    _step_done = true
+    emu.stop()
     local s = _step_hitState
     print(string.format(
       "STEP_UNTIL_HIT frame=%d pc=$%02X:%04X a=$%04X x=$%04X y=$%04X "
-      .. "sp=$%04X p=$%02X db=$%02X d=$%04X scanline=%d cycle=%d",
+      .. "sp=$%04X p=$%02X db=$%02X d=$%04X scanline=%d",
       _step_hitFrame, s.k, s.pc, s.a, s.x, s.y, s.sp, s.p, s.db, s.d,
-      s.scanline or -1, s.cycle or -1
+      s.scanline
     ))
-    emu.stop()
     return
   end
+  local frame = emu.getState()["ppu.frameCount"]
   if frame >= {max_frame} then
-    print(string.format("STEP_UNTIL_TIMEOUT frame=%d max=%d (no hit)", frame, {max_frame}))
+    _step_done = true
     emu.stop()
+    print(string.format("STEP_UNTIL_TIMEOUT frame=%d max=%d (no hit)", frame, {max_frame}))
   end
 end, emu.eventType.endFrame)
 """
@@ -1561,7 +1570,7 @@ end, emu.eventType.endFrame)
 
 @mcp.tool()
 def step_until_pc(
-    pc: int,
+    pc: int | str,
     max_frames: int = 600,
     timeout: int = 60,
 ) -> str:
@@ -1573,10 +1582,10 @@ def step_until_pc(
     testrunner each call (cold boot to target PC).
 
     Args:
-        pc: 24-bit CPU address (e.g. 0xC51D4E for scummvm.lookupObjectWalkTo
-            entry, or 0xC00A83 for the sta inside finalizeEgoSpawn). Will
-            be auto-prefixed with $C0 if pc < 0x010000 (matches
-            lookup_symbol's romCpuAddr return convention for HiROM bank 0).
+        pc: 24-bit CPU address — int (12615765) OR hex string ("0xC08055",
+            "$C08055", "C08055" all accepted, case-insensitive). PCs below
+            0x010000 are auto-prefixed with $C0 (matches lookup_symbol's
+            romCpuAddr return convention for HiROM bank 0).
         max_frames: Frame budget. Returns "STEP_UNTIL_TIMEOUT" if the PC
                     isn't hit before this many frames pass. Default 600
                     (~10 sec at 60Hz).
@@ -1585,8 +1594,24 @@ def step_until_pc(
     Returns:
         On hit: "STEP_UNTIL_HIT frame=N pc=$BB:OOOO a=... x=... y=... ..."
         On timeout: "STEP_UNTIL_TIMEOUT frame=N max=M (no hit)".
+
+    Known limitation:
+        Cold-boot only — does not accept input_schedule, so PCs that
+        only execute after intro skip / button presses will time out.
+        For those, use run_with_input + register the exec hook in lua_init.
     """
-    target_pc = int(pc)
+    if isinstance(pc, str):
+        s = pc.strip().lower()
+        if s.startswith("$"):
+            s = s[1:]
+        if s.startswith("0x"):
+            s = s[2:]
+        try:
+            target_pc = int(s, 16) if any(c in s for c in "abcdef") else int(s, 0)
+        except ValueError:
+            return f"ERROR: cannot parse pc={pc!r} as integer or hex"
+    else:
+        target_pc = int(pc)
     if target_pc < 0x010000:
         target_pc |= 0xC00000
     if max_frames < 1 or max_frames > 1_000_000:

@@ -38,8 +38,12 @@ wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make"
 
 Two MCP servers are wired up in `.mcp.json`:
 
-- **`mesen-inproc`** (`tools/mesen_inproc_bridge.py` → Mesen2 `--mcp` mode) — generic Mesen-2 debugger toolchain (35 tools: state, hooks, render, audio). Long-lived; talks to a running Mesen instance over TCP.
-- **`smi-workflow`** (`tools/smi_workflow_server.py`) — project-scoped one-shot workflow (build, validate, testrunner, screenshot, sym lookup). Each call spawns a fresh Mesen testrunner.
+- **`mesen-inproc`** (`tools/mesen_inproc_bridge.py` → Mesen2 `--mcp` mode) — generic Mesen-2 debugger toolchain (46 tools: state, hooks, render, audio). Long-lived; talks to a running Mesen instance over TCP.
+- **`smi-workflow`** (`tools/smi_workflow_server.py`) — project-scoped one-shot workflow (build, validate, testrunner, screenshot, sym lookup, step_until_pc). Each call spawns a fresh Mesen testrunner.
+
+**Legacy `mesen.*` tool names** (in older transcripts) were split on 2026-04-26 into the two namespaces above. Mapping for stale references:
+- Build/validate/testrunner/screenshot/sym-lookup tools → `mcp__smi-workflow__*`
+- Everything else (memory hooks, register state, render, audio, etc.) → `mcp__mesen-inproc__*`
 
 The `smi-workflow` server provides:
 

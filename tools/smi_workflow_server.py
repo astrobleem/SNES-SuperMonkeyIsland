@@ -230,7 +230,7 @@ def run_lua_snippet(lua_code: str, timeout: int = 60) -> str:
         timeout: Max seconds to wait.
     """
     script_path = SFC_DIR / "_mcp_snippet.lua"
-    script_path.write_text(lua_code, encoding="utf-8")
+    _write_lua_script(script_path, lua_code, "run_lua_snippet")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -331,7 +331,7 @@ def _capture_frame(
     lua_code = lua_code.replace("{lua_preamble}", lua_preamble)
 
     script_path = SFC_DIR / "_mcp_screenshot.lua"
-    script_path.write_text(lua_code, encoding="utf-8")
+    _write_lua_script(script_path, lua_code, "take_screenshot")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -961,9 +961,11 @@ def _lookup_sym_address(sym_path: Path, symbol_name: str) -> int | None:
 def _lookup_wram_offset(sym_path: Path, symbol_name: str) -> int | None:
     """Look up a WRAM symbol's offset from $7E:0000.
 
-    WLA-DX sym files store WRAM addresses as bank=0000 with the full 24-bit
-    SNES address in the addr field (e.g. 0000:7EED63).  _lookup_sym_address
-    would incorrectly add a $C0 ROM prefix to these — use this instead.
+    Strict: only resolves symbols whose address is in the $7E/$7F WRAM
+    banks ($7E0000..$7FFFFF). Anything else (ROM, direct page in bank 0,
+    SA-1 IRAM, etc.) returns None — the caller almost certainly does not
+    want a "stripped" offset for a non-WRAM symbol. Callers that need
+    arbitrary CPU addresses should use _lookup_sym_address instead.
     """
     for line in sym_path.read_text().split("\n"):
         parsed = _parse_sym_line(line)
@@ -971,10 +973,38 @@ def _lookup_wram_offset(sym_path: Path, symbol_name: str) -> int | None:
             continue
         _bank, addr, name, _full = parsed
         if name == symbol_name:
-            if addr >= 0x7E0000:
+            if 0x7E0000 <= addr <= 0x7FFFFF:
                 return addr - 0x7E0000
-            return addr
+            return None
     return None
+
+
+def _assert_ascii_lua(text: str, label: str) -> None:
+    """Guard for Lua templates: refuse non-ASCII before write_text.
+
+    Even with encoding='utf-8', non-ASCII Lua source has bitten us
+    (the cp1252 default + a stray '->' arrow crashed write_text once,
+    and Mesen's Lua interpreter is also picky about high bytes inside
+    string literals). All assembled Lua scripts written from this server
+    must be 7-bit clean.
+    """
+    for i, ch in enumerate(text):
+        if ord(ch) > 127:
+            line = text[:i].count("\n") + 1
+            col = i - text.rfind("\n", 0, i)
+            raise ValueError(
+                f"Non-ASCII char U+{ord(ch):04X} in Lua template '{label}' "
+                f"at line {line} col {col}: {ch!r}. Use ASCII-only "
+                f"(e.g. '->' instead of '→')."
+            )
+
+
+def _write_lua_script(path: Path, content: str, label: str | None = None) -> None:
+    """ASCII-checked, utf-8-encoded Lua write. Use this everywhere a
+    *_LUA template is materialized to disk.
+    """
+    _assert_ascii_lua(content, label or path.name)
+    path.write_text(content, encoding="utf-8")
 
 
 def _check_magenta_crash(argb_pixels: list[int], width: int) -> bool:
@@ -1035,7 +1065,7 @@ def _run_boot_test(sym_path: Path) -> str:
     )
 
     script_path = SFC_DIR / "_mcp_boot_test.lua"
-    script_path.write_text(lua_code, encoding="utf-8")
+    _write_lua_script(script_path, lua_code, "validate_rom_boot")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -1150,7 +1180,7 @@ _RUN_WITH_INPUT_LUA = r"""
 -- Use emu.memType.snesMemory so callers pass the full $7Exxxx CPU address
 -- (matching what lookup_symbol returns). Reading through the SNES bus
 -- routes through SnesMemoryManager::Peek, which short-circuits $7E/$7F
--- direct to _workRam — so SA-1 ROMs get correct WRAM bytes too. Passing
+-- direct to _workRam -- so SA-1 ROMs get correct WRAM bytes too. Passing
 -- a $7Exxxx address to memType.snesWorkRam silently misreads (it expects
 -- a 0..$1FFFF offset into the 128KB WRAM array, not a CPU address).
 local function rd8(a) return emu.read(a, emu.memType.snesMemory, false) end
@@ -1165,7 +1195,7 @@ local function rd16s(a)
 end
 
 -- CPU + PPU snapshot helpers. emu.getState() returns a FLAT dictionary
--- with dotted keys ("cpu.a", not nested cpu.a) — these wrap that surprise.
+-- with dotted keys ("cpu.a", not nested cpu.a) -- these wrap that surprise.
 -- Mesen's actual keys are cpu.dbr (not cpu.db) and cpu.ps (not cpu.p);
 -- aliased here so callers can write the obvious .p / .db / .pb names.
 -- ppu has no .cycle field; drop it.
@@ -1439,7 +1469,7 @@ def run_with_input(
 
     # Write and execute
     script_path = SFC_DIR / "_mcp_run_with_input.lua"
-    script_path.write_text(lua, encoding="utf-8")
+    _write_lua_script(script_path, lua, "run_with_input")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (
@@ -1632,10 +1662,10 @@ def _build_input_injection_preamble(
 
 _STEP_UNTIL_PC_HOOK_LUA = r"""
 -- step_until_pc rig: hook target PC, run frames, capture CPU snapshot.
--- State vars MUST be globals (no `local`) — Mesen's callback context
+-- State vars MUST be globals (no `local`) -- Mesen's callback context
 -- runs in a sandbox that can't read script-scope locals.
 -- Mesen's getState keys are cpu.dbr / cpu.ps (NOT cpu.db / cpu.p) and
--- there is no ppu.cycle field — using the wrong names returns nil and
+-- there is no ppu.cycle field -- using the wrong names returns nil and
 -- crashes the format on every endFrame, which prevents emu.stop and
 -- looks like a hung emulator from outside.
 _step_hit = false
@@ -1733,7 +1763,7 @@ def step_until_pc(
     lua = lua.replace("{max_frame}", str(max_frames))
 
     script_path = SFC_DIR / "_step_until_pc.lua"
-    script_path.write_text(lua, encoding="utf-8")
+    _write_lua_script(script_path, lua, "step_until_pc")
 
     out_file = SFC_DIR / "out.txt"
     cmd = (

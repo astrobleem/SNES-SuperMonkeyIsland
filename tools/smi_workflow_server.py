@@ -1519,17 +1519,18 @@ def run_with_input(
 
 _STEP_UNTIL_PC_LUA = r"""
 -- step_until_pc rig: hook target PC, run frames, capture CPU snapshot.
-local _hit = false
-local _hitFrame = -1
-local _hitState = nil
-local _frame = 0
+-- State vars MUST be globals (no `local`) — Mesen's callback context
+-- runs in a sandbox that can't read script-scope locals.
+_step_hit = false
+_step_hitFrame = -1
+_step_hitState = nil
 
 emu.addMemoryCallback(function()
-  if _hit then return end
-  _hit = true
-  _hitFrame = emu.getState()["ppu.frameCount"]
+  if _step_hit then return end
+  _step_hit = true
+  _step_hitFrame = emu.getState()["ppu.frameCount"]
   local s = emu.getState()
-  _hitState = {
+  _step_hitState = {
     a  = s["cpu.a"],  x  = s["cpu.x"],  y  = s["cpu.y"],
     pc = s["cpu.pc"], k  = s["cpu.k"],  sp = s["cpu.sp"],
     p  = s["cpu.p"],  db = s["cpu.db"], d  = s["cpu.d"],
@@ -1538,20 +1539,20 @@ emu.addMemoryCallback(function()
 end, emu.callbackType.exec, {target_pc})
 
 emu.addEventCallback(function()
-  _frame = emu.getState()["ppu.frameCount"]
-  if _hit then
-    local s = _hitState
+  local frame = emu.getState()["ppu.frameCount"]
+  if _step_hit then
+    local s = _step_hitState
     print(string.format(
       "STEP_UNTIL_HIT frame=%d pc=$%02X:%04X a=$%04X x=$%04X y=$%04X "
-      .. "sp=$%04X p=$%02X db=$%02X d=$%04X k=$%02X scanline=%d cycle=%d",
-      _hitFrame, s.k, s.pc, s.a, s.x, s.y, s.sp, s.p, s.db, s.d, s.k,
+      .. "sp=$%04X p=$%02X db=$%02X d=$%04X scanline=%d cycle=%d",
+      _step_hitFrame, s.k, s.pc, s.a, s.x, s.y, s.sp, s.p, s.db, s.d,
       s.scanline or -1, s.cycle or -1
     ))
     emu.stop()
     return
   end
-  if _frame >= {max_frame} then
-    print(string.format("STEP_UNTIL_TIMEOUT frame=%d max=%d (no hit)", _frame, {max_frame}))
+  if frame >= {max_frame} then
+    print(string.format("STEP_UNTIL_TIMEOUT frame=%d max=%d (no hit)", frame, {max_frame}))
     emu.stop()
   end
 end, emu.eventType.endFrame)

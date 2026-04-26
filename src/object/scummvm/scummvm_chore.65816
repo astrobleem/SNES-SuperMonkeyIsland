@@ -218,9 +218,19 @@ _caa.cmdStop:
   stz.w SCUMM.actors.moving, x
   rep #$20
   .ACCU 16
-  ; Replace frame with standFrame (v5 default _standFrame=3).
-  lda #3
+  ; Replace frame with per-actor standFrame (ScummVM Actor::_standFrame).
+  ; Default seeded to 3 by engine init / actorOps subop $08 init / $0A animDefault;
+  ; scripts may override via actorOps subop $06.
+  phx
+  ldx.w SCUMM.scratch                      ; X = actor_num
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorStandFrame, x
+  rep #$20
+  .ACCU 16
+  and #$00FF
   sta.w SCUMM.scratch2
+  plx
   ; fall through to decodeData
 
 _caa.decodeDefault:

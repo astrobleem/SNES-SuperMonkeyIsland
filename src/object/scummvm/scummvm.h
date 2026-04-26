@@ -200,6 +200,10 @@ SCUMM.cutSceneScript      ds 5    ;5 nesting levels x 1B: slot index running the
 SCUMM.cutSceneData        ds 10   ;5 nesting levels x 2B: associated data word
 SCUMM.pendingCamTarget    dw      ;setCameraAt target stashed while a room load is pending
 SCUMM.pendingCamFlag      db      ;nonzero = pendingCamTarget is live, apply after processRoomChange
+SCUMM.pendingEgoObj       dw      ;loadRoomWithEgo: obj id whose walk-to anchors ego after room loads
+SCUMM.pendingEgoX         dw      ;loadRoomWithEgo: bytecode x walk target ($FFFF = none)
+SCUMM.pendingEgoY         dw      ;loadRoomWithEgo: bytecode y walk target
+SCUMM.egoPositioned       db      ;ScummVM _egoPositioned: nonzero = ENCD/script already placed ego in new room
 .ends
 
 ; Virtual sound tracking — gives isSoundRunning a duration-based answer
@@ -680,13 +684,18 @@ SCUMM.invNameCount       dw                      ; number of cached names
 .base BSL
 .section "VerbHdmaTable" free
 VerbHdmaTable:
-  .db $FF                               ; repeat 127 lines (0-126)
+  ; SNES HDMA line-count format: bit 7 = 0 → REPEAT mode (one data byte
+  ; reused for N scanlines). Bit 7 = 1 puts the channel in CONTINUE mode
+  ; (one data byte per scanline) and walks the source pointer through
+  ; whatever follows in ROM — looks like the table is being respected
+  ; but the channel is actually slurping garbage. Keep bit 7 clear.
+  .db $7F                               ; repeat 127 lines (0-126)
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db $81                               ; repeat 1 line (127) -- 127+1=128
+  .db $01                               ; repeat 1 line (127)
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db $90                               ; repeat 16 lines (128-143)
+  .db $10                               ; repeat 16 lines (128-143)
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
-  .db $D0                               ; repeat 80 lines (144-223)
+  .db $50                               ; repeat 80 lines (144-223)
   .db T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $16 (no BG1)
   .db 0                                 ; end of table
 
@@ -697,7 +706,10 @@ VerbHdmaTable:
 ; water. This differs from VerbHdmaTable which turns BG1 off at 144+ to hide
 ; room art beneath the gameplay verb bar.
 CutsceneHdmaTable:
-  .db 128                               ; scanlines 0-127: room area
+  ; Repeat-mode line counts must keep bit 7 clear (max 127 per entry).
+  .db 127                               ; scanlines 0-126
+  .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
+  .db 1                                 ; scanline 127
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
   .db 16                                ; scanlines 128-143: room area continued
   .db T_BG1_ENABLE | T_BG2_ENABLE | T_BG3_ENABLE | T_OBJ_ENABLE  ; $17
@@ -709,8 +721,10 @@ CutsceneHdmaTable:
 ; Game area (0-143): BG1+BG2 both at chr base $0000 (room tiles).
 ; Verb area (144+): BG2 at chr base $4000 (verb font), BG1 stays $0000.
 Bg2NbaHdmaTable:
-  .db 128                               ; scanlines 0-127
+  .db 127                               ; scanlines 0-126
   .db $00                               ; BG1=$0000, BG2=$0000
+  .db 1                                 ; scanline 127
+  .db $00
   .db 16                                ; scanlines 128-143
   .db $00                               ; BG1=$0000, BG2=$0000
   .db 80                                ; scanlines 144-223
@@ -719,8 +733,10 @@ Bg2NbaHdmaTable:
 
 ; Default BG12NBA table (no z-plane masking): BG2 always at verb chr base.
 Bg2NbaDefaultTable:
-  .db 128
+  .db 127
   .db $40                               ; BG1=$0000, BG2=$4000
+  .db 1
+  .db $40
   .db 96
   .db $40
   .db 0
@@ -729,8 +745,10 @@ Bg2NbaDefaultTable:
 ; Game area (0-143): BG2SC=$58 → tilemap at word $5800 (room BG2 fill).
 ; Verb area (144+): BG2SC=$48 → tilemap at word $4800 (verb text).
 Bg2ScHdmaTable:
-  .db 128                               ; scanlines 0-127
+  .db 127                               ; scanlines 0-126
   .db $58                               ; room BG2 tilemap at $5800, 32x32
+  .db 1                                 ; scanline 127
+  .db $58
   .db 16                                ; scanlines 128-143
   .db $58
   .db 80                                ; scanlines 144-223
@@ -739,7 +757,9 @@ Bg2ScHdmaTable:
 
 ; Default BG2SC table (no z-plane masking): verb tilemap everywhere.
 Bg2ScDefaultTable:
-  .db 128
+  .db 127
+  .db $48
+  .db 1
   .db $48
   .db 96
   .db $48

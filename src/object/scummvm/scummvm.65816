@@ -1337,6 +1337,15 @@ _prc.roomLoadOk:
   ; room.load overwrites the font DMA'd during init; force blank is still active
   jsl scummvm.loadDialogFont
 
+  ; Reload verb font tiles into VRAM $8000 (word $4000) -- room art DMA can
+  ; overwrite the verb font area on rooms whose tile data exceeds the BG1
+  ; budget. Without this, BG2 in the verb area renders garbage glyphs
+  ; (visible as horizontal stripes in the verb bar after natural intro flow).
+  sep #$20
+  lda #1
+  sta.w SCUMM.verbFontNmiPending
+  rep #$20
+
   ; Overwrite verb-reserved CGRAM slots with static verb colors.
   ; pal6/pal7 c1-c3 and pal1 c12-c13 are reserved from room art; the converter
   ; zeroes them in each room's palette file, and this call restores the canonical
@@ -1574,6 +1583,14 @@ _prc.noPendingCam:
   rep #$20
 _prc.skipViewport:
 
+  ; ScummVM startScene clears _egoPositioned before entry scripts. Any
+  ; ENCD-side putActor(VAR_EGO, ...) (the script's intended entry point)
+  ; will then reclaim the flag and finalizeEgoSpawn skips its obj-walk-to
+  ; fallback so the script's placement isn't clobbered.
+  sep #$20
+  stz.w SCUMM.egoPositioned
+  rep #$20
+
   ; --- Run entry scripts in ScummVM order ---
   ; 1. VAR_ENTRY_SCRIPT (globalVar[28]) -- script 5 in MI1
   ldx #28*2
@@ -1616,6 +1633,11 @@ _prc.noEntryScript2:
 
   ; Assign walkboxes for all visible actors in this room
   jsr _scummvm.assignActorWalkboxes
+
+  ; If a loadRoomWithEgo is pending, finalize ego spawn against the new
+  ; room's BOXD + obj table (must run after assignActorWalkboxes so the
+  ; pending-obj's walk-to lookup hits the freshly loaded roomObjTable).
+  jsr _scummvm.finalizeEgoSpawn
 
   ; Clear any stale BG3 text from boot scripts before making screen visible
   jsl scummvm.clearDialogTilemap
@@ -1723,6 +1745,140 @@ _aaw.skip16:
   inc a
   cmp #SCUMM_WALK_ACTORS
   bcc _aaw.loop
+  rts
+
+
+;-------------------------------------------------------------------
+; _scummvm.finalizeEgoSpawn -- post-processRoomChange ego positioner.
+;
+; ScummVM's startScene(room, ego, walkToObj) parks ego at walkToObj's
+; walk-to point inside the newly-loaded room, then o5_loadRoomWithEgo
+; calls startWalkActor(x, y) for the bytecode (x, y) target.
+;
+; Our op_loadRoomWithEgo stashes obj/x/y; this routine fires after the
+; new room's BOXD + obj table are live, looks up the obj's walk-to,
+; teleports ego there, assigns the actor walkbox, and (if x != -1)
+; kicks off a walk to (x, y). pendingEgoObj is cleared on every entry
+; so stale state from a prior loadRoom doesn't leak into a fresh one.
+;-------------------------------------------------------------------
+_scummvm.finalizeEgoSpawn:
+  rep #$31
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.pendingEgoObj
+  bne +
+  jmp _fes.exit                      ; no pending op_loadRoomWithEgo
++
+  pha                                ; preserve obj id across actor lookup
+  ; Resolve ego actor struct from globalVar[1] (VAR_EGO). Inline the
+  ; actor-offset compute (getActorPtr is in a different section).
+  ldx #1*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  cmp #SCUMM_MAX_ACTORS
+  bcc +
+  jmp _fes.popExit
++
+  asl a                              ; *16 = sizeof(scummActor)
+  asl a
+  asl a
+  asl a
+  tax
+  stx.w SCUMM.scratch2               ; scratch2 = ego struct offset
+
+  ; If ENCD/entry script already placed ego (SCUMM.egoPositioned set),
+  ; skip the obj-walk-to teleport — ScummVM only positions from
+  ; walkToObj when the entry script didn't claim the spawn first.
+  pla                                ; pop saved obj id (we still need pendingEgoX/Y)
+  sep #$20
+  lda.w SCUMM.egoPositioned
+  rep #$20
+  and #$00FF
+  bne _fes.afterPlace
+
+  ; ENCD didn't position ego — look up obj walk-to in the freshly loaded room.
+  lda.w SCUMM.pendingEgoObj
+  jsl scummvm.lookupObjectWalkTo     ; A=walk_x, scratch=walk_y, C=found
+  bcc _fes.useByteXY                 ; obj missing → fall back to bytecode (x,y)
+  ldx.w SCUMM.scratch2
+  sta.w SCUMM.actors.x,x
+  lda.w SCUMM.scratch
+  sta.w SCUMM.actors.y,x
+  bra _fes.afterPlace
+
+_fes.useByteXY:
+  ; No walk-to obj — drop ego at bytecode (x, y) if provided.
+  lda.w SCUMM.pendingEgoX
+  cmp #$FFFF
+  bne +
+  jmp _fes.exit                      ; no obj AND no x → leave actor in last spot
++
+  ldx.w SCUMM.scratch2
+  sta.w SCUMM.actors.x,x
+  lda.w SCUMM.pendingEgoY
+  sta.w SCUMM.actors.y,x
+
+_fes.afterPlace:
+  ; Clear "moving" so chore engine doesn't carry over a stale walk.
+  ldx.w SCUMM.scratch2
+  sep #$20
+  stz.w SCUMM.actors.moving,x
+  rep #$20
+  ; Re-assign walkboxes now that ego sits on a real point.
+  jsr _scummvm.assignActorWalkboxes
+
+  ; If bytecode target (x, y) is valid AND differs from spawn, kick off a
+  ; path-find so ego walks from the obj walk-to point to (x, y).
+  lda.w SCUMM.pendingEgoX
+  cmp #$FFFF
+  bne +
+  jmp _fes.exit
++
+  ldx.w SCUMM.scratch2
+  cmp.w SCUMM.actors.x,x
+  bne _fes.startWalk
+  lda.w SCUMM.pendingEgoY
+  cmp.w SCUMM.actors.y,x
+  bne _fes.startWalk
+  jmp _fes.exit                      ; (x, y) == spawn → no walk needed
+_fes.startWalk:
+  ; Set actor target slot for the chore engine (mirrors actorAtObj_impl walk path).
+  ldx.w SCUMM.scratch2
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = actor index
+  sta.w SCUMM.scratch3
+  asl a
+  tax
+  lda.w SCUMM.pendingEgoX
+  sta.w SCUMM.actorTargetX,x
+  lda.w SCUMM.pendingEgoY
+  sta.w SCUMM.actorTargetY,x
+  ; buildWalkPath args
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  lda.w SCUMM.pendingEgoX
+  sta.b tmp+4
+  lda.w SCUMM.pendingEgoY
+  sta.b tmp+6
+  lda.w SCUMM.scratch3
+  jsl scummvm.buildWalkPath_long
+  ldx.w SCUMM.scratch2
+  sep #$20
+  lda #1
+  sta.w SCUMM.actors.moving,x
+  rep #$20
+  jmp _fes.exit
+
+_fes.popExit:
+  pla                                ; balance pushed obj id
+_fes.exit:
+  stz.w SCUMM.pendingEgoObj          ; consume regardless of outcome
   rts
 
 
@@ -5089,31 +5245,43 @@ op_equalZero:
   clc
   rts
 
-; isGreater ($78, $F8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b > a) → if(!(b>a)) jump → jump when a >= b
-; cmp does A-scratch = a-b. Carry set when a >= b.
+; ScummVM v5 comparisons are SIGNED int16 (script_v5.cpp line ~1624). The
+; 65816's cmp.w sets carry from an unsigned subtract, so a naive bcc/bcs
+; gives the wrong branch direction whenever a or b spans the signed/
+; unsigned boundary (e.g. -1 = $FFFF compared with 1). Bias both operands
+; with #$8000 before cmp: that flips the sign bit so unsigned ordering on
+; the biased values matches signed ordering on the originals.
+;
+; This bug was caught by tests/scumm_vm/test_runner.lua's ScummVM-derived
+; signed-comparison cases. See README's "Patterns + gotchas".
+
+; isGreater ($78, $F8) — ScummVM: jumpRelative(b > a)  ⇒  jump when a >= b.
 op_isGreater:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.getResultPos
   lda.w SCUMM.resultVar
   jsr _scummvm.readVariable
-  pha
+  pha                            ; save a
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord
-  sta.w SCUMM.scratch
+  sta.w SCUMM.scratch            ; scratch = b
   jsr _scummvm.fetchWord
-  sta.w SCUMM.scratch2
-  pla
-  cmp.w SCUMM.scratch
-  bcc +                          ; a < b → b > a → cond TRUE → skip (fall through)
-    jsr _scummvm.takeRelJump     ; a >= b → !(b>a) → cond FALSE → jump
+  sta.w SCUMM.scratch2           ; jump offset
+  ; Signed-bias both operands so unsigned cmp gives signed result.
+  lda.w SCUMM.scratch
+  eor #$8000
+  sta.w SCUMM.scratch
+  pla                            ; A = a
+  eor #$8000                     ; biased a
+  cmp.w SCUMM.scratch            ; biased a vs biased b (signed via bias)
+  bcc +                          ; signed a < b → b > a → no jump
+    jsr _scummvm.takeRelJump
 +
   clc
   rts
 
-; isLess ($44, $C4) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b < a) → if(!(b<a)) jump → jump when a <= b
+; isLess ($44, $C4) — ScummVM: jumpRelative(b < a) ⇒ jump when a <= b.
 op_isLess:
   .ACCU 16
   .INDEX 16
@@ -5126,19 +5294,21 @@ op_isLess:
   sta.w SCUMM.scratch
   jsr _scummvm.fetchWord
   sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch
+  eor #$8000
+  sta.w SCUMM.scratch
   pla
+  eor #$8000
   cmp.w SCUMM.scratch
-  beq _isL.doJump                ; a == b → !(b<a) → jump
-  bcs +                          ; a > b → b < a → cond TRUE → skip (fall through)
-    ; a < b → !(b<a) → cond FALSE → jump
+  beq _isL.doJump                ; signed a == b → cond FALSE (b !< a) → jump
+  bcs +                          ; signed a > b → b < a TRUE → no jump
 _isL.doJump:
     jsr _scummvm.takeRelJump
 +
   clc
   rts
 
-; isLessEqual ($38, $B8) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b <= a) → if(!(b<=a)) jump → jump when a < b
+; isLessEqual ($38, $B8) — ScummVM: jumpRelative(b <= a) ⇒ jump when a < b.
 op_isLessEqual:
   .ACCU 16
   .INDEX 16
@@ -5151,16 +5321,19 @@ op_isLessEqual:
   sta.w SCUMM.scratch
   jsr _scummvm.fetchWord
   sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch
+  eor #$8000
+  sta.w SCUMM.scratch
   pla
+  eor #$8000
   cmp.w SCUMM.scratch
-  bcs +                          ; a >= b → b <= a → cond TRUE → skip (fall through)
-    jsr _scummvm.takeRelJump     ; a < b → !(b<=a) → cond FALSE → jump
+  bcs +                          ; signed a >= b → b <= a TRUE → no jump
+    jsr _scummvm.takeRelJump
 +
   clc
   rts
 
-; isGreaterEqual ($04, $84) -- getVar + p16[7] + jump
-; ScummVM: jumpRelative(b >= a) → if(!(b>=a)) jump → jump when a > b
+; isGreaterEqual ($04, $84) — ScummVM: jumpRelative(b >= a) ⇒ jump when a > b.
 op_isGreaterEqual:
   .ACCU 16
   .INDEX 16
@@ -5173,11 +5346,15 @@ op_isGreaterEqual:
   sta.w SCUMM.scratch
   jsr _scummvm.fetchWord
   sta.w SCUMM.scratch2
+  lda.w SCUMM.scratch
+  eor #$8000
+  sta.w SCUMM.scratch
   pla
+  eor #$8000
   cmp.w SCUMM.scratch
-  bcc +                          ; a < b → b > a → b >= a → cond TRUE → skip
-  beq +                          ; a == b → b >= a → cond TRUE → skip (fall through)
-    jsr _scummvm.takeRelJump     ; a > b → !(b>=a) → cond FALSE → jump
+  bcc +                          ; signed a < b → b > a → b >= a TRUE → no jump
+  beq +                          ; signed a == b → b >= a TRUE → no jump
+    jsr _scummvm.takeRelJump
 +
   clc
   rts
@@ -5659,11 +5836,24 @@ _freeze.next:
   rts
 
 ; stopObjectScript ($6E, $EE)
+; stopObjectScript ($6E, $EE) -- ScummVM stops slots running script id N
+; (object scripts and global scripts share the slot.number field). Mirror
+; the op_stopScript impl: find slot, killSlotCleanup. Was a stub before.
 op_stopObjectScript:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord
+  and #$00FF
+  beq _stopObjectScript.done            ; script 0 = no-op
+  phy                                    ; save SCUMM PC (findSlotByNumber clobbers Y)
+  jsr _scummvm.findSlotByNumber
+  ply
+  bcc _stopObjectScript.done            ; not running
+  jsr scummvm.killSlotCleanup
+_stopObjectScript.done:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 
@@ -6181,15 +6371,14 @@ op_putActorInRoom:
   ldx.w SCUMM.scratch2
   sep #$20
   sta.w SCUMM.actors.room,x
-  ; room=0 means "remove from room" → clear visible; otherwise set visible
+  ; ScummVM o5_putActorInRoom only sets _room. Visibility is owned by
+  ; putActor / showActor / hideActor — putActorInRoom must NOT touch it
+  ; on a non-zero room. The exception: room == 0 implies a hide
+  ; (ScummVM does `a->putActor(0,0,0)` which calls hideActor → visible=0).
   cmp #0
-  beq +
-    lda #1
-    sta.w SCUMM.actors.visible,x
-    bra ++
-+
+  bne +
     stz.w SCUMM.actors.visible,x
-++
++
   rep #$20
 
   ; If the target room matches currentRoom, flag costumes dirty so the
@@ -6315,6 +6504,7 @@ op_putActor:
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte    ; actor number
+  pha                                ; save raw actor number for VAR_EGO compare
   jsr _scummvm.getActorPtr           ; X = actor table offset (clamped if invalid)
   stx.w SCUMM.scratch2              ; save actor offset
 
@@ -6327,6 +6517,25 @@ op_putActor:
   jsr _scummvm.getVarOrDirectWord    ; y coordinate
   ldx.w SCUMM.scratch2
   sta.w SCUMM.actors.y,x
+
+  ; ScummVM: VAR(VAR_EGO) == actor → _egoPositioned = true. ENCD running
+  ; before finalizeEgoSpawn uses this to claim the spawn slot so the
+  ; obj-walk-to fallback is suppressed.
+  pla                                ; raw actor number
+  and #$00FF
+  pha
+  ldx #1*2
+  lda.w SCUMM.globalVars,x
+  and #$00FF
+  cmp 1,s
+  bne +
+  sep #$20
+  lda #1
+  sta.w SCUMM.egoPositioned
+  rep #$20
++
+  pla                                ; balance pushed actor number
+  ldx.w SCUMM.scratch2
 
   ; ScummVM: putActor(x,y) does NOT change actor's room or visible flag.
   ; Only clears moving. Room is set by putActorInRoom, not putActor.
@@ -6661,9 +6870,30 @@ _actorOps.sub_init_writeFacing:
     ply                              ; restore script PC
     jmp _actorOps.subLoop
 +
-  ;--- Sub 0x0A: animDefault (0 params)
+  ;--- Sub 0x0A: animDefault (0 params) — reset frame fields to ScummVM v5 defaults
   cmp #$0A
-  beq _actorOps.jmp_none
+  bne +
+    lda 1,s                          ; actor struct offset from stack
+    lsr a
+    lsr a
+    lsr a
+    lsr a                            ; /16 = actor number
+    and #$000F
+    tax
+    sep #$20
+    .ACCU 8
+    lda #2
+    sta.w SCUMM.actorWalkAnimNr,x
+    lda #3
+    sta.w SCUMM.actorStandFrame,x
+    lda #4
+    sta.w SCUMM.actorTalkAnimStart,x
+    lda #5
+    sta.w SCUMM.actorTalkAnimEnd,x
+    rep #$20
+    .ACCU 16
+    jmp _actorOps.subLoop
++
   ;--- Sub 0x12: neverZClip (0 params)
   cmp #$12
   beq _actorOps.jmp_none
@@ -7753,13 +7983,18 @@ _setClass.loop:
   sta.w SCUMM.scratch                ; save class value
   and #$00FF
   beq _setClass.clearAll             ; cls == 0 → clear all
-  ; Compute class bit: class_number = (cls & $1F) -- ScummVM uses cls &= 0x1F
-  and #$001F                         ; class number (0-31)
+  ; ScummVM (object.cpp:262-289): cls &= 0x7F, then bit = 1 << (cls - 1).
+  ; Class is 1-indexed; class 1 → bit 0. Our 16-bit objectClass storage
+  ; supports classes 1..16 (bits 0..15); classes 17..32 are silently
+  ; dropped — caller must be aware that kObjectClassUntouchable=32 won't
+  ; round-trip through this path.
+  and #$007F                         ; ScummVM mask: class 0..127
+  dec a                              ; class - 1 (now 0..126; class 0 already filtered)
   cmp #16
-  bcs _setClass.loop                 ; class > 15, unsupported in 16-bit storage
+  bcs _setClass.loop                 ; class - 1 >= 16 → out of 16-bit range, skip
   asl a                              ; x2 for word table lookup
   tax
-  lda.l scummvm.classBitLut,x               ; bit mask for this class position
+  lda.l scummvm.classBitLut,x        ; bit mask for class - 1
   sta.w SCUMM.scratch2               ; save bit mask
   ; Compute object word offset
   ldx.w SCUMM.scratch3               ; obj ID
@@ -8473,67 +8708,64 @@ _roomOps.palManipulate:
 ; loadRoomWithEgo ($24, $64, $A4, $E4) -- p16 + p8[6] + word + word
 ; Sets newRoom and yields (no-op for actor placement)
 ;-------------------------------------------------------------------
+; ScummVM startScene-with-walktarget semantics:
+;   1. Resolve the room (direct param, else ObjRoomTable[obj]).
+;   2. Stash bytecode (x, y) and obj id for the post-room-load fixup —
+;      the new room's BOXD/objects aren't loaded yet, so we cannot
+;      adjustActorPos against them here.
+;   3. After processRoomChange, finalizeEgoSpawn snaps ego onto the obj's
+;      walk-to point and starts a walk to (x, y) if (x, y) != (-1, -1).
 op_loadRoomWithEgo:
   .ACCU 16
   .INDEX 16
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; object (p16[7])
-  pha                                ; save object ID for room lookup
+  sta.w SCUMM.pendingEgoObj          ; latch obj id for finalize hook
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; room number
   and #$00FF
   bne _loadRoomEgo.hasRoom
-  ; room=0: look up room from object via ObjRoomTable (ScummVM: getObjectRoom)
-  pla                                ; A = object ID (16-bit, objects range 0-1045)
-  sta.l $7EFD00                      ; DEBUG: log object ID
-  ; Bounds check: if object >= OBJ_ROOM_TABLE_SIZE, skip
+  ; room=0 → look up via ObjRoomTable (ScummVM: getObjectRoom)
+  lda.w SCUMM.pendingEgoObj
   cmp #OBJ_ROOM_TABLE_SIZE
   bcs _loadRoomEgo.noRoom
   tax
   sep #$20
-  lda.l ObjRoomTable,x              ; A = room number for this object
+  lda.l ObjRoomTable,x
   rep #$20
   and #$00FF
-  beq _loadRoomEgo.noRoom           ; room 0 in table = unknown
-  sta.l $7EFD02                      ; DEBUG: log resolved room
+  beq _loadRoomEgo.noRoom
   sta.w SCUMM.newRoom
-  bra _loadRoomEgo.roomSet
+  bra _loadRoomEgo.fetchXY
 _loadRoomEgo.hasRoom:
-  sta.w SCUMM.newRoom               ; A = room byte from getVarOrDirectByte; high byte already masked to 0
-  pla                                ; discard saved object ID (pla clobbers A, so store first)
-_loadRoomEgo.roomSet:
+  sta.w SCUMM.newRoom
 _loadRoomEgo.noRoom:
-  ; Place ego actor at (x, y) from bytecode (ScummVM: a->putActor(x, y, room))
-  jsr _scummvm.fetchWord             ; x
-  sta.w SCUMM.scratch                ; save x
-  jsr _scummvm.fetchWord             ; y
-  sta.w SCUMM.scratch2               ; save y
-  ; Check x != -1 (ScummVM skips putActor if x == -1)
-  lda.w SCUMM.scratch
-  cmp #$FFFF
-  beq _loadRoomEgo.done
-  ; Get ego actor pointer (VAR_EGO = global[1] = actor number)
-  lda #1                             ; global var 1 = VAR_EGO
+_loadRoomEgo.fetchXY:
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.pendingEgoX            ; bytecode walk-to x ($FFFF = none)
+  jsr _scummvm.fetchWord
+  sta.w SCUMM.pendingEgoY
+
+  ; Park ego in the new room with cleared moving — finalizeEgoSpawn does
+  ; the real position assignment once the new BOXD/obj table is loaded.
+  lda #1
   jsr _scummvm.readVariable          ; A = ego actor number
-  jsr _scummvm.getActorPtr           ; X = actor table offset
-  bcc _loadRoomEgo.done              ; invalid actor → skip
-  ; Write position + room
-  lda.w SCUMM.scratch
-  sta.w SCUMM.actors.x,x
-  lda.w SCUMM.scratch2
-  sta.w SCUMM.actors.y,x
+  jsr _scummvm.getActorPtr
+  bcc _loadRoomEgo.done
   lda.w SCUMM.newRoom
   sep #$20
   sta.w SCUMM.actors.room,x
   lda #1
   sta.w SCUMM.actors.visible,x
-  stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
+  stz.w SCUMM.actors.moving,x
   rep #$20
-  ; ScummVM: camera._follows = a->_number (ego actor)
-  ldx #1*2                           ; VAR_EGO = globalVar[1]
-  lda.w SCUMM.globalVars,x           ; ego actor number
+
+  ; ScummVM: camera._follows = ego
+  ldx #1*2
+  lda.w SCUMM.globalVars,x
   and #$00FF
   sta.w SCUMM.cameraFollows
+
 _loadRoomEgo.done:
   .ACCU 16
   .INDEX 16
@@ -8616,6 +8848,18 @@ op_animateActor:
 
   lda #SCUMM_FLAG_BIT6
   jsr _scummvm.getVarOrDirectByte    ; animation frame
+  ; ScummVM Actor::animateActor (actor.cpp): values $FC..$FF are
+  ; semantic command codes (face camera / stop turn / etc), NOT frame
+  ; numbers. For v5 MI1 they all collapse to "no-op" or "set direction
+  ; that we don't have anyway", so treat them as no-op here and skip
+  ; both the initFrame write and the chore dispatch (which would seed
+  ; bogus frame 252-255).
+  and #$00FF
+  cmp #$FC
+  bcc _opAnimAct.frame                ; < $FC → real frame number
+    clc
+    rts                                ; semantic command → no-op
+_opAnimAct.frame:
   ldx.w SCUMM.scratch2
   sep #$20
   sta.w SCUMM.actors.initFrame,x
@@ -8843,10 +9087,18 @@ _walkActorTo.anim:
   sta.w SCUMM.actors.moving,x
   rep #$20
 
-  ; Seed chore engine with walk anim (ScummVM Actor::startWalkAnim → startAnimActor(_walkFrame))
+  ; Seed chore engine with per-actor walk anim
+  ; (ScummVM Actor::startWalkAnim → startAnimActor(_walkFrame); default 2)
+  ldy.w SCUMM.scratch3                ; Y = actor_num
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorWalkAnimNr, y
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax                                 ; X = walkFrame
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #2                              ; frame = 2 (walk) — v5 default _walkFrame
   jsl scummvm.chore.animateActor_impl
 
   ; Restore SCUMM PC (Y) saved before walkActorTo body
@@ -9796,6 +10048,32 @@ op_getActorFacing:
   jsr _scummvm.getVarOrDirectByte
   jsr _scummvm.getActorPtr
   lda.w SCUMM.actors.facing,x
+  ; ScummVM (util.cpp:41) `newDirToOldDir`: scripts expect 0..3
+  ; (E=1, S=2, W=0, N=3), NOT raw 0/90/180/270 angle.
+  ;   71..109   → 1
+  ;   109..251  → 2  (109 hits first range, returns 1)
+  ;   251..289  → 0  (251 hits second range, returns 2)
+  ;   else      → 3
+  cmp #71
+  bcc _gaf.north
+  cmp #110
+  bcc _gaf.east
+  cmp #252
+  bcc _gaf.south
+  cmp #290
+  bcc _gaf.west
+_gaf.north:
+  lda #3
+  bra _gaf.write
+_gaf.east:
+  lda #1
+  bra _gaf.write
+_gaf.south:
+  lda #2
+  bra _gaf.write
+_gaf.west:
+  lda #0
+_gaf.write:
   jsr _scummvm.writeVariable
   clc
   rts
@@ -9969,9 +10247,78 @@ op_getClosestObjActor:
 ; getDist ($34, $B4) -- result + p16[7] + p16[6] → return 0 (stub)
 ; actorFromPos ($15, $55, $95, $D5) -- result + p16[7] + p16[6] → 0
 ;-------------------------------------------------------------------
+; getDist ($34, $74, $B4, $F4) -- result + p16[7]=a + p16[6]=b
+; ScummVM (object.cpp): result = MIN(getDistance(x1,y1, x2,y2), 0xFE).
+; getDistance is Chebyshev: MAX(|x1-x2|, |y1-y2|).
+; Treat both args as actor IDs (1..15 = chore range, valid actors).
+; Higher IDs (objects) → return 0xFF (unsupported obj-XY lookup here).
 op_getDist:
   .ACCU 16
   .INDEX 16
+  jsr _scummvm.getResultPos
+  lda #SCUMM_FLAG_BIT7
+  jsr _scummvm.getVarOrDirectWord    ; A = arg1
+  pha                                  ; save arg1
+  lda #SCUMM_FLAG_BIT6
+  jsr _scummvm.getVarOrDirectWord    ; A = arg2
+  sta.w SCUMM.scratch3               ; save arg2
+
+  ; --- Read arg1's (x, y) into scratch (x), scratch2 (y) ---
+  pla                                  ; A = arg1
+  cmp #16
+  bcs _gd.notFound                    ; arg1 >= 16 → treat as obj-not-found
+  jsr _scummvm.getActorPtr
+  lda.w SCUMM.actors.x,x
+  sta.w SCUMM.scratch                 ; scratch = x1
+  lda.w SCUMM.actors.y,x
+  sta.w SCUMM.scratch2                ; scratch2 = y1
+
+  ; --- Read arg2's (x, y), compute Chebyshev distance ---
+  lda.w SCUMM.scratch3                ; A = arg2
+  cmp #16
+  bcs _gd.notFound
+  jsr _scummvm.getActorPtr
+  lda.w SCUMM.actors.x,x
+  sec
+  sbc.w SCUMM.scratch                 ; A = x2 - x1
+  bpl +
+    eor #$FFFF                        ; |x2 - x1|
+    inc a
++
+  sta.w SCUMM.scratch                 ; scratch = |dx|
+
+  lda.w SCUMM.actors.y,x
+  sec
+  sbc.w SCUMM.scratch2                ; A = y2 - y1
+  bpl +
+    eor #$FFFF
+    inc a
++
+  ; A = |dy|; pick max(|dx|, |dy|)
+  cmp.w SCUMM.scratch
+  bcs +
+    lda.w SCUMM.scratch                ; |dx| larger
++
+  ; Clamp to 0xFE
+  cmp #$00FF
+  bcc +
+    lda #$00FE
++
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+_gd.notFound:
+  .ACCU 16
+  .INDEX 16
+  lda #$00FF                          ; ScummVM-spec: missing args → 0xFF
+  jsr _scummvm.writeVariable
+  clc
+  rts
+
+; actorFromPos ($15, $55, $95, $D5) -- result + p16[7]=x + p16[6]=y
+; ScummVM: scan actors, return one whose visible bbox contains (x, y).
+; Stub: still returns 0 (full impl needs costume bbox lookup).
 op_actorFromPos:
   .ACCU 16
   .INDEX 16
@@ -10298,6 +10645,12 @@ op_divide:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord
   pha
+  ; fetchWord (called by getVarOrDirectWord) ends with `iny iny` which
+  ; clobbers Z to reflect Y, NOT the fetched value. Re-test A explicitly
+  ; so the zero-divisor branch fires when the divisor is 0.
+  ; (ScummVM-spec: o5_divide setResult(0) on a==0; without this check
+  ; div16 runs with divisor=0 and produces garbage like $FFFF.)
+  cmp #0
   beq _op_div.zero_stk
   lda.w SCUMM.resultVar
   jsr _scummvm.readVariable
@@ -10358,14 +10711,17 @@ _icoi.loop:
   ; A = class value
   and #$00FF
   beq _icoi.clsZero                  ; cls == 0: check if ANY class set
-  ; Extract class number and check/negate flag
+  ; Extract class number and check/negate flag. ScummVM (object.cpp:262):
+  ; cls &= 0x7F, then bit = 1 << (cls - 1) — class is 1-indexed, class 1
+  ; → bit 0. Must match op_setClass exactly or set/check disagree.
   pha                                ; save full cls
-  and #$001F                         ; ScummVM: cls &= 0x1F
+  and #$007F                         ; ScummVM mask: class 0..127
+  dec a                              ; class - 1
   cmp #16
-  bcs _icoi.skipCls                  ; class > 15, unsupported in 16-bit → skip
+  bcs _icoi.skipCls                  ; class - 1 >= 16 → out of 16-bit range
   asl a
   tax
-  lda.l scummvm.classBitLut,x               ; bit mask
+  lda.l scummvm.classBitLut,x        ; bit mask for class - 1
   sta.w SCUMM.scratch2               ; save mask
   pla                                ; recover full cls
   and #$0080                         ; test set flag (bit 7)
@@ -11085,10 +11441,17 @@ _zew.actorArrays:
   sta.w SCUMM.actorWalkSpeedX,x
   sta.w SCUMM.actorWalkSpeedY,x
   sta.w SCUMM.actorAnimSpeed,x
+  ; ScummVM v5 initActor defaults: walkFrame=2 standFrame=3 talkStart=4 talkStop=5
+  pha
+  lda #2
   sta.w SCUMM.actorWalkAnimNr,x
+  lda #3
   sta.w SCUMM.actorStandFrame,x
+  lda #4
   sta.w SCUMM.actorTalkAnimStart,x
+  lda #5
   sta.w SCUMM.actorTalkAnimEnd,x
+  pla
   sta.w SCUMM.actorZClip,x
   sta.w SCUMM.actorWalkBox,x
   sta.w SCUMM.actorIgnoreBoxes,x
@@ -14499,7 +14862,15 @@ _rvbc.done:
   rtl
 
 _rvbc.skip:
-  stz.w SCUMM.verbDirty
+  ; Mark verb tilemap dirty so the verb-render path runs on the first
+  ; gameplay tick after this skip phase (cutscene/userPut<=0 ends).
+  ; Room change calls clearVerbTilemap, and saveRestoreVerbs may also wipe
+  ; the verb table during a cutscene — without this, post-cutscene gameplay
+  ; renders an empty BG2 verb tilemap, exposing tile-0 of the verb font
+  ; across the whole screen (room 33 corruption from natural intro flow).
+  ; renderVerbBar self-clears verbDirty on successful render.
+  lda #1
+  sta.w SCUMM.verbDirty
   ; Hide verb bar by disabling BG2 on main screen
   sep #$20
   lda.w MainScreen
@@ -14588,10 +14959,24 @@ _rvb.verbLoop:
   ; tile_y = (scumm_y - 144) / 8
   lda.w SCUMM.verbs.1.x,x
   and #$00FF
-  ; X is SCUMM pixel coordinate; convert to tile column: x / 8
-  lsr a
-  lsr a
-  lsr a
+  ; SCUMM scripts position verbs assuming a proportional ~7px/char font
+  ; (e.g. Pick up at x=72, Use at x=124 packs cleanly when each char is 7px).
+  ; Our SNES port uses a fixed 8x8 font, so a literal /8 conversion makes
+  ; column-2 / column-3 verbs overlap (7 chars * 8px = 56px > 52px gap).
+  ; Snap to a fixed 3-column grid by SCUMM x range:
+  ;   scumm_x < 50  → tile col  0  (left:   "Walk to / Give / Open / Close")
+  ;   scumm_x < 100 → tile col  9  (middle: "Pick up / Look at / Talk to")
+  ;   scumm_x >= 100→ tile col 18  (right:  "Use / Push / Pull")
+  cmp #50
+  bcs +
+    lda #0
+    bra _rvb.tileXSet
++ cmp #100
+  bcs +
+    lda #9
+    bra _rvb.tileXSet
++ lda #18
+_rvb.tileXSet:
   sta.w SCUMM.scratch
 
   lda.w SCUMM.verbs.1.y,x
@@ -15305,13 +15690,28 @@ _uc.vhYok:
   jmp _uc.verbHitNext
 _uc.vhYnotEq:
 
-  ; Check X: verb.x <= cursorX < verb.x + nameLen*8
+  ; Check X: verb.x_snapped <= cursorX < verb.x_snapped + nameLen*8
+  ;
+  ; The renderer snaps verb x to a fixed 3-column tile grid (col 0 / 9 / 18,
+  ; pixel 0 / 72 / 144) because MI1's scumm_x positions assume a proportional
+  ; ~7px font; our SNES port uses fixed 8x8 tiles. The hit-test must apply
+  ; the same snap so clicking on a rendered verb actually selects it.
   lda.w SCUMM.verbs.1.x,x
   and #$00FF
+  cmp #50
+  bcs +
+    lda #0
+    bra _uc.vhXSnapped
++ cmp #100
+  bcs +
+    lda #72
+    bra _uc.vhXSnapped
++ lda #144
+_uc.vhXSnapped:
   cmp.w SCUMM.actorScreenX
   beq _uc.vhXge
   bcc _uc.vhXge
-  jmp _uc.verbHitNext                 ; verb.x > cursorX
+  jmp _uc.verbHitNext                 ; verb.x_snapped > cursorX
 _uc.vhXge:
   .ACCU 16
   pha
@@ -15321,7 +15721,7 @@ _uc.vhXge:
   asl a
   asl a                               ; nameLen * 8
   clc
-  adc 1,s                             ; verb.x + nameLen*8
+  adc 1,s                             ; verb.x_snapped + nameLen*8
   sta 1,s
   pla
   cmp.w SCUMM.actorScreenX
@@ -16525,6 +16925,10 @@ _cvt.clearLoop:
 
   lda #1
   sta.w SCUMM.verbTilemapNmiPending
+  ; Mark verbs dirty so the next gameplay tick repopulates the tilemap.
+  ; Without this, room change → empty tilemap + verbDirty=0 leaves BG2
+  ; rendering tile-0 across the whole screen post-cutscene.
+  sta.w SCUMM.verbDirty
 
   plb
   plx
@@ -17239,10 +17643,17 @@ _aao.walk:
   sta.w SCUMM.actors.moving,x
   rep #$20
 
-  ; Seed chore engine with walk anim (matches _walkActorTo.anim)
+  ; Seed chore engine with per-actor walk anim (matches _walkActorTo.anim).
+  ldy.w SCUMM.scratch3                     ; Y = actor_num
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorWalkAnimNr, y
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tax                                      ; X = walkFrame
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #2                                   ; frame = 2 (walk) — v5 default _walkFrame
   jsl scummvm.chore.animateActor_impl
 
   rtl
@@ -17281,7 +17692,7 @@ scummvm.moveCamera:
   ; Skip follow if actor isn't in the current room — otherwise per-frame
   ; moveCamera drags the viewport back toward a stale X from a prior room
   ; (e.g. title card room 96 where ego is still in room 38).
-  pha
+  pha                                ; save actor number
   asl a
   asl a
   asl a
@@ -17291,8 +17702,13 @@ scummvm.moveCamera:
   lda.w SCUMM.actors,x              ; actor.room (byte at +0)
   cmp.w SCUMM.currentRoom
   rep #$20
-  pla
-  bne _mc.checkPan                  ; actor not here -> let dest stay at room-center
+  beq _mc.actorInRoom               ; equal: stay in follow path (do NOT pla after pha,
+                                    ;  because pla clobbers Z and would always fire bne)
+  pla                                ; not in room: drop saved actor num
+  jmp _mc.checkPan
+
+_mc.actorInRoom:
+  pla                                ; restore actor number
 
   ; Compute actor X: actors + actorNum*16 + 2
   asl a
@@ -17309,35 +17725,13 @@ scummvm.moveCamera:
   ; screenStartStrip = (cameraPosX - 128) / 8
   ; actorStrip = actorX / 8 - screenStartStrip
   ; If actorStrip < leftTrigger(8) or actorStrip > rightTrigger(24), follow
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda.w SCUMM.globalVars,x          ; cameraPosX (center)
-  sec
-  sbc #128                           ; left edge
-  bcs +
-    lda #0
-+
-  lsr a
-  lsr a
-  lsr a                              ; screenStartStrip = leftEdge / 8
-  sta.w SCUMM.scratch                ; scratch = screenStartStrip
-  lda.w SCUMM.scratch3               ; actorX
-  lsr a
-  lsr a
-  lsr a                              ; actorX / 8
-  sec
-  sbc.w SCUMM.scratch                ; actorStrip = actorX/8 - screenStartStrip
-  cmp #8                             ; leftTrigger = 8 strips (64px from left)
-  bcc _mc.follow                     ; actor too far left → follow
-  cmp #25                            ; rightTrigger = 24, so > 24 means >= 25
-  bcc _mc.checkPan                   ; within safe zone, don't update dest
-
-_mc.follow:
-  .ACCU 16
-  .INDEX 16
-  ; Set cameraDest = actorX
-  lda.w SCUMM.scratch3
+  ; Always center on the followed actor — clamping to MIN_X/MAX_X below
+  ; keeps the camera inside the room data area. This deviates from
+  ; ScummVM v5's strip-trigger dead zone in favor of strict centering.
+  lda.w SCUMM.scratch3                ; actorX
   sta.w SCUMM.cameraDest
 
+_mc.follow:                            ; (label kept for legacy bra targets)
 _mc.checkPan:
   .ACCU 16
   .INDEX 16
@@ -17358,50 +17752,19 @@ _mc.checkPan:
     sta.w SCUMM.cameraDest
 +
 
-  ; Move cameraPosX toward cameraDest
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda.w SCUMM.globalVars,x          ; current camera pos
-  cmp.w SCUMM.cameraDest
-  beq _mc.updateRoom                ; already at destination
-  bcc _mc.moveRight
-
-  ; Move left: step = min(cur - dest, fast_x)
-  sec
-  sbc.w SCUMM.cameraDest
-  sta.w SCUMM.scratch3              ; delta
-  ldx #SCUMM_VAR_CAMERA_FAST_X*2
-  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
-  bcc +
-    lda.w SCUMM.globalVars,x
-    sta.w SCUMM.scratch3
-+
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda.w SCUMM.globalVars,x
-  sec
-  sbc.w SCUMM.scratch3
-  sta.w SCUMM.globalVars,x
-  bra _mc.updateRoom
-
-_mc.moveRight:
-  .ACCU 16
-  .INDEX 16
-  ; step = min(dest - cur, fast_x)
+  ; Snap cameraPosX directly to cameraDest. The user wants the camera
+  ; centered on the followed actor immediately — no FAST_X interpolation.
+  ; This eliminates the "fly to actor" animation on room load (camera
+  ; was spawning at a stale center position then panning to ego over many
+  ; frames). For SCUMM panCameraTo cutscene panning, scripts must clear
+  ; cameraFollows so this branch doesn't override the pan target.
   lda.w SCUMM.cameraDest
   ldx #SCUMM_VAR_CAMERA_POS_X*2
-  sec
-  sbc.w SCUMM.globalVars,x          ; delta = dest - cur
-  sta.w SCUMM.scratch3
-  ldx #SCUMM_VAR_CAMERA_FAST_X*2
-  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_FAST_X
-  bcc +
-    lda.w SCUMM.globalVars,x
-    sta.w SCUMM.scratch3
-+
-  ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda.w SCUMM.globalVars,x
-  clc
-  adc.w SCUMM.scratch3
   sta.w SCUMM.globalVars,x
+  ; (legacy labels kept so any external bra/jmp targets still resolve)
+  bra _mc.updateRoom
+
+_mc.moveRight:                      ; (unreachable; retained for legacy refs)
 
 _mc.updateRoom:
   .ACCU 16

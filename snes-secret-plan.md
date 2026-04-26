@@ -1008,7 +1008,7 @@ Actual blockers to controllable gameplay right now, in priority order:
 1. **Part One title card never advances** — room 96 script stalls (wait opcode? timer gate? — needs Aramis trace)
 2. **Part One text not centered** — title text positioning bug in room 96 (or in extractAndRenderString centering)
 3. **Title-screen mountain cloud flicker** — room 38 backdrop rendering defect, not CYCL-driven (metadata confirms)
-4. **Campfire not animating + stray OAM upper-left** during old man intro (room 38)
+4. ~~**Campfire not animating + stray OAM upper-left** during old man intro (room 38)~~ — RESOLVED. Chore engine stopped-bit mechanism ($79/$7A) + highflag (extra&$80 → curpos bit 15) + cs=$FFFF limb-disable ported from ScummVM. setActorCostume dual-seeds init+stand with preserve flag; loadActorCostumes re-seeds on room entry; renderer gates limb drawing on choreStopped. Chore dispatch formula corrected to ScummVM v5 `cmd = frame >> 2` and `op_faceActor` now computes east/west from target.x lookup (commit 337b596). Campfire cycles 00→01→02→03, Guybrush faces west toward old man, old man turns east during dialog.
 5. **Dialog choice selection** — choices render but no d-pad+A cursor-highlight-and-select. Blocks pirate conversations.
 
 Items 1–4 are the current working-plan. Item 5 remains for when gameplay reaches the Scumm Bar.
@@ -1068,13 +1068,13 @@ Items 1–4 are the current working-plan. Item 5 remains for when gameplay reach
 **Costume Pipeline (follow-up):**
 - [x] DCOS mapping — gen_costume_rom.py now indexes CostumeDirTable by SCUMM resource ID (2026-03-29)
 - [x] Sparse lookup tables — pic file number indexing with gap fallback, fixes frame alignment (2026-03-29)
-- [ ] Walk cycle table generalization — extract animation data from COST chunks instead of hardcoding costume 1's cycle
+- [x] Walk cycle table generalization — chore engine (`scummvm_chore.65816`) is now the sole anim driver. Legacy `CostumeWalkCycle` / `CostumeHeadCycle` tables and `actorAnimFrame` / `actorAnimTimer` WRAM deleted (commits cb8188b, 3f613e6, dbb11e4). Renderer reads body/head pic straight from `SCUMM.chorePic` — all 119 costumes cycle from their own COST/CHOR data.
 - [ ] Costume palette per-room — some costumes may look wrong with their source room's palette when used in a different room
 
 **Cutscene System:**
-- [ ] beginOverride/endOverride opcodes — cutscene stack, ESC-to-skip
-- [ ] freezeScripts — pause non-current scripts during cutscenes (8 MI1 occurrences)
-- [ ] cursorCommand sub-opcodes — user interaction enable/disable
+- [x] beginOverride/endOverride opcodes — cutscene stack + VAR_OVERRIDE + fetchLoop read wired (session 4, 2026-04-05; stillbroken.txt items 13A/B/C)
+- [x] freezeScripts — `op_freezeScripts` at scummvm.65816:5351 walks slots, increments/decrements freezeCount
+- [x] cursorCommand sub-opcodes — `op_cursorCommand` at scummvm.65816:5651 dispatches sub-ops 1–14 (cursor on/off, userput on/off, image, hotspot, charset color)
 
 **Dialog:**
 - [ ] Dialog choice selection — cursor highlights choices, d-pad+A to select

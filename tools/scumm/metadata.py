@@ -206,7 +206,17 @@ def _parse_obcd(data: bytes) -> dict:
                 result['walk_x'] = walk_x
                 result['walk_y'] = walk_y
                 result['actor_dir'] = (h & 0x07)
-                result['initial_state'] = d[12] if len(d) > 12 else 1
+                # ScummVM v5: object's initial state is encoded in the
+                # `flags` byte (offset 6 of CDHD). The legacy code at byte 12
+                # was reading actordir, not state — produced state=3 for
+                # MI1 obj 428 (SCUMM bar door) which kept it stuck closed.
+                #   if (flags == 0x80) → state = 1
+                #   else               → state = flags & 0x0F
+                # See ScummEngine::resetRoomObjects in scummvm/object.cpp.
+                if flags == 0x80:
+                    result['initial_state'] = 1
+                else:
+                    result['initial_state'] = flags & 0x0F
 
         elif sub.tag == 'VERB':
             # VERB chunk: verb table entries {verb_id:u8, offset:u16} terminated

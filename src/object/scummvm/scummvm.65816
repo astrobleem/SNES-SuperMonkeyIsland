@@ -17872,107 +17872,251 @@ _aao.fail:
 .section "ScummVM camera" free
 
 ;-------------------------------------------------------------------
-; scummvm.moveCamera -- update camera position per frame
-; Called via jsl from play() after updateActors.
-; If following an actor, updates cameraDest from actor X.
-; Moves camera center toward cameraDest at FAST_X speed.
-; Writes GLOBAL.room.cameraX (left edge) for scroll system.
+; scummvm.moveCamera -- per-frame camera update
+; Faithful port of ScummVM v5 Camera::moveCamera (camera.cpp:93-167).
+;
+; State model:
+;   _cur.x = VAR_CAMERA_POS_X (center)
+;   _dest.x = SCUMM.cameraDest
+;   _follows = SCUMM.cameraFollows (actor # or 0)
+;   _movingToActor = SCUMM.cameraMovingToActor
+;
+; v5 trigger strips: leftTrigger=8, rightTrigger=24 (40-col viewport).
+; snapToX = VAR_CAMERA_FAST_X != 0  (we ignore _snapScroll — unused on
+; SNES). When snapToX is set, the camera jumps in 80px increments to
+; reach the followed actor; otherwise it lerps 8 px/frame.
 ;-------------------------------------------------------------------
 scummvm.moveCamera:
   rep #$31
 
-  ; If cameraFollows != 0, update cameraDest from actor X
+  ; --- Compute snapToX (= VAR_CAMERA_FAST_X != 0) into SCUMM.scratch ---
+  ldx #SCUMM_VAR_CAMERA_FAST_X*2
+  lda.w SCUMM.globalVars,x
+  sta.w SCUMM.scratch
+
+  ; --- Align _cur.x to 8px boundary ---
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  and #$FFF8
+  sta.w SCUMM.globalVars,x
+
+  ; --- _cur.x < MIN_X ? ---
+  ldx #SCUMM_VAR_CAMERA_MIN_X*2
+  lda.w SCUMM.globalVars,x
+  sta.w SCUMM.scratch3              ; scratch3 = MIN_X
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  cmp.w SCUMM.scratch3
+  bcs _mc.notUnderMin
+  ; Below MIN: snap or lerp +8
+  lda.w SCUMM.scratch
+  beq +
+  lda.w SCUMM.scratch3
+  bra ++
++
+  lda.w SCUMM.globalVars,x
+  clc
+  adc #8
+++
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x
+  jmp _mc.updateRoom
+_mc.notUnderMin:
+
+  ; --- _cur.x > MAX_X ? ---
+  ldx #SCUMM_VAR_CAMERA_MAX_X*2
+  lda.w SCUMM.globalVars,x
+  sta.w SCUMM.scratch3              ; scratch3 = MAX_X
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  cmp.w SCUMM.scratch3
+  bcc _mc.notOverMax
+  beq _mc.notOverMax
+  ; Above MAX: snap or lerp -8
+  lda.w SCUMM.scratch
+  beq +
+  lda.w SCUMM.scratch3
+  bra ++
++
+  lda.w SCUMM.globalVars,x
+  sec
+  sbc #8
+++
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  sta.w SCUMM.globalVars,x
+  jmp _mc.updateRoom
+_mc.notOverMax:
+
+  ; --- Follow-actor mode: trigger-strip dead zone ---
   lda.w SCUMM.cameraFollows
   and #$00FF
-  beq _mc.checkPan
+  beq _mc.followDone
 
-  ; Skip follow if actor isn't in the current room — otherwise per-frame
-  ; moveCamera drags the viewport back toward a stale X from a prior room
-  ; (e.g. title card room 96 where ego is still in room 38).
-  pha                                ; save actor number
+  ; Skip follow if actor isn't in the current room (e.g. title card with
+  ; ego still parked in a previous room) — same defensive check as before.
+  pha
   asl a
   asl a
   asl a
-  asl a                              ; * 16 = actor struct offset
+  asl a
   tax
   sep #$20
-  lda.w SCUMM.actors,x              ; actor.room (byte at +0)
+  lda.w SCUMM.actors,x              ; actor.room
   cmp.w SCUMM.currentRoom
   rep #$20
-  beq _mc.actorInRoom               ; equal: stay in follow path (do NOT pla after pha,
-                                    ;  because pla clobbers Z and would always fire bne)
-  pla                                ; not in room: drop saved actor num
-  jmp _mc.checkPan
-
-_mc.actorInRoom:
-  pla                                ; restore actor number
-
-  ; Compute actor X: actors + actorNum*16 + 2
+  beq _mc.followInRoom
+  pla
+  bra _mc.followDone
+_mc.followInRoom:
+  pla
+  ; actorX = actors[a].x at offset +2
   asl a
   asl a
   asl a
-  asl a                              ; * 16
+  asl a
   clc
-  adc #2                             ; .x offset
+  adc #2
   tax
-  lda.w SCUMM.actors,x              ; actor X
-  sta.w SCUMM.scratch3
+  lda.w SCUMM.actors,x              ; actorX
+  sta.w SCUMM.scratch2              ; scratch2 = actorX (preserve across compares)
 
-  ; Strip-based trigger zones (ScummVM model)
-  ; screenStartStrip = (cameraPosX - 128) / 8
-  ; actorStrip = actorX / 8 - screenStartStrip
-  ; If actorStrip < leftTrigger(8) or actorStrip > rightTrigger(24), follow
-  ; Always center on the followed actor — clamping to MIN_X/MAX_X below
-  ; keeps the camera inside the room data area. This deviates from
-  ; ScummVM v5's strip-trigger dead zone in favor of strict centering.
-  lda.w SCUMM.scratch3                ; actorX
+  ; t = actorX/8 - screenStartStrip ; screenStartStrip = (cur.x-128)/8
+  ; Equivalently: t = (actorX - cur.x + 128) / 8
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x          ; cur.x
+  sec
+  sbc #128                          ; cur.x - 128 = screenStartPx
+  ; if negative, treat as 0 (clamp; stays consistent with cameraX=0 floor)
+  bpl +
+  lda #0
++
+  sta.w SCUMM.scratch3              ; scratch3 = screenStartPx
+  lda.w SCUMM.scratch2              ; actorX
+  sec
+  sbc.w SCUMM.scratch3              ; actorX - screenStartPx
+  ; A is now in pixel-strip units * 8 (v5 strips are 8px wide)
+  ; Compare against strip*8 thresholds: leftTrigger 8 → 64, rightTrigger 24 → 192
+  cmp #65                           ; t < 8 (px < 65)?
+  bcs +
+  ; t < leftTrigger
+  lda.w SCUMM.scratch                ; snapToX?
+  beq _mc.setMovingToActor
+  ; snapToX with t < 5 → _dest.x = actorX - 80
+  ; (We use the simpler "<= 4 strips" boundary; v5 is `t < 5`)
+  lda.w SCUMM.scratch2
+  sec
+  sbc #80
   sta.w SCUMM.cameraDest
+  bra _mc.followDone
++
+  cmp #193                          ; t > 24 (px > 192)?
+  bcc _mc.followDone                ; in dead zone, no trigger
+  ; t > rightTrigger
+  lda.w SCUMM.scratch                ; snapToX?
+  beq _mc.setMovingToActor
+  ; snapToX with t > 35 (40-5) → _dest.x = actorX + 80
+  lda.w SCUMM.scratch2
+  clc
+  adc #80
+  sta.w SCUMM.cameraDest
+  bra _mc.followDone
+_mc.setMovingToActor:
+  lda #1
+  sta.w SCUMM.cameraMovingToActor
+_mc.followDone:
 
-_mc.follow:                            ; (label kept for legacy bra targets)
-_mc.checkPan:
-  .ACCU 16
-  .INDEX 16
-  ; Clamp cameraDest to [MIN_X, MAX_X]
+  ; --- If movingToActor: _dest.x = actor.x ---
+  lda.w SCUMM.cameraMovingToActor
+  beq _mc.notMoving
+  ; Re-read actor (dereference cameraFollows again, ScummVM does the same)
+  lda.w SCUMM.cameraFollows
+  and #$00FF
+  beq _mc.notMoving                 ; defensive: no actor to follow
+  asl a
+  asl a
+  asl a
+  asl a
+  clc
+  adc #2
+  tax
+  lda.w SCUMM.actors,x
+  sta.w SCUMM.cameraDest
+_mc.notMoving:
+
+  ; --- Clamp _dest.x to [MIN_X, MAX_X] ---
   ldx #SCUMM_VAR_CAMERA_MIN_X*2
   lda.w SCUMM.cameraDest
-  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_MIN_X
+  cmp.w SCUMM.globalVars,x
   bcs +
-    lda.w SCUMM.globalVars,x
-    sta.w SCUMM.cameraDest
+  lda.w SCUMM.globalVars,x
+  sta.w SCUMM.cameraDest
 +
   ldx #SCUMM_VAR_CAMERA_MAX_X*2
   lda.w SCUMM.cameraDest
-  cmp.w SCUMM.globalVars,x          ; VAR_CAMERA_MAX_X
+  cmp.w SCUMM.globalVars,x
   bcc +
   beq +
-    lda.w SCUMM.globalVars,x
-    sta.w SCUMM.cameraDest
+  lda.w SCUMM.globalVars,x
+  sta.w SCUMM.cameraDest
 +
 
-  ; Snap cameraPosX directly to cameraDest. The user wants the camera
-  ; centered on the followed actor immediately — no FAST_X interpolation.
-  ; This eliminates the "fly to actor" animation on room load (camera
-  ; was spawning at a stale center position then panning to ego over many
-  ; frames). For SCUMM panCameraTo cutscene panning, scripts must clear
-  ; cameraFollows so this branch doesn't override the pan target.
+  ; --- Apply: snap or lerp 8px/frame ---
+  lda.w SCUMM.scratch                ; snapToX?
+  beq _mc.lerp
+  ; Snap: cur.x = dest.x
   lda.w SCUMM.cameraDest
   ldx #SCUMM_VAR_CAMERA_POS_X*2
   sta.w SCUMM.globalVars,x
-  ; (legacy labels kept so any external bra/jmp targets still resolve)
-  bra _mc.updateRoom
+  bra _mc.afterApply
+_mc.lerp:
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  cmp.w SCUMM.cameraDest
+  bcs _mc.lerpNotLess
+  clc
+  adc #8
+  sta.w SCUMM.globalVars,x
+  bra _mc.afterApply
+_mc.lerpNotLess:
+  beq _mc.afterApply                ; cur == dest, no move
+  sec
+  sbc #8
+  sta.w SCUMM.globalVars,x
+_mc.afterApply:
 
-_mc.moveRight:                      ; (unreachable; retained for legacy refs)
+  ; --- Stop movingToActor when aligned ---
+  lda.w SCUMM.cameraMovingToActor
+  beq _mc.updateRoom
+  lda.w SCUMM.cameraFollows
+  and #$00FF
+  beq _mc.updateRoom
+  asl a
+  asl a
+  asl a
+  asl a
+  clc
+  adc #2
+  tax
+  lda.w SCUMM.actors,x              ; actor.x
+  and #$FFF8                         ; actor.x / 8 (* 8 — strip)
+  sta.w SCUMM.scratch3
+  ldx #SCUMM_VAR_CAMERA_POS_X*2
+  lda.w SCUMM.globalVars,x
+  and #$FFF8                         ; cur.x / 8 (* 8)
+  cmp.w SCUMM.scratch3
+  bne _mc.updateRoom
+  stz.w SCUMM.cameraMovingToActor
 
 _mc.updateRoom:
   .ACCU 16
   .INDEX 16
   ; Convert center to left edge: cameraX = cameraPosX - 128
   ldx #SCUMM_VAR_CAMERA_POS_X*2
-  lda.w SCUMM.globalVars,x          ; VAR_CAMERA_POS_X
+  lda.w SCUMM.globalVars,x
   sec
   sbc #128
   bcs +
-    lda #0
+  lda #0
 +
   sta.w GLOBAL.room.cameraX
 

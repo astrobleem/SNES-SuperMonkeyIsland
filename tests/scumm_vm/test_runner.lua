@@ -212,8 +212,8 @@ local SCUMM_actorTargetX      = 0x7EFBC7   -- 16 actors × 2 bytes each
 local SCUMM_actorTargetY      = 0x7EFBE7
 local SCUMM_cutsceneNest      = 0x7EF8E3
 local SCUMM_cutScenePtr       = 0x7EF981   -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest        = 0x7EFEBC
-local SCUMM_cameraFollows     = 0x7EFEBA
+local SCUMM_cameraDest        = 0x7EFEAA
+local SCUMM_cameraFollows     = 0x7EFEA8
 
 -- TEST: op_putActor — literal coords (opcode $01, no flag bits set).
 --   $01 actor=byte x=word y=word
@@ -2314,8 +2314,8 @@ end
 
 local SCUMM_cutsceneNest = 0x7EF8E3
 local SCUMM_cutScenePtr  = 0x7EF981  -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest    = 0x7EFEBC
-local SCUMM_cameraFollows = 0x7EFEBA
+local SCUMM_cameraDest    = 0x7EFEAA
+local SCUMM_cameraFollows = 0x7EFEA8
 
 -- $40 op_cutscene + $A0 stopObjectCode: when the slot terminates, our
 -- killSlotCleanup decrements cutsceneNest by the slot's cutsceneOverride

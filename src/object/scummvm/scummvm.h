@@ -634,8 +634,11 @@ SCUMM.keyAckDelay        dw      ; frames var[105] has been 0 while button held 
 ; Camera state
 ;---------------------------------------------------------------------------
 .ramsection "scumm camera state" bank 0 slot 1
-SCUMM.cameraFollows   dw      ; actor number to follow (0 = none)
-SCUMM.cameraDest      dw      ; target camera center X (for pan/follow)
+SCUMM.cameraFollows         dw  ; actor number to follow (0 = none)
+SCUMM.cameraDest            dw  ; target camera center X (for pan/follow)
+SCUMM.cameraMovingToActor   dw  ; ScummVM Camera::_movingToActor — non-zero
+                                ; while camera is lerping toward followed actor
+                                ; after a strip-trigger fired
 .ends
 
 ; Room effect state

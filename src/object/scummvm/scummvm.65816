@@ -6731,36 +6731,62 @@ op_putActor:
   lda.b tmp+2
   pha
 
-  ; Branch on room match
+  ; Branch on room match.
+  ; ScummVM Actor::putActor (actor.cpp:1753-1770) gating:
+  ;   if (_visible)
+  ;     if (isInCurrentRoom())  -> stopMoving + standFrame + adjustActorPos
+  ;     else                    -> hideActor
+  ;   else
+  ;     if (isInCurrentRoom())  -> showActor (NO snap!)
+  ; Critical: when actor was hidden (visible=0) and is now placed in
+  ; current room, ScummVM only sets visible=1; it does NOT snap. This
+  ; matters for actors placed at "off-screen sentinel" coords like
+  ; room 38's campfire putActor(actor=3, x=9216, y=904) -- those coords
+  ; intentionally far from any walkbox; snapping would yank them onto
+  ; the closest walkbox, overlapping the old man (bug 4 regression).
   ldx.w SCUMM.scratch2
   sep #$20
   .ACCU 8
+  ; Capture the OLD visible flag before we mutate state.
+  lda.w SCUMM.actors.visible,x
+  pha                                ; save old visible
   lda.w SCUMM.actors.room,x
   cmp.w SCUMM.currentRoom
-  bne _opa.notInRoom
+  beq _opa.inRoom
 
+  ; ---- Not in current room ----
+  ; ScummVM: if (_visible) hideActor(). Our equivalent: clear visible.
+  ; If actor wasn't visible, no-op on visibility but still clear moving.
+  stz.w SCUMM.actors.visible,x
+  stz.w SCUMM.actors.moving,x
+  pla                                ; discard saved visible
+  bra _opa.restore
+
+_opa.inRoom:
   ; ---- In current room ----
-  ; If was moving, stand-anim seed + clear moving
+  pla                                ; A = OLD visible
+  beq _opa.wasHidden
+
+  ; was visible AND in current room -> stopMoving + standFrame + snap
   lda.w SCUMM.actors.moving,x
   beq _opa.notMoving
   stz.w SCUMM.actors.moving,x
   rep #$20
   .ACCU 16
-  ; seed stand anim: A=actor index, X=frame=3 (v5 _standFrame)
   txa
   lsr a
   lsr a
   lsr a
   lsr a                              ; A = actor index
-  ldx #3                             ; frame = 3
+  ldx #3                             ; frame = 3 (v5 _standFrame)
   jsl scummvm.chore.animateActor_impl
-  ldx.w SCUMM.scratch2               ; reload struct offset
+  ldx.w SCUMM.scratch2
   sep #$20
   .ACCU 8
 _opa.notMoving:
   rep #$20
   .ACCU 16
-  ; adjustActorPos: snap actor.x/y to closest walkbox + update walkbox
+  ; adjustActorPos snap (only when WAS visible)
   lda.w SCUMM.actors.x,x
   sta.w SCUMM.bwpTargetX
   lda.w SCUMM.actors.y,x
@@ -6771,28 +6797,25 @@ _opa.notMoving:
   sta.w SCUMM.actors.x,x
   lda.w SCUMM.bwpTargetY
   sta.w SCUMM.actors.y,x
-  ; actorWalkBox[actor] = bwpDestBox
   txa
   lsr a
   lsr a
   lsr a
-  lsr a                              ; A = actor index
+  lsr a
   tay
   lda.w SCUMM.bwpDestBox
   sep #$20
   .ACCU 8
   sta.w SCUMM.actorWalkBox,y
-  ; showActor: ensure visible (Actor::putActor sets visible if was hidden;
-  ; visible already 1 is a no-op)
   ldx.w SCUMM.scratch2
-  lda #1
-  sta.w SCUMM.actors.visible,x
   bra _opa.restore
 
-_opa.notInRoom:
-  ; ---- Not in current room: hideActor ----
-  stz.w SCUMM.actors.visible,x
-  stz.w SCUMM.actors.moving,x
+_opa.wasHidden:
+  ; was hidden AND now in current room -> showActor (no snap, no
+  ; coord/walkbox modification). Coords stay at the literal putActor
+  ; values; ego-vs-actor compositing is the script's responsibility.
+  lda #1
+  sta.w SCUMM.actors.visible,x
 
 _opa.restore:
   rep #$20

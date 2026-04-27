@@ -18,14 +18,14 @@ H.SYM = {
   SCUMM_actor_stride  = 16,
   SCUMM_slots_base    = 0x7ED1EA,
   SCUMM_slot_stride   = 64,
-  SCUMM_currentRoom   = 0x7EF967,
-  SCUMM_newRoom       = 0x7EF969,
+  SCUMM_currentRoom   = 0x7EF8E7,
+  SCUMM_newRoom       = 0x7EF8E9,
   SCUMM_globalVars    = 0x7ECBAA,
-  SCUMM_pendingEgoObj = 0x7EFA1F,
-  SCUMM_pendingEgoX   = 0x7EFA21,
-  SCUMM_pendingEgoY   = 0x7EFA23,
-  SCUMM_egoPositioned = 0x7EFA25,
-  SCUMM_bitVars       = 0x7EF657,    -- 256 bytes = 2048 bit-vars, 1 bit each
+  SCUMM_pendingEgoObj = 0x7EF99F,
+  SCUMM_pendingEgoX   = 0x7EF9A1,
+  SCUMM_pendingEgoY   = 0x7EF9A3,
+  SCUMM_egoPositioned = 0x7EF9A5,
+  SCUMM_bitVars       = 0x7EF5D7,    -- 256 bytes = 2048 bit-vars, 1 bit each
   SCUMM_cache_base    = 0x7F6400,
   slot_status = 0, slot_number = 1, slot_where = 2, slot_freezeCount = 3,
   slot_pc = 4, slot_cachePtr = 6, slot_cacheLen = 8, slot_delay = 10,
@@ -201,19 +201,19 @@ end
 local SCUMM_objectOwner       = 0x7EE22A   -- byte per obj
 local SCUMM_objectState       = 0x7EDE2A   -- byte per obj
 local SCUMM_objectClass       = 0x7EBBAA   -- word per obj
-local SCUMM_actorWalkBox      = 0x7EEED2   -- byte per actor (16 actors)
-local SCUMM_actorWidth        = 0x7EEEF2   -- byte per actor (16 actors)
-local SCUMM_actorIgnoreBoxes  = 0x7EEEE2   -- byte per actor
-local SCUMM_actorWalkAnimNr   = 0x7EEF32   -- byte per actor — _walkFrame
-local SCUMM_actorStandFrame   = 0x7EEF42   -- byte per actor — _standFrame
-local SCUMM_actorTalkAnimStart= 0x7EEF52   -- byte per actor — _talkStartFrame
-local SCUMM_actorTalkAnimEnd  = 0x7EEF62   -- byte per actor — _talkStopFrame
-local SCUMM_actorTargetX      = 0x7EFBC9   -- 16 actors × 2 bytes each
-local SCUMM_actorTargetY      = 0x7EFBE9
-local SCUMM_cutsceneNest      = 0x7EF965
-local SCUMM_cutScenePtr       = 0x7EFA03   -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest        = 0x7EFEB9
-local SCUMM_cameraFollows     = 0x7EFEB7
+local SCUMM_actorWalkBox      = 0x7EF0B4   -- byte per actor (16 actors)
+local SCUMM_actorWidth        = 0x7EF0D4   -- byte per actor (16 actors)
+local SCUMM_actorIgnoreBoxes  = 0x7EF0C4   -- byte per actor
+local SCUMM_actorWalkAnimNr   = 0x7EF114   -- byte per actor — _walkFrame
+local SCUMM_actorStandFrame   = 0x7EF124   -- byte per actor — _standFrame
+local SCUMM_actorTalkAnimStart= 0x7EF134   -- byte per actor — _talkStartFrame
+local SCUMM_actorTalkAnimEnd  = 0x7EF144   -- byte per actor — _talkStopFrame
+local SCUMM_actorTargetX      = 0x7EFB49   -- 16 actors × 2 bytes each
+local SCUMM_actorTargetY      = 0x7EFB69
+local SCUMM_cutsceneNest      = 0x7EF8E5
+local SCUMM_cutScenePtr       = 0x7EF983   -- 5 nest levels × 2 bytes
+local SCUMM_cameraDest        = 0x7EFE3E
+local SCUMM_cameraFollows     = 0x7EFE3C
 
 -- TEST: op_putActor — literal coords (opcode $01, no flag bits set).
 --   $01 actor=byte x=word y=word
@@ -748,7 +748,7 @@ end
 -- Use actor 20 (above SCUMM_WALK_ACTORS=16, untouched by chore tick).
 -- ============================================================================
 
-local SCUMM_actorIgnoreBoxes = 0x7EEEE2
+local SCUMM_actorIgnoreBoxes = 0x7EF0C4
 
 -- ============================================================================
 -- PHASE C — Cross-cutting & multi-frame
@@ -848,7 +848,7 @@ end
 -- so MI1 keeps running.
 -- ============================================================================
 
-local SCUMM_boxCount      = 0x7EFDE7
+local SCUMM_boxCount      = 0x7EFD67
 local SCUMM_BOX_WRAM      = 0x7F5000   -- box count word + 20-byte entries
 
 -- Stage one walkbox at index `idx` (1..N — index 0 is the sentinel).
@@ -954,9 +954,9 @@ end
 -- actor (commit 921e287).
 -- ============================================================================
 
-local SCUMM_boxMatrixPtr  = 0x7EFDE9
-local SCUMM_walkPathLen   = 0x7EEEB2
-local SCUMM_actorIgnoreBoxes = 0x7EEEE2
+local SCUMM_boxMatrixPtr  = 0x7EFD69
+local SCUMM_walkPathLen   = 0x7EF094
+local SCUMM_actorIgnoreBoxes = 0x7EF0C4
 
 -- Stage a 3x3 BOXM matrix at $7F:5060 (well past the BOXD entries).
 -- Each entry is the next-hop box (or $FF for no route). Updates
@@ -1091,8 +1091,8 @@ end
 -- invariants rather than opcode semantics.
 -- ============================================================================
 
-local SCUMM_actorsDirty   = 0x7EFE29
-local Mesen_ScreenBrightness = 0x7EFD7D
+local SCUMM_actorsDirty   = 0x7EFDA9
+local Mesen_ScreenBrightness = 0x7EFCFD
 
 -- After harness boot wait, the game has reached a stable state. Verify:
 --   * currentRoom != 0 (we're inside a room)
@@ -1288,8 +1288,8 @@ end
 -- globalVars[52]/[53].
 -- ============================================================================
 
-local SCUMM_cursorEnabled = 0x7EFE13
-local SCUMM_userPut       = 0x7EFE15
+local SCUMM_cursorEnabled = 0x7EFD93
+local SCUMM_userPut       = 0x7EFD95
 
 function test_phaseB_cursorCommand_01_cursorOn()
   H.wr8(SCUMM_cursorEnabled, 0)
@@ -1714,8 +1714,8 @@ end
 -- ---------------------------------------------------------------------------
 local SCUMM_objectOwner    = 0x7EE22A   -- byte per obj
 local SCUMM_objectState    = 0x7EDE2A   -- byte per obj
-local SCUMM_actorWalkBox   = 0x7EEED2   -- byte per actor (16 actors)
-local SCUMM_actorWidth     = 0x7EEEF2   -- byte per actor (16 actors)
+local SCUMM_actorWalkBox   = 0x7EF0B4   -- byte per actor (16 actors)
+local SCUMM_actorWidth     = 0x7EF0D4   -- byte per actor (16 actors)
 function test_setState()
   H.wr8(SCUMM_objectState + 75, 0)
   -- $07 obj=75 state=5
@@ -2068,8 +2068,8 @@ end
 -- ScummVM: a->startWalkActor(x, y, dir).
 -- ============================================================================
 
-local SCUMM_actorTargetX = 0x7EFBC9   -- 16 actors × 2 bytes each
-local SCUMM_actorTargetY = 0x7EFBE9
+local SCUMM_actorTargetX = 0x7EFB49   -- 16 actors × 2 bytes each
+local SCUMM_actorTargetY = 0x7EFB69
 
 -- $1E op_walkActorTo: walk actor to absolute (x, y).
 -- Ego (actor 1) gets per-frame walk-tick processing that completes the walk
@@ -2198,10 +2198,10 @@ end
 -- PHASE A.6 — Cutscene & override
 -- ============================================================================
 
-local SCUMM_cutsceneNest = 0x7EF965
-local SCUMM_cutScenePtr  = 0x7EFA03  -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest    = 0x7EFEB9
-local SCUMM_cameraFollows = 0x7EFEB7
+local SCUMM_cutsceneNest = 0x7EF8E5
+local SCUMM_cutScenePtr  = 0x7EF983  -- 5 nest levels × 2 bytes
+local SCUMM_cameraDest    = 0x7EFE3E
+local SCUMM_cameraFollows = 0x7EFE3C
 
 -- $40 op_cutscene + $A0 stopObjectCode: when the slot terminates, our
 -- killSlotCleanup decrements cutsceneNest by the slot's cutsceneOverride

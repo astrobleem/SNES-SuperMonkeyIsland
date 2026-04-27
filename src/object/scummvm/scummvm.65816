@@ -3705,6 +3705,12 @@ _gbe.boxOffset:
 scummvm.buildWalkPath:
   .ACCU 16
   .INDEX 16
+  ; ScummVM-equivalent walk-leg setup. Replaces the old multi-waypoint
+  ; pre-built path with per-leg state in walkData[actor]. Each frame
+  ; the pump checks if we've arrived at walkData.nextX/Y; on arrival
+  ; it computes the next leg via getNextBox + getBoxEdgeCrossing
+  ; (or finalizes the walk on MF_LAST_LEG). This call sets up the
+  ; FIRST leg so the pump can start advancing.
   pha                   ;save actor index
 
   ;save target coords to WRAM before findBox trashes DP tmp
@@ -3725,22 +3731,22 @@ scummvm.buildWalkPath:
   jsr scummvm.findBox   ;trashes tmp+4-26; result in A
   sta.w SCUMM.bwpDestBox
 
-  ;compute walk path array base for this actor
-  ;walkPathX base = SCUMM.walkPathX + actor * WALK_MAX_WAYPOINTS * 2
+  ;compute walkData byte offset for this actor (slot * 24)
   pla                   ;actor index
   pha
   and #$000F
-  asl a                 ;*2
-  asl a                 ;*4
-  asl a                 ;*8
-  asl a                 ;*16 (= WALK_MAX_WAYPOINTS * 2)
-  sta.w SCUMM.bwpArrayOfs
-
-  ;pathLen = 0
-  stz.w SCUMM.bwpPathLen
+  sta.w SCUMM.bwpArrayOfs   ;reused: stores slot
+  asl a
+  asl a
+  asl a                 ;slot * 8
+  pha
+  asl a                 ;slot * 16
+  clc
+  adc 1,s
+  ply                   ;discard slot * 8
+  sta.w SCUMM.bwpArrayOfs   ;walkData byte offset
 
   ;if destBox == $FF, target is outside walkboxes -- clamp to nearest box
-  ;(must come BEFORE curBox check so target is always clamped)
   lda.w SCUMM.bwpDestBox
   cmp #$00FF
   bne +
@@ -3750,93 +3756,108 @@ scummvm.buildWalkPath:
   bne +
   jmp _bwp.noPath          ;no walkboxes at all -- give up
 +
-  ;if curBox == $FF, actor is outside walkboxes -- go direct (target already clamped)
+
+  ;Save final destination + dest box into walkData[actor].destX/Y/Box
+  ldx.w SCUMM.bwpArrayOfs
+  lda.w SCUMM.bwpTargetX
+  sta.w SCUMM.walkData.destX,x
+  lda.w SCUMM.bwpTargetY
+  sta.w SCUMM.walkData.destY,x
+  lda.w SCUMM.bwpDestBox
+  sep #$20
+  sta.w SCUMM.walkData.destBox,x
+  rep #$20
+
+  ;if curBox == $FF, actor is outside walkboxes -- direct walk to target
   lda.w SCUMM.bwpCurBox
   cmp #$00FF
-  beq _bwp.directPath
-  lda.w SCUMM.bwpCurBox
+  beq _bwp.directLastLeg
+  ;if curBox == destBox, walk directly to target inside the same box
   cmp.w SCUMM.bwpDestBox
-  beq _bwp.directPath
+  beq _bwp.directLastLeg
 
-  ;routing loop: follow BOXM until we reach destBox
-_bwp.routeLoop:
-  .ACCU 16
-  .INDEX 16
-  lda.w SCUMM.bwpPathLen
-  cmp #(WALK_MAX_WAYPOINTS - 1) * 2
-  bcs _bwp.directPath   ;path full, just go direct
-
-  ;nextBox = getNextBox(curBox, destBox)
+  ;curBox != destBox -- compute the FIRST leg via getNextBox.
   lda.w SCUMM.bwpCurBox
   ldy.w SCUMM.bwpDestBox
-  jsr scummvm.getNextBox ;trashes tmp+6-10; result in A
+  jsr scummvm.getNextBox
   cmp #$00FF
   beq _bwp.fizzle       ;no BOXM route -> ScummVM MF_LAST_LEG fizzle
   cmp.w SCUMM.bwpCurBox
   beq _bwp.fizzle       ;self-loop -> no progress, fizzle
-  pha                   ;save nextBox on stack
+  pha                   ;save nextBox
 
-  ;get crossing waypoint between curBox and nextBox
+  ;getBoxEdgeCrossing(curBox, nextBox) -> tmp+0,+2 = crossing waypoint
   tay                   ;Y = nextBox
-  lda.w SCUMM.bwpCurBox ;A = curBox
-  jsr scummvm.getBoxEdgeCrossing ;trashes tmp+0-30; output: tmp+0=crossX, tmp+2=crossY
-
-  ;store waypoint at walkPath[actor][pathLen]
-  lda.w SCUMM.bwpPathLen
-  clc
-  adc.w SCUMM.bwpArrayOfs
-  tax
-  lda.b tmp             ;crossX
-  sta.w SCUMM.walkPathX,x
-  lda.b tmp+2           ;crossY
-  sta.w SCUMM.walkPathY,x
-
-  ;advance pathLen
-  lda.w SCUMM.bwpPathLen
-  clc
-  adc #2                ;next waypoint slot (2 bytes per entry)
-  sta.w SCUMM.bwpPathLen
-
-  ;curBox = nextBox
-  pla                   ;pop nextBox
-  sta.w SCUMM.bwpCurBox
-  cmp.w SCUMM.bwpDestBox
-  bne _bwp.routeLoop
-
-_bwp.directPath:
-  .ACCU 16
-  .INDEX 16
-  ;final waypoint = target position
-  lda.w SCUMM.bwpPathLen
-  clc
-  adc.w SCUMM.bwpArrayOfs
-  tax
-  lda.w SCUMM.bwpTargetX
-  sta.w SCUMM.walkPathX,x
-  lda.w SCUMM.bwpTargetY
-  sta.w SCUMM.walkPathY,x
-
-  ;pathLen = (bwpPathLen / 2) + 1  (convert byte offset to index, add final wp)
-  lda.w SCUMM.bwpPathLen
-  lsr a
-  inc a
-  sta.w SCUMM.bwpPathLen
-
-  ;store pathLen and reset pathIdx for this actor
-  pla                   ;actor index (pushed at entry)
-  and #$000F
-  tax
-  lda.w SCUMM.bwpPathLen
-  sep #$20
-  sta.w SCUMM.walkPathLen,x
-  lda #0
-  sta.w SCUMM.walkPathIdx,x
-
-  ;update actorWalkBox to curBox
   lda.w SCUMM.bwpCurBox
-  sta.w SCUMM.actorWalkBox,x
+  jsr scummvm.getBoxEdgeCrossing
+
+  ;walkData[actor].nextX/Y = crossing
+  ldx.w SCUMM.bwpArrayOfs
+  lda.b tmp
+  sta.w SCUMM.walkData.nextX,x
+  lda.b tmp+2
+  sta.w SCUMM.walkData.nextY,x
+
+  ;walkData.curBox = nextBox (the box this leg is heading toward)
+  pla                   ;nextBox
+  sep #$20
+  sta.w SCUMM.walkData.curBox,x
   rep #$20
 
+  ;Set walkPathLen flag (1 = "is walking", chore engine reads this).
+  ;We keep walkPathLen as the chore-engine's idle/walking gate during
+  ;migration; the pump will clear it when the walk completes.
+  pla                   ;actor index
+  pha
+  and #$000F
+  tay
+  sep #$20
+  lda #1
+  sta.w SCUMM.walkPathLen,y
+  lda #0
+  sta.w SCUMM.walkPathIdx,y
+  rep #$20
+
+  ;update actorWalkBox to current source box (tracks per-leg progress)
+  lda.w SCUMM.bwpCurBox
+  sep #$20
+  sta.w SCUMM.actorWalkBox,y
+  rep #$20
+
+  pla                   ;discard saved actor index
+  rts
+
+_bwp.directLastLeg:
+  .ACCU 16
+  .INDEX 16
+  ; Actor outside any box, OR start-and-dest in same box: walk straight
+  ; to target. Set walkData.nextX/Y = target so the pump moves toward
+  ; it; mark this as the LAST leg so the pump finalizes on arrival.
+  ldx.w SCUMM.bwpArrayOfs
+  lda.w SCUMM.bwpTargetX
+  sta.w SCUMM.walkData.nextX,x
+  lda.w SCUMM.bwpTargetY
+  sta.w SCUMM.walkData.nextY,x
+  ;walkData.curBox = destBox (or $FF if no source box)
+  lda.w SCUMM.bwpDestBox
+  sep #$20
+  sta.w SCUMM.walkData.curBox,x
+  rep #$20
+
+  pla                   ;actor index
+  pha
+  and #$000F
+  tay
+  sep #$20
+  lda #1
+  sta.w SCUMM.walkPathLen,y
+  lda #0
+  sta.w SCUMM.walkPathIdx,y
+  ;actorWalkBox = destBox (or $FF if outside)
+  lda.w SCUMM.bwpDestBox
+  sta.w SCUMM.actorWalkBox,y
+  rep #$20
+  pla
   rts
 
 _bwp.fizzle:
@@ -3844,9 +3865,9 @@ _bwp.fizzle:
   .INDEX 16
   ; ScummVM Actor::walkActor: when getNextBox(_walkbox, destbox) returns
   ; kInvalidBox, the walk fizzles -- destbox=_walkbox + MF_LAST_LEG, the
-  ; actor stays at current position. Our equivalent is pathLen=0; the
-  ; existing pump sees pathLen=0 and clears moving without moving the
-  ; actor. Discards any partial waypoints already routed.
+  ; actor stays at current position. Our equivalent: pathLen=0 so the
+  ; pump sees "not walking" and skips. walkData fields are left as-is
+  ; (will be reset by the next walk request).
   pla                   ;recover actor index (pushed at entry)
   and #$000F
   tax
@@ -9250,31 +9271,44 @@ _walkActorTo.checkBoxes:
 _walkActorTo.direct:
   .ACCU 16
   .INDEX 16
-  ; Direct path: single waypoint = target
+  ; Direct path (no walkboxes / actor ignores boxes): walk straight to
+  ; the target. Set walkData.nextX/Y = target, mark MF_LAST_LEG so the
+  ; pump finalizes on arrival.
   lda.w SCUMM.scratch3             ; actor index
   and #$000F
   tax
   sep #$20
   lda #1
-  sta.w SCUMM.walkPathLen,x
+  sta.w SCUMM.walkPathLen,x        ; "is moving" flag (chore engine reads this)
   lda #0
   sta.w SCUMM.walkPathIdx,x
   rep #$20
 
-  ; Copy target to walkPathX/Y[actor][0]
-  txa
-  asl a                             ; *2
-  asl a                             ; *4
-  asl a                             ; *8
-  asl a                             ; *16 (WALK_MAX_WAYPOINTS * 2)
-  tax
-  lda.w SCUMM.scratch3
-  asl a                             ; word index for target arrays
+  ; Copy target to walkData[actor].nextX / .nextY (and .destX/.destY).
+  ; walkData stride = 24 bytes per actor.
+  lda.w SCUMM.scratch3             ; actor index
+  and #$000F
+  sta.w SCUMM.scratch              ; tmp = slot
+  asl a                            ; *2
+  asl a                            ; *4
+  asl a                            ; *8
+  pha                              ; save slot * 8
+  asl a                            ; *16
+  clc
+  adc 1,s                          ; + slot * 8 = slot * 24
+  ply                              ; discard saved slot * 8
+  tax                              ; X = walkData byte offset
+
+  ; word index into actorTargetX/Y (slot * 2)
+  lda.w SCUMM.scratch
+  asl a
   tay
   lda.w SCUMM.actorTargetX,y
-  sta.w SCUMM.walkPathX,x
+  sta.w SCUMM.walkData.nextX,x
+  sta.w SCUMM.walkData.destX,x
   lda.w SCUMM.actorTargetY,y
-  sta.w SCUMM.walkPathY,x
+  sta.w SCUMM.walkData.nextY,x
+  sta.w SCUMM.walkData.destY,x
 
 _walkActorTo.anim:
   .ACCU 16
@@ -11281,49 +11315,28 @@ _ua.skipSlot:
   jmp _ua.nextSlot
 +
 
-  ; Get current waypoint from walk path
-  ; waypointArrayOfs = slot * WALK_MAX_WAYPOINTS * 2 + waypointIdx * 2
-  lda.w SCUMM.walkPathIdx,x
-  and #$00FF
-  asl a                               ; * 2 for word index
-  sta.w SCUMM.actorOamCount           ; save waypointIdx * 2
-  lda.w SCUMM.scratch3
-  and #$00FF
-  ; slot * WALK_MAX_WAYPOINTS * 2 = slot * 8 * 2 = slot * 16
-  asl a
-  asl a
-  asl a
-  asl a                               ; slot * 16
+  ; Read current intermediate waypoint from walkData[slot].nextX/Y.
+  ; walkData stride = 24 bytes per actor (sizeof(scummWalkData)).
+  ; slot * 24 = slot * 16 + slot * 8 = uaActorStructOfs + (uaActorStructOfs >> 1).
+  lda.w SCUMM.uaActorStructOfs
+  lsr a                               ; slot * 8
   clc
-  adc.w SCUMM.actorOamCount           ; + waypointIdx * 2
+  adc.w SCUMM.uaActorStructOfs        ; + slot * 16 = slot * 24
+  sta.w SCUMM.uaWalkDataOfs
   tax
 
-  ; dx = waypointX - actor.x
-  lda.w SCUMM.walkPathX,x
-  pha                                 ; save waypointX
+  ; dx = walkData.nextX - actor.x
+  lda.w SCUMM.walkData.nextX,x
+  pha                                 ; save waypointX for later
   ldx.w SCUMM.uaActorStructOfs
   sec
   sbc.w SCUMM.actors.x,x
   sta.w SCUMM.scratch                 ; dx
 
-  ; dy = waypointY - actor.y
-  ; Recompute waypoint X offset for Y array
-  ldx.w SCUMM.scratch3
-  lda.w SCUMM.walkPathIdx,x
-  and #$00FF
-  asl a
-  sta.w SCUMM.actorOamCount
-  lda.w SCUMM.scratch3
-  and #$00FF
-  asl a
-  asl a
-  asl a
-  asl a
-  clc
-  adc.w SCUMM.actorOamCount
-  tax
-  lda.w SCUMM.walkPathY,x
-  pha                                 ; save waypointY
+  ; dy = walkData.nextY - actor.y
+  ldx.w SCUMM.uaWalkDataOfs
+  lda.w SCUMM.walkData.nextY,x
+  pha                                 ; save waypointY for later
   ldx.w SCUMM.uaActorStructOfs
   sec
   sbc.w SCUMM.actors.y,x

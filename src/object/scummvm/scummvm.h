@@ -421,6 +421,14 @@ SCUMM.actorLastFrame ds SCUMM_WALK_ACTORS      ; 16B — last rendered pic index
 .define SCUMM_BOX_LOCKED     $40   ; excluded from pathfinding as intermediate
 .define SCUMM_BOX_INVISIBLE  $80   ; excluded from findBox AND pathfinding
 
+; ScummVM v5 walk-pump state-machine MoveFlags (actor.h:49-55).
+; actors.moving is a bitmask of these.
+.define MF_NEW_LEG           $01   ; request new-leg calculation via getNextBox
+.define MF_IN_LEG            $02   ; mid-leg, step toward _walkdata.next
+.define MF_TURN              $04   ; turning only (no positional advance)
+.define MF_LAST_LEG          $08   ; final leg, finalize on arrival
+.define MF_FROZEN            $80   ; actor walk frozen by op
+
 .ramsection "scumm walkbox state" bank 0 slot 1
 SCUMM.boxCount        dw      ; number of walkboxes in current room
 SCUMM.boxMatrixPtr    dw      ; offset within $7F bank to routing matrix start
@@ -455,18 +463,39 @@ SCUMM.bwpArrayOfs   dw
 SCUMM.bwpPathLen    dw
 .ends
 
-; Walk path arrays (per-actor waypoint data, bank $7E lowram)
+; ScummVM v5 ActorWalkData (actor.h:157-189) — per-actor walk-pump state.
+; One leg at a time, computed dynamically by walkActor each frame.
+; Replaces the old pre-built waypoint array model.
+.struct scummWalkData
+  destX     dw   ; +$00  final target X
+  destY     dw   ; +$02  final target Y
+  destBox   db   ; +$04  final target box ($FF = none)
+  destDir   db   ; +$05  destination facing direction (0..3 mapped from angle)
+  curBox    db   ; +$06  current leg's destination box (per-leg progression)
+  pad7      db   ; +$07  pad to even
+  nextX     dw   ; +$08  intermediate target X (where actorWalkStep walks toward)
+  nextY     dw   ; +$0A  intermediate target Y
+  deltaXFac dw   ; +$0C  Q8 fixed-point X step per frame (signed)
+  deltaYFac dw   ; +$0E  Q8 fixed-point Y step per frame (signed)
+  xFrac     dw   ; +$10  sub-pixel accumulator X
+  yFrac     dw   ; +$12  sub-pixel accumulator Y
+  pad14     dw   ; +$14  reserved
+  pad16     dw   ; +$16  pad to 24 bytes (power-of-2-friendly)
+.endst
+
+; Per-actor walk-pump state. SCUMM.walkData replaces the old
+; walkPathX/Y pre-built waypoint arrays; legs are computed
+; dynamically per frame by the walkActor pump.
 .ramsection "scumm walk path" bank 0 slot 1
-SCUMM.walkPathX    ds SCUMM_WALK_ACTORS * WALK_MAX_WAYPOINTS * 2  ; 256B
-SCUMM.walkPathY    ds SCUMM_WALK_ACTORS * WALK_MAX_WAYPOINTS * 2  ; 256B
-SCUMM.walkPathLen  ds SCUMM_WALK_ACTORS                           ; 16B — waypoints in path
-SCUMM.walkPathIdx  ds SCUMM_WALK_ACTORS                           ; 16B — current waypoint
-SCUMM.actorWalkBox ds SCUMM_WALK_ACTORS                           ; 16B — current box per actor
-SCUMM.actorIgnoreBoxes ds SCUMM_WALK_ACTORS                       ; 16B — 1=straight-line walk
-SCUMM.actorWidth       ds SCUMM_WALK_ACTORS                       ; 16B — pixel width (default 24)
-SCUMM.actorWalkSpeedX  ds SCUMM_WALK_ACTORS                       ; 16B — walk speed X component
-SCUMM.actorWalkSpeedY  ds SCUMM_WALK_ACTORS                       ; 16B — walk speed Y component
-SCUMM.actorAnimSpeed   ds SCUMM_WALK_ACTORS                       ; 16B — animation speed
+SCUMM.walkData     INSTANCEOF scummWalkData SCUMM_WALK_ACTORS  ; 16 * 24 = 384B
+SCUMM.walkPathLen  ds SCUMM_WALK_ACTORS                        ; 16B — 0 = idle, !=0 = "actor is walking" flag for chore engine + waitForActor
+SCUMM.walkPathIdx  ds SCUMM_WALK_ACTORS                        ; 16B — kept (deprecated, will be removed once nothing reads it)
+SCUMM.actorWalkBox ds SCUMM_WALK_ACTORS                        ; 16B — current box per actor
+SCUMM.actorIgnoreBoxes ds SCUMM_WALK_ACTORS                    ; 16B — 1=straight-line walk
+SCUMM.actorWidth       ds SCUMM_WALK_ACTORS                    ; 16B — pixel width (default 24)
+SCUMM.actorWalkSpeedX  ds SCUMM_WALK_ACTORS                    ; 16B — walk speed X component
+SCUMM.actorWalkSpeedY  ds SCUMM_WALK_ACTORS                    ; 16B — walk speed Y component
+SCUMM.actorAnimSpeed   ds SCUMM_WALK_ACTORS                    ; 16B — animation speed
 SCUMM.actorWalkAnimNr  ds SCUMM_WALK_ACTORS                       ; 16B — walk animation number
 SCUMM.actorStandFrame  ds SCUMM_WALK_ACTORS                       ; 16B — stand animation frame
 SCUMM.actorTalkAnimStart ds SCUMM_WALK_ACTORS                     ; 16B — talk anim start frame
@@ -482,6 +511,7 @@ SCUMM.oamScratch     ds 80
 ; updateActors scratch (survives across inner subroutine calls)
 .ramsection "scumm updateActors scratch" bank 0 slot 1
 SCUMM.uaActorStructOfs   dw    ; actor struct byte offset (actor * 16)
+SCUMM.uaWalkDataOfs      dw    ; walkData byte offset (actor * 24)
 SCUMM.uaFacingChanged    db    ; nonzero = facing changed, re-seed walk anim at nextSlot
 .ends
 

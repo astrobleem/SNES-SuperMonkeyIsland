@@ -233,8 +233,17 @@ end
 
 -- TEST: putActor on different actors writes to different struct slots.
 function test_putActor_actor_indexing()
+  -- Pre-set actors 7 and 8 to room=255 (not currentRoom) and visible=0
+  -- so op_putActor's ScummVM-equivalent gating does NOT fire the
+  -- adjustActorPos snap (snap only runs when was_visible && in_current_room).
+  -- This test verifies the index/slot routing of putActor itself, not the
+  -- snap behavior.
+  H.wr8 (H.actor_addr(7, 0), 255)
+  H.wr8 (H.actor_addr(7, 11), 0)
   H.wr16(H.actor_addr(7, 2), 0)
   H.wr16(H.actor_addr(7, 4), 0)
+  H.wr8 (H.actor_addr(8, 0), 255)
+  H.wr8 (H.actor_addr(8, 11), 0)
   H.wr16(H.actor_addr(8, 2), 0)
   H.wr16(H.actor_addr(8, 4), 0)
 

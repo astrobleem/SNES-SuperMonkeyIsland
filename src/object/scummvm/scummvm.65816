@@ -1849,6 +1849,16 @@ _scummvm.finalizeEgoSpawn:
   ldx #3                              ; frame = 3 = v5 default _standFrame
   jsl scummvm.chore.animateActor_impl
 
+  ; animateActor_impl seeds choreCurpos/Start/End/Wait but DEFERS the
+  ; chorePic write to chore.tick. Without an immediate tick, chorePic
+  ; stays $FF (uninitialized sentinel) and the actor renderer (line
+  ; ~12348: cmp #$FF; beq _ri.bodyHidden) skips ego entirely on the
+  ; first frame after room change. Player saw "Guybrush invisible until
+  ; clicking around" because op_walkActorTo's later seed gave chore.tick
+  ; a frame to populate chorePic. Force one tick here so the next
+  ; render frame draws ego correctly.
+  jsl scummvm.chore.tick
+
   bra _fes.afterPlace
 
 _fes.useByteXY:

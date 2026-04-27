@@ -1872,6 +1872,28 @@ _fes.afterPlace:
   ; Re-assign walkboxes now that ego sits on a real point.
   jsr _scummvm.assignActorWalkboxes
 
+  ; Room 33 (moonlit dock + upper cliff) has BG1.1 fg tiles that mask
+  ; ego at upper-cliff spawn (Bug 1). Force ego.zClip=1 so the renderer
+  ; uses priority 3 (above BG1.1). MI1 scripts don't set this in v5
+  ; because ScummVM's _layer dispatch uses zplane-aware masking we
+  ; don't have on SNES. Long-term: walkbox-z-driven priority would
+  ; pick the right value automatically per actor position.
+  sep #$20
+  lda.w SCUMM.currentRoom
+  cmp #33
+  bne +
+  ldx.w SCUMM.scratch2
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = ego actor index
+  tax
+  lda #1
+  sta.w SCUMM.actorZClip,x
++
+  rep #$20
+
   ; If bytecode target (x, y) is valid AND differs from spawn, kick off a
   ; path-find so ego walks from the obj walk-to point to (x, y).
   lda.w SCUMM.pendingEgoX
@@ -13230,17 +13252,19 @@ _ri.buildOam:
   ; Compute flip mask: priority + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   ;
-  ; Actor priority = 3 ($30) for both normal and zClip=1 actors. In MI1's
-  ; mode-1 layout, BG1 carries the room art with priority-1 marking
-  ; foreground tiles for some scenes (e.g. room 33 cliff edge tiles
-  ; where ego stands). Priority 2 hides ego behind those cliff tiles
-  ; (bug 1). Priority 3 puts the actor above BG1.1 / BG2.1 — matching
-  ; ScummVM's default actor-above-room-art ordering.
+  ; Actor priority comes from per-actor zClip (ScummVM Actor::_layer):
+  ;   zClip == 0 (default): priority 2 ($20) — actor renders BETWEEN
+  ;     BG.0 and BG.1 in mode 1, so BG1.1 / BG2.1 foreground tiles
+  ;     mask the actor (e.g. rocky archway in room 38 lookout).
+  ;   zClip != 0: priority 3 ($30) — actor renders ABOVE BG1.1 /
+  ;     BG2.1 fg tiles. MI1 scripts set this for actors that visually
+  ;     belong "in front of" room features (e.g. room 38 old man +
+  ;     campfire are already script-set zClip=1).
   ;
-  ; Per-actor "behind foreground" behavior (cloud actors that should
-  ; pass behind room features) would need ScummVM's Actor::_layer
-  ; mechanism + per-frame priority compute from walkbox z-data. Not
-  ; yet implemented; zClip is currently a no-op render-order hint.
+  ; Bug 1 (ego invisible at room 33 upper-cliff) is patched by setting
+  ; ego.zClip = 1 in the room-33 entry hook (see _fes._fixupRoom33ZClip
+  ; in finalizeEgoSpawn). Long-term: walkbox-z-driven priority would
+  ; pick the right value automatically per actor position.
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3               ; render slot
@@ -13252,11 +13276,11 @@ _ri.buildOam:
   cmp #1
   bne _ri.normalPriority
   lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$30                            ; priority 3 (zClip=1 actor; same as normal until _layer is wired)
+  ora #$30                            ; priority 3 (above BG1.1 / BG2.1 fg)
   bra _ri.priorityDone
 _ri.normalPriority:
   lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$30                            ; priority 3 (above BG1/BG2 pri-1 foreground)
+  ora #$20                            ; priority 2 (between BG.0 and BG.1)
 _ri.priorityDone:
   sta.w SCUMM.actorFlipMask
 

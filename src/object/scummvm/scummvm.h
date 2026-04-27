@@ -161,7 +161,6 @@ SCUMM.slots         INSTANCEOF scummSlot SCUMM_MAX_SLOTS
 ; VM state variables
 .ramsection "scumm vm state" bank 0 slot 1
 SCUMM.running             dw      ;nonzero = VM is active
-SCUMM.egoFixupPending     dw      ;nonzero = force ego costume 1 after next scheduler pass
 SCUMM.currentSlot         dw      ;current slot index (0-24)
 SCUMM.currentSlotPtr      dw      ;byte offset into SCUMM.slots for current slot
 SCUMM.currentOpcode       dw      ;last fetched opcode byte (zero-extended)

@@ -112,7 +112,6 @@ _init.zeroBits:
   stz.w SCUMM.newRoom
   stz.w SCUMM.bgInitDone
   stz.w SCUMM.gcInProgress
-  stz.w SCUMM.egoFixupPending
   stz.w SCUMM.hdmaChannel
   stz.w SCUMM.roomEncdPtr
   stz.w SCUMM.roomEncdLen
@@ -570,36 +569,6 @@ _play.nextSlot:
   sta.w SCUMM.currentSlot
   cmp #SCUMM_MAX_SLOTS
   bcc _play.slotLoop
-
-  ; Post-ENCD ego costume fixup: force costume 1 if pending
-  lda.w SCUMM.egoFixupPending
-  beq _play.noEgoFixup
-  stz.w SCUMM.egoFixupPending
-  ldx #1*16                         ; actor 1 struct offset
-  sep #$20
-  lda #1
-  sta.w SCUMM.actors.costume,x
-  ; Update render slot 0 to match
-  ldx #0
-  sta.w SCUMM.renderSlotCostume,x
-  lda #$FF
-  sta.w SCUMM.renderSlotLastPic,x
-  lda #1
-  sta.w SCUMM.renderSlotDirty,x
-  rep #$20
-  ; (removed forced cursor/userput re-enable -- scripts own this state)
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-_play.noEgoFixup:
-  .ACCU 16
-  .INDEX 16
 
   ; Update actor movement + animation (after scripts have run)
   jsl scummvm.updateActors
@@ -1871,28 +1840,6 @@ _fes.afterPlace:
   rep #$20
   ; Re-assign walkboxes now that ego sits on a real point.
   jsr _scummvm.assignActorWalkboxes
-
-  ; Room 33 (moonlit dock + upper cliff) has BG1.1 fg tiles that mask
-  ; ego at upper-cliff spawn (Bug 1). Force ego.zClip=1 so the renderer
-  ; uses priority 3 (above BG1.1). MI1 scripts don't set this in v5
-  ; because ScummVM's _layer dispatch uses zplane-aware masking we
-  ; don't have on SNES. Long-term: walkbox-z-driven priority would
-  ; pick the right value automatically per actor position.
-  sep #$20
-  lda.w SCUMM.currentRoom
-  cmp #33
-  bne +
-  ldx.w SCUMM.scratch2
-  txa
-  lsr a
-  lsr a
-  lsr a
-  lsr a                              ; A = ego actor index
-  tax
-  lda #1
-  sta.w SCUMM.actorZClip,x
-+
-  rep #$20
 
   ; If bytecode target (x, y) is valid AND differs from spawn, kick off a
   ; path-find so ego walks from the obj walk-to point to (x, y).

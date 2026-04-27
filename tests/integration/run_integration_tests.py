@@ -60,8 +60,8 @@ def case_scumm_bar() -> tuple[bool, str]:
     Mesen's own Lua API has no `emu.saveScreenshot`.
     """
     lua = r'''
-local NEW_ROOM = 0x7EF8E9
-local CUR_ROOM = 0x7EF8E7
+local NEW_ROOM = 0x7EF8E7
+local CUR_ROOM = 0x7EF8E5
 local fc = 0
 local state = "boot"
 local poked = 0

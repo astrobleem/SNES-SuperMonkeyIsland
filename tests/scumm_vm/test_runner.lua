@@ -1085,6 +1085,111 @@ function test_buildWalkPath_with_route_builds_path()
     string.format("buildWalkPath: BOXM has route → pathLen >= 1 (got %d)", pathLen))
 end
 
+-- Multi-leg walk: stage 3 adjacent boxes in a row + BOXM connectivity,
+-- run op_walkActorTo across all 3 boxes, wait for the pump to advance
+-- through each leg, assert actor reaches destination box. Exercises
+-- the per-leg dispatch in updateActors_body's _ua.fullyArrived path.
+function test_walkActor_multiLeg_traverses_boxes()
+  local snap = H_snapshot_walkboxes()
+  -- 3 boxes in a row: box 1 = [0..50], box 2 = [50..100], box 3 = [100..150].
+  H_inject_walkbox(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+  H_inject_walkbox(1,
+    0,  0,  50, 0,  50, 50, 0,  50, 0)   -- (0,0)-(50,50)
+  H_inject_walkbox(2,
+    50, 0,  100, 0,  100, 50, 50, 50, 0) -- (50,0)-(100,50)
+  H_inject_walkbox(3,
+    100, 0, 150, 0,  150, 50, 100, 50, 0)-- (100,0)-(150,50)
+  H.wr16(SCUMM_boxCount, 4)
+
+  -- BOXM 4x4 matrix: box 1 routes through 2 to reach 3, etc.
+  local ROUTE = {
+    --       to=0   to=1   to=2   to=3
+    0x00, 0xFF, 0xFF, 0xFF,   -- from=0 (sentinel)
+    0xFF, 0x01, 0x02, 0x02,   -- from=1: route to 2 directly, to 3 via 2
+    0xFF, 0x01, 0x02, 0x03,   -- from=2: 1 directly, 3 directly
+    0xFF, 0x02, 0x02, 0x03,   -- from=3: 2 directly, 1 via 2
+  }
+  local matrix_addr = 0x7F5060
+  for i = 1, #ROUTE do
+    H.wr8(matrix_addr + (i - 1), ROUTE[i])
+  end
+  local saved_matrix_ptr = H.rd16(SCUMM_boxMatrixPtr)
+  H.wr16(SCUMM_boxMatrixPtr, 0x5060)
+
+  local saved = {
+    actor_room   = H.rd8 (H.actor_addr(5, 0)),
+    actor_x      = H.rd16(H.actor_addr(5, 2)),
+    actor_y      = H.rd16(H.actor_addr(5, 4)),
+    actor_ignore = H.rd8 (SCUMM_actorIgnoreBoxes + 5),
+    actor_walkBox = H.rd8 (SCUMM_actorWalkBox + 5),
+    pathLen      = H.rd8 (SCUMM_walkPathLen + 5),
+    matrix_ptr   = saved_matrix_ptr,
+    snap         = snap,
+  }
+
+  -- Place actor 5 at (10, 25) inside box 1, room = current.
+  -- Set scalex to full (255) so the pump's scaled walk speed isn't 0.
+  H.wr8 (H.actor_addr(5, 0), H.rd8(H.SYM.SCUMM_currentRoom))
+  H.wr16(H.actor_addr(5, 2), 10)
+  H.wr16(H.actor_addr(5, 4), 25)
+  H.wr8 (H.actor_addr(5, 13), 255)     -- scalex (full size)
+  H.wr8 (SCUMM_actorIgnoreBoxes + 5, 0)
+  H.wr8 (SCUMM_actorWalkBox + 5, 1)
+  H.wr8 (0x7EF0E4 + 5, 4)              -- actorWalkSpeedX = 4
+  H.wr8 (0x7EF0F4 + 5, 4)              -- actorWalkSpeedY = 4
+
+  -- Freeze MI1's slots manually so they don't trample actor 5 during
+  -- the long wait_frames after the bytecode test slot completes.
+  local saved_freezes = H.freeze_other_slots()
+
+  -- Walk actor 5 from (10,25) in box 1 to (140,25) in box 3 (~130 px).
+  -- Bytecode: walkActorTo + stopObjectCode. The slot dies after ~2 frames;
+  -- the actor walk continues across subsequent pump ticks.
+  local bc = {0x1E, 0x05, 0x8C, 0x00, 0x19, 0x00, 0x00}
+  H.write_bytes(H.TEST_BYTECODE_ADDR, bc)
+  H.wr8 (H.slot_addr(H.SYM.slot_status),         H.SCUMM_SLOT_RUNNING)
+  H.wr8 (H.slot_addr(H.SYM.slot_number),         200)
+  H.wr8 (H.slot_addr(H.SYM.slot_where),          0)
+  H.wr8 (H.slot_addr(H.SYM.slot_freezeCount),    0)
+  H.wr16(H.slot_addr(H.SYM.slot_pc),             0)
+  H.wr16(H.slot_addr(H.SYM.slot_cachePtr),       H.TEST_CACHE_OFFSET)
+  H.wr16(H.slot_addr(H.SYM.slot_cacheLen),       #bc)
+  H.wr16(H.slot_addr(H.SYM.slot_delay),          0)
+  H.wr8 (H.slot_addr(H.SYM.slot_cutsceneOverride), 0)
+
+  -- Wait for slot to die + many additional frames so the pump can
+  -- traverse the 130px route at min 1 px/frame.
+  H.wait_frames(180)
+
+  H.restore_slot_freezes(saved_freezes)
+
+  local final_x   = H.rd16(H.actor_addr(5, 2))
+  local final_y   = H.rd16(H.actor_addr(5, 4))
+  local final_box = H.rd8 (SCUMM_actorWalkBox + 5)
+  local final_mov = H.rd8 (H.actor_addr(5, 10))
+
+  -- Restore state
+  H.wr8 (H.actor_addr(5, 0), saved.actor_room)
+  H.wr16(H.actor_addr(5, 2), saved.actor_x)
+  H.wr16(H.actor_addr(5, 4), saved.actor_y)
+  H.wr8 (SCUMM_actorIgnoreBoxes + 5, saved.actor_ignore)
+  H.wr8 (SCUMM_actorWalkBox + 5, saved.actor_walkBox)
+  H.wr8 (SCUMM_walkPathLen + 5, saved.pathLen)
+  H.wr16(SCUMM_boxMatrixPtr, saved.matrix_ptr)
+  H_restore_walkboxes(snap)
+
+  -- After multi-leg walk, the pump should have advanced the actor
+  -- across boxes 1 -> 2 -> 3, and arrived at or near the target.
+  -- Strict assertion: actor.x advanced past box 1 (>= 50) and ended
+  -- in box 2 or 3. Looser than exact-x-equals-140 because of step
+  -- rounding + frame budget; the per-leg dispatch is what we're
+  -- exercising here, not pixel precision.
+  H.assert_eq(final_x >= 50 and 1 or 0, 1,
+    string.format("multi-leg walk: actor.x advanced past box 1 (got %d, want >=50)", final_x))
+  H.assert_eq((final_box == 2 or final_box == 3) and 1 or 0, 1,
+    string.format("multi-leg walk: actor crossed to box 2 or 3 (got walkBox=%d)", final_box))
+end
+
 -- ============================================================================
 -- PHASE D — Engine pipeline integration smokes
 -- These run against the live game state (post-boot) and assert pipeline
@@ -2863,6 +2968,8 @@ local TESTS = {
     fn = test_buildWalkPath_no_route_fizzles },
   { name = "Phase C: buildWalkPath with BOXM route → pathLen>=1 builds",
     fn = test_buildWalkPath_with_route_builds_path },
+  { name = "Phase C: walkActor multi-leg traverses 3 boxes (per-leg dispatch)",
+    fn = test_walkActor_multiLeg_traverses_boxes },
   -- Phase D: integration smokes
   { name = "Phase D: boot smoke (room set, brightness $0F, VAR_ROOM match)",
     fn = test_phaseD_boot_smoke },

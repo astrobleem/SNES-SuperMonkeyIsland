@@ -445,8 +445,13 @@ _init.lastScale:
   lda #1
   sta.w SCUMM.running
 
-  ;--- Init default verb bar ---
-  jsl scummvm.initDefaultVerbs
+  ; Verb table is zeroed in _init.zeroVerbs above. MI1's boot script
+  ; (script 1) calls op_verbOps repeatedly during init to populate the
+  ; ten standard verbs (ID, position, name, image) — matching ScummVM's
+  ; script-driven o5_verbOps path (script_v5.cpp:3132+). Until those
+  ; ops fire (around frame 229 from cold boot) every verb has flags=0
+  ; so the renderer skips them, which is correct: there's no game
+  ; scene to overlay yet.
 
   plb                               ; restore DBR
   rts
@@ -15164,144 +15169,10 @@ _voi.xySkip:
 .ends
 
 
-;===================================================================
-; Default verb initializer (superfree -- called via jsl from init)
-; Hardcodes MI1's standard 10 verbs until proper boot flow runs.
-; Table format: 8 bytes per entry (fixed size, no variable-length names)
-;   id(1), x_pixel(1), y_pixel(1), nameLen(1), nameOffset(2), pad(2)
-; Names stored separately for easy addressing.
-;===================================================================
-.bank 5 slot 0
-.base BSL
-.section "ScummVMDefaultVerbs" free
-
-scummvm.initDefaultVerbs:
-  phb
-  sep #$20
-  lda #$7E
-  pha
-  plb
-  rep #$31
-
-  lda #0
-  sta.w SCUMM.verbNamesPtr             ; reset name write pointer
-
-  ; Process 10 verb entries
-  ldx #0                               ; X = table index (0..9) * 4
-  ldy #0                               ; Y = verb slot offset
-
-_idv.loop:
-  .ACCU 16
-  .INDEX 16
-  cpx #_idv.tableEnd - _idv.table
-  bcs _idv.done
-
-  ; Read id
-  sep #$20
-  lda.l _idv.table,x
-  beq _idv.done
-  sta.w SCUMM.verbs.1.id,y
-
-  ; Read x, y pixel coords
-  lda.l _idv.table+1,x
-  sta.w SCUMM.verbs.1.x,y
-
-  lda.l _idv.table+2,x
-  sta.w SCUMM.verbs.1.y,y
-
-  ; Set flags = ON
-  lda #SCUMM_VERB_FLAG_ON
-  sta.w SCUMM.verbs.1.flags,y
-
-  ; Read name length
-  lda.l _idv.table+3,x
-  sta.w SCUMM.verbs.1.nameLen,y
-  rep #$20
-  and #$00FF
-  sta.w SCUMM.scratch                  ; name length
-
-  ; Set name pointer = current verbNamesPtr
-  lda.w SCUMM.verbNamesPtr
-  sta.w SCUMM.verbs.1.namePtr,y
-
-  ; Copy name: read offset from table entry bytes 4-5
-  phx
-  phy
-  lda.l _idv.table+4,x                ; name ROM offset (relative to _idv.names)
-  and #$00FF
-  tax                                  ; X = name source offset
-  ldy.w SCUMM.verbNamesPtr            ; Y = dest offset in verbNames
-  lda.w SCUMM.scratch                  ; char count
-  sta.w SCUMM.scratch2
-
-_idv.copy:
-  .ACCU 16
-  .INDEX 16
-  sep #$20
-  lda.l _idv.names,x
-  sta.w SCUMM.verbNames,y
-  rep #$20
-  inx
-  iny
-  dec.w SCUMM.scratch2
-  bne _idv.copy
-
-  tya
-  sta.w SCUMM.verbNamesPtr
-  ply                                  ; restore verb slot offset
-  plx                                  ; restore table index
-
-  ; Advance to next entry (6 bytes per table row)
-  rep #$20
-  txa
-  clc
-  adc #6
-  tax
-
-  ; Advance verb slot
-  tya
-  clc
-  adc #_sizeof_scummVerb
-  tay
-
-  bra _idv.loop
-
-_idv.done:
-  .ACCU 16
-  .INDEX 16
-  lda #1
-  sta.w SCUMM.verbDirty
-  plb
-  rtl
-
-; Table: id, x_pixel, y_pixel, nameLen, nameOffset (1 byte into _idv.names)
-_idv.table:
-  ;     id   x    y   len  nameOff
-  .db  $0B,   0, 152,   7, _idv.n0 - _idv.names, 0
-  .db  $09,  80, 152,   7, _idv.n4 - _idv.names, 0
-  .db  $07, 168, 152,   3, _idv.n7 - _idv.names, 0
-  .db  $04,   0, 160,   4, _idv.n1 - _idv.names, 0
-  .db  $08,  80, 160,   7, _idv.n5 - _idv.names, 0
-  .db  $05, 168, 160,   4, _idv.n8 - _idv.names, 0
-  .db  $02,   0, 168,   4, _idv.n2 - _idv.names, 0
-  .db  $0A,  80, 168,   7, _idv.n6 - _idv.names, 0
-  .db  $06, 168, 168,   4, _idv.n9 - _idv.names, 0
-  .db  $03,   0, 176,   5, _idv.n3 - _idv.names, 0
-_idv.tableEnd:
-
-_idv.names:
-_idv.n0: .db "Walk to"
-_idv.n1: .db "Give"
-_idv.n2: .db "Open"
-_idv.n3: .db "Close"
-_idv.n4: .db "Pick up"
-_idv.n5: .db "Look at"
-_idv.n6: .db "Talk to"
-_idv.n7: .db "Use"
-_idv.n8: .db "Push"
-_idv.n9: .db "Pull"
-
-.ends
+; (Removed: ScummVMDefaultVerbs hardcoded init. MI1 boot script (script 1)
+; populates the verb table via op_verbOps starting at frame ~229 from cold
+; boot — runtime-probed 19 calls in frames 229-232 — matching ScummVM's
+; script-driven o5_verbOps path. The init was vestigial.)
 
 
 ;===================================================================

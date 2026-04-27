@@ -208,12 +208,12 @@ local SCUMM_actorWalkAnimNr   = 0x7EF114   -- byte per actor — _walkFrame
 local SCUMM_actorStandFrame   = 0x7EF124   -- byte per actor — _standFrame
 local SCUMM_actorTalkAnimStart= 0x7EF134   -- byte per actor — _talkStartFrame
 local SCUMM_actorTalkAnimEnd  = 0x7EF144   -- byte per actor — _talkStopFrame
-local SCUMM_actorTargetX      = 0x7EFB49   -- 16 actors × 2 bytes each
-local SCUMM_actorTargetY      = 0x7EFB69
+local SCUMM_actorTargetX      = 0x7EFBC9   -- 16 actors × 2 bytes each
+local SCUMM_actorTargetY      = 0x7EFBE9
 local SCUMM_cutsceneNest      = 0x7EF8E5
 local SCUMM_cutScenePtr       = 0x7EF983   -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest        = 0x7EFE3E
-local SCUMM_cameraFollows     = 0x7EFE3C
+local SCUMM_cameraDest        = 0x7EFEBE
+local SCUMM_cameraFollows     = 0x7EFEBC
 
 -- TEST: op_putActor — literal coords (opcode $01, no flag bits set).
 --   $01 actor=byte x=word y=word
@@ -857,7 +857,7 @@ end
 -- so MI1 keeps running.
 -- ============================================================================
 
-local SCUMM_boxCount      = 0x7EFD67
+local SCUMM_boxCount      = 0x7EFDE7
 local SCUMM_BOX_WRAM      = 0x7F5000   -- box count word + 20-byte entries
 
 -- Stage one walkbox at index `idx` (1..N — index 0 is the sentinel).
@@ -963,7 +963,7 @@ end
 -- actor (commit 921e287).
 -- ============================================================================
 
-local SCUMM_boxMatrixPtr  = 0x7EFD69
+local SCUMM_boxMatrixPtr  = 0x7EFDE9
 local SCUMM_walkPathLen   = 0x7EF094
 local SCUMM_actorIgnoreBoxes = 0x7EF0C4
 
@@ -1205,8 +1205,8 @@ end
 -- invariants rather than opcode semantics.
 -- ============================================================================
 
-local SCUMM_actorsDirty   = 0x7EFDA9
-local Mesen_ScreenBrightness = 0x7EFCFD
+local SCUMM_actorsDirty   = 0x7EFE29
+local Mesen_ScreenBrightness = 0x7EFD7D
 
 -- After harness boot wait, the game has reached a stable state. Verify:
 --   * currentRoom != 0 (we're inside a room)
@@ -1402,8 +1402,8 @@ end
 -- globalVars[52]/[53].
 -- ============================================================================
 
-local SCUMM_cursorEnabled = 0x7EFD93
-local SCUMM_userPut       = 0x7EFD95
+local SCUMM_cursorEnabled = 0x7EFE13
+local SCUMM_userPut       = 0x7EFE15
 
 function test_phaseB_cursorCommand_01_cursorOn()
   H.wr8(SCUMM_cursorEnabled, 0)
@@ -2182,8 +2182,8 @@ end
 -- ScummVM: a->startWalkActor(x, y, dir).
 -- ============================================================================
 
-local SCUMM_actorTargetX = 0x7EFB49   -- 16 actors × 2 bytes each
-local SCUMM_actorTargetY = 0x7EFB69
+local SCUMM_actorTargetX = 0x7EFBC9   -- 16 actors × 2 bytes each
+local SCUMM_actorTargetY = 0x7EFBE9
 
 -- $1E op_walkActorTo: walk actor to absolute (x, y).
 -- Ego (actor 1) gets per-frame walk-tick processing that completes the walk
@@ -2314,8 +2314,8 @@ end
 
 local SCUMM_cutsceneNest = 0x7EF8E5
 local SCUMM_cutScenePtr  = 0x7EF983  -- 5 nest levels × 2 bytes
-local SCUMM_cameraDest    = 0x7EFE3E
-local SCUMM_cameraFollows = 0x7EFE3C
+local SCUMM_cameraDest    = 0x7EFEBE
+local SCUMM_cameraFollows = 0x7EFEBC
 
 -- $40 op_cutscene + $A0 stopObjectCode: when the slot terminates, our
 -- killSlotCleanup decrements cutsceneNest by the slot's cutsceneOverride
@@ -2523,6 +2523,58 @@ function test_phaseA_findObject_no_hit()
   H.run_bytecode({0x35, 0xAE, 0x01, 0x05, 0x05, 0xA0})
   H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 430*2), 0,
               "findObject(5, 5) = 0 (no obj at top-left corner)")
+end
+
+-- BUG 3 REGRESSION: findObject must NOT skip obj whose objectState == 0.
+-- ScummVM (object.cpp:557+) only filters obj_nr<1 OR kObjectClassUntouchable
+-- (class 32). State==0 just selects the default visual; it is fully clickable.
+-- Stage one room object at (40,40,w=40,h=40), state=0, untouchable=0 → expect
+-- findObject(60,60) = 700.
+local SCUMM_roomObjCount       = 0x7EB3A4
+local SCUMM_roomObjTable       = 0x7EB3AA   -- 16 bytes per entry
+local SCUMM_objectStateBase    = 0x7EDE2A   -- byte per obj
+local SCUMM_objectUntouchable  = 0x7EFAD6   -- bit per obj (1024/8 = 128B)
+local GLOBAL_room_cameraX      = 0x7EF9A6
+function test_bug3_findObject_state_zero_clickable()
+  -- Park camera at 0 so screenX==roomX.
+  H.wr16(GLOBAL_room_cameraX, 0)
+  -- Stage one entry: obj 700 at (40,40), 40x40.
+  H.wr16(SCUMM_roomObjCount, 1)
+  H.wr16(SCUMM_roomObjTable + 0,  700)
+  H.wr16(SCUMM_roomObjTable + 2,  40)
+  H.wr16(SCUMM_roomObjTable + 4,  40)
+  H.wr16(SCUMM_roomObjTable + 6,  40)
+  H.wr16(SCUMM_roomObjTable + 8,  40)
+  -- Bug-3 conditions: state == 0 (default), untouchable bit clear.
+  H.wr8(SCUMM_objectStateBase + 700, 0)
+  H.wr8(SCUMM_objectUntouchable + (700 >> 3), 0)
+  -- Find at (60,60) — inside (40..79, 40..79).
+  H.wr16(H.SYM.SCUMM_globalVars + 434*2, 0xFFFF)
+  H.run_bytecode({0x35, 0xB2, 0x01, 60, 60, 0xA0})
+  H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 434*2), 700,
+              "findObject(60,60) = 700 (state==0 must NOT filter)")
+end
+
+-- BUG 3: findObject MUST skip obj whose objectUntouchable bit is set
+-- (kObjectClassUntouchable / class 32). Stage same entry but with the
+-- untouchable bit set → expect findObject(60,60) = 0.
+function test_bug3_findObject_untouchable_filtered()
+  H.wr16(GLOBAL_room_cameraX, 0)
+  H.wr16(SCUMM_roomObjCount, 1)
+  H.wr16(SCUMM_roomObjTable + 0,  701)
+  H.wr16(SCUMM_roomObjTable + 2,  40)
+  H.wr16(SCUMM_roomObjTable + 4,  40)
+  H.wr16(SCUMM_roomObjTable + 6,  40)
+  H.wr16(SCUMM_roomObjTable + 8,  40)
+  H.wr8(SCUMM_objectStateBase + 701, 0)
+  -- Set untouchable bit for obj 701: byte = 701 >> 3 = 87, bit = 701 & 7 = 5
+  H.wr8(SCUMM_objectUntouchable + 87, 0x20)   -- 1 << 5
+  H.wr16(H.SYM.SCUMM_globalVars + 435*2, 0xFFFF)
+  H.run_bytecode({0x35, 0xB3, 0x01, 60, 60, 0xA0})
+  H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 435*2), 0,
+              "findObject(60,60) = 0 (untouchable bit must filter)")
+  -- Restore bitmap so other tests aren't poisoned.
+  H.wr8(SCUMM_objectUntouchable + 87, 0)
 end
 
 -- $66 op_getClosestObjActor: scans actors in [VAR_ACTOR_RANGE_MIN, MAX]
@@ -2808,6 +2860,10 @@ local TESTS = {
     fn = test_phaseA_animateActor_var_ref_frame },
   { name = "op_findObject ($35): no-hit point → 0",
     fn = test_phaseA_findObject_no_hit },
+  { name = "Bug 3: findObject state==0 must be clickable (no spurious filter)",
+    fn = test_bug3_findObject_state_zero_clickable },
+  { name = "Bug 3: findObject untouchable bit must filter (kObjectClassUntouchable)",
+    fn = test_bug3_findObject_untouchable_filtered },
   { name = "op_getClosestObjActor ($66): no-crash",
     fn = test_phaseA_getClosestObjActor_no_crash },
   { name = "op_findInventory ($3D): empty → 0",

@@ -255,10 +255,21 @@ SCUMM.objectOwner    ds SCUMM_MAX_OBJECTS
 .ends
 
 ; Object class table (2 bytes per object, 1024 objects = 2048 bytes)
-; Bit N = class (N+17).  Supports classes 17-32 (MI1 uses 20-32).
-; Class 20=bit3, 22=bit5, 29=bit12, 30=bit13, 31=bit14, 32=bit15
+; ScummVM (object.cpp:262-289) maps class N → bit (N-1). Our 16-bit slot
+; therefore stores classes 1..16. Classes 17..31 are silently dropped
+; (op_setClass / op_ifClassOfIs short-circuit them). Class 32
+; (kObjectClassUntouchable) is critical for findObject visibility, so
+; it has its own 1-bit-per-object bitmap below.
 .ramsection "scumm object class" bank 0 slot 1
 SCUMM.objectClass    ds SCUMM_MAX_OBJECTS * 2
+.ends
+
+; Object untouchable bitmap (1 bit per object, 1024 / 8 = 128 bytes).
+; Mirrors ScummVM kObjectClassUntouchable (class 32). When bit is set,
+; the object is unclickable and findObject must skip it. Bit indexed
+; as: byte = obj >> 3, bit = 1 << (obj & 7).
+.ramsection "scumm object untouchable" bank 0 slot 1
+SCUMM.objectUntouchable ds (SCUMM_MAX_OBJECTS / 8)
 .ends
 
 ; Color cycling constants + struct are in src/object/scummvm/scummvm_cycle.h

@@ -8218,7 +8218,9 @@ _setClass.loop:
   jsr _scummvm.fetchByte             ; aux byte (flag for next arg)
   and #$00FF
   cmp #$00FF
-  beq _setClass.done
+  bne +
+  jmp _setClass.done                 ; long jump (untouchable blocks pushed _setClass.done out of branch range)
++
   sta.w SCUMM.currentOpcode          ; treat aux byte as opcode for getVarOrDirectWord
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectWord    ; class value
@@ -8228,10 +8230,13 @@ _setClass.loop:
   beq _setClass.clearAll             ; cls == 0 → clear all
   ; ScummVM (object.cpp:262-289): cls &= 0x7F, then bit = 1 << (cls - 1).
   ; Class is 1-indexed; class 1 → bit 0. Our 16-bit objectClass storage
-  ; supports classes 1..16 (bits 0..15); classes 17..32 are silently
-  ; dropped — caller must be aware that kObjectClassUntouchable=32 won't
-  ; round-trip through this path.
+  ; covers classes 1..16. Class 32 (kObjectClassUntouchable) is critical
+  ; for findObject visibility and lives in the parallel objectUntouchable
+  ; bitmap. Classes 17..31 are silently dropped (MI1 doesn't use them
+  ; for click-gating).
   and #$007F                         ; ScummVM mask: class 0..127
+  cmp #32
+  beq _setClass.untouchable          ; class 32 → bitmap
   dec a                              ; class - 1 (now 0..126; class 0 already filtered)
   cmp #16
   bcs _setClass.loop                 ; class - 1 >= 16 → out of 16-bit range, skip
@@ -8273,7 +8278,27 @@ _setClass.clearAll:
   asl a
   tax
   stz.w SCUMM.objectClass,x
+  ; Also clear the parallel untouchable bit for this object
+  lda.w SCUMM.scratch3
+  jsl scummvm.objUntouchable_clear
   bra _setClass.loop
+_setClass.untouchable:
+  ; Class 32 (kObjectClassUntouchable) → bitmap. Bit 7 of original cls
+  ; (SCUMM.scratch low byte) selects set vs clear.
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch
+  and #$0080
+  beq _setClass.untouchableClear
+  lda.w SCUMM.scratch3
+  jsl scummvm.objUntouchable_set
+  jmp _setClass.loop
+_setClass.untouchableClear:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch3
+  jsl scummvm.objUntouchable_clear
+  jmp _setClass.loop
 _setClass.done:
   .ACCU 16
   .INDEX 16
@@ -10972,6 +10997,8 @@ _icoi.loop:
   ; → bit 0. Must match op_setClass exactly or set/check disagree.
   pha                                ; save full cls
   and #$007F                         ; ScummVM mask: class 0..127
+  cmp #32
+  beq _icoi.untouchable              ; class 32 → bitmap
   dec a                              ; class - 1
   cmp #16
   bcs _icoi.skipCls                  ; class - 1 >= 16 → out of 16-bit range
@@ -11010,6 +11037,31 @@ _icoi.clsZero:
   beq _icoi.loop                     ; no classes → condition holds
   stz.w SCUMM.scratch                ; cond = false
   bra _icoi.loop
+_icoi.untouchable:
+  ; Class 32 → check parallel objectUntouchable bitmap. Stack still has
+  ; the full cls byte from `pha` above; bit 7 selects positive/negative
+  ; sense (cls & 0x80 → cond holds iff bit IS set).
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch3               ; obj_id
+  jsl scummvm.objUntouchable_test    ; A = 0 (clear) or non-zero (set)
+  sta.w SCUMM.scratch2               ; save bit-test result
+  pla                                ; recover full cls
+  and #$0080                         ; bit 7 = "must be set" sense
+  beq _icoi.untouchClear
+  ; cls & 0x80: cond fails if untouchable bit NOT set
+  lda.w SCUMM.scratch2
+  bne _icoi.loop                     ; bit IS set → cond holds
+  stz.w SCUMM.scratch                ; cond = false
+  jmp _icoi.loop
+_icoi.untouchClear:
+  .ACCU 16
+  .INDEX 16
+  ; !(cls & 0x80): cond fails if untouchable bit IS set
+  lda.w SCUMM.scratch2
+  beq _icoi.loop                     ; bit NOT set → cond holds
+  stz.w SCUMM.scratch                ; cond = false
+  jmp _icoi.loop
 _icoi.loopDone:
   .ACCU 16
   .INDEX 16
@@ -11735,6 +11787,111 @@ _ua.noReseed:
 scummvm.classBitLut:
   .dw $0001, $0002, $0004, $0008, $0010, $0020, $0040, $0080
   .dw $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
+.ends
+
+
+;===================================================================
+; 8-bit bit lookup table (1 << N for N in 0..7)
+; Used by objectUntouchable bitmap helpers.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "Bit8Lut" free
+scummvm.bit8Lut:
+  .db $01, $02, $04, $08, $10, $20, $40, $80
+.ends
+
+
+;===================================================================
+; objectUntouchable bitmap helpers
+; Mirrors ScummVM kObjectClassUntouchable (class 32). 1 bit per object,
+; byte = obj >> 3, bit = 1 << (obj & 7). Called via jsl from any bank.
+; Caller has DBR=$7E and A/XY=16-bit on entry.
+;===================================================================
+.bank 5 slot 0
+.base BSL
+.section "scummvm objUntouchable helpers" free
+
+; A = obj_id (16-bit). Sets the untouchable bit. Trashes A, X, Y.
+; X = bit number (0..7) for `lda.l bit8Lut, X` (long indexed needs X).
+; Y = byte index for `lda.w bitmap, Y` (absolute via DBR).
+scummvm.objUntouchable_set:
+  .ACCU 16
+  .INDEX 16
+  cmp #SCUMM_MAX_OBJECTS
+  bcs _ou.set_ret
+  pha                              ; save obj_id
+  lsr a
+  lsr a
+  lsr a                            ; A = byte index
+  tay
+  pla                              ; A = obj_id
+  and #$0007                       ; bit number 0..7
+  tax
+  lda #0                           ; ensure A high byte = 0
+  sep #$20
+.ACCU 8
+  lda.l scummvm.bit8Lut, x
+  ora.w SCUMM.objectUntouchable, y
+  sta.w SCUMM.objectUntouchable, y
+  rep #$20
+.ACCU 16
+_ou.set_ret:
+  rtl
+
+; A = obj_id (16-bit). Clears the untouchable bit. Trashes A, X, Y.
+scummvm.objUntouchable_clear:
+  .ACCU 16
+  .INDEX 16
+  cmp #SCUMM_MAX_OBJECTS
+  bcs _ou.clear_ret
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tay
+  pla
+  and #$0007
+  tax
+  lda #0
+  sep #$20
+.ACCU 8
+  lda.l scummvm.bit8Lut, x
+  eor #$FF
+  and.w SCUMM.objectUntouchable, y
+  sta.w SCUMM.objectUntouchable, y
+  rep #$20
+.ACCU 16
+_ou.clear_ret:
+  rtl
+
+; A = obj_id (16-bit). Returns A=0 (Z) if clear, A!=0 (NZ) if set.
+; Trashes X, Y. A is bit value (or 0).
+scummvm.objUntouchable_test:
+  .ACCU 16
+  .INDEX 16
+  cmp #SCUMM_MAX_OBJECTS
+  bcs _ou.test_oob
+  pha
+  lsr a
+  lsr a
+  lsr a
+  tay
+  pla
+  and #$0007
+  tax
+  lda #0
+  sep #$20
+.ACCU 8
+  lda.l scummvm.bit8Lut, x
+  and.w SCUMM.objectUntouchable, y
+  rep #$20
+.ACCU 16
+  rtl
+_ou.test_oob:
+  lda #0
+  rtl
+
 .ends
 
 
@@ -18158,6 +18315,17 @@ _icv.classLoop:
   inx
   cpx #SCUMM_MAX_OBJECTS * 2
   bcc _icv.classLoop
+  ;--- Init objectUntouchable bitmap: all zero (1 bit per object) ---
+  lda #0
+  ldx #0
+_icv.untouchLoop:
+  .ACCU 16
+  .INDEX 16
+  sta.l SCUMM.objectUntouchable,x
+  inx
+  inx
+  cpx #(SCUMM_MAX_OBJECTS / 8)
+  bcc _icv.untouchLoop
   ;--- Init render slots: all empty ---
   sep #$20
   ldx #0

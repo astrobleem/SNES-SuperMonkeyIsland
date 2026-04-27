@@ -1075,16 +1075,19 @@ room.findObject:
   tax                                   ;X = byte offset of last entry
 
 _fo.loop:
-  ;read obj_id, check visibility
+  ;read obj_id; ScummVM (object.cpp:557+) skips obj_nr<1 OR
+  ;kObjectClassUntouchable (class 32). State==0 is NOT a clickability
+  ;filter — it just selects the object's default visual.
   lda.l SCUMM.roomObjTable,x           ;obj_id
+  beq _fo.next                          ;obj_id == 0 → skip
+  phx                                   ;save loop offset (jsl trashes A/X/Y)
+  jsl scummvm.objUntouchable_test       ;A=0 if clickable, !=0 if untouchable
+  plx                                   ;restore loop offset
+  cmp #0
+  bne _fo.next                          ;untouchable → skip
+  ;reload obj_id into Y for downstream AABB compares
+  lda.l SCUMM.roomObjTable,x
   tay
-  sep #$20
-.ACCU 8
-  lda.w SCUMM.objectState,y
-  rep #$20
-.ACCU 16
-  and #$00FF
-  beq _fo.next
 
   ;AABB X: roomX >= x_px AND roomX < x_px + width_px
   lda.l SCUMM.roomObjTable+6,x         ;width_px

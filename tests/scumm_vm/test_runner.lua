@@ -944,6 +944,148 @@ function test_phaseC_isActorInBox_outside()
 end
 
 -- ============================================================================
+-- PHASE C cont — BOXM-pathfinding (buildWalkPath fizzle on no route)
+-- Stages a synthetic 3-box room with no BOXM connection between box 1
+-- and box 2, runs op_walkActorTo across the gap, asserts pathLen=0.
+-- This is the regression-class catcher for the "auto-walk to dock middle"
+-- cheat: when no route exists, ScummVM v5's walkActor sets MF_LAST_LEG
+-- and the actor stays put. Our equivalent is `_bwp.fizzle` which clears
+-- pathLen; the pump sees pathLen=0 and clears moving without moving the
+-- actor (commit 921e287).
+-- ============================================================================
+
+local SCUMM_boxMatrixPtr  = 0x7EFDE9
+local SCUMM_walkPathLen   = 0x7EEEB2
+local SCUMM_actorIgnoreBoxes = 0x7EEEE2
+
+-- Stage a 3x3 BOXM matrix at $7F:5060 (well past the BOXD entries).
+-- Each entry is the next-hop box (or $FF for no route). Updates
+-- boxMatrixPtr to point at it. Caller must restore boxMatrixPtr.
+local function H_inject_box_matrix_3x3(matrix)
+  local matrix_addr = 0x7F5060
+  for i = 1, 9 do
+    H.wr8(matrix_addr + (i - 1), matrix[i] or 0xFF)
+  end
+  -- boxMatrixPtr is the offset within $7F bank where the matrix lives.
+  H.wr16(SCUMM_boxMatrixPtr, 0x5060)
+end
+
+-- Set up a 3-box scenario: sentinel + 2 disjoint rectangles + stage a
+-- matrix. Returns a teardown closure that restores all touched state.
+local function H_setup_3box_scenario(matrix, actor_idx, actor_x, actor_y)
+  local snap = H_snapshot_walkboxes()
+  H_inject_walkbox(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+  H_inject_walkbox(1,
+    0,   0,    -- UL
+    100, 0,    -- UR
+    100, 100,  -- LR
+    0,   100,  -- LL
+    0)
+  H_inject_walkbox(2,
+    200, 200,
+    300, 200,
+    300, 300,
+    200, 300,
+    0)
+  H.wr16(SCUMM_boxCount, 3)
+
+  local saved_matrix_ptr = H.rd16(SCUMM_boxMatrixPtr)
+  H_inject_box_matrix_3x3(matrix)
+
+  local saved = {
+    actor_room   = H.rd8 (H.actor_addr(actor_idx, 0)),
+    actor_x      = H.rd16(H.actor_addr(actor_idx, 2)),
+    actor_y      = H.rd16(H.actor_addr(actor_idx, 4)),
+    actor_ignore = H.rd8 (SCUMM_actorIgnoreBoxes + actor_idx),
+    pathLen      = H.rd8 (SCUMM_walkPathLen + actor_idx),
+    matrix_ptr   = saved_matrix_ptr,
+    snap         = snap,
+  }
+
+  -- Place actor inside box 1 with room = currentRoom so buildWalkPath
+  -- treats them as live. actorIgnoreBoxes=0 forces the box-routing path.
+  H.wr8 (H.actor_addr(actor_idx, 0), H.rd8(H.SYM.SCUMM_currentRoom))
+  H.wr16(H.actor_addr(actor_idx, 2), actor_x)
+  H.wr16(H.actor_addr(actor_idx, 4), actor_y)
+  H.wr8 (SCUMM_actorIgnoreBoxes + actor_idx, 0)
+  -- Clear pathLen with a sentinel so we can tell buildWalkPath wrote.
+  H.wr8 (SCUMM_walkPathLen + actor_idx, 0xCC)
+
+  return saved
+end
+
+local function H_teardown_3box_scenario(actor_idx, saved)
+  H.wr8 (H.actor_addr(actor_idx, 0), saved.actor_room)
+  H.wr16(H.actor_addr(actor_idx, 2), saved.actor_x)
+  H.wr16(H.actor_addr(actor_idx, 4), saved.actor_y)
+  H.wr8 (SCUMM_actorIgnoreBoxes + actor_idx, saved.actor_ignore)
+  H.wr8 (SCUMM_walkPathLen + actor_idx, saved.pathLen)
+  H.wr16(SCUMM_boxMatrixPtr, saved.matrix_ptr)
+  H_restore_walkboxes(saved.snap)
+end
+
+-- buildWalkPath: when BOXM has NO route from start box to dest box,
+-- the path fizzles (pathLen=0) — actor doesn't auto-walk through walls.
+-- This is the regression catch for #45 (auto-walk to dock middle).
+function test_buildWalkPath_no_route_fizzles()
+  -- Matrix: identity diagonal, all off-diagonal $FF (no routes).
+  -- Indices: row*3 + col. Box 0 sentinel; boxes 1 and 2 mutually unreachable.
+  local NO_ROUTE = {
+    --        to=0  to=1  to=2
+    0x00, 0xFF, 0xFF,   -- from=0
+    0xFF, 0x01, 0xFF,   -- from=1 (NO route to box 2)
+    0xFF, 0xFF, 0x02,   -- from=2 (NO route to box 1)
+  }
+  local saved = H_setup_3box_scenario(NO_ROUTE, 5, 50, 50)
+
+  -- op_walkActorTo (literals): 1E actor x.lo x.hi y.lo y.hi
+  -- Walk actor 5 from (50,50) inside box 1 to (250,250) inside box 2.
+  -- Followed by op_stopObjectCode ($00) to terminate the test slot.
+  local bc = {0x1E, 0x05, 0xFA, 0x00, 0xFA, 0x00, 0x00}
+  H.run_bytecode(bc)
+
+  local pathLen = H.rd8(SCUMM_walkPathLen + 5)
+  H_teardown_3box_scenario(5, saved)
+
+  H.assert_eq(pathLen, 0,
+    "buildWalkPath: no BOXM route → pathLen=0 (fizzle, ScummVM MF_LAST_LEG-on-no-route)")
+end
+
+-- buildWalkPath: when BOXM has a route (boxes adjacent + connected),
+-- buildWalkPath produces pathLen > 0 and the actor walks. Sanity check
+-- so the fizzle test isn't trivially passing because buildWalkPath is
+-- broken across the board.
+function test_buildWalkPath_with_route_builds_path()
+  local WITH_ROUTE = {
+    --        to=0  to=1  to=2
+    0x00, 0xFF, 0xFF,   -- from=0 (sentinel — irrelevant)
+    0xFF, 0x01, 0x02,   -- from=1: route to box 2 directly
+    0xFF, 0x01, 0x02,   -- from=2: route back to box 1 directly
+  }
+  local saved = H_setup_3box_scenario(WITH_ROUTE, 5, 50, 50)
+  -- For a route to actually be built, boxes need to be adjacent so
+  -- getBoxEdgeCrossing can pick a viable waypoint. Override box 2 to
+  -- abut box 1 along their right/left edges.
+  H_inject_walkbox(2,
+    100, 0,
+    200, 0,
+    200, 100,
+    100, 100,
+    0)
+
+  local bc = {0x1E, 0x05, 0x96, 0x00, 0x32, 0x00, 0x00}  -- walk to (150,50)
+  H.run_bytecode(bc)
+
+  local pathLen = H.rd8(SCUMM_walkPathLen + 5)
+  H_teardown_3box_scenario(5, saved)
+
+  -- pathLen >= 1 (at least one waypoint = the target itself for a same-box
+  -- or adjacent-box walk). Strict ">=1" lets implementation choose 1 or 2.
+  H.assert_eq(pathLen >= 1 and 1 or 0, 1,
+    string.format("buildWalkPath: BOXM has route → pathLen >= 1 (got %d)", pathLen))
+end
+
+-- ============================================================================
 -- PHASE D — Engine pipeline integration smokes
 -- These run against the live game state (post-boot) and assert pipeline
 -- invariants rather than opcode semantics.
@@ -2716,6 +2858,11 @@ local TESTS = {
     fn = test_phaseC_isActorInBox_inside },
   { name = "Phase C: isActorInBox with actor outside → no jump",
     fn = test_phaseC_isActorInBox_outside },
+  -- BOXM-pathfinding regression catchers (commit 921e287):
+  { name = "Phase C: buildWalkPath no BOXM route → pathLen=0 fizzle",
+    fn = test_buildWalkPath_no_route_fizzles },
+  { name = "Phase C: buildWalkPath with BOXM route → pathLen>=1 builds",
+    fn = test_buildWalkPath_with_route_builds_path },
   -- Phase D: integration smokes
   { name = "Phase D: boot smoke (room set, brightness $0F, VAR_ROOM match)",
     fn = test_phaseD_boot_smoke },

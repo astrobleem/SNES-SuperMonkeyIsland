@@ -13049,19 +13049,18 @@ _ri.buildOam:
   ; Compute flip mask: priority + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
   ;
-  ; Actor priority comes from per-actor zClip (ScummVM Actor::_layer):
-  ;   zClip == 0 (default): priority 2 ($20) — actor renders BETWEEN
-  ;     BG.0 and BG.1 in mode 1, so BG1.1 / BG2.1 foreground tiles
-  ;     mask the actor (e.g. rocky archway in room 38 lookout).
-  ;   zClip != 0: priority 3 ($30) — actor renders ABOVE BG1.1 /
-  ;     BG2.1 fg tiles. MI1 scripts set this for actors that visually
-  ;     belong "in front of" room features (e.g. room 38 old man +
-  ;     campfire are already script-set zClip=1).
-  ;
-  ; Bug 1 (ego invisible at room 33 upper-cliff) is patched by setting
-  ; ego.zClip = 1 in the room-33 entry hook (see _fes._fixupRoom33ZClip
-  ; in finalizeEgoSpawn). Long-term: walkbox-z-driven priority would
-  ; pick the right value automatically per actor position.
+  ; Actor priority — ScummVM v5 zbuf semantics (actor.cpp:2584-2595).
+  ;   1. If actor._forceClip != 0, use it directly. (Sub-op 19,
+  ;      SO_ALWAYS_ZCLIP, sets it via op_actorOps; sub-op 18 clears.)
+  ;   2. Else, zbuf = getMaskFromBox(actor._walkbox) — the walkbox's
+  ;      mask byte indicates which zplane masks this actor.
+  ; SNES priority mapping:
+  ;   resolved zbuf == 0 → priority 3 ($30): actor draws ABOVE all
+  ;     BG1.1 / BG2.1 foreground tiles (no fg masking applies).
+  ;   resolved zbuf != 0 → priority 2 ($20): actor draws BETWEEN
+  ;     BG.0 and BG.1, so foreground tiles MAY mask the actor.
+  ; (SNES has whole-tile priority bits; we don't have ScummVM's per-
+  ; pixel zplane masking, so this is a coarse approximation.)
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3               ; render slot
@@ -13069,15 +13068,42 @@ _ri.buildOam:
   sta.w SCUMM.actorFlipMask          ; save palette bits temporarily
   lda.w SCUMM.renderSlotActor,x      ; actor number for this slot
   tax
-  lda.w SCUMM.actorZClip,x
-  cmp #1
-  bne _ri.normalPriority
-  lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$30                            ; priority 3 (above BG1.1 / BG2.1 fg)
+  lda.w SCUMM.actorZClip,x           ; _forceClip
+  bne _ri.zbufNonZero                ; non-zero override → priority 2
+
+  ; _forceClip == 0: read walkbox.mask
+  lda.w SCUMM.actorWalkBox,x         ; box index byte
+  cmp #$FF
+  beq _ri.zbufZero                   ; no box (sentinel) → priority 3
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  pha                                ; save box idx
+  asl a
+  asl a                              ; *4
+  sta.w SCUMM.scratch                ; scratch = box*4
+  pla                                ; box
+  asl a
+  asl a
+  asl a
+  asl a                              ; *16
+  clc
+  adc.w SCUMM.scratch                ; box*20
+  clc
+  adc #18                            ; +18 = offset to mask byte (skip
+                                     ; 2-byte count prefix + 16 coord bytes)
+  tax
+  sep #$20
+  .ACCU 8
+  lda.l $7F5000,x                    ; A = box.mask
+  beq _ri.zbufZero
+_ri.zbufNonZero:
+  lda.w SCUMM.actorFlipMask
+  ora #$20                            ; priority 2
   bra _ri.priorityDone
-_ri.normalPriority:
-  lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$20                            ; priority 2 (between BG.0 and BG.1)
+_ri.zbufZero:
+  lda.w SCUMM.actorFlipMask
+  ora #$30                            ; priority 3
 _ri.priorityDone:
   sta.w SCUMM.actorFlipMask
 

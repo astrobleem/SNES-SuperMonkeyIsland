@@ -13072,8 +13072,18 @@ _ri.buildOam:
   .INDEX 16
   ; Compute flip mask: priority + palette bits + optional H-flip
   ; OAM attr: VHOOPPPc (V=vflip, H=hflip, OO=priority, PPP=palette, c=nametable)
-  ; Priority 2 = default (below BG pri-1 tiles, above BG pri-0).
-  ; Priority 0 = behind all BG (for actors with zClip=1, e.g. clouds).
+  ;
+  ; Actor priority = 3 ($30) for both normal and zClip=1 actors. In MI1's
+  ; mode-1 layout, BG1 carries the room art with priority-1 marking
+  ; foreground tiles for some scenes (e.g. room 33 cliff edge tiles
+  ; where ego stands). Priority 2 hides ego behind those cliff tiles
+  ; (bug 1). Priority 3 puts the actor above BG1.1 / BG2.1 — matching
+  ; ScummVM's default actor-above-room-art ordering.
+  ;
+  ; Per-actor "behind foreground" behavior (cloud actors that should
+  ; pass behind room features) would need ScummVM's Actor::_layer
+  ; mechanism + per-frame priority compute from walkbox z-data. Not
+  ; yet implemented; zClip is currently a no-op render-order hint.
   sep #$20
   .ACCU 8
   ldx.w SCUMM.scratch3               ; render slot
@@ -13085,11 +13095,11 @@ _ri.buildOam:
   cmp #1
   bne _ri.normalPriority
   lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$20                            ; priority 2: same as normal actors (above BG1-pri-0 sky, below BG1-pri-1 foreground)
+  ora #$30                            ; priority 3 (zClip=1 actor; same as normal until _layer is wired)
   bra _ri.priorityDone
 _ri.normalPriority:
   lda.w SCUMM.actorFlipMask          ; palette bits
-  ora #$20                            ; priority 2: normal actor rendering
+  ora #$30                            ; priority 3 (above BG1/BG2 pri-1 foreground)
 _ri.priorityDone:
   sta.w SCUMM.actorFlipMask
 

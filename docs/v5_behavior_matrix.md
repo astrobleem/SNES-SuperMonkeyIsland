@@ -88,9 +88,13 @@ should be EXECUTED.
 
 | Step | ScummVM v5 | Our port | Status |
 |------|-----------|----------|--------|
-| `getNextBox(_walkbox, destbox) < 0 → destbox=walkbox + MF_LAST_LEG` | All versions | `buildWalkPath` now jumps to `_bwp.fizzle` (pathLen=0) on no BOXM route — matches ScummVM's MF_LAST_LEG fizzle from caller's POV | ✅ |
-| `setBox(_walkdata.curbox)` per-leg | All versions | UNVERIFIED | ❓ |
-| `calcMovementFactor` v3/v4 vs v5 | v5 simpler | UNVERIFIED — audit gap | ❓ |
+| `getNextBox(_walkbox, destbox) < 0 → destbox=walkbox + MF_LAST_LEG` | All versions | `buildWalkPath` jumps to `_bwp.fizzle` on no route + pump's `_ua.fizzleArrival` finalizes mid-walk if BOXM goes inconsistent | ✅ |
+| `setBox(_walkdata.curbox)` per-leg | All versions | `_ua.fullyArrived` writes `walkData.curBox -> SCUMM.actorWalkBox[slot]` on every intermediate arrival (commit 8266f71) | ✅ |
+| Per-leg `getNextBox` + `getBoxEdgeCrossing` on arrival | All versions | `_ua.fullyArrived` calls `getNextBox(walkData.curBox, walkData.destBox)` + `getBoxEdgeCrossing` to compute next leg (commit 8266f71). Verified by `test_walkActor_multiLeg_traverses_boxes` fixture (commit fa7e12c). | ✅ |
+| MF_LAST_LEG transition when `walkbox == destbox` | All versions | `_ua.startLastLeg` ORs `MF_LAST_LEG` into `actors.moving` and sets `walkData.next{X,Y} = walkData.dest{X,Y}` for the final leg | ✅ |
+| MF_LAST_LEG finalize on arrival | All versions | `_ua.finalArrival` clears moving, walkPathLen, seeds standFrame via `chore.animateActor_impl(frame=3)` | ✅ |
+| MF_TURN (turn-only without walking) | All versions | NOT IMPLEMENTED — op_faceDirection snaps facing instead of rotating over frames. Cosmetic only. | ❌ MEDIUM |
+| `calcMovementFactor` v3/v4 vs v5 step math | v5 simpler | Our port uses scaled walk-speed (scale * walkSpeedX/Y / 256), Manhattan distance arrival check. Functionally equivalent for MI1; not bit-for-bit ScummVM. | ⏳ partial |
 
 ### `Actor::adjustXYToBeInBox` (`actor.cpp:1983`)
 

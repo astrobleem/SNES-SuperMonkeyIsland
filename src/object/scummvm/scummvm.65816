@@ -6655,52 +6655,112 @@ op_putActor:
   pla                                ; balance pushed actor number
   ldx.w SCUMM.scratch2
 
-  ; ScummVM: putActor(x,y) does NOT change actor's room or visible flag.
-  ; Only clears moving. Room is set by putActorInRoom, not putActor.
-  sep #$20
-  stz.w SCUMM.actors.moving,x       ; ScummVM: putActor clears moving
-  rep #$20
+  ; ScummVM Actor::putActor (actor.cpp:1730-1769) — full v5 semantics:
+  ;
+  ;   if (_visible) {
+  ;       if (isInCurrentRoom()) {
+  ;           if (_moving) { stopActorMoving(); startAnimActor(_standFrame); }
+  ;           adjustActorPos();   // snap to walkbox + setBox
+  ;       } else {
+  ;           hideActor();
+  ;       }
+  ;   } else {
+  ;       if (isInCurrentRoom())
+  ;           showActor();
+  ;   }
+  ;
+  ; isInCurrentRoom() == (actor.room == currentRoom). Branch on that:
+  ;   - In current room: stop-moving (with stand-anim seed if was
+  ;     moving), snap to walkbox, then make visible.
+  ;   - Not in current room: hide (visible=0) + clear moving.
+  ;
+  ; Pre-fix our op_putActor only did stz moving + findBox-no-snap +
+  ; actorWalkBox set. That left actor.x/y outside any walkbox in many
+  ; cases (e.g. obj walk-to point (5, 75) in room 33), and never seeded
+  ; stand-anim on transitions. Both feed the actor renderer abstract-
+  ; iterator BRK regression we hit at room 33 entry.
 
-  ; Assign walkbox from position (ScummVM: adjustActorPos)
-  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (tmp) -- findBox clobbers both
+  ; Save SCUMM PC (Y) + fetchLoop bytecode pointer (DP tmp) — both
+  ; snapPointToWalkbox_long and chore.animateActor_impl can trash tmp
+  ; via internal scratch use.
   phy                                ; save Y = SCUMM PC
   lda.b tmp
   pha
   lda.b tmp+2
   pha
-  ; Set findBox args
-  lda.w SCUMM.actors.x,x
-  sta.b tmp
-  lda.w SCUMM.actors.y,x
-  sta.b tmp+2
-  jsr scummvm.findBox                ; A = boxIdx or $FF
-  ; Restore fetchLoop bytecode pointer + SCUMM PC
-  pha                                ; save findBox result
-  lda 3,s                            ; saved tmp+2 (stack: result, tmp+2, tmp, Y)
-  sta.b tmp+2
-  lda 5,s                            ; saved tmp
-  sta.b tmp
-  pla                                ; A = findBox result
-  plx                                ; discard saved tmp+2
-  plx                                ; discard saved tmp
-  ply                                ; restore Y = SCUMM PC
-  cmp #$00FF
-  beq +
-  pha                                ; save boxIdx
-  ldx.w SCUMM.scratch2              ; actor struct offset
+
+  ; Branch on room match
+  ldx.w SCUMM.scratch2
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.room,x
+  cmp.w SCUMM.currentRoom
+  bne _opa.notInRoom
+
+  ; ---- In current room ----
+  ; If was moving, stand-anim seed + clear moving
+  lda.w SCUMM.actors.moving,x
+  beq _opa.notMoving
+  stz.w SCUMM.actors.moving,x
+  rep #$20
+  .ACCU 16
+  ; seed stand anim: A=actor index, X=frame=3 (v5 _standFrame)
   txa
   lsr a
   lsr a
   lsr a
-  lsr a                              ; / 16 = actor number
-  tax
-  pla                                ; recover boxIdx
+  lsr a                              ; A = actor index
+  ldx #3                             ; frame = 3
+  jsl scummvm.chore.animateActor_impl
+  ldx.w SCUMM.scratch2               ; reload struct offset
   sep #$20
   .ACCU 8
-  sta.w SCUMM.actorWalkBox,x
+_opa.notMoving:
   rep #$20
   .ACCU 16
-+
+  ; adjustActorPos: snap actor.x/y to closest walkbox + update walkbox
+  lda.w SCUMM.actors.x,x
+  sta.w SCUMM.bwpTargetX
+  lda.w SCUMM.actors.y,x
+  sta.w SCUMM.bwpTargetY
+  jsl scummvm.snapPointToWalkbox_long
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.bwpTargetX
+  sta.w SCUMM.actors.x,x
+  lda.w SCUMM.bwpTargetY
+  sta.w SCUMM.actors.y,x
+  ; actorWalkBox[actor] = bwpDestBox
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = actor index
+  tay
+  lda.w SCUMM.bwpDestBox
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.actorWalkBox,y
+  ; showActor: ensure visible (Actor::putActor sets visible if was hidden;
+  ; visible already 1 is a no-op)
+  ldx.w SCUMM.scratch2
+  lda #1
+  sta.w SCUMM.actors.visible,x
+  bra _opa.restore
+
+_opa.notInRoom:
+  ; ---- Not in current room: hideActor ----
+  stz.w SCUMM.actors.visible,x
+  stz.w SCUMM.actors.moving,x
+
+_opa.restore:
+  rep #$20
+  .ACCU 16
+  ; Restore SCUMM PC + fetchLoop pointer
+  pla
+  sta.b tmp+2
+  pla
+  sta.b tmp
+  ply
   clc
   rts
 

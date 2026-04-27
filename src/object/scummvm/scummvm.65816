@@ -11447,14 +11447,17 @@ _ua.facingDone:
   ; A = |dy|
   clc
   adc.w SCUMM.actorOamCount           ; A = |dx|+|dy|
-  ; Compare sum with effective speed: if sum > speed, not arrived
+  ; Compare sum with effective speed: if sum >= speed, not arrived.
+  ; (Combined branch -> JMP because per-leg dispatch added 195+ bytes
+  ; below, putting _ua.notArrived out of short-branch range.)
   sep #$20
   .ACCU 8
   cmp.w SCUMM.chrDmaPending          ; sum vs effective speed
   rep #$20
   .ACCU 16
-  beq _ua.notArrived                  ; sum == speed → not arrived (still moving)
-  bcs _ua.notArrived                  ; sum > speed → not arrived
+  bcc +                               ; sum < speed → arrived
+  jmp _ua.notArrived
++
 
   ; --- Arrived at waypoint: snap position ---
   pla                                 ; waypointY
@@ -11463,35 +11466,140 @@ _ua.facingDone:
   pla                                 ; waypointX
   sta.w SCUMM.actors.x,x
 
-  ; Advance to next waypoint
-  sep #$20
-  ldx.w SCUMM.scratch3
-  lda.w SCUMM.walkPathIdx,x
-  inc a
-  cmp.w SCUMM.walkPathLen,x
-  bcs _ua.fullyArrived
-  sta.w SCUMM.walkPathIdx,x
-  rep #$20
-  jmp _ua.nextSlot                    ; keep moving=1, next frame targets new waypoint
+  ; --- Arrived at intermediate waypoint walkData.nextX/Y. ---
+  ; ScummVM Actor::walkActor (actor.cpp:980-1014): on arrival,
+  ;   1. setBox(_walkdata.curbox) -- enter the box this leg led to
+  ;   2. If walkbox == destbox -> walk straight to dest, MF_LAST_LEG
+  ;   3. Else -> getNextBox + findPathTowards for next intermediate leg
+  ; If MF_LAST_LEG was already set, this IS the final arrival -> finalize.
 
-_ua.fullyArrived:
+  sep #$20
+  .ACCU 8
+  ldx.w SCUMM.uaActorStructOfs
+  lda.w SCUMM.actors.moving,x
+  bit #MF_LAST_LEG
+  beq +                               ; not LAST -> intermediate dispatch
+  jmp _ua.finalArrival                ; MF_LAST_LEG arrival -> finalize
++
+
+  ; Intermediate arrival: setBox(walkData.curBox).
+  ldx.w SCUMM.uaWalkDataOfs
+  lda.w SCUMM.walkData.curBox,x
+  ldy.w SCUMM.scratch3
+  sta.w SCUMM.actorWalkBox,y
+
+  ; If walkData.curBox == walkData.destBox -> kick off the LAST leg
+  ; (walk from current pos to walkData.dest). Else compute next leg.
+  cmp.w SCUMM.walkData.destBox,x
+  beq _ua.startLastLeg
+
+  rep #$20
+  .ACCU 16
+  ; getNextBox(walkData.curBox, walkData.destBox)
+  ldx.w SCUMM.uaWalkDataOfs
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.walkData.curBox,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  pha                                 ; save curBox
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.walkData.destBox,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  tay                                 ; Y = destBox
+  pla                                 ; A = curBox
+  jsr scummvm.getNextBox              ; A = nextBox or $FF
+  cmp #$00FF
+  beq _ua.fizzleArrival
+  pha                                 ; save nextBox
+
+  ; getBoxEdgeCrossing(curBox, nextBox) -> tmp+0, tmp+2 = waypoint
+  tay                                 ; Y = nextBox
+  ldx.w SCUMM.uaWalkDataOfs
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.walkData.curBox,x
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  jsr scummvm.getBoxEdgeCrossing      ; trashes tmp+0..30; output tmp+0,+2
+
+  ; Stash new intermediate waypoint into walkData.nextX/Y
+  ldx.w SCUMM.uaWalkDataOfs
+  lda.b tmp
+  sta.w SCUMM.walkData.nextX,x
+  lda.b tmp+2
+  sta.w SCUMM.walkData.nextY,x
+
+  ; walkData.curBox = nextBox (the box this new leg heads toward)
+  pla                                 ; recover nextBox
+  sep #$20
+  .ACCU 8
+  sta.w SCUMM.walkData.curBox,x
+  rep #$20
+  .ACCU 16
+  jmp _ua.nextSlot                    ; new leg ready, keep walking
+
+_ua.startLastLeg:
+  ; walkData.curBox == walkData.destBox: walk current pos -> walkData.dest.
+  ; Set walkData.nextX/Y = destX/Y, OR MF_LAST_LEG into actors.moving.
+  rep #$20
+  .ACCU 16
+  ldx.w SCUMM.uaWalkDataOfs
+  lda.w SCUMM.walkData.destX,x
+  sta.w SCUMM.walkData.nextX,x
+  lda.w SCUMM.walkData.destY,x
+  sta.w SCUMM.walkData.nextY,x
+  ldx.w SCUMM.uaActorStructOfs
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actors.moving,x
+  ora #MF_LAST_LEG
+  sta.w SCUMM.actors.moving,x
+  rep #$20
+  .ACCU 16
+  jmp _ua.nextSlot                    ; LAST leg ready, keep walking
+
+_ua.fizzleArrival:
+  ; Mid-walk getNextBox returned $FF (BOXM inconsistency). ScummVM:
+  ; set destbox=walkbox, MF_LAST_LEG, return -> on next frame's
+  ; arrival check, MF_LAST_LEG will trigger _ua.finalArrival.
+  ; Simplest equivalent: just finalize here.
+  ; Fall through to _ua.finalArrival.
+
+_ua.finalArrival:
   .ACCU 8
   .INDEX 16
   ldx.w SCUMM.uaActorStructOfs
   stz.w SCUMM.actors.moving,x
   ldx.w SCUMM.scratch3
+  stz.w SCUMM.walkPathLen,x           ; clear "is walking" flag
   lda #$FF
   sta.w SCUMM.actorLastFrame,x
   rep #$20
   .ACCU 16
 
-  ; Seed chore engine with stand anim (ScummVM Actor::stopActorMoving → startAnimActor(_standFrame))
+  ; ScummVM v5 Actor::walkActor finalize: startAnimActor(_standFrame).
+  ; v5 default _standFrame = 3.
   lda.w SCUMM.scratch3
   and #$00FF
-  ldx #3                              ; frame = 3 (stand) — v5 default _standFrame
+  ldx #3
   jsl scummvm.chore.animateActor_impl
 
   jmp _ua.nextSlot
+
+_ua.fullyArrived:
+  ; Legacy entry kept for the path-len decrement above; route to
+  ; finalize. (The decrement check is now redundant since walkData
+  ; uses single-waypoint per leg, but keeping until that block is
+  ; refactored in a follow-up.)
+  rep #$20
+  .ACCU 16
+  jmp _ua.finalArrival
 
 _ua.notArrived:
   .ACCU 16

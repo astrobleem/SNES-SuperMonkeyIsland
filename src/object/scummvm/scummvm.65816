@@ -3771,9 +3771,9 @@ _bwp.routeLoop:
   ldy.w SCUMM.bwpDestBox
   jsr scummvm.getNextBox ;trashes tmp+6-10; result in A
   cmp #$00FF
-  beq _bwp.directPath   ;no path
+  beq _bwp.fizzle       ;no BOXM route -> ScummVM MF_LAST_LEG fizzle
   cmp.w SCUMM.bwpCurBox
-  beq _bwp.directPath   ;stuck (self-loop)
+  beq _bwp.fizzle       ;self-loop -> no progress, fizzle
   pha                   ;save nextBox on stack
 
   ;get crossing waypoint between curBox and nextBox
@@ -3837,6 +3837,23 @@ _bwp.directPath:
   sta.w SCUMM.actorWalkBox,x
   rep #$20
 
+  rts
+
+_bwp.fizzle:
+  .ACCU 16
+  .INDEX 16
+  ; ScummVM Actor::walkActor: when getNextBox(_walkbox, destbox) returns
+  ; kInvalidBox, the walk fizzles -- destbox=_walkbox + MF_LAST_LEG, the
+  ; actor stays at current position. Our equivalent is pathLen=0; the
+  ; existing pump sees pathLen=0 and clears moving without moving the
+  ; actor. Discards any partial waypoints already routed.
+  pla                   ;recover actor index (pushed at entry)
+  and #$000F
+  tax
+  sep #$20
+  stz.w SCUMM.walkPathLen,x
+  stz.w SCUMM.walkPathIdx,x
+  rep #$20
   rts
 
 ;-------------------------------------------------------------------

@@ -88,7 +88,7 @@ should be EXECUTED.
 
 | Step | ScummVM v5 | Our port | Status |
 |------|-----------|----------|--------|
-| `getNextBox(_walkbox, destbox) < 0 → destbox=walkbox + MF_LAST_LEG` | All versions | `buildWalkPath_long` directs to `_bwp.directPath` instead, ignoring BOXM-no-route | ❌ HIGH (recently mitigated for FES-only via 822e1ae route-fizzle pre-check, but core buildWalkPath still wrong for other callers) |
+| `getNextBox(_walkbox, destbox) < 0 → destbox=walkbox + MF_LAST_LEG` | All versions | `buildWalkPath` now jumps to `_bwp.fizzle` (pathLen=0) on no BOXM route — matches ScummVM's MF_LAST_LEG fizzle from caller's POV | ✅ |
 | `setBox(_walkdata.curbox)` per-leg | All versions | UNVERIFIED | ❓ |
 | `calcMovementFactor` v3/v4 vs v5 | v5 simpler | UNVERIFIED — audit gap | ❓ |
 
@@ -191,23 +191,33 @@ should be EXECUTED.
 ## Remediation order (HIGH first)
 
 1. ✅ HIGH: `op_putActor` calls `adjustActorPos` (walkbox snap +
-   showActor) — **DONE commit e356342**. Boot test passes; ego state
-   at room 33 entry now correctly snapped + visible. The room 33 BRK
-   regression persists, confirming (per user intuition + audit r2) it
-   is a cluster bug — see remaining HIGH items 2 and 3 below.
-2. ❌ HIGH: `startWalkActor` calls `adjustXYToBeInBox` for v5.
+   showActor) — **DONE commit e356342**.
+2. ✅ HIGH: Room 33 BRK fixed — was caused by 3 cross-bank `jsr`
+   instructions in `_fes.startWalk` that landed inside `room.clearTilemap`
+   in bank 0 (the JSRs targeted bank-4 symbols but JSR is intra-bank).
+   **DONE commit 2e90a56.**
+3. ✅ HIGH: `buildWalkPath` BOXM-no-route fizzle — when getNextBox
+   returns `$FF`, `_bwp.fizzle` clears pathLen so the existing pump
+   stops the actor. Matches ScummVM's `MF_LAST_LEG` semantics from the
+   caller's POV. **DONE this session.** All callers now respect BOXM
+   routing, not just FES.
+4. ❌ HIGH: `startWalkActor` calls `adjustXYToBeInBox` for v5.
    Required before walk pump kicks off so `_walkdata.dest` is always
    inside a real box.
-3. ❌ HIGH: `findObject` visibility check via
+5. ❌ HIGH: `findObject` visibility check via
    `kObjectClassUntouchable` (ticket #50).
-4. ❌ HIGH: `op_actorOps` sub 0x11 (`scale`): verify v5 takes 2
+6. ❌ HIGH: `op_actorOps` sub 0x11 (`scale`): verify v5 takes 2
    bytes (scaleX, scaleY).
-5. ❌ MEDIUM: `_bwp.adjustToBox` three-pass threshold + backwards
+7. ❌ MEDIUM: `_bwp.adjustToBox` three-pass threshold + backwards
    iteration + true edge-distance.
-6. ❌ MEDIUM: `Actor::putActor` visibility transitions
+8. ❌ MEDIUM: `Actor::putActor` visibility transitions
    (showActor/hideActor on room match change).
-7. ❓ verify gaps: walk pump step math, faceToObject direction
-   encoding, walkbox flag specdir override.
+9. ❌ MEDIUM (deferred to fresh session): full ScummVM walkActor
+   state machine port — MF_NEW_LEG/IN_LEG/LAST_LEG/TURN bitmask on
+   `actors.moving`, per-leg `getNextBox` routing in updateActors_body
+   instead of pre-built path. Spec in `.claude/next_session_walkpump.md`.
+10. ❓ verify gaps: walk pump step math, faceToObject direction
+    encoding, walkbox flag specdir override.
 
 ---
 

@@ -2917,13 +2917,12 @@ _scummvm.loadActorCostumes:
 
 
 ;===================================================================
-; _scummvm.renderActors
-; Write OAM entries for visible actors in current room.
-; MVP: only renders actor 1 (Guybrush) using hardcoded costume frame.
-; Called at end of ScummVM.play(), after slot scheduler.
-;
-; Writes to GLOBAL.oamBuffer (Table 0) and GLOBAL.oamTable1 (Table 1).
-; Sets GLOBAL.oamUploadFlag so the engine DMAs to OAM during VBlank.
+; _scummvm.renderActors -- thunk into the bank-5 renderActors_impl.
+; Iterates all render slots (up to SCUMM_MAX_RENDER_SLOTS) and emits
+; OAM for each one. Called at end of ScummVM.play(), after the slot
+; scheduler. Writes GLOBAL.oamBuffer (Table 0) + GLOBAL.oamTable1
+; (Table 1); sets GLOBAL.oamUploadFlag so NMI DMAs to OAM during
+; VBlank.
 ;===================================================================
 
 _scummvm.renderActors:

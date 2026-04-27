@@ -375,19 +375,13 @@ _init.zeroDialogTilemap:
   ;--- Init camera state (superfree helper) ---
   jsl scummvm.initCameraVars
 
-  ;--- Set up pseudo-room mapper ---
-  ; MI1 room 1 is entered via pseudo-room 130 (pier/lookout direction).
-  ; ENCD checks VAR_ROOM against 130/131/132 to determine entry direction.
-  ; Set up mapper: 130/131/132 all resolve to real room 1.
-  sep #$20
-  lda #1
-  ldx #130
-  sta.w SCUMM.resourceMapper,x
-  inx
-  sta.w SCUMM.resourceMapper,x
-  inx
-  sta.w SCUMM.resourceMapper,x
-  rep #$20
+  ; (Removed: hardcoded resourceMapper preset for 130/131/132. MI1's
+  ; script 1 calls op_pseudoRoom ($CC) at PC $0801 with base=1 and
+  ; j-bytes $82 $83 $84 — populating mapper[2/3/4]=1 (= 130/131/132 &
+  ; 0x7F). The resolver in processRoomChange masks newRoom with 0x7F
+  ; before indexing, matching ScummVM script_v5.cpp:2089. The earlier
+  ; preset wrote mapper[130/131/132] directly with the wrong index, a
+  ; band-aid for the resolver that didn't mask.)
 
   ;--- Zero walk path state (prevent garbage movement before walkActorTo) ---
   ldx #0
@@ -1010,14 +1004,21 @@ _prc.bgReady:
   ; scene) doesn't show in scanlines 144-223 during intro cutscenes.
   jsl scummvm.clearVerbTilemap
 
-  ; Resolve pseudo-room → real room via resourceMapper for loading
+  ; Resolve pseudo-room → real room via resourceMapper.
+  ; ScummVM (room.cpp:167, resource.cpp:605, script_v5.cpp:2089): only
+  ; rooms with bit 7 set are pseudo-rooms; index is `room & 0x7F` into
+  ; a 128-byte mapper. Rooms < 128 use the value directly.
   lda.w SCUMM.newRoom
   and #$00FF
+  cmp #$80
+  bcc _prc.noMapper
+  and #$7F
   tax
   sep #$20
   lda.w SCUMM.resourceMapper,x
   rep #$20
   and #$00FF
+_prc.noMapper:
 
   ; Save resolved room number
   pha
@@ -1393,14 +1394,19 @@ _prc.noExitScript2:
   ; Flush cache (global scripts reload on demand)
   stz.w SCUMM.cacheWritePtr
 
-  ; Load room scripts using real room number (resolve again)
+  ; Load room scripts using real room number (resolve again — same
+  ; ScummVM-style "bit 7 set → mapper[room & 0x7F]" rule as above).
   lda.w SCUMM.newRoom
   and #$00FF
+  cmp #$80
+  bcc _prc.noMapper2
+  and #$7F
   tax
   sep #$20
   lda.w SCUMM.resourceMapper,x
   rep #$20
   and #$00FF
+_prc.noMapper2:
   jsr _scummvm.loadRoomScripts
 
   ; Reload surviving global scripts into fresh cache positions

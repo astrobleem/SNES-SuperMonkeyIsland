@@ -1786,23 +1786,49 @@ _scummvm.finalizeEgoSpawn:
   tax
   stx.w SCUMM.scratch2               ; scratch2 = ego struct offset
 
-  ; If ENCD/entry script already placed ego (SCUMM.egoPositioned set),
-  ; skip the obj-walk-to teleport — ScummVM only positions from
-  ; walkToObj when the entry script didn't claim the spawn first.
+  ; CORRECTION: this teleport is NOT v4-only in spirit. ScummVM v5 ALSO
+  ; puts ego at the obj's walk-to point — the placement just happens
+  ; inside startScene (room.cpp:223-237 + 257-263) instead of inside the
+  ; v<=4 block of o5_loadRoomWithEgo. End result: ego sits at the obj's
+  ; walk-to point in BOTH versions. Reference screenshot (PC talkie at
+  ; the dock-entry moment) shows tiny Guybrush on the upper-left cliff
+  ; — that IS obj 426's walk-to point (5, 75), scaled small by the
+  ; SCAL Y=76 → s=32 slot. The DOCK CENTER auto-walk we were producing
+  ; was a *different* bug: bytecode startWalkActor(346, 133) at the end
+  ; of o5_loadRoomWithEgo. ScummVM's pathfinding fizzles that walk
+  ; because box 1 (degenerate, where (5, 75) snaps) has no BOXM route
+  ; to box 9 (dock middle). Our buildWalkPath_long doesn't honor BOXM
+  ; the same way, so the walk completes and Guybrush lands at the dock
+  ; middle. Fix is in pathfinding (#45 follow-up), not here.
   pla                                ; pop saved obj id (we still need pendingEgoX/Y)
   sep #$20
   lda.w SCUMM.egoPositioned
   rep #$20
   and #$00FF
-  bne _fes.afterPlace
+  bne _fes.afterPlace                ; ENCD already positioned ego
 
-  ; ENCD didn't position ego — look up obj walk-to in the freshly loaded room.
   lda.w SCUMM.pendingEgoObj
   jsl scummvm.lookupObjectWalkTo     ; A=walk_x, scratch=walk_y, C=found
   bcc _fes.useByteXY                 ; obj missing → fall back to bytecode (x,y)
   ldx.w SCUMM.scratch2
   sta.w SCUMM.actors.x,x
   lda.w SCUMM.scratch
+  sta.w SCUMM.actors.y,x
+
+  ; ScummVM Actor::putActor calls adjustActorPos which snaps the actor
+  ; to the closest walkbox AABB. The obj walk-to point is often outside
+  ; every walkbox (e.g. room 33 obj 426 -> (5, 75); no walkbox contains
+  ; that point). Without the snap, our actor renderer reads box 0
+  ; (sentinel garbage) for actorWalkBox[ego] and BRKs.
+  lda.w SCUMM.actors.x,x
+  sta.w SCUMM.bwpTargetX
+  lda.w SCUMM.actors.y,x
+  sta.w SCUMM.bwpTargetY
+  jsl scummvm.snapPointToWalkbox_long  ; clamps target + sets bwpDestBox
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.bwpTargetX
+  sta.w SCUMM.actors.x,x
+  lda.w SCUMM.bwpTargetY
   sta.w SCUMM.actors.y,x
   bra _fes.afterPlace
 
@@ -1842,7 +1868,50 @@ _fes.afterPlace:
   bne _fes.startWalk
   jmp _fes.exit                      ; (x, y) == spawn → no walk needed
 _fes.startWalk:
-  ; Set actor target slot for the chore engine (mirrors actorAtObj_impl walk path).
+  ; ScummVM v5 walkActor: when getNextBox(spawnBox, destBox) returns
+  ; kInvalidBox (no BOXM route), it sets _walkdata.destbox = _walkbox
+  ; and OR's MF_LAST_LEG into _moving — the walk completes on the
+  ; next frame without leaving the spawn box. Visually that's
+  ; indistinguishable from "no walk happened". Our buildWalkPath_long
+  ; instead falls back to a directPath that walks straight to the
+  ; target ignoring BOXM connectivity, so the room 33 dock entry
+  ; auto-walks Guybrush from (5, 75) all the way to (346, 133) —
+  ; the cheat the user (rightly) called out for #45. Pre-check the
+  ; route here: if findBox(spawn) and findBox(dest) are NOT connected
+  ; via getNextBox, skip the walk entirely so ego stays at the
+  ; obj walk-to point until the player clicks something.
+  ldx.w SCUMM.scratch2
+  lda.w SCUMM.actors.x,x
+  sta.b tmp
+  lda.w SCUMM.actors.y,x
+  sta.b tmp+2
+  jsr scummvm.findBox                ; A = spawn box (or $FF)
+  sta.w SCUMM.scratch3               ; spawnBox
+  cmp #$00FF
+  beq _fes.skipAutoWalk              ; spawn outside any box -> match fizzle
+
+  lda.w SCUMM.pendingEgoX
+  sta.b tmp
+  lda.w SCUMM.pendingEgoY
+  sta.b tmp+2
+  jsr scummvm.findBox                ; A = dest box (or $FF)
+  cmp #$00FF
+  beq _fes.skipAutoWalk              ; dest outside any box
+
+  cmp.w SCUMM.scratch3
+  beq _fes.doAutoWalk                ; spawn==dest box -> walk within box
+
+  ; getNextBox(spawnBox, destBox)
+  tay                                ; Y = destBox
+  lda.w SCUMM.scratch3               ; A = spawnBox
+  jsr scummvm.getNextBox             ; A = next hop box (or $FF if no route)
+  cmp #$00FF
+  beq _fes.skipAutoWalk              ; no BOXM route -> ScummVM fizzle
+  cmp.w SCUMM.scratch3
+  beq _fes.skipAutoWalk              ; self-loop -> no progress
+
+_fes.doAutoWalk:
+  ; Real path exists: kick off the walk via buildWalkPath_long.
   ldx.w SCUMM.scratch2
   txa
   lsr a
@@ -1856,7 +1925,6 @@ _fes.startWalk:
   sta.w SCUMM.actorTargetX,x
   lda.w SCUMM.pendingEgoY
   sta.w SCUMM.actorTargetY,x
-  ; buildWalkPath args
   ldx.w SCUMM.scratch2
   lda.w SCUMM.actors.x,x
   sta.b tmp
@@ -1872,6 +1940,15 @@ _fes.startWalk:
   sep #$20
   lda #1
   sta.w SCUMM.actors.moving,x
+  rep #$20
+  jmp _fes.exit
+
+_fes.skipAutoWalk:
+  ; No reachable route from spawn box to dest box -- ScummVM-equivalent
+  ; fizzle. Leave actor parked at the obj walk-to point with moving=0.
+  ldx.w SCUMM.scratch2
+  sep #$20
+  stz.w SCUMM.actors.moving,x
   rep #$20
   jmp _fes.exit
 
@@ -4255,6 +4332,28 @@ _cbm.getBoxFlags:
 ;-------------------------------------------------------------------
 scummvm.createBoxMatrix_long:
   jsr scummvm.createBoxMatrix
+  rtl
+
+;-------------------------------------------------------------------
+; scummvm.snapPointToWalkbox_long -- ScummVM Actor::adjustActorPos
+; equivalent. Given a point that may be outside any walkbox, finds
+; the closest walkbox AABB and clamps the point to it. Wrapper around
+; the existing _bwp.adjustToBox helper.
+;
+; Input:  bwpTargetX, bwpTargetY (point to snap)
+; Output: bwpTargetX, bwpTargetY (clamped to closest box)
+;         bwpDestBox             (closest box index, $FF if no boxes)
+;
+; Use case: finalizeEgoSpawn places ego at obj walk-to (e.g. (5, 75)
+; for room 33 obj 426) which is often OUTSIDE every walkbox. The
+; actor renderer uses actorWalkBox[ego] to look up SCAL slots; if it
+; reads box 0 (sentinel with $8300 corner garbage), it BRKs. Snapping
+; ego.x/y to the closest box AABB matches what ScummVM's putActor
+; → adjustActorPos does and makes the renderer happy.
+;-------------------------------------------------------------------
+scummvm.snapPointToWalkbox_long:
+  rep #$31
+  jsr _bwp.adjustToBox
   rtl
 
 .ends

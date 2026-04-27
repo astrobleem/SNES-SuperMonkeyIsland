@@ -1904,7 +1904,7 @@ _fes.startWalk:
   sta.b tmp
   lda.w SCUMM.actors.y,x
   sta.b tmp+2
-  jsr scummvm.findBox                ; A = spawn box (or $FF)
+  jsl scummvm.findBox_long           ; A = spawn box (or $FF) -- cross-bank
   sta.w SCUMM.scratch3               ; spawnBox
   cmp #$00FF
   beq _fes.skipAutoWalk              ; spawn outside any box -> match fizzle
@@ -1913,7 +1913,7 @@ _fes.startWalk:
   sta.b tmp
   lda.w SCUMM.pendingEgoY
   sta.b tmp+2
-  jsr scummvm.findBox                ; A = dest box (or $FF)
+  jsl scummvm.findBox_long           ; A = dest box (or $FF) -- cross-bank
   cmp #$00FF
   beq _fes.skipAutoWalk              ; dest outside any box
 
@@ -1923,7 +1923,7 @@ _fes.startWalk:
   ; getNextBox(spawnBox, destBox)
   tay                                ; Y = destBox
   lda.w SCUMM.scratch3               ; A = spawnBox
-  jsr scummvm.getNextBox             ; A = next hop box (or $FF if no route)
+  jsl scummvm.getNextBox_long        ; A = next hop box (or $FF if no route)
   cmp #$00FF
   beq _fes.skipAutoWalk              ; no BOXM route -> ScummVM fizzle
   cmp.w SCUMM.scratch3
@@ -4021,6 +4021,10 @@ scummvm.buildWalkPath_long:
 
 scummvm.findBox_long:
   jsr scummvm.findBox
+  rtl
+
+scummvm.getNextBox_long:
+  jsr scummvm.getNextBox
   rtl
 
 

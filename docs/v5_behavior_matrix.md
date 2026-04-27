@@ -34,10 +34,12 @@ should be EXECUTED.
 | Behavior | ScummVM gate | Our port | Status |
 |----------|--------------|----------|--------|
 | Sets actor (x, y) and clears moving | All versions | op_putActor | ✅ |
-| Calls adjustActorPos (snap to walkbox AABB) implicitly via Actor::putActor | All versions | NOT CALLED — actor.x/y stays at raw values, only assignActorWalkboxes finds box | ❌ HIGH |
-| Calls showActor when previously hidden | All versions | NOT CALLED | ❌ MEDIUM |
+| Calls adjustActorPos (snap to walkbox AABB) implicitly via Actor::putActor | All versions | ✅ via snapPointToWalkbox_long (commit e356342) | ✅ |
+| Calls showActor when previously hidden | All versions | ✅ visible=1 set when actor.room == currentRoom (commit e356342) | ✅ |
+| Calls hideActor when actor.room != currentRoom | All versions | ✅ visible=0 cleared when not in current room (commit e356342) | ✅ |
 | Sets _egoPositioned when actor == VAR_EGO | All versions | ✅ | ✅ |
-| `egoPositioned` walkbox snap (`adjustActorPos`) | All versions | Done in finalizeEgoSpawn after teleport (post 822e1ae) | ⏳ partial |
+| `egoPositioned` walkbox snap (`adjustActorPos`) | All versions | ✅ both via op_putActor side-effect AND finalizeEgoSpawn (commit 822e1ae + e356342) | ✅ |
+| `if (was_moving) startAnimActor(_standFrame)` | All versions | ✅ chore.animateActor_impl frame=3 seeded when transitioning from moving (commit e356342) | ✅ |
 
 ### `o5_actorOps` (`script_v5.cpp:404`)
 
@@ -188,11 +190,11 @@ should be EXECUTED.
 
 ## Remediation order (HIGH first)
 
-1. ❌ HIGH: `op_putActor` calls `adjustActorPos` (walkbox snap +
-   showActor). Without this, `op_putActor` is missing the implicit
-   visibility/position-snap that ScummVM does for free. Likely fixes
-   the "Guybrush parked at degenerate box → renderer BRK" regression
-   from 822e1ae.
+1. ✅ HIGH: `op_putActor` calls `adjustActorPos` (walkbox snap +
+   showActor) — **DONE commit e356342**. Boot test passes; ego state
+   at room 33 entry now correctly snapped + visible. The room 33 BRK
+   regression persists, confirming (per user intuition + audit r2) it
+   is a cluster bug — see remaining HIGH items 2 and 3 below.
 2. ❌ HIGH: `startWalkActor` calls `adjustXYToBeInBox` for v5.
    Required before walk pump kicks off so `_walkdata.dest` is always
    inside a real box.

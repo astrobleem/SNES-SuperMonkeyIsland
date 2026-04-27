@@ -1031,16 +1031,12 @@ _prc.noMapper:
   jmp _prc.doRoom0Setup
 _prc.notRoom0:
 
-  ; --- Room 90 check: use REQUESTED room (newRoom), not resolved ---
-  ; resourceMapper maps room 90 to room 58 on disk, so comparing the
-  ; resolved room against 90 always fails. Check the original request.
-  lda.w SCUMM.newRoom
-  and #$00FF
-  cmp #90
-  bne _prc.notRoom90early
-  pla                              ; pop resolved room number (discard)
-  jmp _prc90.scan155               ; jump to copy protection bypass
-_prc.notRoom90early:
+  ; (Removed: Room 90 / Dial-a-Pirate copy-protection bypass. The
+  ; replacement lives in _scummvm.startScriptSlot — when MI1's boot
+  ; script calls startScript(155), we short-circuit it and pre-set
+  ; Var[105]=$FF9C. Script 155 never runs, so loadRoom(90) is never
+  ; issued, so newRoom never equals 90. Mirrors ScummVM
+  ; script_v5.cpp:2967 with _copyProtection=false.)
 
   ; --- Virtual room fast path: skip display blanking ---
   ; Check if the resolved room has tile data in the ROM data pack.
@@ -1080,171 +1076,7 @@ _prc.realRoom:
   sta.l HDMAEN
   stz.w ScreenBrightness
   rep #$20
-  ; --- Room 90 bypass: copy protection room (Dial-a-Pirate) ---
-  ; Script 155 issues loadRoom(90) for the copy protection screen.
-  ; On SNES we skip the room load, pre-set the correct answer, and kill
-  ; scripts 155/154.  Script 1's isScriptRunning(155) wait loop is an
-  ; infinite loop if 155 is dead (equalZero jumps back), so we advance
-  ; script 1's PC past it to offset 0x084E.
-  ; NOTE: A was clobbered by brightness/HDMA setup above. The resolved
-  ; room number is on the stack at SP+3 (past two 8-bit pushes).
-  lda 3,s                              ; peek resolved room number
-  cmp #90
-  beq +
   jmp _prc.doRoomLoad
-+
-
-  ; --- Display LucasArts logo (room 10) for ~3 seconds ---
-  ; Only show the logo on FIRST boot. The demo dispatcher restarts the
-  ; boot script via startScript(1), which re-triggers room 90 loading.
-  ; Skip the logo on subsequent passes to avoid 3-second delays per scene.
-  rep #$20
-  lda.l SCUMM.globalVars + 105*2         ; Var[105] = copy protection sentinel
-  cmp #$FF9C
-  beq _prc90.skipLogo                     ; already set → logo was already shown
-  ; First boot: show the logo
-  lda #344
-  sta.w GLOBAL.room.cameraX
-  sta.w GLOBAL.room.cameraXOld
-  sta.w xScrollBG1
-  jsr room.reloadViewport              ; re-DMA tile cache for cam=344
-  sep #$20
-  lda #$0F
-  sta.w ScreenBrightness
-  sta.l INIDSP
-  lda 1,s                               ; peek hdmaEnable (top of stack)
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  rep #$20
-  ; Wait ~180 frames (3 seconds at 60fps) showing the logo
-  lda #180
-_prc90.logoWait:
-  pha
-  rep #$20
-  lda #344
-  sta.w xScrollBG1
-  jsr core.nmi.waitFrame
-  pla
-  dec a
-  bne _prc90.logoWait
-  sep #$20
-  lda #0
-  sta.w ScreenBrightness
-  sta.l INIDSP
-  rep #$20
-_prc90.skipLogo:
-
-  ; Room 90 discarded: restore stack and return without loading anything.
-  ; Stack: roomNum[16], brightness[8], hdmaEnable[8]  (pushed above)
-  sep #$20
-  pla                                   ; pop hdmaEnable
-  sta.w GLOBAL.HDMA.CHANNEL.ENABLE
-  sta.l HDMAEN
-  pla                                   ; pop brightness (discard — we managed brightness above)
-  rep #$20
-  pla                                   ; pop roomNum
-
-  ; Kill scripts 155 and 154 (copy protection)
-  ldx #0
-_prc90.scan155:
-  lda.w SCUMM.slots.status,x
-  and #$00FF
-  beq _prc90.next155
-  lda.w SCUMM.slots.number,x
-  and #$00FF
-  cmp #155
-  bne _prc90.next155
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
-  bra _prc90.done155
-_prc90.next155:
-  txa
-  clc
-  adc #64
-  tax
-  cpx #1600
-  bcc _prc90.scan155
-_prc90.done155:
-
-  ldx #0
-_prc90.scan154:
-  lda.w SCUMM.slots.status,x
-  and #$00FF
-  beq _prc90.next154
-  lda.w SCUMM.slots.number,x
-  and #$00FF
-  cmp #154
-  bne _prc90.next154
-  sep #$20
-  lda #SCUMM_SLOT_DEAD
-  sta.w SCUMM.slots.status,x
-  rep #$20
-  bra _prc90.done154
-_prc90.next154:
-  txa
-  clc
-  adc #64
-  tax
-  cpx #1600
-  bcc _prc90.scan154
-_prc90.done154:
-
-  ; ---------------------------------------------------------------
-  ; Copy protection bypass: pre-set the correct answer and advance
-  ; script 1's PC past the isScriptRunning(155) wait loop to $084E.
-  ;
-  ; $084E is the NORMAL post-copy-protection game initialization.
-  ; It is NOT an attract/demo mode. The boot script at $084E sets up
-  ; game vars, locks resources, then runs the intro sequence:
-  ;   room 22 (narrator/"Deep in the Caribbean") → island flyover
-  ;   → campfire scene → title screen → Guybrush at lookout.
-  ;
-  ; The rooms cycling (25,18,64,83...) that appear from $084E ARE
-  ; the MI1 intro playing. If scenes appear wrong, the fix is in
-  ; the rendering/script layer, not in changing the PC target.
-  ; ---------------------------------------------------------------
-
-  ; Set Var[105] = 0xFF9C (correct-answer sentinel for copy protection)
-  ldx #(105 * 2)
-  lda #$FF9C
-  sta.w SCUMM.globalVars,x
-
-  ; Advance script 1's PC past the isScriptRunning(155) wait loop
-  ; to $084E (normal post-copy-protection initialization).
-  ; The loop at $0844 waits for 155 to start running, then falls
-  ; through. Since we killed 155, the loop would spin forever.
-  ldx #0
-_prc90.scan1:
-  lda.w SCUMM.slots.status,x
-  and #$00FF
-  beq _prc90.next1
-  lda.w SCUMM.slots.number,x
-  and #$00FF
-  cmp #1
-  bne _prc90.next1
-  lda #$084E
-  sta.w SCUMM.slots.pc,x
-  ; No delay needed: the boot script at $084E starts script 152
-  ; (the MI1 CD intro sequence) and waits for it to complete.
-  ; Script 152 handles the entire campfire/narrator/title flow.
-  bra _prc90.done1
-_prc90.next1:
-  txa
-  clc
-  adc #64
-  tax
-  cpx #1600
-  bcc _prc90.scan1
-_prc90.done1:
-
-  ; Sync rooms: set currentRoom = newRoom to suppress re-trigger, then
-  ; let the boot script proceed naturally from $084E. The boot script
-  ; calls loadRoom(0) at $0962 to clear room state, then starts the
-  ; intro via script 152.
-  lda.w SCUMM.newRoom
-  sta.w SCUMM.currentRoom
-  jmp _prc.failed                       ; use 'failed' exit (no room loaded, no ENCD)
 
 _prc.doRoom0Setup:
   ; Room 0 needs brightness/HDMA on stack (same as real room path)
@@ -1301,9 +1133,6 @@ _prc.doRoomLoad:
   ; Jump past tile-dependent code to script loading
   jmp _prc.virtualRoomScripts
 _prc.roomLoadGood:
-  ; Room 10 camera handled by bypass (room 90 intercept) which sets cam=256
-  ; and calls reloadViewport.  snapCameraToRoom below would override any
-  ; camera setup here, so don't bother setting it during room.load.
 _prc.roomLoadOk:
   .ACCU 16
   .INDEX 16
@@ -1435,12 +1264,9 @@ _prc.noMapper2:
   jmp _prc.skipViewport                ; virtual room -- no MSU tile data
 _prc.hasViewport:
 
-  ; Update camera limits + snap to followed actor.
-  ; Historically room 10 (logo) skipped snap to preserve a cam=256 setup
-  ; done in the room 90 bypass, but that bypass path is now unreachable
-  ; (resolved room != 90 due to resourceMapper). Without this call, the
-  ; previous room's VAR_CAMERA_MAX_X carries over and clamps script 152's
-  ; setCameraAt(480) to a tiny value — logo never visible.
+  ; Update camera limits + snap to followed actor. Without this call,
+  ; the previous room's VAR_CAMERA_MAX_X carries over and clamps later
+  ; setCameraAt operations (e.g. script 152's logo display).
   jsl scummvm.snapCameraToRoom
 
   ; Reload viewport (force-blank DMA of BG tiles)
@@ -2151,10 +1977,24 @@ _loadGlobal.cacheOk:
 ; Input: A = script number to start
 ;-------------------------------------------------------------------
 _scummvm.startScriptSlot:
-  ; It gets stuck on the quiz (no keyboard input on SNES), but the boot
-  ; script only needs isScriptRunning(155)==true to exit its wait loop.
-  ; The keyboard emulation at updateCursor handles button→var[105] mapping
-  ; so pressing A/START eventually completes the quiz.
+  ; Copy-protection short-circuit (ScummVM equivalent: script_v5.cpp:2957
+  ; `if (!_copyProtection) ... if (script == 155) return`). MI1's script
+  ; 1 calls startScript(155) for the Dial-a-Pirate quiz; we have no
+  ; keyboard so we skip the script entirely AND pre-set Var[105]=$FF9C
+  ; (correct-answer sentinel) so script 1's gate after isScriptRunning(155)
+  ; passes naturally. Carry-clear return means "no slot created" — the
+  ; op_startScript caller skips its arg-copy on this path so the absent
+  ; slot stays absent.
+  cmp #155
+  bne _startScript.notCopyProt
+  ldx #(105 * 2)
+  pha
+  lda #$FF9C
+  sta.w SCUMM.globalVars,x
+  pla
+  clc
+  rts
+_startScript.notCopyProt:
 
   sta.w SCUMM.scratch
 

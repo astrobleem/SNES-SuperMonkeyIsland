@@ -12,7 +12,6 @@
 ;
 
 .include "src/object/scummvm/scummvm.h"
-; scummvm_sparkle.h removed — sparkle driven by SCUMM scripts via room-object renderer
 
 .bank 0 slot 0
 .base BSL

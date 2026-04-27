@@ -1830,6 +1830,25 @@ _scummvm.finalizeEgoSpawn:
   sta.w SCUMM.actors.x,x
   lda.w SCUMM.bwpTargetY
   sta.w SCUMM.actors.y,x
+
+  ; ScummVM v5 Actor::putActor (actor.cpp:1755-1757): when the actor is
+  ; visible and in the current room, putActor calls
+  ;     stopActorMoving();
+  ;     startAnimActor(_standFrame);
+  ; The startAnimActor call seeds the chore-engine pic data so the
+  ; renderer has something valid to draw. Without this seed, our
+  ; renderer dereferences uninitialized chore data when the actor sits
+  ; stationary in a degenerate walkbox at room load -- the BRK we hit
+  ; trying to fix #45 cleanly. v5 _standFrame default = 3 (per
+  ; feedback_scumm_v5_anim_frames.md).
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                               ; A = actor index (struct offset / 16)
+  ldx #3                              ; frame = 3 = v5 default _standFrame
+  jsl scummvm.chore.animateActor_impl
+
   bra _fes.afterPlace
 
 _fes.useByteXY:

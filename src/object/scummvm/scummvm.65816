@@ -11872,6 +11872,28 @@ scummvm.loadActorCostumes_impl:
   sta.w ObjSel
   rep #$20
 
+  ; --- Snapshot pre-clear slot state into SCUMM._cgramHdmaTableStub ---
+  ; Layout (5 slots): +0..4=oldActor, +5..9=oldCost, +10..14=oldLastHead,
+  ;                   +15..19=oldLastPic.
+  ; Used at end of function to restore lastHead/lastPic for slots whose
+  ; actor+costume didn't change — prevents head DMA from being marked
+  ; "always pending" by redundant putActorInRoom→actorsDirty triggers
+  ; (root cause of Bug A: headless old man at room 38).
+  sep #$20
+  ldx #SCUMM_MAX_RENDER_SLOTS - 1
+_lac.snapLoop:
+  lda.w SCUMM.renderSlotActor,x
+  sta.l SCUMM._cgramHdmaTableStub + 0,x
+  lda.w SCUMM.renderSlotCostume,x
+  sta.l SCUMM._cgramHdmaTableStub + 5,x
+  lda.w SCUMM.renderSlotLastHead,x
+  sta.l SCUMM._cgramHdmaTableStub + 10,x
+  lda.w SCUMM.renderSlotLastPic,x
+  sta.l SCUMM._cgramHdmaTableStub + 15,x
+  dex
+  bpl _lac.snapLoop
+  rep #$20
+
   ; --- Clear all render slots ---
   sep #$20
   ldx #SCUMM_MAX_RENDER_SLOTS - 1
@@ -12221,6 +12243,31 @@ _lac.seedNext:
   inc.w SCUMM.scratch3
   jmp _lac.seedLoop
 _lac.seedDone:
+  ; --- Restore lastHead/lastPic for slots whose actor+costume didn't change ---
+  ; The clear loop above blanked these to $FF. If the same actor+costume
+  ; landed in the same slot, the in-VRAM CHR is still valid — we should
+  ; preserve lastHead/lastPic so the head DMA staging logic doesn't
+  ; falsely re-stage every time loadActorCostumes runs (which would gate
+  ; head-OAM emit forever — see Bug A: headless old man at room 38).
+  rep #$31
+  sep #$20
+  ldx #SCUMM_MAX_RENDER_SLOTS - 1
+_lac.restoreLoop:
+  lda.w SCUMM.renderSlotActor,x
+  cmp.l SCUMM._cgramHdmaTableStub + 0,x
+  bne _lac.restoreNext
+  lda.w SCUMM.renderSlotCostume,x
+  cmp.l SCUMM._cgramHdmaTableStub + 5,x
+  bne _lac.restoreNext
+  ; Same actor + same costume — restore lastHead and lastPic from snapshot
+  lda.l SCUMM._cgramHdmaTableStub + 10,x
+  sta.w SCUMM.renderSlotLastHead,x
+  lda.l SCUMM._cgramHdmaTableStub + 15,x
+  sta.w SCUMM.renderSlotLastPic,x
+_lac.restoreNext:
+  dex
+  bpl _lac.restoreLoop
+  rep #$20
   rtl
 
 .ends

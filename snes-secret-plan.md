@@ -314,7 +314,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **105 dispatch entries, ~35 parameter-consuming stubs remaining** (camera, inventory, object interaction, drawing, wait) (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50).
+The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented; ~20 sub-opcode stubs remain** in complex families (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). VM regression harness in `tests/run_vm_tests.py` runs **178 unit tests** covering opcode semantics; gameplay-grade integration runner in `tests/integration/run_integration_tests.py` covers scenarios unit tests miss. 11 ScummVM-spec divergences caught and fixed via the new harness; tracked in `docs/v5_behavior_matrix.md`.
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -352,7 +352,7 @@ The heart of the engine. Interprets MI1's script bytecode. **105 dispatch entrie
 
 **Current engine ROM**: Interpreter + dispatch table + 105 opcode handlers (256 dispatch entries, 0 stubs) in bank $01. Room loader + scroll system in bank $00. 119 costume data sections in banks $06-$1A. Total ROM: 4MB HiROM (64 banks, SA-1 directly addressable).
 
-**Multi-room status**: MI1 boots end-to-end. Room 1 (beach) loads and renders correctly. All 105 base opcodes implemented — every opcode byte in the 256-entry dispatch table points to a real handler. Multi-room smoke test (`distribution/test_multiroom.lua`) verifies 9/9 rooms pass: 1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 20. Room transitions work reliably — global script cache is reloaded after each room change to prevent stale pointer crashes. Room 15 has a separate E_Brk crash under investigation. Next milestone: actor placement.
+**Multi-room status**: MI1 boots end-to-end through the LucasArts logo, credits, title card, opening cutscene, and into controllable gameplay on the lookout. All 105 base opcodes implemented — every byte in the 256-entry dispatch table points to a real handler. Multi-room smoke test verifies 15/15 rooms pass: 1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50. Room transitions reliable; global script cache reloaded on each room change to prevent stale pointer crashes. Room 33 cross-bank JSR crash fixed (commit `2e90a56`). Next milestone: dialog choice selection (the gating bug for SCUMM Bar gameplay).
 
 ### 5.2 Resource Streamer (MSU-1 Interface)
 
@@ -948,9 +948,10 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - Guybrush visible on beach: costume 17 pic 0, 13 tiles, correct palette (white shirt, dark pants, brown hair, skin tones)
 - [x] Basic linear walking — walkActorTo sets targets, updateActors moves 2px/frame, 12-step walk cycle
 - [x] Walkbox pathfinding (core: data pipeline, room loader, pathfinding, waypoint walking)
+- [x] **ScummVM-parity `walkActor` port** — `walkData` WRAM struct, per-leg `buildWalkPath`, per-leg dispatch on waypoint arrival (`e8e2194`, `8266f71`); BOXM-route fizzles match ScummVM (`921e287`)
 - [x] matrixOps (setBoxFlags/setBoxScale/setBoxSlot + createBoxMatrix)
 - [x] Walkbox opcodes (isActorInBox, getActorWalkBox, actorOps ignoreBoxes/followBoxes)
-- [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync
+- [x] Camera system — actorFollowCamera, panCameraTo, setCameraAt, moveCamera per-frame update, tile scroll sync; **`Camera::moveCamera` strip dead-zone port** (`a2ea990`) — replaces strict centering with ScummVM dead-zone behavior
 - [x] Multi-actor walking — updateActors loops 16 walk slots (SCUMM_WALK_ACTORS=16), per-actor room/moving/pathLen checks
 - [x] Mouse input: SNES Mouse position tracking, click detection
 - [x] Joypad virtual cursor: 8x8 OAM sprite, D-pad 2px/frame, A-button click-to-walk, verb hover detection
@@ -990,6 +991,8 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
   - SA-1 math wait optimized (5→3 NOPs, saves ~6000 cycles per composite)
   - 11 bugs fixed during implementation (stray PHA, bitplane decode order, signed multiply, buffer zero, etc.)
 - [x] Inventory system — pickup, UI, save/restore verbs (Phase 2k)
+- [x] **Z-plane BG2 pixel-level masking** (commits `c1ff8a5`..`e0f059f`) — converter generates masked tiles + BG2 tilemaps; runtime BG2 tilemap at VRAM $5800 via `BG2SC` HDMA so verb area stays at scroll=0 while room area scrolls; per-pixel actor masking via VRAM column writes + `BG2VOFS` HDMA. Actors clip behind pillars / foreground geometry per pixel, not per tile boundary.
+- [x] **Actor zbuf from `walkbox.mask`** when `_forceClip == 0` (ScummVM v5 parity, commit `40f1f03`)
 
 **Success Criteria:** Player can walk Guybrush around the SCUMM Bar, talk to the three pirates, pick up objects, use objects. First ~15 minutes of gameplay functional.
 
@@ -997,21 +1000,21 @@ Root cause was expression handler ($AC) sub-opcode dispatch numbering being off-
 
 **Goal:** Complete the game start to finish.
 
-**Status (2026-04-19):** LucasArts logo → credits → title card → lookout → Part One card intro flow runs end-to-end. Guybrush + old man + campfire render on lookout. 105 opcodes + beginOverride/freezeScripts/cursorCommand all wired. Remaining frontier: cutscene progression bugs (Part One stall, title-screen rendering flicker, campfire animation, dialog choice selection before player reaches the Scumm Bar).
+**Status (2026-05-03):** LucasArts logo → credits → title card → lookout → Part One card → opening cutscene → controllable gameplay on the lookout runs end-to-end. Guybrush + old man + campfire render and animate. 105 opcodes + beginOverride/freezeScripts/cursorCommand all wired. ScummVM-parity port of the walking pump landed: multi-leg `walkActor` with `walkData` WRAM struct, per-leg dispatch on waypoint arrival, `buildWalkPath` BOXM-route fizzle, `Camera::moveCamera` strip dead zone, `op_putActor` adjustActorPos snap + visibility transitions, actor zbuf derived from `walkbox.mask`. Z-plane BG2 pixel-level masking shipping. Copy-protection script-level short-circuit replaces the hand-rolled patch. Verb table now driven by MI1 script (`verbOps`), not hardcoded defaults. 178-test VM regression harness + gameplay-grade integration runner. 11 ScummVM-spec engine bugfixes caught by the new harness.
 
 ---
 
-#### Current Frontier (2026-04-19)
+#### Current Frontier (2026-05-03)
 
 Actual blockers to controllable gameplay right now, in priority order:
 
-1. **Part One title card never advances** — room 96 script stalls (wait opcode? timer gate? — needs Aramis trace)
-2. **Part One text not centered** — title text positioning bug in room 96 (or in extractAndRenderString centering)
-3. **Title-screen mountain cloud flicker** — room 38 backdrop rendering defect, not CYCL-driven (metadata confirms)
+1. ~~**Part One title card never advances**~~ — RESOLVED (commit `a3e9921`).
+2. ~~**Part One text not centered**~~ — RESOLVED (commit `a3e9921`).
+3. **Title-screen mountain cloud flicker** — partially mitigated (`69a8563` suppress sparkle during cutscenes; `872ba9c` gate on cameraX=344). Not fully resolved.
 4. ~~**Campfire not animating + stray OAM upper-left** during old man intro (room 38)~~ — RESOLVED. Chore engine stopped-bit mechanism ($79/$7A) + highflag (extra&$80 → curpos bit 15) + cs=$FFFF limb-disable ported from ScummVM. setActorCostume dual-seeds init+stand with preserve flag; loadActorCostumes re-seeds on room entry; renderer gates limb drawing on choreStopped. Chore dispatch formula corrected to ScummVM v5 `cmd = frame >> 2` and `op_faceActor` now computes east/west from target.x lookup (commit 337b596). Campfire cycles 00→01→02→03, Guybrush faces west toward old man, old man turns east during dialog.
 5. **Dialog choice selection** — choices render but no d-pad+A cursor-highlight-and-select. Blocks pirate conversations.
 
-Items 1–4 are the current working-plan. Item 5 remains for when gameplay reaches the Scumm Bar.
+Items 3 and 5 remain. Item 5 is the gating bug for SCUMM Bar gameplay.
 
 #### Beach → Scumm Bar Critical Path (historical)
 
@@ -1028,6 +1031,29 @@ Items 1–4 are the current working-plan. Item 5 remains for when gameplay reach
 ---
 
 #### Completed Work
+
+**Phase 3 Continuation (2026-04-19 → 2026-05-03):**
+- [x] **ScummVM-parity `walkActor` port** — `walkData` WRAM struct, per-leg `buildWalkPath`, dispatch on waypoint arrival (`e8e2194`, `8266f71`); BOXM-route fizzles match ScummVM (`921e287`)
+- [x] **`Camera::moveCamera` strip dead zone** — port replaces strict centering with ScummVM dead-zone behavior (`a2ea990`)
+- [x] **Actor zbuf derived from walkbox.mask** when `_forceClip == 0` (ScummVM v5) (`40f1f03`)
+- [x] **`op_putActor` adjustActorPos snap + visibility transitions** — actor snaps to walkbox AABB; visible bit set/cleared on room transitions (`e356342`, `2fe1aab`)
+- [x] **Stand-anim seed in `finalizeEgoSpawn`** — chore tick fires after FES standFrame seed (`e862b76`, `8085284`)
+- [x] **Z-plane BG2 pixel-level masking** — converter generates masked tiles + BG2 tilemaps (`c1ff8a5`); runtime BG2 loading + HDMA tile-base switching (`7a1d45f`); per-pixel actor masking via VRAM column writes + VOFS HDMA (`1141780`, `abd195c`); separate BG2 tilemap at VRAM $5800 via BG2SC HDMA (`baf9baf`); BG2HOFS HDMA so verb tilemap stays at scroll=0 (`d0c3df5`); BG2 tile cache seeding for fill tiles (`6830503`, `e0f059f`). Resolves Open Question #4 (foreground z-masking).
+- [x] **Copy-protection bypass replaced** with ScummVM-style short-circuit (215 lines of hand-rolled patch deleted) (`ea90a67`)
+- [x] **Verb table driven by MI1 script** — hardcoded `initDefaultVerbs` deleted (`554ac3f`)
+- [x] **`op_pseudoRoom` drives resourceMapper** — resolver masks room & 0x7F (`d0fcce2`)
+- [x] **Actor priority overhaul** — default 3, gated by zClip (`a325a1e`, `3b9463f`); `findObject` uses `kObjectClassUntouchable` bitmap not `state==0` (`9f18687`)
+- [x] **VM regression harness** — `tests/run_vm_tests.py` runs **178 unit tests** that inject synthetic bytecode and assert WRAM. Catches opcode-semantic regressions in isolation.
+- [x] **Gameplay-grade integration runner** — `tests/integration/run_integration_tests.py` boots the ROM normally, drives state pokes / clicks, asserts visible result. Caught Bugs 1–4 (invisible spawn, moonwalking, can't-enter SCUMM bar, old-man-on-campfire) that slipped through the unit harness.
+- [x] **11 ScummVM-spec engine bugfixes** caught by the new harness — signed comparisons (`isGreater`/`isLess`/`isLessEqual`/`isGreaterEqual` use SIGNED int16), `getActorFacing` returns `newDirToOldDir(facing)`, expression evaluator stack-machine fixes, etc. (`7176932`)
+- [x] **`docs/v5_behavior_matrix.md`** — tracks every ScummVM `_game.version` gate vs. our port's behavior, with status legend (✅ MATCHES / ❌ DIVERGES / ⏳ PARTIAL)
+- [x] **Cross-bank JSR fix** — room 33 BRK fixed; cross-bank JSR landed inside `clearTilemap` (`2e90a56`)
+- [x] **AdLib FM → SNES BRR audio pipeline** — extracts AdLib FM samples from MI1, converts to SNES BRR for TAD (`76da9fa`)
+- [x] **First real MML songs** — LucasArts logo theme (`r010_lucasarts`), SCUMM Bar theme (`soun_scummbar` planned), SUPERGUYBRUSH theme. emberling's SCUMM Bar arrangement translated to TAD MML.
+- [x] **MCP toolchain split** — `mesen-inproc` (long-lived debugger: state, hooks, render, audio — 46 tools) + `smi-workflow` (project-scoped: build, validate, run_test, screenshot, sym lookup, step_until_pc) (`8a2f8d0`)
+- [x] **Costume hue-aware background stripping** + manual transparency editor (`33cd491`, `7bceed8`)
+- [x] **OAM Table 1 stray-sprite fix** — Part One stall + title centering + stray sprites all fixed (`a3e9921`)
+- [x] **Talk-mouth animation** — actor talk-mouth + idle-loop animation explored, then reverted pending more design (`428edd1` → `0ac6be6`)
 
 **Phase 3 Audit (2026-03-27):**
 - [x] roomFade — real impl (brightness + effect flags)
@@ -1086,9 +1112,11 @@ Items 1–4 are the current working-plan. Item 5 remains for when gameplay reach
 - [ ] All puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion, etc.)
 
 **Audio:**
-- [ ] SPC700 music — MI1 tracks arranged as MML, compiled via TAD (SCUMM opcodes already wired)
-- [ ] SPC700 sound effects — MI1 SFX as BRR samples in TAD project
-- [ ] SCUMM-to-TAD ID mapping table (SCUMM sound numbers → TAD song/SFX IDs)
+- [x] AdLib FM → SNES BRR sample pipeline (`tools/audio/gen_instrument_samples.py`, commit `76da9fa`)
+- [x] First MML songs landed: LucasArts logo (`r010_lucasarts`), SUPERGUYBRUSH theme. SCUMM Bar arrangement (emberling) translated and queued in `audio/songs/soun_scummbar.mml`
+- [x] WAV-based SFX registration (`tools/audio/register_sfx.py`); 12+ SFX samples in `audio/samples/sfx/`
+- [ ] SPC700 music — remaining MI1 tracks need MML arrangement (most rooms still on the silence song)
+- [ ] SCUMM-to-TAD ID mapping table beyond the existing virtSound shim
 - [ ] MSU-1 voice acting — CD Talkie voice lines extracted as PCM tracks (stretch goal)
 
 **Save System:**
@@ -1189,7 +1217,7 @@ Cross-referenced the plan against the ScummVM v5 C++ source (`E:/gh/scummvm/engi
 
 9. ~~**`roomOps` complexity**~~ — **MOSTLY RESOLVED.** Real implementations: roomScroll (camera bounds), shakeOn/Off (flag), roomScale (SCAL slots), roomFade (brightness + effects), rgbRoomIntensity/darkenPalette (BW-RAM CGRAM shadow scaling), setPalColor (VGA→BGR555 + shadow). Consume-only stubs: setScreen, saveGame, saveString, palManipulate, roomShadow (software renderer feature). Remaining: palManipulate (gradual palette transitions).
 
-10. **`cursorCommand` sub-opcodes** — ~14 sub-opcodes: cursor on/off, userput on/off, soft cursor on/off, set cursor image, set cursor hotspot, set charset, etc. Some control whether the user can interact at all (userput on/off). Critical for cutscenes where interaction should be disabled.
+10. ~~**`cursorCommand` sub-opcodes**~~ — **RESOLVED.** `op_cursorCommand` dispatches sub-ops 1–14 (cursor on/off, userput on/off, image, hotspot, charset color). Wired via the cutscene system (`beginOverride`/`freezeScripts`/`cursorCommand`).
 
 11. **Save/load state completeness** — Plan's save layout (section 5.7) omits critical state that must be serialized:
     - Bit variables (256 bytes)
@@ -1252,7 +1280,7 @@ The engine itself contains zero LucasArts intellectual property. It's a clean-ro
 
 3. ~~**Which MI1 version exactly?**~~ **RESOLVED: CD Talkie** (`monkey.000` / `monkey.001`, XOR'd with `0x69`). All 86 rooms, 187 scripts, 138 sounds, 123 costumes, 5 charsets extracted and verified. Voice streaming can be deferred — start with text-only, add MSU-1 PCM speech later.
 
-4. ~~**BG2 split: foreground masking vs verb UI.**~~ **RESOLVED.** HDMA splits the screen at scanline 144: ch1 disables BG1 below the room area (TM register), ch2 swaps CGRAM palettes for verb font colors. BG2 holds verb tilemap in lower portion. 70-byte WRAM HDMA table rebuilt on verb dirty flag. Foreground z-masking still TBD (upper BG2 area available).
+4. ~~**BG2 split: foreground masking vs verb UI.**~~ **FULLY RESOLVED.** HDMA splits the screen at scanline 144: ch1 disables BG1 below the room area (TM register), ch2 swaps CGRAM palettes for verb font colors. BG2 holds verb tilemap in lower portion. 70-byte WRAM HDMA table rebuilt on verb dirty flag. **Foreground z-masking now shipping** (commits `c1ff8a5`..`e0f059f`): converter generates masked tiles + per-room BG2 tilemaps; runtime BG2 tilemap at VRAM $5800 via `BG2SC` HDMA so verb area stays at scroll=0 while room area scrolls; per-pixel actor masking via VRAM column writes + `BG2VOFS` HDMA. Actors clip behind pillars / foreground geometry per pixel, not per tile boundary.
 
 5. **MI2 compatibility path?** MI2 is also SCUMM v5. If we architect the interpreter cleanly, MI2 support might be relatively achievable as a follow-up. Worth keeping in mind during design, without over-engineering for it.
 

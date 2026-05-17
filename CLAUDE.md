@@ -6,10 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Monkey Island on the Super Nintendo, targeting real NTSC SNES hardware with MSU-1 on SD2SNES/FXPAK Pro. Written in 65816 assembly with a custom OOP framework. Engine forked from SuperDragonsLairArcade.
 
-## Assembly
-
-Write 65816 assembly directly. The `snes-65816-dev` and `scumm-reference` agents no longer exist.
-
 ## Agent
 
 **Aramis** (`.claude/agents/mesen-debugger.md`) — Mesen 2 debugging: Lua tests, WRAM inspection, frame analysis. Use the Agent tool with `subagent_type: "mesen-debugger"` for complex runtime diagnostics. You can write simple Lua snippets directly via `run_lua_snippet`, but delegate thorough debugging sessions to Aramis.
@@ -35,6 +31,8 @@ wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make"
 **TAD audio**: `tools/tad/tad-compiler.exe` compiles `audio/smi.terrificaudio` → `build/audio/tad-audio-data.bin`. Triggered automatically by make.
 
 ## Testing & Validation
+
+**Mesen prerequisites:** the `mesen/Mesen.exe` binary is built from the `astrobleem/Mesen2` fork (cloned at `E:/gh/Mesen2`). Rebuild it via `dotnet publish UI/UI.csproj -c Release -r win-x64 --self-contained true` (or the `mesen-mcp-release.yml` workflow) and mirror the entire output dir into `mesen/`, preserving `Saves/`, `SaveStates/`, `Screenshots/`, `RecentGames/`, `GameConfig/`, `Cheats/`, `Avi/`, and `settings.json`. **A targeted file copy that mixes new + old runtime DLLs will fail to launch** with "No frameworks were found" because hostfxr in the app dir gets confused by the version mismatch — always replace the runtime tree as a unit. .NET 8 system install is optional for self-contained builds.
 
 Two MCP servers are wired up in `.mcp.json`:
 
@@ -62,6 +60,15 @@ The `smi-workflow` server provides:
 cmd.exe /c "cd /d E:\gh\SNES-SuperMonkeyIsland\distribution && E:\gh\SNES-SuperMonkeyIsland\mesen\Mesen.exe --testrunner SuperMonkeyIsland.sfc script.lua > out.txt 2>&1"
 ```
 
+**VM regression tests** — `tests/run_vm_tests.py` is the primary opcode-level regression harness. Each test injects a synthetic SCUMM bytecode sequence into the script cache, runs it, and asserts WRAM. Add new tests in `tests/scumm_vm/test_runner.lua`'s `TESTS` table (single-file harness — Mesen testrunner disables `dofile`/`require`). See `tests/README.md` for cache-offset gotchas, freezeCount handling, and field-offset tables.
+
+```bash
+python3 tests/run_vm_tests.py            # use the current build
+python3 tests/run_vm_tests.py --build    # rebuild first
+```
+
+**Mesen-MCP harness reference:** `AGENTS.md` (repo root) documents the long-lived Mesen-MCP toolset (state diffs, exec/read/write hooks, audio capture, DMA/PPU inspection). Read it before doing nontrivial runtime debugging.
+
 **distribution/SuperMonkeyIsland.msu is REQUIRED for boot** — do not delete it. Rooms + scripts moved to ROM (via `tools/rom_pack_data.py`, appended after link), but the MSU-1 boot handshake still expects the file to exist. `room.msu1Seek` is dead code; the file persists for the hardware/emulator MSU-1 presence check. When MSU-1 PCM audio work resumes, the pipeline regenerates this file plus `.pcm` tracks.
 
 ## Bank 0 Management
@@ -76,11 +83,10 @@ Bank 0 overflow is silent — WLA-DX reshuffles sections without error.
 
 ## Architecture (High-Level)
 
-- **HiROM+FastROM**, 16 banks x 64KB = 1MB ROM, PBR=$C0 at runtime
+- **ROM/Data**: 4MB HiROM engine with room and script data appended into upper ROM banks by `tools/rom_pack_data.py`; `distribution/SuperMonkeyIsland.msu` remains the boot-time MSU-1 presence file
 - **OOP System**: 48 concurrent object slots, init/play/kill methods, direct page allocation
 - **SCUMM v5 Interpreter**: 105 dispatch entries, 25 script slots, 800 global vars, 2048 bit vars, 44KB script cache in bank $7F
-- **Actor System**: 16B struct x 256, 19 opcodes, walking animation, walkbox pathfinding
-- **MSU-1**: Room/script data streaming from .msu files in `distribution/`
+- **Actor System**: 16B actor structs, SCUMM v5 actorOps coverage, chore-driven animation, walking, walkbox pathfinding, and SA-1-assisted scaling
 - **Audio**: TAD v0.2.0 (SPC700), pinned to bank 2
 
 ### Game Flow
@@ -92,8 +98,12 @@ boot.65816 → main.script → msu1 splash → losers/credits → title_screen �
 
 | File | Purpose |
 |------|---------|
-| `src/object/scummvm/scummvm.65816` | SCUMM v5 interpreter: scheduler, opcodes, script cache, room transitions |
+| `src/object/scummvm/scummvm.65816` | SCUMM v5 interpreter core: scheduler, opcodes, script cache, room transitions |
+| `src/object/scummvm/scummvm_chore.65816` | Costume chore engine (split from scummvm.65816) |
+| `src/object/scummvm/scummvm_cycle.65816` | Palette/color-cycle engine (split from scummvm.65816) |
 | `src/object/scummvm/scummvm.h` | SCUMM constants, slot struct, WRAM layout, cache config |
+| `src/object/scummvm/scummvm_dispatch_table.inc` | Generated 105-entry opcode dispatch (do not hand-edit; see `tools/gen_dispatch_table.py`) |
+| `docs/v5_behavior_matrix.md` | SCUMM v5 opcode/behavior reference — consult before claiming an opcode is correct |
 | `src/object/room/room.65816` | Room loader: MSU-1 seek, index lookup, tileset/tilemap/palette DMA |
 | `src/object/actor/actor.65816` | Actor rendering, costumes, walking, multi-actor OAM |
 | `src/object/audio/tad_interface.65816` | Terrific Audio Driver — SPC700 init, transfer, per-frame processing |

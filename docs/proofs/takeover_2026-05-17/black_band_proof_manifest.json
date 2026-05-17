@@ -1,0 +1,496 @@
+{
+  "proof": "Bug 85 black-band flicker targeted visual check",
+  "target_room": 38,
+  "symbols": {
+    "SCUMM.currentRoom": "0x7ef8e5",
+    "SCUMM.newRoom": "0x7ef8e7",
+    "MainScreen": "0x7efd4c",
+    "SCUMM.actorsDirty": "0x7efe27"
+  },
+  "route": "boot 1500 frames, poke SCUMM.newRoom=38, wait for currentRoom=38, settle 360 frames, capture 12 screenshots every 6 frames",
+  "captures": [
+    {
+      "index": 0,
+      "frameCount": 2216,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_00.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 1,
+      "frameCount": 2222,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_01.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 2,
+      "frameCount": 2228,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_02.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 3,
+      "frameCount": 2234,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_03.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 4,
+      "frameCount": 2240,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_04.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 5,
+      "frameCount": 2246,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_05.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 6,
+      "frameCount": 2252,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_06.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 7,
+      "frameCount": 2258,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_07.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 8,
+      "frameCount": 2264,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_08.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 9,
+      "frameCount": 2270,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_09.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 10,
+      "frameCount": 2276,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_10.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    },
+    {
+      "index": 11,
+      "frameCount": 2282,
+      "currentRoom": 38,
+      "newRoom": 38,
+      "mainScreen": 21,
+      "actorsDirty": 0,
+      "path": "docs/proofs/takeover_2026-05-17/room38_black_band_11.png",
+      "analysis": {
+        "size": [
+          256,
+          224
+        ],
+        "region_y": [
+          3,
+          75
+        ],
+        "max_consecutive_rows_with_90pct_black_pixels": 0,
+        "max_row_black_ratio": 0.34375
+      }
+    }
+  ],
+  "contact_sheet": "docs/proofs/takeover_2026-05-17/room38_black_band_contact_sheet.png",
+  "mcp_filmstrip": "docs/proofs/takeover_2026-05-17/room38_black_band_mcp_filmstrip.png",
+  "final_state": {
+    "isRunning": true,
+    "isPaused": true,
+    "frameCount": 2354
+  },
+  "final_currentRoom": 38,
+  "final_newRoom": 38,
+  "final_mainScreen": 21,
+  "final_actorsDirty": 0,
+  "ppu_state": {
+    "frameCount": 2354,
+    "scanline": 21,
+    "forcedBlank": false,
+    "brightness": 15,
+    "bgMode": 1,
+    "mainScreenLayers": 23,
+    "subScreenLayers": 0,
+    "mainScreenWindowMask": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "subScreenWindowMask": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "mosaicSize": 1,
+    "mosaicEnabled": 0,
+    "layers": [
+      {
+        "index": 0,
+        "tilemapAddr": 14336,
+        "chrAddr": 0,
+        "hscroll": 64,
+        "vscroll": 1023,
+        "largeTiles": false,
+        "doubleWidth": true,
+        "doubleHeight": false
+      },
+      {
+        "index": 1,
+        "tilemapAddr": 22528,
+        "chrAddr": 0,
+        "hscroll": 64,
+        "vscroll": 110,
+        "largeTiles": false,
+        "doubleWidth": false,
+        "doubleHeight": false
+      },
+      {
+        "index": 2,
+        "tilemapAddr": 19456,
+        "chrAddr": 20480,
+        "hscroll": 0,
+        "vscroll": 0,
+        "largeTiles": false,
+        "doubleWidth": false,
+        "doubleHeight": false
+      },
+      {
+        "index": 3,
+        "tilemapAddr": 0,
+        "chrAddr": 0,
+        "hscroll": 0,
+        "vscroll": 0,
+        "largeTiles": false,
+        "doubleWidth": false,
+        "doubleHeight": false
+      }
+    ]
+  },
+  "dma_state": [
+    {
+      "channel": 0,
+      "control": 0,
+      "bbus": 34,
+      "aBusAddrLo": 104,
+      "aBusAddrMid": 254,
+      "aBusBank": 126,
+      "countLo": 0,
+      "countHi": 0,
+      "indirectBank": 255,
+      "tableAddrLo": 255,
+      "tableAddrHi": 255,
+      "lineCounter": 255,
+      "aBusAddr": 8322664,
+      "tableAddr": 65535,
+      "count": 0,
+      "targetReg": "$2122"
+    },
+    {
+      "channel": 1,
+      "control": 0,
+      "bbus": 44,
+      "aBusAddrLo": 198,
+      "aBusAddrMid": 29,
+      "aBusBank": 197,
+      "countLo": 255,
+      "countHi": 255,
+      "indirectBank": 0,
+      "tableAddrLo": 200,
+      "tableAddrHi": 29,
+      "lineCounter": 106,
+      "aBusAddr": 12918214,
+      "tableAddr": 7624,
+      "count": 65535,
+      "targetReg": "$212C"
+    },
+    {
+      "channel": 2,
+      "control": 0,
+      "bbus": 11,
+      "aBusAddrLo": 207,
+      "aBusAddrMid": 29,
+      "aBusBank": 197,
+      "countLo": 255,
+      "countHi": 255,
+      "indirectBank": 255,
+      "tableAddrLo": 209,
+      "tableAddrHi": 29,
+      "lineCounter": 106,
+      "aBusAddr": 12918223,
+      "tableAddr": 7633,
+      "count": 65535,
+      "targetReg": "$210B"
+    },
+    {
+      "channel": 3,
+      "control": 0,
+      "bbus": 8,
+      "aBusAddrLo": 223,
+      "aBusAddrMid": 29,
+      "aBusBank": 197,
+      "countLo": 255,
+      "countHi": 255,
+      "indirectBank": 255,
+      "tableAddrLo": 225,
+      "tableAddrHi": 29,
+      "lineCounter": 106,
+      "aBusAddr": 12918239,
+      "tableAddr": 7649,
+      "count": 65535,
+      "targetReg": "$2108"
+    },
+    {
+      "channel": 4,
+      "control": 2,
+      "bbus": 15,
+      "aBusAddrLo": 244,
+      "aBusAddrMid": 248,
+      "aBusBank": 126,
+      "countLo": 255,
+      "countHi": 255,
+      "indirectBank": 255,
+      "tableAddrLo": 247,
+      "tableAddrHi": 248,
+      "lineCounter": 106,
+      "aBusAddr": 8321268,
+      "tableAddr": 63735,
+      "count": 65535,
+      "targetReg": "$210F"
+    },
+    {
+      "channel": 5,
+      "control": 255,
+      "bbus": 255,
+      "aBusAddrLo": 255,
+      "aBusAddrMid": 255,
+      "aBusBank": 255,
+      "countLo": 255,
+      "countHi": 255,
+      "indirectBank": 255,
+      "tableAddrLo": 255,
+      "tableAddrHi": 255,
+      "lineCounter": 255,
+      "aBusAddr": 16777215,
+      "tableAddr": 65535,
+      "count": 65535,
+      "targetReg": "$21FF"
+    },
+    {
+      "channel": 6,
+      "control": 0,
+      "bbus": 34,
+      "aBusAddrLo": 8,
+      "aBusAddrMid": 131,
+      "aBusBank": 214,
+      "countLo": 0,
+      "countHi": 0,
+      "indirectBank": 255,
+      "tableAddrLo": 255,
+      "tableAddrHi": 255,
+      "lineCounter": 255,
+      "aBusAddr": 14058248,
+      "tableAddr": 65535,
+      "count": 0,
+      "targetReg": "$2122"
+    },
+    {
+      "channel": 7,
+      "control": 0,
+      "bbus": 4,
+      "aBusAddrLo": 136,
+      "aBusAddrMid": 243,
+      "aBusBank": 126,
+      "countLo": 0,
+      "countHi": 0,
+      "indirectBank": 255,
+      "tableAddrLo": 255,
+      "tableAddrHi": 255,
+      "lineCounter": 255,
+      "aBusAddr": 8319880,
+      "tableAddr": 65535,
+      "count": 0,
+      "targetReg": "$2104"
+    }
+  ],
+  "automated_black_band_check": {
+    "max_consecutive_rows_with_90pct_black_pixels": 0,
+    "threshold_for_failure": 16,
+    "pass": true,
+    "note": "Advisory row-darkness heuristic; final verdict also uses visual inspection of the contact sheet and MCP filmstrip."
+  },
+  "result": "PASS"
+}

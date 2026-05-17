@@ -6348,6 +6348,15 @@ op_putActorInRoom:
   sta.w SCUMM.scratch3              ; save room number
   ldx.w SCUMM.scratch2
   sep #$20
+  ; Bug 85: capture OLD actor.room before overwrite. Used below to suppress
+  ; spurious actorsDirty triggers when this is a no-op put (actor already in
+  ; currentRoom). Background scripts re-issue putActorInRoom every SCUMM
+  ; tick (~10Hz); without this gate, loadActorCostumes force-blanks for
+  ; ~50 scanlines mid-frame on every 6th frame, producing the visible
+  ; black band y=3-75 in lookout.
+  lda.w SCUMM.actors.room,x
+  sta.w SCUMM.scratch                ; scratch = old room (1 byte)
+  lda.w SCUMM.scratch3                ; reload new room (low byte; sep #$20)
   sta.w SCUMM.actors.room,x
   ; ScummVM o5_putActorInRoom only sets _room. Visibility is owned by
   ; putActor / showActor / hideActor — putActorInRoom must NOT touch it
@@ -6359,15 +6368,23 @@ op_putActorInRoom:
 +
   rep #$20
 
-  ; If the target room matches currentRoom, flag costumes dirty so the
-  ; main loop re-runs loadActorCostumes (DMAs the new actor's palette+CHR).
-  ; Needed because processRoomChange runs loadActorCostumes BEFORE ENCD
-  ; places non-ego actors, so their costumes never get loaded otherwise.
+  ; If the target room matches currentRoom AND the actor wasn't already
+  ; in currentRoom, flag costumes dirty so the main loop re-runs
+  ; loadActorCostumes (DMAs the new actor's palette+CHR). Needed because
+  ; processRoomChange runs loadActorCostumes BEFORE ENCD places non-ego
+  ; actors, so their costumes never get loaded otherwise.
   lda.w SCUMM.scratch3
   and #$00FF
   beq +                              ; room=0 (remove) — no need to reload
   cmp.w SCUMM.currentRoom
   bne +
+  ; Suppress when actor's OLD room was already currentRoom (no transition).
+  ; 8-bit cmp because scratch holds only the low byte of old room (rooms < 256).
+  sep #$20
+  lda.w SCUMM.scratch
+  cmp.w SCUMM.currentRoom
+  rep #$20
+  beq +
     lda #1
     sta.w SCUMM.actorsDirty
 +
@@ -12063,6 +12080,29 @@ _lac.dmaLoop:
   bne +
   jmp _lac.dmaNext                    ; empty slot
 +
+
+  ; Bug 85 (HDMA flicker): if this slot's (actor, costume) match the
+  ; pre-clear snapshot, the palette + CHR already in VRAM/CGRAM are still
+  ; valid — skip the ~33k-cycle DMA. Without this skip, background scripts
+  ; that re-issue op_putActorInRoom every SCUMM tick (~10Hz) keep
+  ; actorsDirty=1, so loadActorCostumes force-blanks for ~70 scanlines
+  ; mid-frame on every 6th rendered frame. Visible as a clean black band
+  ; (y=3-75) cycling through the room area in Lookout. The restore loop at
+  ; _lac.restoreLoop already uses this same actor+costume match.
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.renderSlotActor,x
+  cmp.l SCUMM._cgramHdmaTableStub + 0,x
+  bne _lac.dmaNeeded
+  lda.w SCUMM.renderSlotCostume,x
+  cmp.l SCUMM._cgramHdmaTableStub + 5,x
+  bne _lac.dmaNeeded
+  rep #$20
+  .ACCU 16
+  jmp _lac.dmaNext
+_lac.dmaNeeded:
+  rep #$20
+  .ACCU 16
 
   ; Look up costume in CostumeDirTable (8 bytes per entry)
   lda.w SCUMM.renderSlotCostume,x

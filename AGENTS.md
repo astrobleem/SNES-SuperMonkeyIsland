@@ -24,7 +24,8 @@ with McpSession(rom='distribution/SuperMonkeyIsland.sfc') as m:
     print(m.read_memory('snesMemory', 0x7EF967, 1).hex())  # currentRoom
 ```
 
-Full tool surface (30 tools): `read_memory`, `write_memory`,
+Full tool surface is versioned with the deployed Mesen fork (46 tools in this
+checkout; older notes may still say 30): `read_memory`, `write_memory`,
 `add_exec_hook` / `add_read_hook` / `add_write_hook` / `add_frame_hook`,
 `take_screenshot`, `crop_screenshot`, `record_audio`, `get_audio_state`,
 `save_state_slot` / `load_state_slot`, `lookup_symbol`, `disassemble`,
@@ -124,18 +125,14 @@ C++ side (`Core/Mcp/`, `InteropDLL/DebugApiWrapper.cpp`) only needs touching
 for new emulator-thread hot paths or new C-ABI exports. Most extensions are
 pure C# additions.
 
-## Tracked deferrals
+## Historical deferrals
 
-Things the harness deliberately doesn't do yet, with TODO tasks:
-
-- **Movie record/play** for replayable boot paths instead of START-spam
-  every test (#23). Would cut smoke-test runtime from ~30s to ~3s.
-- **Frame-exact stepping** (greenzone-style) instead of wall-clock
-  `run_frames` (#24).
-- **Pansy metadata import** alongside WLA-DX `.sym` (#25).
-
-If your task hits one of these, surface it; don't paper over it with a
-brittle workaround.
+Older handoff notes list movie record/play (#23), frame-exact stepping (#24),
+and Pansy metadata import (#25) as open harness gaps. They are completed in
+this checkout's task snapshot, so treat those older notes as historical. If a
+new workflow depends on one of them, verify the live tool shape through
+`tools/mcp_client.py`, `.mcp.json`, and the Mesen fork docs instead of copying
+the stale TODO wording.
 
 ## Pointers
 

@@ -41,9 +41,13 @@ INSTRUMENTS = {
     'bottle':     (76, 661.6, 150, 1600),
     'fantasia':   (70, 467.3, 250, 1920),
     # sampled at the range center (ch4 plays 48-83 folded) so down-pitched
-    # strikes keep their transient sharpness
-    'marimba':    (66, 371.2, 200, 1280),
-    'xylophone':  (76, 669.5, 200, 960),
+    # strikes keep their transient sharpness. Percussive voices keep only the
+    # strike transient and loop a bright early cycle group — the DSP envelope
+    # (SL=0 decay) shapes the whole ring. Trimming mid-decay instead puts a
+    # level cliff at loop entry (measured: -52dB at 0.15s vs the MT-32's
+    # -11dB at 0.2s).
+    'marimba':    (66, 371.2, 50, 1280),
+    'xylophone':  (76, 669.5, 50, 960),
     'acoubass':   (36, 65.0,  150, 6400),
 }
 

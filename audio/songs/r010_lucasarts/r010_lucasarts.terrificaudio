@@ -62,12 +62,12 @@
       "source": "../../samples/instruments/mt32_marimba.wav",
       "freq": 375.0,
       "loop": "loop_with_filter",
-      "loop_setting": 6400,
+      "loop_setting": 1600,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 3,
       "last_octave": 5,
-      "envelope": "adsr 15 4 0 0",
+      "envelope": "adsr 15 1 0 0",
       "comment": "MT-32 patch 104 marimba, sampled at range center (MIDI 66) so down-pitched strikes keep transient sharpness. Percussive decay."
     },
     {
@@ -75,12 +75,12 @@
       "source": "../../samples/instruments/mt32_xylophone.wav",
       "freq": 666.667,
       "loop": "loop_with_filter",
-      "loop_setting": 6400,
+      "loop_setting": 1600,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 4,
       "last_octave": 6,
-      "envelope": "adsr 15 5 0 0",
+      "envelope": "adsr 15 2 0 0",
       "comment": "MT-32 patch 103 xylophone, ch2 mallet line."
     },
     {

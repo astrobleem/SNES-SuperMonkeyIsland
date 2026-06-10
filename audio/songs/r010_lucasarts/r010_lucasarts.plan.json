@@ -3,8 +3,8 @@
   "title": "Secret of Monkey Island - Main Theme (MT-32 voices per ROL chunk)",
   "composer": "Michael Z. Land",
   "arranger": "Claude (SMI SNES port; Munt MT-32 samples, ROL-source channels)",
-  "timer": 256,
-  "zenlen": 224,
+  "timer": 167,
+  "zenlen": 192,
   "grid": "32nd",
   "grid_tolerance": 1,
   "instruments": {
@@ -94,5 +94,7 @@
     "62": "drum_conga_med",
     "63": "drum_conga_hi",
     "64": "drum_conga_hi"
-  }
+  },
+  "_timer_note": "TAD caps timer at 256 (tick <= 32ms) and zenlen at 255, so a 2000ms quarter cannot be zenlen/4. note_scale=2 writes quarters as halves: 96 ticks x 20.875ms (timer 167) = 2004ms = 29.94 BPM (+0.2%). All musical lengths integer (64th = 6 ticks).",
+  "note_scale": 2
 }

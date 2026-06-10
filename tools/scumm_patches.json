@@ -1,0 +1,66 @@
+{
+  "_comment": "SCUMM script patches applied at build time. Offsets are into the ORIGINAL extracted script file. Patches processed in order; file is rebuilt with length adjustments propagated. Each patch rewrites a print op ($14) that contains only a $0F text sub-op. Use \\n to insert a SCUMM newline escape ($FF $01). Optional 'position' [x, y] injects a $00 pos sub-op before the text.",
+  "scripts/scrp_152_room010.bin": {
+    "description": "Intro title-screen credits scroll",
+    "_position_note": "Default credit position now lives in the runtime (extractAndRenderString picks Y=168 when actor=$FF and dialogY==0 during a cutscene). Only explicit text replacements need patches here.",
+    "byte_patches": [
+      {
+        "offset": 64,
+        "expect": "e0 01",
+        "replace": "d8 01",
+        "_note": "setCameraAt(480) -> setCameraAt(472). Shifts the LucasArts logo 8px right on the 256-wide SNES viewport so it centers cleanly. The shift MUST be a multiple of 8 so BG1HOFS stays tile-aligned — non-aligned offsets cause the tile cache to load the wrong palette for boundary tiles (the 'F' splotch and right-edge garbage we saw at cam=476)."
+      }
+    ],
+    "patches": [
+      {
+        "op_offset": 645,
+        "original_text": "TM & (c) 1990 LucasArts Entertainment Company.\nAll Rights Reserved.",
+        "new_text": "TM & (c) 1990 LucasArts\nEntertainment Company.\nAll Rights Reserved.",
+        "_note": "Original had one 47-char line that wrapped past 32 cols; split to 3 lines. Drops the existing color=5 and SO_CENTER sub-ops (renderer already centers; white is fine)."
+      },
+      {
+        "op_offset": 1619,
+        "new_text": "Additional Art By\nTami Borowick, James Dollar\nBill Eaken, Avril Harrison\nIain McCaig, Jim McLeod\nMichael Stemmle, Sean Turner\nSpecial Thanks to\nBrad Taylor, Peter Chan\nRon Lussier",
+        "_note": "Original was 180+ chars one line wrapping past the screen. Split to 8 lines; drops the single-line original text and the NBSP ($A0) first/last name joiners (replaced with regular spaces)."
+      },
+      {
+        "op_offset": 1350,
+        "original_text": "CD-ROM Conversion by\nAric Wilmunder, Wallace Poulter,\nand Sean Clark",
+        "new_text": "Conversion by\nAric Wilmunder, Wallace Poulter,\nand Sean Clark",
+        "position": [160, 152],
+        "_note": "Original CD-ROM conversion team preserved verbatim; just stripped the 'CD-ROM' era-prefix."
+      },
+      {
+        "op_offset": 2061,
+        "original_text": "IBM Sounds by\nMichael Land, Peter McConnell,\nand J. Anthony White",
+        "new_text": "Music by\nMichael Land, Peter McConnell,\nand J. Anthony White",
+        "position": [160, 152]
+      },
+      {
+        "op_offset": 2219,
+        "original_text": "CD-ROM Lead Testing by\nChip Hinnenberg",
+        "new_text": "Testing by\nChip Hinnenberg",
+        "position": [160, 152]
+      },
+      {
+        "op_offset": 2605,
+        "original_text": "IBM CD-ROM Project Lead by\nAric Wilmunder",
+        "new_text": "Conversion Lead by\nAric Wilmunder",
+        "position": [160, 152]
+      },
+      {
+        "op_offset": 2667,
+        "original_text": "IBM CD-ROM System by\nAric Wilmunder",
+        "new_text": "SNES MSU-1\nChad Doebelin and Claude",
+        "position": [160, 152],
+        "_note": "Repurposed Aric's 'IBM CD-ROM System' slot for the SNES port team. Aric still credited in #1 (conversion) and #4 (project lead)."
+      },
+      {
+        "op_offset": 2771,
+        "original_text": "IBM CD-ROM Project Produced by\nBrenna Kruppa-Holden",
+        "new_text": "CD-ROM Production by\nBrenna Kruppa-Holden",
+        "position": [160, 152]
+      }
+    ]
+  }
+}

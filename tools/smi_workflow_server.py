@@ -1129,7 +1129,10 @@ def validate_rom(clean_build: bool = False) -> str:
     from brk_scanner import scan_rom
     result = scan_rom(str(sym_path), str(rom_path))
     hit_count = len(result.hits)
-    baseline = 15
+    # Keep in sync with brk_scanner.py main(): 35 known M/X-desync false
+    # positives as of 2026-06-10 (recalibrated after the snes_to_rom HiROM
+    # mapping fix).
+    baseline = 35
 
     if hit_count > baseline:
         new_hits = hit_count - baseline

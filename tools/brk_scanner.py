@@ -156,20 +156,23 @@ class Symbol:
 
 
 def snes_to_rom(bank: int, offset: int) -> int:
-    """Convert SNES HiROM address to linear ROM file offset."""
+    """Convert a WLA-DX .sym bank:offset to a linear ROM file offset.
+
+    The project is HiROM with 64KB banks (config.inc: .ROMBANKSIZE $10000,
+    hirom): WLA bank N covers ROM N*0x10000..N*0x10000+0xFFFF and the symbol
+    offset is the address within that bank. There is NO LoROM 32KB math here —
+    a previous version applied it to offsets >= $8000, which silently mapped
+    every upper-half symbol (all superfree sections) to the wrong ROM bytes.
+    """
+    if bank in (0x7E, 0x7F):
+        return -1                       # WRAM, not ROM
     if bank >= 0xC0:
         bank -= 0xC0
     elif bank >= 0x80:
         bank -= 0x80
-
-    if bank <= 0x3F:
-        if offset >= 0x8000:
-            return bank * 0x8000 + (offset - 0x8000)
-        else:
-            return bank * 0x10000 + offset
-    elif bank <= 0x7D:
-        return bank * 0x10000 + offset
-    return -1
+    elif bank >= 0x40:
+        bank -= 0x40
+    return bank * 0x10000 + offset
 
 
 def parse_symbols(sym_path: str) -> list[Symbol]:
@@ -188,6 +191,12 @@ def parse_symbols(sym_path: str) -> list[Symbol]:
             bank = int(m.group(1), 16)
             offset = int(m.group(2), 16)
             name = m.group(3)
+
+            # Some entries carry a full 24-bit address in the offset field
+            # (e.g. "0000:7efc67" for WRAM labels) — normalize it.
+            if offset > 0xFFFF:
+                bank = offset >> 16
+                offset &= 0xFFFF
 
             # Skip WRAM symbols
             if bank in (0x7E, 0x7F):
@@ -223,6 +232,9 @@ _DATA_NAME_PATTERNS = re.compile(
     r'Lut|Table|Data|Tiles|Font|Pal$|Palette|Chr|'
     # Costume/sprite/OAM data
     r'Costume.*Oam|OamEnd|Costume_pic|CostumeFrame|SPRITE\.|oamClear|VramClear|'
+    # Generated per-costume data blocks (tools/ costume pipeline): CostNNN_OamLo,
+    # CostNNN_AnimCmds, CostNNN_HeadOamHi, CostNNN_AnimDispatch, ...
+    r'Cost\d+_|'
     # Walk cycle / dispatch tables
     r'WalkCycleTable|dispatchTable|'
     # Memory allocation metadata (WRAM/VRAM/CGRAM blocks)
@@ -458,7 +470,11 @@ def main():
     # known-benign hits in the clean ROM (legitimate $00 operand bytes in DMA
     # register addresses, small constants, etc.). Any NEW hits above baseline
     # warrant investigation.
-    baseline = 15  # known false positives in clean ROM
+    # 35 as of 2026-06-10: recalibrated after fixing snes_to_rom (the old
+    # LoROM math made the scanner read wrong ROM bytes for every upper-half
+    # symbol, so the old baseline of 15 measured garbage). All 35 are M/X
+    # desync artifacts in engine banks 0-5 + the SA-1 "BIOS" ASCII at $00:FFAB.
+    baseline = 35  # known false positives in clean ROM
     for i, arg in enumerate(sys.argv):
         if arg == '--baseline' and i + 1 < len(sys.argv):
             baseline = int(sys.argv[i + 1])

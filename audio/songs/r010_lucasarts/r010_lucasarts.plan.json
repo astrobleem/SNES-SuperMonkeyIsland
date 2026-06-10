@@ -50,7 +50,8 @@
       "spc": 3,
       "midi_ch": 3,
       "reduction": "bottom",
-      "role": "pad"
+      "role": "pad",
+      "fold_below": 48
     },
     {
       "spc": 4,

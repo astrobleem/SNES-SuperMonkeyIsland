@@ -20,16 +20,16 @@
     },
     {
       "name": "r010_fm_ch2",
-      "source": "../../samples/instruments/shakuhachi.wav",
-      "freq": 739.53,
+      "source": "../../samples/instruments/atmosphere_h.wav",
+      "freq": 1051.09,
       "loop": "loop_with_filter",
-      "loop_setting": 2496,
+      "loop_setting": 3152,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 2,
+      "first_octave": 4,
       "last_octave": 6,
       "envelope": "adsr 15 3 7 12",
-      "comment": "Doubler (MIDI ch2 60-89), same SHAKU78 sample/freq as ch1 so the pitch table is shared."
+      "comment": "FX 8 sci-fi wash (GM 103, MIDI ch2 60-89) \u2014 ATMOS84. GM program from the ROL chunk of soun_005 (ground truth, 2026-06-10); was wrongly shakuhachi."
     },
     {
       "name": "r010_fm_ch3",
@@ -39,23 +39,23 @@
       "loop_setting": 320,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 2,
+      "first_octave": 3,
       "last_octave": 5,
-      "envelope": "adsr 15 7 7 28",
-      "comment": "Pad/twinkle (GM 9 glockenspiel, MIDI ch3 43-83, split top+bottom across SPC 2+3)."
+      "envelope": "adsr 15 2 0 0",
+      "comment": "Glockenspiel pad (GM 9, MIDI ch3 43-83, split top+bottom). Percussive envelope: SL=0 decays to silence like the SC-55 mallet patch \u2014 the old adsr 15 7 7 28 sustained the loop as an organ drone."
     },
     {
       "name": "r010_fm_ch4",
-      "source": "../../samples/instruments/sitar.wav",
-      "freq": 671.9,
+      "source": "../../samples/instruments/arp_poly72.wav",
+      "freq": 514.04,
       "loop": "loop_with_filter",
-      "loop_setting": 432,
+      "loop_setting": 4688,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 3,
       "last_octave": 6,
-      "envelope": "adsr 15 1 7 4",
-      "comment": "Arp (GM 104 sitar, MIDI ch4 48-89). Flagged grating in the pre-floor-fix render; re-judge by ear, candidates queued in samples/instruments/arp_*.wav."
+      "envelope": "adsr 15 3 0 0",
+      "comment": "Polysynth arp (SC-55 POLY_72A, MIDI ch4 48-89). Replaced sitar.wav: harmonic profile [1.00 0.28 0.19] matches talkie arp ref [1.00 0.27 0.21] (dist 0.34 vs sitar 2.46 \u2014 the 2.6kHz screech). f0 measured 514.04 Hz; loop 4688 = tail ~3 cycles, 16-aligned. Percussive envelope per SC-55 pluck."
     },
     {
       "name": "r010_fm_ch5",
@@ -66,22 +66,22 @@
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 1,
-      "last_octave": 3,
+      "last_octave": 2,
       "envelope": "adsr 15 5 7 20",
       "comment": "Bass (MIDI ch5 26-43). ACOBS43A natural 43, no transpose-up needed."
     },
     {
       "name": "r010_fm_ch7",
-      "source": "../../samples/instruments/atmosphere_h.wav",
-      "freq": 1051.09,
+      "source": "../../samples/instruments/violn76_hi.wav",
+      "freq": 646.0,
       "loop": "loop_with_filter",
-      "loop_setting": 3152,
+      "loop_setting": 1328,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 4,
       "last_octave": 6,
       "envelope": "adsr 15 2 7 10",
-      "comment": "Ornament (MIDI ch7 62-88). ATMOS84 +12 variant."
+      "comment": "Fiddle countermelody (GM 110, MIDI ch7 62-88) \u2014 VIOLN76 +12st variant. GM program from the ROL chunk; was wrongly atmosphere."
     },
     {
       "name": "r010_fm_drum_kick",
@@ -90,7 +90,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 KICK264"
@@ -102,7 +102,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 FATSD60A"
@@ -114,7 +114,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 CHH__60A (closed hi-hat)"
@@ -126,7 +126,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 CRASH60B"
@@ -138,7 +138,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 TOM__60"
@@ -150,7 +150,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 OCNGA60"
@@ -162,7 +162,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 CLAVE60"
@@ -174,7 +174,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 COWBL66"
@@ -186,7 +186,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 CLAVE60 (woodblock proxy)"
@@ -198,7 +198,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 TRI__60"
@@ -210,7 +210,7 @@
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 1,
+      "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
       "comment": "SC-55 MARCS60 (maracas as shaker)"

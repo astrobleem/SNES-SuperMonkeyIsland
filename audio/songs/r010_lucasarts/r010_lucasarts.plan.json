@@ -1,19 +1,22 @@
 {
   "dialect": "terrific",
-  "title": "Secret of Monkey Island \u2014 Main Theme (SC-55 voices per MI1 talkie)",
+  "title": "Secret of Monkey Island - Main Theme (MT-32 voices per ROL chunk)",
   "composer": "Michael Z. Land",
-  "arranger": "Claude (SMI SNES port; SC-55 samples, GM-source channels)",
+  "arranger": "Claude (SMI SNES port; Munt MT-32 samples, ROL-source channels)",
   "timer": 256,
   "zenlen": 224,
   "grid": "32nd",
   "grid_tolerance": 1,
   "instruments": {
-    "lead": "r010_fm_ch1",
-    "doubler": "r010_fm_ch2",
-    "bass": "r010_fm_ch5",
-    "pad": "r010_fm_ch3",
-    "arp": "r010_fm_ch4",
-    "ornament": "r010_fm_ch7",
+    "lead": "r010_mt32_lead",
+    "doubler": "r010_mt32_xylo",
+    "bass": "r010_mt32_bass",
+    "pad": "r010_mt32_organ",
+    "arp": "r010_mt32_marimba",
+    "ornament": "r010_mt32_bottle",
+    "extra": [
+      "r010_mt32_fantasia"
+    ],
     "drums": {
       "drum_kick": "r010_fm_drum_kick",
       "drum_snare": "r010_fm_drum_snare",
@@ -32,7 +35,7 @@
       "drum_shaker": "r010_fm_drum_shaker"
     }
   },
-  "_about_assignments": "GM iMUSE channels from r010_lucasarts.mid (stable musical voices \u2014 the AdLib per-OPL capture has voice stealing and is NOT usable as note source; see r010_combined.mid post-mortem 2026-06-10).",
+  "_about_assignments": "ROL chunk targets the Roland MT-32: program numbers are MT-32 patches, translated via ScummVM _mt32ToGm. ch1=77 flute lead, ch2=103 xylophone, ch3=9 organ pad, ch4=104 marimba arp, ch5=65 acoustic bass, ch6=32 fantasia bells, ch7=110 blown bottle. ch6+ch7 are temporally disjoint and share spc7 via merge_ch. Samples rendered dry through Munt at 32kHz (native MT-32 = native SNES DSP rate).",
   "assignments": [
     {
       "spc": 1,
@@ -44,7 +47,8 @@
       "spc": 2,
       "midi_ch": 3,
       "reduction": "top",
-      "role": "pad"
+      "role": "pad",
+      "fold_below": 48
     },
     {
       "spc": 3,
@@ -57,7 +61,8 @@
       "spc": 4,
       "midi_ch": 4,
       "reduction": "top",
-      "role": "arp"
+      "role": "arp",
+      "fold_above": 83
     },
     {
       "spc": 5,
@@ -75,7 +80,10 @@
       "spc": 7,
       "midi_ch": 7,
       "reduction": "top",
-      "role": "ornament"
+      "role": "ornament",
+      "fold_above": 83,
+      "merge_ch": 6,
+      "merge_instrument": "r010_mt32_fantasia"
     },
     {
       "spc": 8,

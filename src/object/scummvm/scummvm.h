@@ -158,6 +158,9 @@ SCUMM.bitVars       ds 256
 SCUMM.slots         INSTANCEOF scummSlot SCUMM_MAX_SLOTS
 .ends
 
+; Multi-actor render slots (5 visible actors max)
+.define SCUMM_MAX_RENDER_SLOTS 5
+
 ; VM state variables
 .ramsection "scumm vm state" bank 0 slot 1
 SCUMM.running             dw      ;nonzero = VM is active
@@ -189,7 +192,15 @@ SCUMM.hdmaScChannel       db      ;allocated HDMA channel id for BG2SC tilemap s
 SCUMM.hdmaHofsChannel     db      ;allocated HDMA channel id for BG2HOFS verb/game split
 SCUMM.cgramDirty          db      ;nonzero = setPalColor wrote shadow; NMI flushes to CGRAM
 SCUMM.bg2HofsHdmaTable    ds 10   ;HDMA mode 2 table: {127+17}@cameraX, 80@0. Line count capped at 127 per HDMA spec.
-SCUMM._cgramHdmaTableStub ds 75   ;UNUSED reserve (was SCUMM.cgramHdmaTable, shrunk for hdmaVofsChannel + bg2HofsHdmaTable)
+; loadActorCostumes slot bookkeeping (carved from the old cgramHdmaTable
+; reserve — total stays 75 bytes so downstream ramsection addresses hold):
+SCUMM._lacSnapActor       ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot actor (rebuild-change detection)
+SCUMM._lacSnapCostume     ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot costume
+SCUMM._lacSnapLastHead    ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot lastHead
+SCUMM._lacSnapLastPic     ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot lastPic
+SCUMM.vramSlotActor       ds SCUMM_MAX_RENDER_SLOTS ;actor whose palette+CHR the slot DMA actually loaded
+SCUMM.vramSlotCostume     ds SCUMM_MAX_RENDER_SLOTS ;costume whose palette+CHR the slot DMA actually loaded
+SCUMM._cgramHdmaReserve   ds 45   ;UNUSED remainder of the old cgramHdmaTable reserve
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
@@ -344,8 +355,7 @@ SCUMM.cursorPalC2Hi  db      ; cursor OBJ pal5 color2 high byte
 SCUMM.debugActorScale db      ; debug: L/R override scale (0=use walkbox)
 .ends
 
-; Multi-actor render slots (5 visible actors max)
-.define SCUMM_MAX_RENDER_SLOTS 5
+; Multi-actor render slots
 .ramsection "scumm render slots" bank 0 slot 1
 SCUMM.renderSlotActor    ds SCUMM_MAX_RENDER_SLOTS      ; actor number per slot (0=empty)
 SCUMM.renderSlotCostume  ds SCUMM_MAX_RENDER_SLOTS      ; costume number in slot

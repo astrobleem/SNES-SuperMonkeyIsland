@@ -7116,6 +7116,10 @@ _asc.foundSlot:
   sta.w SCUMM.renderSlotLastPic,x
   lda #1
   sta.w SCUMM.renderSlotDirty,x
+  ; The slot palette only lives in loadActorCostumes' CGRAM DMA — flag a
+  ; reload pass so the new costume's palette lands. vramSlotCostume still
+  ; holds the old costume, so the pass re-DMAs exactly this slot.
+  sta.w SCUMM.actorsDirty
   pha                                ; re-push to match stack
 _asc.noSlot:
   .ACCU 8
@@ -11889,24 +11893,22 @@ scummvm.loadActorCostumes_impl:
   sta.w ObjSel
   rep #$20
 
-  ; --- Snapshot pre-clear slot state into SCUMM._cgramHdmaTableStub ---
-  ; Layout (5 slots): +0..4=oldActor, +5..9=oldCost, +10..14=oldLastHead,
-  ;                   +15..19=oldLastPic.
+  ; --- Snapshot pre-clear slot state ---
   ; Used at end of function to restore lastHead/lastPic for slots whose
-  ; actor+costume didn't change — prevents head DMA from being marked
-  ; "always pending" by redundant putActorInRoom→actorsDirty triggers
-  ; (root cause of Bug A: headless old man at room 38).
+  ; actor+costume didn't change across this rebuild — prevents head DMA
+  ; from being marked "always pending" by redundant putActorInRoom→
+  ; actorsDirty triggers (root cause of Bug A: headless old man at room 38).
   sep #$20
   ldx #SCUMM_MAX_RENDER_SLOTS - 1
 _lac.snapLoop:
   lda.w SCUMM.renderSlotActor,x
-  sta.l SCUMM._cgramHdmaTableStub + 0,x
+  sta.l SCUMM._lacSnapActor,x
   lda.w SCUMM.renderSlotCostume,x
-  sta.l SCUMM._cgramHdmaTableStub + 5,x
+  sta.l SCUMM._lacSnapCostume,x
   lda.w SCUMM.renderSlotLastHead,x
-  sta.l SCUMM._cgramHdmaTableStub + 10,x
+  sta.l SCUMM._lacSnapLastHead,x
   lda.w SCUMM.renderSlotLastPic,x
-  sta.l SCUMM._cgramHdmaTableStub + 15,x
+  sta.l SCUMM._lacSnapLastPic,x
   dex
   bpl _lac.snapLoop
   rep #$20
@@ -12081,21 +12083,22 @@ _lac.dmaLoop:
   jmp _lac.dmaNext                    ; empty slot
 +
 
-  ; Bug 85 (HDMA flicker): if this slot's (actor, costume) match the
-  ; pre-clear snapshot, the palette + CHR already in VRAM/CGRAM are still
-  ; valid — skip the ~33k-cycle DMA. Without this skip, background scripts
-  ; that re-issue op_putActorInRoom every SCUMM tick (~10Hz) keep
-  ; actorsDirty=1, so loadActorCostumes force-blanks for ~70 scanlines
-  ; mid-frame on every 6th rendered frame. Visible as a clean black band
-  ; (y=3-75) cycling through the room area in Lookout. The restore loop at
-  ; _lac.restoreLoop already uses this same actor+costume match.
+  ; Bug 85 (HDMA flicker): if VRAM/CGRAM already hold this slot's
+  ; (actor, costume) — per the vramSlot* ground truth written only when
+  ; the DMA below actually runs — skip the ~33k-cycle DMA. Without this
+  ; skip, every reload trigger force-blanks ~70 scanlines mid-frame for
+  ; all occupied slots; visible as a clean black band (y=3-75) cycling
+  ; through the room area in Lookout. Comparing against vramSlot* (not
+  ; the pre-clear snapshot) matters: setCostume rewrites renderSlotCostume
+  ; in place, so a snapshot compare would wrongly skip the reload that
+  ; the costume swap needs for its palette.
   sep #$20
   .ACCU 8
   lda.w SCUMM.renderSlotActor,x
-  cmp.l SCUMM._cgramHdmaTableStub + 0,x
+  cmp.l SCUMM.vramSlotActor,x
   bne _lac.dmaNeeded
   lda.w SCUMM.renderSlotCostume,x
-  cmp.l SCUMM._cgramHdmaTableStub + 5,x
+  cmp.l SCUMM.vramSlotCostume,x
   bne _lac.dmaNeeded
   rep #$20
   .ACCU 16
@@ -12232,11 +12235,18 @@ _lac.dmaNeeded:
   rep #$20
   .ACCU 16
 
-  ; Init animation state for this actor
+  ; Record VRAM/CGRAM ground truth: this slot's palette + stand CHR now
+  ; hold (actor, costume). Written ONLY here, where the DMA actually ran —
+  ; the skip check at the top of the loop depends on that.
   ldx.w SCUMM.scratch3
   sep #$20
   .ACCU 8
+  lda.w SCUMM.renderSlotCostume,x
+  sta.l SCUMM.vramSlotCostume,x
   lda.w SCUMM.renderSlotActor,x
+  sta.l SCUMM.vramSlotActor,x
+
+  ; Init animation state for this actor (A = actor number)
   rep #$20
   .ACCU 16
   and #$00FF
@@ -12294,15 +12304,15 @@ _lac.seedDone:
   ldx #SCUMM_MAX_RENDER_SLOTS - 1
 _lac.restoreLoop:
   lda.w SCUMM.renderSlotActor,x
-  cmp.l SCUMM._cgramHdmaTableStub + 0,x
+  cmp.l SCUMM._lacSnapActor,x
   bne _lac.restoreNext
   lda.w SCUMM.renderSlotCostume,x
-  cmp.l SCUMM._cgramHdmaTableStub + 5,x
+  cmp.l SCUMM._lacSnapCostume,x
   bne _lac.restoreNext
   ; Same actor + same costume — restore lastHead and lastPic from snapshot
-  lda.l SCUMM._cgramHdmaTableStub + 10,x
+  lda.l SCUMM._lacSnapLastHead,x
   sta.w SCUMM.renderSlotLastHead,x
-  lda.l SCUMM._cgramHdmaTableStub + 15,x
+  lda.l SCUMM._lacSnapLastPic,x
   sta.w SCUMM.renderSlotLastPic,x
 _lac.restoreNext:
   dex

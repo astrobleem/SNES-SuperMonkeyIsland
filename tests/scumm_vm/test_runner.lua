@@ -1236,6 +1236,51 @@ function test_phaseD_putActorInRoom_into_current_room()
               "actor[10].room = currentRoom after putActorInRoom (actorsDirty self-clears)")
 end
 
+local SCUMM_renderSlotActor   = 0x7EFD87
+local SCUMM_renderSlotCostume = 0x7EFD8C
+local SCUMM_vramSlotActor     = 0x7EF912
+local SCUMM_vramSlotCostume   = 0x7EF917
+
+-- Mid-room costume swap must re-DMA the slot palette: actorOps setCostume on
+-- a slotted actor flags actorsDirty; the reload's VRAM-truth skip check
+-- (SCUMM.vramSlot*) re-DMAs exactly the swapped slot and records the new
+-- costume. Guards the Bug 85 DMA skip against masking costume swaps.
+function test_phaseD_setCostume_reloads_slot_palette()
+  local cur = H.rd8(H.SYM.SCUMM_currentRoom)
+  -- Stage actor 13 visible in the current room with costume 33: the real
+  -- room transition in putActorInRoom triggers loadActorCostumes, which
+  -- assigns a render slot and records VRAM truth for it.
+  H.wr8(H.actor_addr(13, 0), 0)            -- room: elsewhere → put is a real transition
+  H.wr8(H.actor_addr(13, 11), 1)           -- visible (putActorInRoom won't set it)
+  H.run_bytecode({0x13, 0x0D, 0x01, 33, 0xFF, 0xA0})   -- actorOps(13): costume=33
+  H.run_bytecode({0x2D, 0x0D, cur, 0xA0})              -- putActorInRoom(13, cur)
+  local slot
+  for i = 0, 4 do
+    if H.rd8(SCUMM_renderSlotActor + i) == 13 then slot = i; break end
+  end
+  H.assert_eq(slot and 1 or 0, 1,
+              "setCostume reload: actor 13 acquired a render slot")
+  if not slot then return end
+  H.assert_eq(H.rd8(SCUMM_vramSlotCostume + slot), 33,
+              "setCostume reload: vramSlotCostume records costume 33 after slot load")
+  -- Mid-room swap: no putActorInRoom — only setCostume's actorsDirty flag
+  -- can trigger the reload that fixes the slot palette.
+  H.run_bytecode({0x13, 0x0D, 0x01, 58, 0xFF, 0xA0})   -- actorOps(13): costume=58
+  H.wait_frames(2)                         -- let the _play tick consume actorsDirty
+  H.assert_eq(H.rd8(SCUMM_renderSlotCostume + slot), 58,
+              "setCostume reload: renderSlotCostume updated in place")
+  H.assert_eq(H.rd8(SCUMM_vramSlotCostume + slot), 58,
+              "setCostume reload: vramSlotCostume == 58 — palette DMA re-ran for the swap")
+  H.assert_eq(H.rd8(SCUMM_vramSlotActor + slot), 13,
+              "setCostume reload: vramSlotActor still actor 13")
+  -- Cleanup: remove actor 13 and force one reload so later tests see a
+  -- clean slot table.
+  H.run_bytecode({0x2D, 0x0D, 0x00, 0xA0})  -- putActorInRoom(13, 0)
+  H.wr8(H.actor_addr(13, 11), 0)
+  H.wr8(SCUMM_actorsDirty, 1)
+  H.run_bytecode({0xA0})
+end
+
 -- ============================================================================
 -- PHASE B.7 — roomOps sub-ops ($33)
 -- Most are PARTIAL (consume params, no SW renderer behind them).
@@ -3040,6 +3085,8 @@ local TESTS = {
     fn = test_phaseD_boot_smoke },
   { name = "Phase D: putActorInRoom into current room (transient actorsDirty)",
     fn = test_phaseD_putActorInRoom_into_current_room },
+  { name = "Phase D: setCostume on slotted actor re-DMAs palette (vramSlot truth)",
+    fn = test_phaseD_setCostume_reloads_slot_palette },
   -- DESTABILIZER ZONE — these tests mutate MI1 game state. Order so the
   -- harshest one (systemOps restart) is absolutely last.
   -- roomOps sub-ops (palette/scroll/shake mutate display state):

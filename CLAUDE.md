@@ -10,6 +10,14 @@ SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Mon
 
 **Aramis** (`.claude/agents/mesen-debugger.md`) — Mesen 2 debugging: Lua tests, WRAM inspection, frame analysis. Use the Agent tool with `subagent_type: "mesen-debugger"` for complex runtime diagnostics. You can write simple Lua snippets directly via `run_lua_snippet`, but delegate thorough debugging sessions to Aramis.
 
+## Response Style
+
+- Do NOT end responses with a menu of next options or "what would you like to do next" — stop when the task is done.
+- No over-cautious framing around routine operations (builds, commits, test runs, pushes) — just do them. Only destructive operations (force-push, resets, deleting user assets) need confirmation.
+- Be concise. Don't re-explain what you just did.
+- Never claim a rendering or audio bug is fixed without proof: screenshot/frame capture for visuals, recorded output for audio. "Code-complete" is not "done".
+- For frame capture and runtime inspection, use the Mesen MCP tools (`mesen-inproc` / `smi-workflow`), not hand-rolled Lua — Lua scripts are for persistent tests in `tests/`.
+
 ## Build Commands
 
 Build runs under WSL. The assembler is a vendored WLA-DX 9.5-svn tree at `tools/wla-dx-9.5-svn/` (built by make; do not substitute a system WLA-DX).
@@ -80,6 +88,13 @@ wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && python3 tools/rom_usage.
 ```
 
 Bank 0 overflow is silent — WLA-DX reshuffles sections without error.
+
+## SNES Assembly Gotchas (WLA-DX / 65816)
+
+- FastROM JML targets must use the bank $80 mirror, not $C0 — I/O registers are inaccessible from $C0.
+- Watch branch-range limits and anonymous-label addressing; wrong-width immediates leave phantom $00 (BRK) bytes — `validate_rom`'s BRK scan exists to catch these (baseline 35 known false positives; investigate anything above it).
+- Debug instrumentation must not perturb the code path being measured (no DMA/HDMA pokes inside the window under test).
+- The sym file (`build/SuperMonkeyIsland.sym`) uses HiROM 64KB banks: ROM offset = bank * $10000 + offset. No LoROM 32KB math anywhere.
 
 ## Architecture (High-Level)
 

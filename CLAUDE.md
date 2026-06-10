@@ -12,7 +12,7 @@ SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Mon
 
 ## Build Commands
 
-Build runs under WSL. The project uses WLA-DX v9.3 assembler (v9.4+ breaks the build).
+Build runs under WSL. The assembler is a vendored WLA-DX 9.5-svn tree at `tools/wla-dx-9.5-svn/` (built by make; do not substitute a system WLA-DX).
 
 ```bash
 # Standard build (clean + build)

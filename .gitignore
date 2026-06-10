@@ -14,3 +14,9 @@ data/snes_converted/
 
 # Mesen emulator (download separately)
 mesen/
+
+# Terrific Audio Driver compiler (download release; see CLAUDE.md "TAD audio")
+tools/tad/
+
+# WLA-DX temp files left behind by interrupted assembler runs
+.wla*

@@ -1,0 +1,38 @@
+{
+  "dialect": "terrific",
+  "title": "AdLib ch0 bisection test (1 voice)",
+  "composer": "—",
+  "arranger": "Claude (bisection: minimal 1-voice plan to isolate AdLib MIDI breakage)",
+  "timer": 256,
+  "zenlen": 224,
+  "grid": "32nd",
+  "grid_tolerance": 1,
+  "instruments": {
+    "lead":     "r010_fm_ch1",
+    "doubler":  "r010_fm_ch1",
+    "bass":     "r010_fm_ch1",
+    "pad":      "r010_fm_ch1",
+    "arp":      "r010_fm_ch1",
+    "ornament": "r010_fm_ch1",
+    "drums": {
+      "drum_kick":    "r010_fm_drum_kick",
+      "drum_snare":   "r010_fm_drum_snare",
+      "drum_hat":     "r010_fm_drum_hat",
+      "drum_hat_open":"r010_fm_drum_crash",
+      "drum_crash":   "r010_fm_drum_crash",
+      "drum_ride":    "r010_fm_drum_hat",
+      "drum_tom":     "r010_fm_drum_tom",
+      "drum_timbale": "r010_fm_drum_tom",
+      "drum_conga":   "r010_fm_drum_conga",
+      "drum_bongo":   "r010_fm_drum_conga",
+      "drum_claves":  "r010_fm_drum_claves",
+      "drum_cowbell": "r010_fm_drum_cowbell",
+      "drum_wood":    "r010_fm_drum_woodblock",
+      "drum_triangle":"r010_fm_drum_triangle",
+      "drum_shaker":  "r010_fm_drum_shaker"
+    }
+  },
+  "assignments": [
+    {"spc": 1, "midi_ch": 0, "reduction": "top", "role": "lead"}
+  ]
+}

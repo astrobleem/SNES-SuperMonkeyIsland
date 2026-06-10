@@ -454,6 +454,26 @@ def render_drum(patch: AdlibPatch, role: str = "snare",
     return normalize(voice.astype(np.float32), peak=0.95)
 
 
+def _freq_to_fnum_block(freq: float) -> tuple[int, int]:
+    """Solve OPL2 frequency formula `f = fnum × 49716 / 2^(20-block)` for
+    (fnum, block) given target Hz. Picks the highest block that keeps
+    fnum in OPL2's preferred 512-1023 range (best fundamental precision).
+    """
+    if freq <= 0:
+        return 345, 4  # safe default, ~261 Hz
+    # Try blocks 7 → 0 to find one with fnum in 512..1023 (best resolution)
+    for block in range(7, -1, -1):
+        fnum = int(round(freq * (1 << (20 - block)) / 49716))
+        if 512 <= fnum <= 1023:
+            return fnum, block
+    # Fallback: any block where fnum fits 1..1023
+    for block in range(7, -1, -1):
+        fnum = int(round(freq * (1 << (20 - block)) / 49716))
+        if 1 <= fnum <= 1023:
+            return fnum, block
+    return 1, 0  # frequency too low — clamp
+
+
 def render_patch(patch: AdlibPatch, base_freq: float = 261.626,
                  dur: float = 0.20, sr: int = SR,
                  sustain: bool = True,
@@ -504,14 +524,20 @@ def render_patch(patch: AdlibPatch, base_freq: float = 261.626,
     # Channel register: FB (bits 3:1) and Connection (bit 0).
     opl.writeReg(0xC0, (patch.feedback << 1) | patch.connection)
 
-    # Key-on at C6-ish. Fnum=345/block=6 → ~1046 Hz internal.
-    # Rendering two octaves up (vs C4) lets us declare freq=1046 and raise
-    # last_octave to 7 without exceeding TAD's pitch-table ceiling, so MI1's
-    # peak-register notes (up to MIDI 89) fit in range without channel
-    # transposes. Timbral character at 1 kHz base is slightly brighter than
-    # the 262 Hz base the patch was "designed for", but OPL2's FM math is
-    # ratio-based (mod_mult/car_mult) so harmonic structure is preserved.
-    fnum, block = 345, 6
+    # OPL2 carrier OUTPUT frequency = (modulator F-num × 2^block × 49716/2²⁰)
+    # × car_mult. We want the rendered sample's audible fundamental to be
+    # `OUTPUT_FREQ` (1046.5 Hz / B5) so the project's `freq` declaration is
+    # correct. Compute the modulator base needed for that output:
+    #
+    #   modulator_base × car_mult = OUTPUT_FREQ
+    #
+    # The previous version hardcoded fnum=345/block=6 ≈ 1046 Hz as the
+    # modulator base, which meant the audible output was 1046 × car_mult Hz —
+    # for ch1 (car×7) that's 7330 Hz, then TAD pitch-shifted DOWN by ~7× to
+    # play normal melody notes, destroying the FM harmonics in the process.
+    OUTPUT_FREQ = 1046.5  # B5 ≈ 83.76 in MIDI; matches project `freq` field
+    modulator_base = OUTPUT_FREQ / max(patch.car_mult, 0.5)
+    fnum, block = _freq_to_fnum_block(modulator_base)
     opl.writeReg(0xA0, fnum & 0xFF)
     opl.writeReg(0xB0, 0x20 | (block << 2) | ((fnum >> 8) & 0x03))
 
@@ -538,7 +564,7 @@ def render_patch(patch: AdlibPatch, base_freq: float = 261.626,
         # still gives at least 100 ms of content; find the closest
         # zero-crossing near the target length and trim there so the loop
         # edges are phase-matched.
-        render_freq = 1046.5
+        render_freq = OUTPUT_FREQ
         samples_per_period = max(4, int(round(sr / render_freq)))
         n_periods = max(1, int(dur * sr) // samples_per_period)
         target_n = n_periods * samples_per_period

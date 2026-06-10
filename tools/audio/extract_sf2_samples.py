@@ -41,12 +41,26 @@ TARGET_SR = 22_050
 # the ear to register the hit before the next one (in dense patterns, 50-100 ms
 # per hit is plenty). Set trim=None to keep the whole sample.
 DRUM_EXTRACTIONS = {
-    # Drums actually referenced by SOUN 010's H track at 32nd-grid resolution.
+    # Short kit referenced by SOUN 010's H track.
     "kick":     ("KICK264",  None),   # 50 ms, keep full
     "snare":    ("FATSD60A", 2200),   # cap at ~100 ms (source is ~197 ms)
     "conga_hi": ("OCNGA60",  1760),   # cap at ~80 ms
     "bongo_hi": ("HBNGO60",  1300),   # cap at ~60 ms; distinct from conga
     "claves":   ("CLAVE60",  None),   # 21 ms, keep full
+    # Extended kit covering the rest of GM percussion (notes 41-81 in
+    # DRUM_MAP_TERRIFIC). Project-wide kit so any song's drum line can
+    # resolve to a real SC-55 sample without falling back to AdLib FM.
+    "hat":       ("CHH__60A", None),   # closed hi-hat — short, keep full
+    "hat_open":  ("OHH__60B", 4400),   # open hi-hat — cap at ~200 ms
+    "crash":     ("CRASH60B", 4400),   # cap at ~200 ms (crashes ring forever)
+    "ride":      ("RDCYM60B", 4400),   # ride cymbal — cap at ~200 ms
+    "tom":       ("TOM__60",  None),   # generic tom (SC-55 has one sample)
+    "cowbell":   ("COWBL66",  None),
+    "triangle":  ("TRI__60",  4400),   # cap at ~200 ms (long ring)
+    "shaker":    ("MARCS60",  None),   # SC-55 has maracas; closest to shaker
+    "timbale":   ("TIMBL60",  None),
+    "woodblock": ("CLAVE60",  None),   # SC-55 lacks woodblock; claves is
+                                       # the closest bright-click timbre
 }
 
 # Melodic samples — each is a tonal instrument with SF2 loop points. We
@@ -79,6 +93,41 @@ MELODIC_EXTRACTIONS = {
     "sitar":        ("SITAR76",  None),   # MIDI 76 native (mid-range)
     "acobass":      ("ACOBS43A", None),   # MIDI 43 native — bass range
     "atmosphere":   ("ATMOS60A", None),   # MIDI 60 native
+    "atmosphere_h": ("ATMOS84",  None),   # MIDI 84 native (high register)
+
+    # Candidates for FFT-matching against MI1 talkie reference. The MIDI's
+    # program_change events identify each MI1 ch's intended GM family:
+    #   ch3 = GM52 Choir Aahs  → CHOIR65A / FMVOX66A
+    #   ch4 = GM88 Pad 1       → FANTA{53,81} / SPACE79  (Roland calls it
+    #                            "Fantasia/New Age"). FANTA81 had a 38ms loop
+    #                            region that buzzed; need long-loop alternatives.
+    #   ch5 = GM28 Muted EGtr  → MUTGT43 (alternative to acobass)
+    #   ch7 = GM83 Lead Chiff  → CHFFR84 (Chiffer Lead) — also short loop, swap
+    #                            for a sustained variant.
+    "pad_choir":      ("CHOIR65A", None),
+    "pad_fmvox":      ("FMVOX66A", None),
+    "arp_fanta53":    ("FANTA53",  None),
+    "arp_fanta81":    ("FANTA81",  None),
+    "arp_space":      ("SPACE79",  None),
+    "bass_mutgt43":   ("MUTGT43",  None),
+    "ornament_chiff": ("CHFFR84",  None),
+    # Sustained-instrument candidates (long loop regions for clean SPC playback)
+    # in/around the arp's pitch range (MIDI ~80-88) and ornament's range:
+    "arp_strng88":    ("STRNG88B", None),   # GM48 Strings, MIDI 88
+    "arp_strng71":    ("STRNG71B", None),   # GM48 Strings, MIDI 71 (lower variant)
+    "arp_fmvox86":    ("FMVOX86A", None),   # FM voice, MIDI 86 (vocal pad)
+    "arp_poly84":     ("POLY_84A", None),   # GM90 Polysynth pad, MIDI 84
+    "arp_poly72":     ("POLY_72A", None),   # GM90 Polysynth, MIDI 72
+    "arp_sstr186":    ("SSTR186A", None),   # GM49 Slow Strings high
+    # VIOLN candidates for lead/doubler (GM 40 Violin — what MI1 ch1 is
+    # actually scored as in the GM source MIDI). All natural pitches; we
+    # pitch-shift up via tools/audio/pitch_shift_sample.py if a candidate
+    # wins FFT but its native pitch doesn't span the lead's MIDI range.
+    "violn68":        ("VIOLN68", None),    # GM 40 Violin, MIDI 68
+    "violn70":        ("VIOLN70", None),    # GM 40 Violin, MIDI 70
+    "violn76":        ("VIOLN76", None),    # GM 40 Violin, MIDI 76
+    "violn80":        ("VIOLN80", None),    # GM 40 Violin, MIDI 80
+    "violn86":        ("VIOLN86", None),    # GM 40 Violin, MIDI 86
 }
 
 

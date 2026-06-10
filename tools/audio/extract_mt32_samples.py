@@ -31,11 +31,18 @@ NOTE_MS = 300  # note-on time inside the render
 # is derived per file, so the resample factor stays within ~1% and
 # timbre/formants are untouched.
 INSTRUMENTS = {
-    'lead_flute': (72, 524.8, 250, 1280),
-    'organ':      (64, 330.2, 150, 3200),
+    'lead_flute': (72, 524.8, 200, 1280),
+    # dedicated low zone for the lead's intro-drone register (notes 38-45) —
+    # the C5 sample stretched -32st smears its attack and formants
+    'lead_low':   (40, 82.4,  150, 1552),
+    # organ loop must span ONE full tremolo cycle (~218ms = 72 pitch cycles):
+    # a 100ms loop froze a fraction of the tremolo and pulsed at 10Hz
+    'organ':      (64, 330.2, 150, 6976),
     'bottle':     (76, 661.6, 150, 1600),
-    'fantasia':   (70, 467.3, 350, 1920),
-    'marimba':    (72, 526.7, 250, 1280),
+    'fantasia':   (70, 467.3, 250, 1920),
+    # sampled at the range center (ch4 plays 48-83 folded) so down-pitched
+    # strikes keep their transient sharpness
+    'marimba':    (66, 371.2, 200, 1280),
     'xylophone':  (76, 669.5, 200, 960),
     'acoubass':   (36, 65.0,  150, 6400),
 }
@@ -82,7 +89,48 @@ def fft_resample(d, new_len):
     return np.fft.irfft(spec, new_len) * (new_len / len(d))
 
 
+# one-shot percussion: no loop — trimmed at the decay floor (2% of peak)
+# capped at max_ms, 5ms fade, padded to a 16-sample multiple.
+DRUMS = {
+    'kick':      100,
+    'rim':       120,
+    'bongo':     150,
+    'conga_med': 150,
+    'conga_hi':  100,
+    'claves':    100,
+}
+
+
+def extract_drums():
+    total = 0
+    for name, max_ms in DRUMS.items():
+        d, sr = load_mono(os.path.join(SRC_DIR, f'dry_drum_{name}.wav'))
+        note_at = NOTE_MS * sr // 1000
+        body = d[note_at:]
+        peak = np.abs(body).max()
+        onset = max(0, int(np.argmax(np.abs(body) > 0.02 * peak)) - 16)
+        body = body[onset:]
+        # decay floor: last index above 2% of peak (10ms-smoothed)
+        hop = sr // 100
+        env = np.array([np.abs(body[i:i + hop]).max() for i in range(0, len(body) - hop, hop)])
+        above = np.nonzero(env > 0.02 * env.max())[0]
+        end = min((above[-1] + 1) * hop if len(above) else len(body), int(max_ms * sr / 1000))
+        end = (end // 16) * 16
+        out = body[:end].copy()
+        fade = int(0.005 * sr)
+        out[-fade:] *= np.linspace(1, 0, fade)
+        out *= 28000.0 / np.abs(out).max()
+        save_wav(os.path.join(OUT_DIR, f'mt32_drum_{name}.wav'), out, sr)
+        brr = (end // 16) * 9
+        total += brr
+        print(f"mt32_drum_{name:<10} len {end:>5} ({end * 1000 // sr}ms) brr {brr:>5}B")
+    print(f"drum BRR total ~{total} bytes")
+
+
 def main():
+    if '--drums' in sys.argv:
+        extract_drums()
+        return 0
     total_brr = 0
     for name, (note, f0_hint, attack_ms, loop_len) in INSTRUMENTS.items():
         d, sr = load_mono(os.path.join(SRC_DIR, f'dry_{name}.wav'))

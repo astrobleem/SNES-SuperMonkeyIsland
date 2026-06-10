@@ -15,24 +15,16 @@
     "arp": "r010_mt32_marimba",
     "ornament": "r010_mt32_bottle",
     "extra": [
-      "r010_mt32_fantasia"
+      "r010_mt32_fantasia",
+      "r010_mt32_lead_low"
     ],
     "drums": {
-      "drum_kick": "r010_fm_drum_kick",
-      "drum_snare": "r010_fm_drum_snare",
-      "drum_hat": "r010_fm_drum_hat",
-      "drum_hat_open": "r010_fm_drum_crash",
-      "drum_crash": "r010_fm_drum_crash",
-      "drum_ride": "r010_fm_drum_hat",
-      "drum_tom": "r010_fm_drum_tom",
-      "drum_timbale": "r010_fm_drum_tom",
-      "drum_conga": "r010_fm_drum_conga",
-      "drum_bongo": "r010_fm_drum_conga",
-      "drum_claves": "r010_fm_drum_claves",
-      "drum_cowbell": "r010_fm_drum_cowbell",
-      "drum_wood": "r010_fm_drum_woodblock",
-      "drum_triangle": "r010_fm_drum_triangle",
-      "drum_shaker": "r010_fm_drum_shaker"
+      "drum_kick": "r010_mt32_drum_kick",
+      "drum_snare": "r010_mt32_drum_rim",
+      "drum_bongo": "r010_mt32_drum_bongo",
+      "drum_conga_med": "r010_mt32_drum_conga_med",
+      "drum_conga_hi": "r010_mt32_drum_conga_hi",
+      "drum_claves": "r010_mt32_drum_claves"
     }
   },
   "_about_assignments": "ROL chunk targets the Roland MT-32: program numbers are MT-32 patches, translated via ScummVM _mt32ToGm. ch1=77 flute lead, ch2=103 xylophone, ch3=9 organ pad, ch4=104 marimba arp, ch5=65 acoustic bass, ch6=32 fantasia bells, ch7=110 blown bottle. ch6+ch7 are temporally disjoint and share spc7 via merge_ch. Samples rendered dry through Munt at 32kHz (native MT-32 = native SNES DSP rate).",
@@ -41,7 +33,11 @@
       "spc": 1,
       "midi_ch": 1,
       "reduction": "top",
-      "role": "lead"
+      "role": "lead",
+      "zone_below": {
+        "note": 48,
+        "instrument": "r010_mt32_lead_low"
+      }
     },
     {
       "spc": 2,
@@ -92,5 +88,11 @@
       "role": "drums"
     }
   ],
-  "min_note_mml_ticks": 2
+  "min_note_mml_ticks": 2,
+  "echo_length": 32,
+  "drum_note_overrides": {
+    "62": "drum_conga_med",
+    "63": "drum_conga_hi",
+    "64": "drum_conga_hi"
+  }
 }

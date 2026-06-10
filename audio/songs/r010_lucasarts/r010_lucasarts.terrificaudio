@@ -10,18 +10,31 @@
       "source": "../../samples/instruments/mt32_lead_flute.wav",
       "freq": 525.0,
       "loop": "loop_with_filter",
-      "loop_setting": 8000,
+      "loop_setting": 6400,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
-      "first_octave": 2,
+      "first_octave": 3,
       "last_octave": 6,
       "envelope": "adsr 15 2 7 4",
       "comment": "MT-32 patch 77 flute lead (Munt dry render @32kHz). Loop 1280 = 21 cycles exact."
     },
     {
+      "name": "r010_mt32_lead_low",
+      "source": "../../samples/instruments/mt32_lead_low.wav",
+      "freq": 82.474,
+      "loop": "loop_with_filter",
+      "loop_setting": 4800,
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "adsr 15 2 7 4",
+      "comment": "Lead flute low zone (MIDI 38-45, the intro drone) sampled at MIDI 40 - the C5 sample stretched -32st smeared attack and formants."
+    },
+    {
       "name": "r010_mt32_organ",
       "source": "../../samples/instruments/mt32_organ.wav",
-      "freq": 330.0,
+      "freq": 330.275,
       "loop": "loop_with_filter",
       "loop_setting": 4800,
       "evaluator": "default",
@@ -29,7 +42,7 @@
       "first_octave": 3,
       "last_octave": 5,
       "envelope": "adsr 15 1 7 0",
-      "comment": "MT-32 patch 9 Elec Org 2 - the intro chord swell bed. Loop 3200 = 33 cycles."
+      "comment": "MT-32 patch 9 Elec Org 2 - intro chord bed. Loop 6976 = 72 pitch cycles = one full ~4.6Hz tremolo cycle; the old 100ms loop pulsed at 10Hz (the \"seams\")."
     },
     {
       "name": "r010_mt32_bass",
@@ -47,15 +60,15 @@
     {
       "name": "r010_mt32_marimba",
       "source": "../../samples/instruments/mt32_marimba.wav",
-      "freq": 525.0,
+      "freq": 375.0,
       "loop": "loop_with_filter",
-      "loop_setting": 8000,
+      "loop_setting": 6400,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 3,
       "last_octave": 5,
       "envelope": "adsr 15 4 0 0",
-      "comment": "MT-32 patch 104 marimba arp. Percussive decay - long gates die like hardware."
+      "comment": "MT-32 patch 104 marimba, sampled at range center (MIDI 66) so down-pitched strikes keep transient sharpness. Percussive decay."
     },
     {
       "name": "r010_mt32_xylo",
@@ -88,7 +101,7 @@
       "source": "../../samples/instruments/mt32_fantasia.wav",
       "freq": 466.667,
       "loop": "loop_with_filter",
-      "loop_setting": 11200,
+      "loop_setting": 8000,
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 4,
@@ -97,52 +110,76 @@
       "comment": "MT-32 patch 32 Fantasia bells (ch6), shares spc7 with bottle via merge_ch."
     },
     {
-      "name": "r010_fm_drum_kick",
-      "source": "../../samples/instruments/kick.wav",
-      "freq": 47.46,
+      "name": "r010_mt32_drum_kick",
+      "source": "../../samples/instruments/mt32_drum_kick.wav",
+      "freq": 65.406,
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "SC-55 KICK264"
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
     },
     {
-      "name": "r010_fm_drum_snare",
-      "source": "../../samples/instruments/snare.wav",
-      "freq": 47.46,
+      "name": "r010_mt32_drum_rim",
+      "source": "../../samples/instruments/mt32_drum_rim.wav",
+      "freq": 65.406,
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "SC-55 FATSD60A"
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
     },
     {
-      "name": "r010_fm_drum_conga",
-      "source": "../../samples/instruments/conga_hi.wav",
-      "freq": 47.46,
+      "name": "r010_mt32_drum_bongo",
+      "source": "../../samples/instruments/mt32_drum_bongo.wav",
+      "freq": 65.406,
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "SC-55 OCNGA60"
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
     },
     {
-      "name": "r010_fm_drum_claves",
-      "source": "../../samples/instruments/claves.wav",
-      "freq": 47.46,
+      "name": "r010_mt32_drum_conga_med",
+      "source": "../../samples/instruments/mt32_drum_conga_med.wav",
+      "freq": 65.406,
       "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "SC-55 CLAVE60"
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
+    },
+    {
+      "name": "r010_mt32_drum_conga_hi",
+      "source": "../../samples/instruments/mt32_drum_conga_hi.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
+    },
+    {
+      "name": "r010_mt32_drum_claves",
+      "source": "../../samples/instruments/mt32_drum_claves.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (Munt dry render @32kHz), plays 1:1 at o2 c."
     }
   ],
   "samples": [],

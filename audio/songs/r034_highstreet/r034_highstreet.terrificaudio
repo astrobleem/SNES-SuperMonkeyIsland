@@ -2,7 +2,7 @@
  "_about": {
   "file_type": "Terrific Audio Driver project file",
   "version": "0.2.0-beta.2",
-  "_comment": "M\u00eal\u00e9e High Street (MI1 soundtrack batch). ch1 is a single doubled note; dropped."
+  "_comment": "M\u00eal\u00e9e High Street (MI1 soundtrack batch). ch1 is a single doubled note; dropped. The organ skank is block chords with ragged release times: segment-based top/bottom spilled inner notes as ghost attacks after every chord (111 notes from 48 chords) -- chord_top/chord_bottom pick per onset group instead. Bass is legato-played: mono keeps true onsets (\"timing off\", Chad 2026-06-11)."
  },
  "instruments": [
   {

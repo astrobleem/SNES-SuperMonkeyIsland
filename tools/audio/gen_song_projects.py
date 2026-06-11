@@ -114,10 +114,15 @@ SPECS = {
  'r034_highstreet': dict(
     mid='room_034_high-stre__soun_002', title='Mêlée High Street', room='bloom',
     chairs={'pad': 'mt32_organ', 'bass': 'ph_bass'},
-    assignments=[(1, 2, 'top', 'pad'), (2, 2, 'bottom', 'pad'),
-                 (3, 4, 'top', 'bass'), (7, 9, 'drum_string', 'drums')],
+    assignments=[(1, 2, 'chord_top', 'pad'), (2, 2, 'chord_bottom', 'pad'),
+                 (3, 4, 'mono', 'bass'), (7, 9, 'drum_string', 'drums')],
     drum_notes=[36, 42, 43, 45, 47, 60, 61, 62, 63],
-    note='ch1 is a single doubled note; dropped.'),
+    note=('ch1 is a single doubled note; dropped. The organ skank is block '
+          'chords with ragged release times: segment-based top/bottom spilled '
+          'inner notes as ghost attacks after every chord (111 notes from 48 '
+          'chords) -- chord_top/chord_bottom pick per onset group instead. '
+          'Bass is legato-played: mono keeps true onsets '
+          '("timing off", Chad 2026-06-11).')),
  'r038_lookout': dict(
     mid='room_038_lookout__soun_001', title='The Lookout', room='bloom',
     chairs={'pad': 'mt32_organ', 'arp': 'mt32_marimba', 'bass': 'ph_bass'},
@@ -145,11 +150,12 @@ SPECS = {
  'r058_damnforest': dict(
     mid='room_058_damnfores__soun_004', title='Forest', room='bloom',
     chairs={'pad': 'mt32_organ', 'doubler': 'mt32_p34', 'bass': 'ph_bass'},
-    assignments=[(1, 2, 'top', 'pad'), (2, 2, 'bottom', 'pad'),
-                 (3, 3, 'top', 'doubler'), (4, 4, 'top', 'bass'),
+    assignments=[(1, 2, 'chord_top', 'pad'), (2, 2, 'chord_bottom', 'pad'),
+                 (3, 3, 'top', 'doubler'), (4, 4, 'mono', 'bass'),
                  (7, 9, 'drum_string', 'drums')],
     drum_notes=[36, 42, 43, 45, 47, 60, 61, 62, 63],
-    note='ch1 is a single doubled note; dropped.'),
+    note=('ch1 is a single doubled note; dropped. Same arrangement as '
+          'highstreet: chord-split organ + mono bass (see r034 note).')),
  'r059_stans': dict(
     mid='room_059_stans__soun_000', title="Stan's Previously Owned Vessels",
     room='interior', tempo=42.5, timer=118,

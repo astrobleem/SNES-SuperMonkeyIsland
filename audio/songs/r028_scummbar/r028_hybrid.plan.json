@@ -1,0 +1,110 @@
+{
+  "_about": "Hybrid of r028_scummbar (MT-32) and r028_phantasia (Bak/ToP): MT-32 keeps the identity voices -- lead flute, organ comping, the approved rhythm kit -- while Bak's samples take the chairs where they are leaner or better: french horn doubler/ornament (a real horn vs the program 91 pad), soft bass (810B vs 6.3KB). All mix/arrangement knobs identical to the parents.",
+  "dialect": "terrific",
+  "title": "Scumm Bar (Hybrid)",
+  "composer": "M. Land / P. McConnell / C. Bajakian",
+  "arranger": "SMI pipeline",
+  "tempo": 30,
+  "timer": 167,
+  "zenlen": 192,
+  "note_scale": 2,
+  "grid": "32nd",
+  "grid_tolerance": 1,
+  "min_note_mml_ticks": 2,
+  "release_through_rests": true,
+  "release_rates": {
+    "lead": "E21",
+    "doubler": "E20",
+    "bass": "E23",
+    "pad": "E21",
+    "arp": "E20",
+    "ornament": "E20"
+  },
+  "drum_timing": "tick",
+  "loop": true,
+  "echo_length": 32,
+  "echo_feedback": -86,
+  "echo_volume": 36,
+  "echo_fir": "64 63 0 0 0 0 0 0",
+  "instruments": {
+    "lead": "mt32_lead_flute",
+    "doubler": "ph_horn",
+    "bass": "ph_bass",
+    "pad": "mt32_organ",
+    "arp": "mt32_organ",
+    "ornament": "ph_horn",
+    "drums": {
+      "drum_kick": "mt32_drum_kick",
+      "drum_conga_med": "mt32_drum_conga_med",
+      "drum_conga_hi": "mt32_drum_conga_hi",
+      "drum_cabasa": "mt32_drum_cabasa",
+      "drum_claves": "mt32_drum_claves"
+    }
+  },
+  "drum_note_overrides": {
+    "62": "drum_conga_med",
+    "63": "drum_conga_hi",
+    "37": "drum_cabasa"
+  },
+  "assignments": [
+    {
+      "spc": 1,
+      "midi_ch": 1,
+      "reduction": "top",
+      "role": "lead",
+      "vol_scale": 1.16
+    },
+    {
+      "spc": 2,
+      "midi_ch": 3,
+      "reduction": "top",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 3,
+      "midi_ch": 3,
+      "reduction": "bottom",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 4,
+      "midi_ch": 4,
+      "reduction": "top",
+      "role": "doubler",
+      "vol_scale": 0.9
+    },
+    {
+      "spc": 5,
+      "midi_ch": 4,
+      "reduction": "bottom",
+      "role": "ornament",
+      "vol_scale": 0.9
+    },
+    {
+      "spc": 6,
+      "midi_ch": 2,
+      "reduction": "top",
+      "role": "bass",
+      "vol_scale": 1.18,
+      "echo": false
+    },
+    {
+      "spc": 7,
+      "midi_ch": 9,
+      "reduction": "drum_string",
+      "role": "drums",
+      "vol_scale": 1.15
+    }
+  ],
+  "drum_overflow_spc": 8,
+  "vibrato": {
+    "lead": "30,2,12"
+  },
+  "drum_vol": {
+    "drum_cabasa": 0.6
+  }
+}

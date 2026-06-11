@@ -1,0 +1,134 @@
+{
+  "_about": {
+    "file_type": "Terrific Audio Driver project file",
+    "version": "0.2.0-beta.2",
+    "_comment": "Scumm Bar hybrid: MT-32 identity voices (lead flute, organ comping, rhythm kit) + Bak Sangwoo ToP samples for the support chairs (french horn doubler/ornament, soft bass). Saves ~8KB audio RAM vs all-MT-32."
+  },
+  "instruments": [
+    {
+      "name": "mt32_lead_flute",
+      "source": "../../samples/instruments/mt32_lead_flute.wav",
+      "freq": 525.0,
+      "loop": "loop_with_filter",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 4,
+      "last_octave": 5,
+      "envelope": "adsr 15 2 7 4",
+      "comment": "MT-32 patch 77 flute lead (Munt dry @32kHz). Loop 1280 = 21 cycles. Bar range D4-G5.",
+      "loop_setting": 6400
+    },
+    {
+      "name": "ph_horn",
+      "source": "../../samples/phantasia/Phantasia_French Horn.brr",
+      "freq": 500.0,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 5,
+      "envelope": "adsr 15 7 7 0",
+      "comment": "ToP french horn, 500Hz natural, loop@7104 len 128. Takes the doubler/ornament chairs (Chad: horn forward; Bak played an actual horn here vs the MT-32 program 91 pad)."
+    },
+    {
+      "name": "ph_bass",
+      "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+      "freq": 111.111,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 1,
+      "last_octave": 2,
+      "envelope": "adsr 15 7 7 12",
+      "comment": "ToP soft bass, 111.111Hz natural, loop@1152 len 288. 810B vs the 6.3KB Munt acoustic bass."
+    },
+    {
+      "name": "mt32_organ",
+      "source": "../../samples/instruments/mt32_organ.wav",
+      "freq": 330.275,
+      "loop": "loop_with_filter",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 3,
+      "last_octave": 5,
+      "envelope": "adsr 15 1 7 0",
+      "comment": "MT-32 patch 9 organ comping. Loop 6976 = 72 cycles = one tremolo cycle.",
+      "loop_setting": 4800
+    },
+    {
+      "name": "mt32_drum_kick",
+      "source": "../../samples/instruments/mt32_drum_kick.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot, plays 1:1 at o2 c."
+    },
+    {
+      "name": "mt32_drum_conga_med",
+      "source": "../../samples/instruments/mt32_drum_conga_med.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (mute hi conga)."
+    },
+    {
+      "name": "mt32_drum_conga_hi",
+      "source": "../../samples/instruments/mt32_drum_conga_hi.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (open hi conga)."
+    },
+    {
+      "name": "mt32_drum_cabasa",
+      "source": "../../samples/instruments/mt32_drum_cabasa.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm note 69 cabasa: 80ms soft noise sweep, rides the rim/side-stick figure at drum_vol 0.6."
+    },
+    {
+      "name": "mt32_drum_claves",
+      "source": "../../samples/instruments/mt32_drum_claves.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (claves) — soft sparse accents."
+    }
+  ],
+  "samples": [],
+  "default_sfx_flags": {
+    "one_channel": true,
+    "interruptible": true
+  },
+  "high_priority_sound_effects": [],
+  "sound_effects": [],
+  "low_priority_sound_effects": [],
+  "sound_effect_file": "",
+  "songs": [
+    {
+      "name": "r028_hybrid",
+      "source": "r028_hybrid.mml"
+    }
+  ]
+}

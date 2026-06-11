@@ -106,8 +106,8 @@
       "comment": "MT-32 rhythm one-shot (open hi conga)."
     },
     {
-      "name": "mt32_drum_claves",
-      "source": "../../samples/instruments/mt32_drum_claves.wav",
+      "name": "mt32_drum_cabasa",
+      "source": "../../samples/instruments/mt32_drum_cabasa.wav",
       "freq": 65.406,
       "loop": "none",
       "evaluator": "default",
@@ -115,7 +115,7 @@
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "MT-32 rhythm one-shot (claves)."
+      "comment": "MT-32 rhythm note 69 cabasa: soft noise sweep. Substitutes the claves ride figure per both human arrangements (Bak: maracas; emberling: brushy w)."
     }
   ],
   "samples": [],

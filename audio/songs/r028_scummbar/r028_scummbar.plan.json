@@ -23,8 +23,8 @@
   "drum_timing": "tick",
   "loop": true,
   "echo_length": 32,
-  "echo_feedback": 108,
-  "echo_volume": 24,
+  "echo_feedback": -86,
+  "echo_volume": 36,
   "echo_fir": "64 63 0 0 0 0 0 0",
   "instruments": {
     "lead": "mt32_lead_flute",
@@ -38,12 +38,13 @@
       "drum_snare": "mt32_drum_rim",
       "drum_conga_med": "mt32_drum_conga_med",
       "drum_conga_hi": "mt32_drum_conga_hi",
-      "drum_claves": "mt32_drum_claves"
+      "drum_cabasa": "mt32_drum_cabasa"
     }
   },
   "drum_note_overrides": {
     "62": "drum_conga_med",
-    "63": "drum_conga_hi"
+    "63": "drum_conga_hi",
+    "75": "drum_cabasa"
   },
   "assignments": [
     {
@@ -74,14 +75,14 @@
       "midi_ch": 4,
       "reduction": "top",
       "role": "doubler",
-      "vol_scale": 0.54
+      "vol_scale": 0.9
     },
     {
       "spc": 5,
       "midi_ch": 4,
       "reduction": "bottom",
       "role": "ornament",
-      "vol_scale": 0.54
+      "vol_scale": 0.9
     },
     {
       "spc": 6,
@@ -105,11 +106,6 @@
     "lead": "30,2,12"
   },
   "_vibrato_note": "MP vibrato: depth_cents,quarter_wavelength_ticks,delay_ticks. Lead 30c at ~6Hz (quarter-wl 2 ticks of 20.9ms) after 250ms delay \u2014 MT-32 flute character; per emberling comparison.",
-  "drum_echo": {
-    "drum_kick": false,
-    "drum_snare": true,
-    "drum_conga_med": true,
-    "drum_conga_hi": true,
-    "drum_claves": true
-  }
+  "_echo_note": "Bak Sangwoo room (Chad-approved A/B): NEGATIVE feedback (-86/128) phase-inverts each repeat -- no DC buildup, hollow instead of metallic, so the room can run wetter (EVOL 36 vs 24) without flutter. All percussion + bass stay dry (their echo mask).",
+  "_horn_note": "bar_pad (horn) at 0.90 vs measured-MT-32 0.54: both human arrangers feature the horn near lead level (Bak v161 vs flute v170); Chad: horn forward."
 }

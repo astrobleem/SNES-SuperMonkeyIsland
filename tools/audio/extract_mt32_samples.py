@@ -110,6 +110,10 @@ DRUMS = {
     'conga_med': 150,
     'conga_hi':  100,
     'claves':    100,
+    # MT-32 rhythm note 69: soft noise sweep ("brush on a ride") — both
+    # human bar-theme arrangers substituted a shaker texture for the claves
+    # ride figure; this is the same call made with an authentic MT-32 voice
+    'cabasa':    120,
 }
 
 

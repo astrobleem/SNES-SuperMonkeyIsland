@@ -112,17 +112,24 @@ SPECS = {
                  (7, 9, 'drum_string', 'drums')],
     drum_notes=[36, 37, 62, 63], vibrato={'lead': '30,2,12'}),
  'r034_highstreet': dict(
-    mid='room_034_high-stre__soun_002', title='Mêlée High Street', room='bloom',
+    mid='room_034_high-stre__soun_002', title='Mêlée High Street',
+    room='interior',
     chairs={'pad': 'mt32_organ', 'bass': 'ph_bass'},
-    assignments=[(1, 2, 'chord_top', 'pad'), (2, 2, 'chord_bottom', 'pad'),
-                 (3, 4, 'mono', 'bass'), (7, 9, 'drum_string', 'drums')],
+    assignments=[(1, 2, 'chord_top', 'pad', {'vol_scale': 0.57, 'pan': 107}),
+                 (2, 2, 'chord_bottom', 'pad', {'vol_scale': 0.43, 'pan': 107}),
+                 (3, 4, 'mono', 'bass', {'vol_scale': 1.33}),
+                 (7, 9, 'drum_string', 'drums', {'vol_scale': 1.08})],
+    release_rates={'lead': 'E21', 'doubler': 'E20', 'bass': 'E25',
+                   'pad': 'E26', 'arp': 'E20', 'ornament': 'E20'},
     drum_notes=[36, 42, 43, 45, 47, 60, 61, 62, 63],
-    note=('ch1 is a single doubled note; dropped. The organ skank is block '
-          'chords with ragged release times: segment-based top/bottom spilled '
-          'inner notes as ghost attacks after every chord (111 notes from 48 '
-          'chords) -- chord_top/chord_bottom pick per onset group instead. '
-          'Bass is legato-played: mono keeps true onsets '
-          '("timing off", Chad 2026-06-11).')),
+    note=('ch1 is a single doubled note; dropped. chord_top/chord_bottom kill '
+          'the chord-spill ghosts; mono bass keeps true onsets. ATMOSPHERE '
+          '(Chad: "echo or atmosphere... lost expression"): the source pans '
+          'the organ skank hard right (CC10=107) over a centered bass+drum '
+          'groove and mixes it ~10dB down (CC7 70 vs 127) -- pan 107 + '
+          'balance.py-measured vol_scales. The bloom room smeared the gaps '
+          '9dB hotter than the MT-32 reference; tight negative-FB interior '
+          'room instead, stillness is the point.')),
  'r038_lookout': dict(
     mid='room_038_lookout__soun_001', title='The Lookout', room='bloom',
     chairs={'pad': 'mt32_organ', 'arp': 'mt32_marimba', 'bass': 'ph_bass'},

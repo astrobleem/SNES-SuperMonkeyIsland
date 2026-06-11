@@ -127,5 +127,6 @@
   },
   "drum_slot_policy": "solo",
   "drum_timing": "tick",
-  "_bass_zone_note": "Bass low-zone REJECTED 2026-06-11 after measurement: dry Munt render of E1 vs the C2 sample stretched -8st = harm dist 0.31 (vs 0.34 for a dedicated G1 sample) and identical attack envelopes - MT-32 patch 65 stretches the same PCM across this range too. The iter-7 \"dist 0.8-2.9 by register\" was probe noise on dense runs (a sample at NATURAL pitch still probed 2.45). Sample/extractor entry kept at tools/audio + audio/samples for provenance."
+  "_bass_zone_note": "Bass low-zone REJECTED 2026-06-11 after measurement: dry Munt render of E1 vs the C2 sample stretched -8st = harm dist 0.31 (vs 0.34 for a dedicated G1 sample) and identical attack envelopes - MT-32 patch 65 stretches the same PCM across this range too. The iter-7 \"dist 0.8-2.9 by register\" was probe noise on dense runs (a sample at NATURAL pitch still probed 2.45). Sample/extractor entry kept at tools/audio + audio/samples for provenance.",
+  "loop": true
 }

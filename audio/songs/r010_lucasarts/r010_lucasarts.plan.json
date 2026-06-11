@@ -96,5 +96,9 @@
     "64": "drum_conga_hi"
   },
   "_timer_note": "TAD caps timer at 256 (tick <= 32ms) and zenlen at 255, so a 2000ms quarter cannot be zenlen/4. note_scale=2 writes quarters as halves: 96 ticks x 20.875ms (timer 167) = 2004ms = 29.94 BPM (+0.2%). All musical lengths integer (64th = 6 ticks).",
-  "note_scale": 2
+  "note_scale": 2,
+  "echo_feedback": 116,
+  "echo_volume": 48,
+  "_echo_note": "MT-32 reference plays through built-in reverb: bell runs ring -38 to -56dB over 700ms; dry render cut to silence in 50ms. EDL 32ms (4KB, RAM cap) + EFB 116 + 2-tap lowpass FIR ~= -1.2dB/pass at DC = ~35dB/s tail with progressive high damping; EVOL 48 sets wet level.",
+  "echo_fir": "64 63 0 0 0 0 0 0"
 }

@@ -4,16 +4,28 @@
   python tools/audio/solo_ab.py render [A B ...]   # build + capture TAD solos
   python tools/audio/solo_ab.py compare A          # numeric A/B for one voice
 
+All song-specific configuration comes from the conversion plan
+(--plan, default r010): the SPC-voice -> MIDI-channel map is derived from
+plan["assignments"], the MIDI tempo map is read from the source .mid, and
+the remaining paths default to the r010 layout:
+
+  --mml      build/verify_full_fixed/r010_mt32.mml   (converted MML)
+  --midi     audio/songs/<plan dir>/<plan stem>.mid  (conversion source)
+  --project  <plan dir>/<plan stem>.terrificaudio
+  --ref-dir  build/mt32      (Munt refs: solo_ch<N>.wav per MIDI channel)
+  --out      build/solo_ab   (captures + DSP logs)
+
 `render` filters the full generated MML down to one channel at a time,
 compiles each with tad-compiler and captures real SPC output through the
-Mesen testrunner (reusing verify.py's machinery). Reference WAVs are the
-Munt solo renders produced by tools/audio scripts into build/mt32/.
+Mesen testrunner (reusing verify.py's machinery).
 
 `compare` picks exposed notes from the source MIDI for that voice and
 reports attack/sustain/release envelope shape, sustain spectrum match and
 pitch — ours vs reference — so instrument fixes can be judged one at a
 time without mix confounds.
 """
+import argparse
+import json
 import sys
 import wave
 from pathlib import Path
@@ -24,21 +36,52 @@ REPO = Path(__file__).resolve().parents[2]
 SKILL = Path.home() / '.claude/skills/midi-to-snes-mml/scripts'
 sys.path.insert(0, str(SKILL))
 
-MML = REPO / 'build/verify_full_fixed/r010_mt32.mml'
-PROJECT = REPO / 'audio/songs/r010_lucasarts/r010_lucasarts.terrificaudio'
-OUT = REPO / 'build/solo_ab'
+DEFAULT_PLAN = REPO / 'audio/songs/r010_lucasarts/r010_lucasarts.plan.json'
+DEFAULT_MML = REPO / 'build/verify_full_fixed/r010_mt32.mml'
 
-# channel letter -> (midi channels it plays, label)
-CHANNELS = {
-    'A': ((1,), 'lead flute (+low zone)'),
-    'B': ((3,), 'organ top'),
-    'C': ((3,), 'organ bottom'),
-    'D': ((4,), 'marimba arp'),
-    'E': ((5,), 'acoustic bass'),
-    'F': ((2,), 'xylophone'),
-    'G': ((7, 6), 'bottle + fantasia'),
-    'H': ((9,), 'drums'),
-}
+# Set by parse_args() / load_config(); module-level so balance.py can reuse.
+PLAN = MML = MIDI = PROJECT = REF_DIR = OUT = None
+CHANNELS: dict = {}
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument('mode', choices=['render', 'compare'])
+    p.add_argument('letters', nargs='*', help='channel letters (default: all)')
+    p.add_argument('--plan', type=Path, default=DEFAULT_PLAN)
+    p.add_argument('--mml', type=Path, default=DEFAULT_MML)
+    p.add_argument('--midi', type=Path, default=None,
+                   help='conversion source .mid (default: <plan stem>.mid)')
+    p.add_argument('--project', type=Path, default=None,
+                   help='.terrificaudio (default: <plan stem>.terrificaudio)')
+    p.add_argument('--ref-dir', type=Path, default=REPO / 'build/mt32',
+                   help='Munt reference dir with solo_ch<N>.wav files')
+    p.add_argument('--out', type=Path, default=REPO / 'build/solo_ab')
+    return p.parse_args(argv)
+
+
+def load_config(args):
+    """Resolve paths + derive the voice->channel map from the plan."""
+    global PLAN, MML, MIDI, PROJECT, REF_DIR, OUT, CHANNELS
+    PLAN = json.loads(Path(args.plan).read_text())
+    MML = Path(args.mml)
+    stem = Path(args.plan).name.replace('.plan.json', '')
+    MIDI = Path(args.midi) if args.midi else Path(args.plan).parent / f'{stem}.mid'
+    PROJECT = (Path(args.project) if args.project
+               else Path(args.plan).parent / f'{stem}.terrificaudio')
+    REF_DIR = Path(args.ref_dir)
+    OUT = Path(args.out)
+
+    CHANNELS = {}
+    for a in PLAN['assignments']:
+        letter = chr(ord('A') + a['spc'] - 1)
+        chs = [a['midi_ch']]
+        # A disjoint merge makes the voice genuinely two-channel; a fill
+        # merge only borrows scraps, so probes stay on the primary channel.
+        if a.get('merge_ch') is not None and a.get('merge_mode') != 'fill':
+            chs.append(a['merge_ch'])
+        label = f"{a.get('role', '?')} ch{'+'.join(str(c) for c in chs)}"
+        CHANNELS[letter] = (tuple(chs), label)
 
 
 def solo_mml(letter: str) -> Path:
@@ -60,6 +103,7 @@ def render(letters):
                         run_mesen_dsp_capture)
     mesen, tad = find_mesen(), find_tad_compiler()
     OUT.mkdir(parents=True, exist_ok=True)
+    dur = song_duration() + 2.0
     for letter in letters:
         mml = solo_mml(letter)
         spc = OUT / f'solo_{letter}.spc'
@@ -67,7 +111,7 @@ def render(letters):
         wav = OUT / f'tad_{letter}.wav'
         work = OUT / f'work_{letter}'
         work.mkdir(exist_ok=True)
-        run_mesen_dsp_capture(spc, mesen, 97.0, work, audio_wav=wav)
+        run_mesen_dsp_capture(spc, mesen, dur, work, audio_wav=wav)
         print(f"{letter}: {wav}")
 
 
@@ -81,23 +125,59 @@ def load(p):
     return d.astype(np.float64), sr
 
 
+def tick_to_seconds(m):
+    """Absolute-tick -> seconds converter honoring every set_tempo event."""
+    tempos = []
+    for tr in m.tracks:
+        t = 0
+        for msg in tr:
+            t += msg.time
+            if msg.type == 'set_tempo':
+                tempos.append((t, msg.tempo))
+    tempos.sort()
+    if not tempos or tempos[0][0] > 0:
+        tempos.insert(0, (0, 500000))
+    segs, sec = [], 0.0
+    for i, (tick, tempo) in enumerate(tempos):
+        if i > 0:
+            sec += ((tick - tempos[i - 1][0]) * tempos[i - 1][1]
+                    / m.ticks_per_beat / 1e6)
+        segs.append((tick, sec, tempo))
+
+    def to_sec(tick):
+        for st, ss, tempo in reversed(segs):
+            if st <= tick:
+                return ss + (tick - st) * tempo / m.ticks_per_beat / 1e6
+        return 0.0
+    return to_sec
+
+
 def note_events(midi_chs):
+    """(on_s, off_s, note, vel, ch) spans for the given MIDI channels."""
     import mido
-    MS = 2.0e6 / 480 / 1000
-    m = mido.MidiFile(str(REPO / 'build/diag_compare/r010_rol.mid'))
-    spans, active, t = [], {}, 0
-    for msg in m.tracks[0]:
-        t += msg.time
-        ch = getattr(msg, 'channel', None)
-        if ch not in midi_chs:
-            continue
-        sec = t * MS / 1000
-        if msg.type == 'note_on' and msg.velocity > 0:
-            active[(ch, msg.note)] = (sec, msg.velocity)
-        elif msg.type in ('note_off', 'note_on') and (ch, msg.note) in active:
-            on, vel = active.pop((ch, msg.note))
-            spans.append((on, sec, msg.note, vel, ch))
+    m = mido.MidiFile(str(MIDI))
+    to_sec = tick_to_seconds(m)
+    spans = []
+    for tr in m.tracks:
+        t, active = 0, {}
+        for msg in tr:
+            t += msg.time
+            ch = getattr(msg, 'channel', None)
+            if ch not in midi_chs:
+                continue
+            sec = to_sec(t)
+            if msg.type == 'note_on' and msg.velocity > 0:
+                active[(ch, msg.note)] = (sec, msg.velocity)
+            elif msg.type in ('note_off', 'note_on') and (ch, msg.note) in active:
+                on, vel = active.pop((ch, msg.note))
+                spans.append((on, sec, msg.note, vel, ch))
     return sorted(spans)
+
+
+def song_duration():
+    """Length of the source MIDI in seconds (all channels)."""
+    spans = note_events(set(range(16)))
+    return max(s[1] for s in spans) if spans else 90.0
 
 
 def pick_exposed(spans, n=4):
@@ -162,34 +242,8 @@ def spectrum_profile(d, sr, t0, dur, f0):
     return amps / (amps.max() + 1e-9)
 
 
-def detect_onsets(d, sr, thresh_ratio=4.0):
-    hop = sr // 100
-    e = np.array([np.sqrt((d[i:i + hop] ** 2).mean() + 1e-9)
-                  for i in range(0, len(d) - hop, hop)])
-    on = []
-    for i in range(2, len(e)):
-        if e[i] > thresh_ratio * (e[i - 2] + 1e-3) and e[i] > e.max() * 0.02:
-            if not on or i * hop / sr - on[-1] > 0.08:
-                on.append(i * hop / sr)
-    return np.array(on)
-
-
-def fit_alignment(midi_onsets, wav_onsets):
-    """Fit t_wav = a * t_midi + b by maximizing matches within 60ms."""
-    best = (1.0, 0.0, -1)
-    for a in np.arange(0.96, 1.045, 0.002):
-        for b in np.arange(-0.3, 0.31, 0.03):
-            mapped = a * midi_onsets + b
-            hits = sum(1 for t in mapped if np.min(np.abs(wav_onsets - t)) < 0.06) \
-                if len(wav_onsets) else 0
-            if hits > best[2]:
-                best = (a, b, hits)
-    return best
-
-
 def kon_times(letter):
     """Exact note onsets for our render from the solo capture's DSP log."""
-    import json as _json
     path = OUT / f'work_{letter}' / 'verify_dsp_out.txt'
     if not path.exists():
         return np.array([])
@@ -199,7 +253,7 @@ def kon_times(letter):
         if not line.startswith('{'):
             continue
         try:
-            e = _json.loads(line)
+            e = json.loads(line)
         except ValueError:
             continue
         if e.get('r') == 0x4C and e.get('v'):
@@ -210,7 +264,7 @@ def kon_times(letter):
 def compare(letter):
     midi_chs, label = CHANNELS[letter]
     ours, osr = load(OUT / f'tad_{letter}.wav')
-    refs = {ch: load(REPO / f'build/mt32/solo_ch{ch}.wav') for ch in midi_chs}
+    refs = {ch: load(REF_DIR / f'solo_ch{ch}.wav') for ch in midi_chs}
     spans = note_events(set(midi_chs))
     picks = pick_exposed(spans)
     midi_on = np.array([s[0] for s in spans])
@@ -258,9 +312,10 @@ def _compare_note(ours, osr, ref, rsr, on, off, ron, roff, note, vel):
 
 
 if __name__ == '__main__':
-    mode = sys.argv[1] if len(sys.argv) > 1 else 'render'
-    if mode == 'render':
-        letters = sys.argv[2:] or list(CHANNELS)
-        render(letters)
-    elif mode == 'compare':
-        compare(sys.argv[2])
+    args = parse_args()
+    load_config(args)
+    if args.mode == 'render':
+        render(args.letters or list(CHANNELS))
+    elif args.mode == 'compare':
+        for letter in (args.letters or list(CHANNELS)):
+            compare(letter)

@@ -1,0 +1,125 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "Hell Cliff (MI1 soundtrack batch). 60 BPM -> note_scale 1, same timer 167. Both prog-91 channels take ph_horn (the chair it won in r028). Marimba engine spans 36-64: low zone below 54."
+ },
+ "instruments": [
+  {
+   "name": "ph_horn",
+   "source": "../../samples/phantasia/Phantasia_French Horn.brr",
+   "freq": 500.0,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 5,
+   "envelope": "adsr 15 7 7 0"
+  },
+  {
+   "name": "mt32_marimba_low",
+   "source": "../../samples/instruments/mt32_marimba_low.wav",
+   "freq": 133.333,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 3,
+   "envelope": "adsr 15 2 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_marimba",
+   "source": "../../samples/instruments/mt32_marimba.wav",
+   "freq": 375.0,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "ph_bass",
+   "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+   "freq": 111.111,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 1,
+   "last_octave": 2,
+   "envelope": "adsr 15 7 7 12"
+  },
+  {
+   "name": "mt32_drum_claves",
+   "source": "../../samples/instruments/mt32_drum_claves.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_conga_hi",
+   "source": "../../samples/instruments/mt32_drum_conga_hi.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_conga_med",
+   "source": "../../samples/instruments/mt32_drum_conga_med.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_kick",
+   "source": "../../samples/instruments/mt32_drum_kick.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_rim",
+   "source": "../../samples/instruments/mt32_drum_rim.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r070_hellcliff",
+   "source": "r070_hellcliff.mml"
+  }
+ ]
+}

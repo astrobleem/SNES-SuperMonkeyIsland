@@ -1,0 +1,103 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "Ghost Ship Deck (MI1 soundtrack batch)."
+ },
+ "instruments": [
+  {
+   "name": "mt32_p53",
+   "source": "../../samples/instruments/mt32_p53.wav",
+   "freq": 624.672,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 6,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3200
+  },
+  {
+   "name": "mt32_p97",
+   "source": "../../samples/instruments/mt32_p97.wav",
+   "freq": 621.622,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 2 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "ph_bass",
+   "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+   "freq": 111.111,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 1,
+   "last_octave": 3,
+   "envelope": "adsr 15 7 7 12"
+  },
+  {
+   "name": "mt32_drum_conga_hi",
+   "source": "../../samples/instruments/mt32_drum_conga_hi.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_conga_med",
+   "source": "../../samples/instruments/mt32_drum_conga_med.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_kick",
+   "source": "../../samples/instruments/mt32_drum_kick.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_rim",
+   "source": "../../samples/instruments/mt32_drum_rim.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r077_ghdeck",
+   "source": "r077_ghdeck.mml"
+  }
+ ]
+}

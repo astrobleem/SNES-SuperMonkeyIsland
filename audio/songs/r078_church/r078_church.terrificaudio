@@ -1,0 +1,48 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "Church (MI1 soundtrack batch). Single pipe-organ channel, chords up to 8 deep -> 6 SPC voices via the new voiceN reductions (top, next-from-top x4, bottom), all on p13 with a low zone below MIDI 58. Vol priors cut so 6 stacked organ voices do not clip."
+ },
+ "instruments": [
+  {
+   "name": "mt32_p13_low",
+   "source": "../../samples/instruments/mt32_p13_low.wav",
+   "freq": 131.148,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 3,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 4160
+  },
+  {
+   "name": "mt32_p13",
+   "source": "../../samples/instruments/mt32_p13.wav",
+   "freq": 592.593,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 6,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 5120
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r078_church",
+   "source": "r078_church.mml"
+  }
+ ]
+}

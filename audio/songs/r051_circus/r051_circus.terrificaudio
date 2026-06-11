@@ -1,0 +1,150 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "Fettucini Circus (MI1 soundtrack batch)."
+ },
+ "instruments": [
+  {
+   "name": "mt32_bottle",
+   "source": "../../samples/instruments/mt32_bottle.wav",
+   "freq": 660.0,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 2 7 10",
+   "loop_setting": 4800
+  },
+  {
+   "name": "mt32_p90",
+   "source": "../../samples/instruments/mt32_p90.wav",
+   "freq": 370.37,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 6080
+  },
+  {
+   "name": "ph_bass",
+   "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+   "freq": 111.111,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 1,
+   "last_octave": 3,
+   "envelope": "adsr 15 7 7 12"
+  },
+  {
+   "name": "mt32_organ",
+   "source": "../../samples/instruments/mt32_organ.wav",
+   "freq": 330.275,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 4800
+  },
+  {
+   "name": "mt32_p78",
+   "source": "../../samples/instruments/mt32_p78.wav",
+   "freq": 275.862,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 6720
+  },
+  {
+   "name": "mt32_marimba",
+   "source": "../../samples/instruments/mt32_marimba.wav",
+   "freq": 375.0,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_drum_n67",
+   "source": "../../samples/instruments/mt32_drum_n67.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n68",
+   "source": "../../samples/instruments/mt32_drum_n68.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_cabasa",
+   "source": "../../samples/instruments/mt32_drum_cabasa.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n44",
+   "source": "../../samples/instruments/mt32_drum_n44.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n38",
+   "source": "../../samples/instruments/mt32_drum_n38.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r051_circus",
+   "source": "r051_circus.mml"
+  }
+ ]
+}

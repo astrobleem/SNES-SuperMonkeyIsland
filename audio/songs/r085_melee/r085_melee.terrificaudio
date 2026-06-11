@@ -1,0 +1,206 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "M\u00eal\u00e9e Town (MI1 soundtrack batch)."
+ },
+ "instruments": [
+  {
+   "name": "mt32_p97",
+   "source": "../../samples/instruments/mt32_p97.wav",
+   "freq": 621.622,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 2 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_p41",
+   "source": "../../samples/instruments/mt32_p41.wav",
+   "freq": 1893.333,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 6,
+   "last_octave": 7,
+   "envelope": "adsr 15 2 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_xylophone",
+   "source": "../../samples/instruments/mt32_xylophone.wav",
+   "freq": 666.667,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 5,
+   "last_octave": 5,
+   "envelope": "adsr 15 2 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_bottle",
+   "source": "../../samples/instruments/mt32_bottle.wav",
+   "freq": 660.0,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 4,
+   "envelope": "adsr 15 2 7 10",
+   "loop_setting": 4800
+  },
+  {
+   "name": "mt32_p71",
+   "source": "../../samples/instruments/mt32_p71.wav",
+   "freq": 65.041,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 1,
+   "last_octave": 2,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3200
+  },
+  {
+   "name": "mt32_marimba",
+   "source": "../../samples/instruments/mt32_marimba.wav",
+   "freq": 375.0,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 0 0",
+   "loop_setting": 1600
+  },
+  {
+   "name": "mt32_drum_bongo",
+   "source": "../../samples/instruments/mt32_drum_bongo.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_claves",
+   "source": "../../samples/instruments/mt32_drum_claves.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_conga_hi",
+   "source": "../../samples/instruments/mt32_drum_conga_hi.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n64",
+   "source": "../../samples/instruments/mt32_drum_n64.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_conga_med",
+   "source": "../../samples/instruments/mt32_drum_conga_med.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n42",
+   "source": "../../samples/instruments/mt32_drum_n42.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_kick",
+   "source": "../../samples/instruments/mt32_drum_kick.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_rim",
+   "source": "../../samples/instruments/mt32_drum_rim.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n45",
+   "source": "../../samples/instruments/mt32_drum_n45.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_n48",
+   "source": "../../samples/instruments/mt32_drum_n48.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r085_melee",
+   "source": "r085_melee.mml"
+  }
+ ]
+}

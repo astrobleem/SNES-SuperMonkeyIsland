@@ -1,0 +1,352 @@
+#Title Fettucini Circus
+#Composer M. Land / P. McConnell / C. Bajakian
+#Author SMI pipeline
+#Timer 167
+#ZenLen 192
+
+; Echo — tame defaults. Per-song MML can override if needed.
+#EchoLength 32
+#EchoFeedback 108
+#EchoVolume 24
+#FirFilter 64 63 0 0 0 0 0 0
+
+; Melodic instruments — one entry per SPC voice role.
+@0 mt32_bottle
+@1 mt32_p90
+@2 ph_bass
+@3 mt32_organ
+@4 mt32_marimba
+@5 mt32_p78
+
+; Drum instruments — one @name per unique drum referenced by
+; the arrangement. Override names via plan["instruments"]["drums"].
+@mt32_drum_n38 mt32_drum_n38
+@mt32_drum_n44 mt32_drum_n44
+@mt32_drum_n67 mt32_drum_n67
+@mt32_drum_n68 mt32_drum_n68
+@mt32_drum_cabasa mt32_drum_cabasa
+
+; SPC Voice 1 -- MIDI ch1 (top) -- role: lead
+A  @0 o5 v7 E1
+A L o5r2^8^32.v9q9,E21d16^64v8q11,E21c16^64^%2q1,E21<b32.^%2v7q0>c64^%2v8
+A q1,E21<b32.^%2q0a64^%1
+; bar 2
+A q11,E21g16^64^%2f+16^64^%1q1,E21f16^64^%1v7q11,E21f+16^64^%1v9q48,E21
+A d4^32^%1r4.
+; bar 3
+A q10,E21>d16^64^%2v8c16^64^%1q1,E21<b32.^%2v7q0>c64^%2v8q1,E21<b32.^%2
+A q0a64^%2q11,E21g16^64^%1q12,E21f+16^64^%1q0f16^64^%1v7q12,E21f+16^64
+A ^%1v9q48,E21d4^32^%2r32^%1
+; bar 4
+A ^4^16^64^%1v8q8,E21a16^64^%1q6,E21e32.^%2q0e32d+16^64q11,E21e16^64^%1
+A a16^64^%1q5,E21e32.^%1q0e32^%1d+16^64q11,E21e16^64^%1
+; bar 5
+A v9q48,E21d4^32.^%2r4^16.^64^%1v8q10,E21a16^64q7,E21e16q0e32q1,E21d+16
+A ^64q10,E21e16^64
+; bar 6
+A q11,E21a16^64^%2v9q6,E21e32.^%1v8q0e32d+16^64v9q48,E21e4^32^%1r4.^16
+A ^64^%2
+; bar 7
+A ^%2q10,E21>d16^64^%1v8c16^64^%1q1,E21<b32.^%2v7q0>c32v8<b32.a32q11,E21
+A g16^64^%2q12,E21f+16^64^%1q0f16^64v7q11,E21f+16^64^%1v9q48,E21d4^32^%2
+A r32
+; bar 8
+A ^4^16.^%1q11,E21>d16^64^%1v8q10,E21c16^64q0<b32.^%1v7>c32v8q1,E21<b32.
+A ^%2q0a64^%2q12,E21g16^64^%2f+16^64^%1q0f16^64v7q12,E21f+16^%2
+; bar 9
+A ^%2v9q48,E21d4^32^%2r4^16.^64^%2v8q8,E21a16^64q6,E21e16q0e32d+16^64
+A q10,E21e16^64
+; bar 10
+A q11,E21a16^64^%2q6,E21e32.^%1q0e32d+16^64q11,E21e16^64^%2v9q48,E21d4
+A ^32.^%1r4^16.^64
+; bar 11
+A v8q10,E21a16^64^%2q6,E21e32.^%2q0e32^%2q1,E21d+16^%1q10,E21e16^64^%1
+A q11,E21a16^64^%1v9q6,E21e32.^%2v8q0e32q1,E21d+16^64^%1v9q10,E21e16^64
+A ^%1q48,E21d4^32.^%2r64
+; bar 12
+A ^4^16
+
+; SPC Voice 2 -- MIDI ch2 (top) -- role: doubler
+B  @1 o5 v5 p72 E1
+B L o5r1
+; bar 2
+B ^1
+; bar 3
+B ^1
+; bar 4
+B ^1
+; bar 5
+B ^1
+; bar 6
+B ^1
+; bar 7
+B ^%2v5q10,E20d16^64^%1c16^64^%1q1,E20<b32.^%2v4q0>c32v5q1,E20<b32.^%1q0
+B a64^%2q11,E20g16^64^%2q12,E20f+16^64^%1q0f16^64v4q11,E20f+16^64^%1v5
+B q48,E20d4^32^%2r32
+; bar 8
+B ^4^16.^%1q11,E20>d16^64^%1q10,E20c16^64q0<b32.^%1v4>c32v5q1,E20<b32.
+B ^%2q0a64^%2q12,E20g16^64^%2f+16^64^%1q0f16^64v4q12,E20f+16^%2
+; bar 9
+B ^%2v5q48,E20d4^32^%2r4^16.^64^%2q8,E20a16^64q6,E20e16q0e32d+16^64
+B q10,E20e16^64
+; bar 10
+B q11,E20a16^64^%2q6,E20e32.^%1q0e32d+16^64q11,E20e16^64^%2q48,E20d4^32.
+B ^%1r4^16.^64
+; bar 11
+B q10,E20a16^64^%2q6,E20e32.^%2q0e32^%2q1,E20d+16^%1q10,E20e16^64^%1
+B q11,E20a16^64^%1q6,E20e32.^%2q0e32q1,E20d+16^64^%1q10,E20e16^64^%1
+B q48,E20d4^32.^%2r64
+; bar 12
+B ^4^16
+
+; SPC Voice 3 -- MIDI ch3 (top) -- role: bass
+C  @2 o3 v7 E0
+C L o2v12q48,E23d4^16^64^%1r32.^%2q0<a32q5,E23>d32.^%1v10q0d64^%2v12q1,E23
+C f16^64^%2q6,E23f+16^64^%1q48,E23d4^16^64r16
+; bar 2
+C q0<a32^%1q5,E23>d32.^%1v10q0d64^%2v12f16^64^%1q7,E23f+16^64^%1q48,E23
+C d4^16^64^%2r32.v10q0<a32v12q4,E23>d32.^%1q0d32q1,E23f16^64^%1q7,E23
+C f+16^%2
+; bar 3
+C ^%2q48,E23d4^16^64^%1r32.^%1q0<a32q4,E23>d32.^%1v10q0d32v12f16^64^%1
+C q7,E23f+16^64^%1q48,E23d4^16^%2r16
+; bar 4
+C q0<a32q3,E23>d32.q1,E23d32^%1q0f16^%2q8,E23f+16^64^%2q48,E23<a4^16^64
+C ^%2r32.^%1q0>a32v10q4,E23<a32.v12q0a64^%2v10>f16^64^%2v12q7,E23f+16^64
+; bar 5
+C ^%1q48,E23d4^16^64^%2r32.^%1v10q0<a32v12q4,E23>d32.q1,E23d32q0f16^64
+C ^%1v9q7,E23f+16^64^%1v12q48,E23<a4^16^64
+; bar 6
+C ^%2r32.^%2q0>a64^%2v10q3,E23<a32.q0a32^%1v12>f16^64^%1q7,E23f+16^64^%1
+C q48,E23d4^16^64^%2r32.^%2q0<a32q5,E23>d32.^%1q0d64^%2v10f16^64^%2v12
+C q7,E23f+16
+; bar 7
+C ^64v10q48,E23d4^16^64^%2r32.^%1q0<a32v12q5,E23>d32.^%1q0d64^%2f16^64
+C ^%2q7,E23f+16^64^%1q48,E23d4^16
+; bar 8
+C ^64^%1r32.^%1v10q0<a64^%2v12q6,E23>d32.^%2q0d32f16^64^%1q7,E23f+16^64
+C ^%1q48,E23d4^16^64^%1r32.^%1v9q0<a64^%2v12q4,E23>d32.^%1q0d32f16^64^%1
+C q7,E23f+16^%1
+; bar 9
+C ^64v10q48,E23d4^16^64^%2r32.q0<a64^%2v12q4,E23>d32.^%1v10q0d32v12f16
+C ^64^%1q8,E23f+16.q48,E23<a4^16
+; bar 10
+C ^64r32.q0>a32v10q4,E23<a32.^%1q0a64^%2v12>f16^64^%2q6,E23f+16^64^%1
+C q48,E23d4^16^64^%1r32.^%1v9q0<a64^%2v12q5,E23>d32.^%2v10q0d64^%2v12f16
+C ^64^%2q6,E23f+16^%2
+; bar 11
+C ^%2q48,E23<a4^16^64^%1r32.^%2q0>a64^%2v10q5,E23<a32.^%1v12q0a32^%1
+C q2,E23>f16^64^%1v10q8,E23f+16^64^%1q48,E23d4^16^%1
+; bar 12
+C ^64r32.^%1q0<a32^%1v12q5,E23>d32.v10q0d32^%1f16^64v12>f+32.
+
+; SPC Voice 4 -- MIDI ch4 (top) -- role: pad
+D  @3 o4 v5 E1
+D L o4r32.^%2v3q1,E21d64^%2q7,E21>d32.^%2q12,E21<a16^64^%1q0d64^%2v4q8,E21
+D >d16v3q12,E21<a16^64q1,E21d32q7,E21>d32.^%1v4q12,E21<a16^64^%2v3q1,E21
+D d64^%2q0>d64q5,E21<a32^%1q13,E21a16^64^%2q0d64^%1>d64^%1q6,E21<a32^%2
+D q13,E21a16^64^%1q2,E21d64^%2q7,E21>d32.^%1q12,E21<a64^%2
+; bar 2
+D ^16q1,E21d64^%2q0>d64q6,E21<a32^%2q13,E21a16^64^%1q0d64^%1>d64^%1
+D q6,E21<a32^%2v4q12,E21a16^64^%1q1,E21d64^%2v3q8,E21>d32.^%2q12,E21<a16
+D ^64^%1v4q0d64^%2v3q7,E21>d32.^%2q12,E21<a16^64^%1q1,E21d64^%2q7,E21
+D >d32.^%2v4q12,E21<a16^64^%1v3q1,E21d64^%2q8,E21>d32.^%2v4q12,E21<a64
+D ^%1
+; bar 3
+D ^16v3q2,E21d64^%2q6,E21>d32.^%1v4q12,E21<a16^64^%1q0d64^%2v3q7,E21>d16
+D v4q13,E21<a16^64^%1v3q1,E21d64^%2q8,E21>d32.^%2q12,E21<a16^64^%1q1,E21
+D d64^%2q0>d64q5,E21<a32^%1v4q13,E21a16^64^%2v3q0d64^%1v4>d64^%1v3q6,E21
+D <a32^%2q12,E21a16^64q2,E21d32q7,E21>d32.^%1v4q13,E21<a64^%2
+; bar 4
+D ^16v3q1,E21d64^%2q0>d64q5,E21<a32^%1q12,E21a16^64^%1v4q0d64^%2v3q7,E21
+D a32.^%2q14,E21a16^64^%1v4q1,E21e64^%2v3q5,E21>e32.^%2v4q12,E21<a16^64
+D ^%1v3q1,E21e64^%2q6,E21>e32.^%1q12,E21<a16^64^%1q1,E21e32v4q6,E21>e32.
+D ^%1v3q12,E21<a16^64^%1q1,E21e32q7,E21>e32.^%2q0c+64q12,E21<a%2
+; bar 5
+D ^16q1,E21d64^%2q6,E21>d32.^%2q13,E21<a16^64^%1q0d64^%1q7,E21>d16
+D q13,E21<a16^64^%1q1,E21d64^%2q8,E21>d32.^%2q13,E21<a16^64^%1q2,E21d64
+D ^%2q6,E21>d32.^%1q12,E21<a16^64^%1v4q0e64^%2v3>e64^%2q5,E21<a32^%1
+D q13,E21a16^64^%1q2,E21e64^%2q8,E21>e32.^%2q12,E21<a64^%1
+; bar 6
+D ^16q1,E21e64^%2q7,E21>e32.^%2q13,E21<a16^64^%1q0e64^%1v4>e64^%2q5,E21
+D <a32^%1v3q12,E21>c+16^64^%1q2,E21<d32q6,E21>d32.^%1q12,E21<a16^64^%1
+D q1,E21d32v4q7,E21>d32.^%2v3q13,E21<a16^64^%1q2,E21d64^%2q6,E21>d32.^%1
+D v4q13,E21<a16^64^%2v3q1,E21d64^%2q0>d64^%1q5,E21<a32^%1q12,E21a64
+; bar 7
+D ^16q1,E21d32^%1q0>d64q5,E21<a32^%1q12,E21a16^64^%1q2,E21d64^%2q6,E21
+D >d32.^%1q12,E21<a16^64^%2q1,E21d64^%2q0>d64^%1q5,E21<a32^%1q13,E21a16
+D ^64^%1q1,E21d64^%2q0>d64^%1q5,E21<a32^%1v4q12,E21a16^64^%1q1,E21d32v3
+D q6,E21>d32.q12,E21<a16^64^%2v4q1,E21d32v3q7,E21>d32.^%1q11,E21<a64
+; bar 8
+D ^16q0d32q7,E21>d32.^%2v4q12,E21<a16^64^%1v3q1,E21d32q0>d64q5,E21<a32
+D ^%1v4q12,E21a16^64^%1v3q1,E21d64^%2q7,E21>d32.^%2v4q12,E21<a16^64
+D q1,E21d32v3q7,E21>d32.^%2v4q13,E21<a16^64^%1v3q0d64^%2q6,E21>d32.^%1
+D q12,E21<a16^64^%2q1,E21d64^%2q0>d64q6,E21<a32^%2v4q12,E21a64
+; bar 9
+D ^16v3q1,E21d32v4q0>d64v3q6,E21<a32^%2q13,E21a16^64^%1q2,E21d64^%2q0
+D >d64v4q5,E21<a32^%1q12,E21a16^64^%1v3q1,E21d32q8,E21>d32.^%1q12,E21
+D <a16^64^%1v4q1,E21d64^%2v3q8,E21a32.^%2q14,E21a16^64^%1v4q0e64^%1v3
+D q6,E21>e16v4q12,E21<a16^64^%1v3q1,E21e64^%2q7,E21>e32.^%1q12,E21<a64
+D ^%2
+; bar 10
+D ^16q1,E21e64^%2v4q7,E21>e32.^%1v3q13,E21<a16^64^%1q0e64^%2>e64^%1
+D q6,E21<a32^%2q0>c+%2q11,E21<a16^%1q1,E21d32q5,E21>d32.^%1q13,E21<a16
+D ^64^%2q1,E21d64^%2q6,E21>d32.^%1q13,E21<a16^64^%2q0d64^%1q7,E21>d16
+D q13,E21<a16^64^%1q1,E21d64^%2q6,E21>d32.^%2q12,E21<a64^%1
+; bar 11
+D ^16v4q1,E21e64^%2v3q0>e64^%1q5,E21<a32^%1q13,E21a16^64^%1q2,E21e32
+D q7,E21>e32.^%1q12,E21<a16^64^%1q1,E21e64^%2q8,E21>e32.^%2q12,E21<a16
+D ^64^%1q1,E21e32v4q0>e64q5,E21<a32^%1v3q13,E21>c+16^64^%2q1,E21<d64^%2
+D q0>d64^%1q4,E21<a32q13,E21a16^64^%2q2,E21d64^%2q0>d64q6,E21<a32^%2
+D q12,E21a64
+; bar 12
+D ^16q1,E21d32q0>d64^%1q5,E21<a32^%1q13,E21a16^64^%1q2,E21d64^%2q0>d64
+D q6,E21<a32^%2q0a64
+
+; SPC Voice 5 -- MIDI ch5 (top) -- role: ornament
+E  @5 o5 v5 p56 E1
+E L o4r1
+; bar 2
+E ^1
+; bar 3
+E ^1
+; bar 4
+E ^1
+; bar 5
+E ^1
+; bar 6
+E ^4.^32.^%1v4q6,E20d32.^%1q48,E20d4^32^%1r8^32^%1d16^%2
+; bar 7
+E ^8.^32^%2r2^32^%1q5,E20d32.q48,E20d8.
+; bar 8
+E ^16.^%2r8^32^%1d4^32.^%1r4.^32.^%2
+; bar 9
+E ^16.q5,E20d32.^%2q48,E20d4^32^%1r8^64^%2e4^32.^%2r16.^%2
+; bar 10
+E ^4.^32.q5,E20d32.^%2q48,E20d4^32^%1r8^32e16^64
+; bar 11
+E ^8.^32r2^32^%2q5,E20d32.^%1q48,E20d8.
+; bar 12
+E ^16.^%2r8^32q0d32.^%2
+
+; SPC Voice 6 -- MIDI ch6 (top) -- role: arp
+F  @4 o5 v6 E1
+F L o4r2^%1v5q0b64^%2a32q1,E20b64^%2a64^%2b32a64^%2q48,E20b4^32.^%1r64^%2
+; bar 2
+F ^8^32.q0b32^%1a64^%1q2,E20b32v4q1,E20a64^%2q0b64^%2q1,E20a64^%2v5
+F q48,E20b4^32.^%1r8.^64q0b32a64^%1b64^%2v4q1,E20a32v5q0b64^%2q1,E20a64
+F ^%1
+; bar 3
+F ^%1q48,E20b4^32^%2r8.^64^%1q1,E20b32v4q0a64^%2v5b64^%2v4q1,E20a64^%2v5
+F b32q2,E20a64^%2q48,E20b4^32.^%2r64^%1
+; bar 4
+F ^8^32.q0a64^%2q1,E20b32q0a64^%1q1,E20b32v4q2,E20a32v5q0b64^%1v4q48,E20
+F a4^32.^%2r8.^%1v5q0b64^%2v4a32v5b64^%2v4q2,E20a32v5q1,E20b32v4q0a64^%1
+; bar 5
+F q48,E20b4^16r8.v5q0a32b32q2,E20a64^%2q0b64^%2v4q1,E20a64^%2v5q0b32
+F q48,E20a4^32^%2r32^%1
+; bar 6
+F ^8^32.q0b64^%2a32q1,E20b32v4a64^%2v5q0b64^%2q48,E20a4^64^%2r4^%1q0b32
+F a64^%2b64^%2q1,E20a32q0b64^%2q2,E20a64
+; bar 7
+F ^%2q48,E20b4^32.^%1r8.^64q0b32^%1q1,E20a64^%1q2,E20b64^%2v4q0a64^%2b64
+F ^%2q1,E20a64^%2v5q48,E20b4^32.^%1r64^%1
+; bar 8
+F ^8.q0b64^%1q1,E20a32b64^%2v4a64^%2v5b32a64^%2q48,E20b4^32^%2r8.^64^%1
+F q0b64^%2v4a64^%2v5q1,E20b32v4a64^%1v5b32q2,E20a64
+; bar 9
+F ^%2q48,E20b4^32.^%2r8.q0a32b64^%2q1,E20a64^%2b32v4q2,E20a64^%2v5q0b64
+F ^%2v4q48,E20a4^32.^%2r64^%1
+; bar 10
+F ^8^32.v5q1,E20b64^%2v4q0a64^%2v5b64^%2v4q1,E20a32v5q0b32v4q1,E20a64^%2
+F q48,E20b4^16r8.v5q1,E20a32q0b64^%2q1,E20a64^%2q0b32v4q1,E20a64^%2v5q0
+F b64^%1
+; bar 11
+F q48,E20a4^32.r8.^64^%2q0b64^%2a64^%2b32v4q2,E20a32v5q0b64^%2q48,E20a4
+F ^64^%1r16^64
+; bar 12
+F ^8^32.^%1q0b64^%2a32b64^%2v4q1,E20a32v5b64^%2q0a64^%2
+
+; SPC Voice 7 -- MIDI ch9 (drum_string) -- role: drums
+G  o2 v7 l32
+G L r%16 v8 @mt32_drum_n38 c%11 v9 c%22 v10 @mt32_drum_cabasa c%32 c%16 v8
+G @mt32_drum_n67 c%5 v7 @mt32_drum_n68 c%6 @mt32_drum_n67 c%5 v9
+G @mt32_drum_n38 c%5 v7 @mt32_drum_n67 c%6 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%16 v10 @mt32_drum_cabasa c%32 c%32 c%16 v7
+G @mt32_drum_n67 c%6 @mt32_drum_n68 c%5 @mt32_drum_n67 c%5 v10
+G @mt32_drum_cabasa c%6 v7 @mt32_drum_n67 c%5 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%17 v8 @mt32_drum_n38 c%10 v9 c%21 v10
+G @mt32_drum_cabasa c%33 c%16 v8 @mt32_drum_n67 c%5 v7
+G @mt32_drum_n68 c%5 @mt32_drum_n67 c%5 v9 @mt32_drum_n38 c%6 v7
+G @mt32_drum_n67 c%5 @mt32_drum_n68 c%5 @mt32_drum_n67 c%16 v10
+G @mt32_drum_cabasa c%32 c%32 c%16 v8 @mt32_drum_n67 c%6 v7
+G @mt32_drum_n68 c%5 @mt32_drum_n67 c%5 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%6 @mt32_drum_n68 c%5 @mt32_drum_n67 c%16 v9
+G @mt32_drum_n38 c%11 c%21 v10 @mt32_drum_cabasa c%32 c%16 v7
+G @mt32_drum_n68 c%5 @mt32_drum_n67 c%6 @mt32_drum_n68 c%5 v9
+G @mt32_drum_n38 c%5 v6 @mt32_drum_n68 c%5 v7 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%17 v10 @mt32_drum_cabasa c%32 c%31 c%16 v7
+G @mt32_drum_n67 c%5 @mt32_drum_n68 c%6 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%6 @mt32_drum_n67 c%6 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%16 v9 @mt32_drum_n38 c%11 c%21 v10
+G @mt32_drum_cabasa c%32 c%16 v7 @mt32_drum_n68 c%5 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%6 v9 @mt32_drum_n38 c%5 v7 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%6 @mt32_drum_n68 c%16 v10 @mt32_drum_cabasa c%32 c%32
+G c%16 v8 @mt32_drum_n67 c%5 v7 @mt32_drum_n68 c%6 @mt32_drum_n67 c%6
+G @mt32_drum_n68 c%5 @mt32_drum_n67 c%5 @mt32_drum_n68 c%6 v10
+G @mt32_drum_n44 c%16 v8 @mt32_drum_n38 c%10 v9 c%6 v10
+G @mt32_drum_n44 c%17 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%15
+G @mt32_drum_cabasa c%16 @mt32_drum_n44 c%6 v7 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%5 v9 @mt32_drum_n38 c%6 v7 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%6 v10 @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16
+G @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%16
+G @mt32_drum_cabasa c%16 @mt32_drum_n44 c%5 v7 @mt32_drum_n68 c%6
+G @mt32_drum_n67 c%5 @mt32_drum_n68 c%5 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%6 v10 @mt32_drum_n44 c%16 v8 @mt32_drum_n38 c%10 v9
+G c%6 v10 @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%16
+G @mt32_drum_cabasa c%15 @mt32_drum_n44 c%6 v7 @mt32_drum_n68 c%6
+G @mt32_drum_n67 c%5 v9 @mt32_drum_n38 c%5 v7 @mt32_drum_n67 c%6
+G @mt32_drum_n68 c%4 v10 @mt32_drum_n44 c%17 @mt32_drum_cabasa c%15
+G @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%17
+G @mt32_drum_cabasa c%15 @mt32_drum_n44 c%6 v7 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%6 @mt32_drum_n68 c%4 @mt32_drum_n67 c%6
+G @mt32_drum_n68 c%5 v10 @mt32_drum_n44 c%16 v9 @mt32_drum_n38 c%11 c%5
+G v10 @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%16
+G @mt32_drum_cabasa c%15 @mt32_drum_n44 c%6 v7 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%5 v9 @mt32_drum_n38 c%6 v6 @mt32_drum_n68 c%5 v7
+G @mt32_drum_n67 c%5 v10 @mt32_drum_n44 c%17 @mt32_drum_cabasa c%15
+G @mt32_drum_n44 c%16 @mt32_drum_cabasa c%15 @mt32_drum_n44 c%17
+G @mt32_drum_cabasa c%15 @mt32_drum_n44 c%6 v7 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%6 @mt32_drum_n68 c%5 @mt32_drum_n67 c%6
+G @mt32_drum_n68 c%4 v10 @mt32_drum_n44 c%17 v9 @mt32_drum_n38 c%11 c%5
+G v10 @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16 @mt32_drum_n44 c%16
+G @mt32_drum_cabasa c%16 @mt32_drum_n44 c%6 v7 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%5 v9 @mt32_drum_n38 c%6 v7 @mt32_drum_n68 c%5
+G @mt32_drum_n67 c%5 v10 @mt32_drum_n44 c%16 @mt32_drum_cabasa c%16
+G @mt32_drum_n44 c%17 @mt32_drum_cabasa c%15 @mt32_drum_n44 c%17
+G @mt32_drum_cabasa c%15 @mt32_drum_n44 c%6 v7 @mt32_drum_n68 c%6
+G @mt32_drum_n67 c%5 @mt32_drum_n68 c%6 @mt32_drum_n67 c%5
+G @mt32_drum_n68 c%5 v10 @mt32_drum_n44 c%16 v9 @mt32_drum_n38 c%11 c%5
+G v10 @mt32_drum_n44 c%17 @mt32_drum_cabasa c%15 @mt32_drum_n44 c%16
+G @mt32_drum_cabasa c%16 @mt32_drum_n44 c%5 v7 @mt32_drum_n68 c%6
+G @mt32_drum_n67 c%5 v9 @mt32_drum_n38 c%6 v7 @mt32_drum_n67 c%4
+
+; SPC Voice 8 -- drum overflow (collision-dropped second-priority hits)
+H  o2 l32
+H L r%16 v10 @mt32_drum_cabasa c%48 r%49 v7 @mt32_drum_n68 c%48 r%81 c%32
+H v10 @mt32_drum_cabasa c%48 r%47 v7 @mt32_drum_n68 c%48 r%80 v10
+H @mt32_drum_cabasa c%32 c%48 r%48 v7 @mt32_drum_n67 c%48 r%79 v10
+H @mt32_drum_cabasa c%33 c%48 r%48 v7 @mt32_drum_n67 c%48 r%81 v10
+H @mt32_drum_cabasa c%32 c%48 r%32 v8 @mt32_drum_n67 c%16 v7
+H @mt32_drum_n68 c%16 @mt32_drum_n67 c%48 r%49 c%16 v10
+H @mt32_drum_cabasa c%15 v7 @mt32_drum_n67 c%17 v10
+H @mt32_drum_cabasa c%48 r%32 v8 @mt32_drum_n67 c%16 v7
+H @mt32_drum_n68 c%16 @mt32_drum_n67 c%48 r%48 v8 c%16 v10
+H @mt32_drum_cabasa c%15 v7 @mt32_drum_n67 c%16 v10
+H @mt32_drum_cabasa c%48 r%31 v7 @mt32_drum_n68 c%16 @mt32_drum_n67 c%16
+H @mt32_drum_n68 c%48 r%48 @mt32_drum_n67 c%16 v10
+H @mt32_drum_cabasa c%16 v7 @mt32_drum_n67 c%16 v10
+H @mt32_drum_cabasa c%48 r%32 v7 @mt32_drum_n68 c%16 @mt32_drum_n67 c%16
+H @mt32_drum_n68 c%48 r%49 v8 @mt32_drum_n67 c%16 v10
+H @mt32_drum_cabasa c%32 c%48 r%32 v8 @mt32_drum_n67 c%16 v7
+H @mt32_drum_n68 c%10

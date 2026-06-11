@@ -1,0 +1,130 @@
+{
+ "_about": {
+  "file_type": "Terrific Audio Driver project file",
+  "version": "0.2.0-beta.2",
+  "_comment": "Stan's Previously Owned Vessels (MI1 soundtrack batch). 42.5 BPM (the 25 BPM set_tempo is overridden at t=0): timer 118, quarter 1416ms (+0.3%). Rhythm keys 52/55/57 are silent on the MT-32 kit -- dropped, faithful to hardware."
+ },
+ "instruments": [
+  {
+   "name": "mt32_p8",
+   "source": "../../samples/instruments/mt32_p8.wav",
+   "freq": 626.667,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 5,
+   "last_octave": 5,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3200
+  },
+  {
+   "name": "mt32_p88_low",
+   "source": "../../samples/instruments/mt32_p88_low.wav",
+   "freq": 164.384,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 6400
+  },
+  {
+   "name": "mt32_p88",
+   "source": "../../samples/instruments/mt32_p88.wav",
+   "freq": 523.49,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 6,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3840
+  },
+  {
+   "name": "mt32_p74_low",
+   "source": "../../samples/instruments/mt32_p74_low.wav",
+   "freq": 164.948,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 4,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3200
+  },
+  {
+   "name": "mt32_p74",
+   "source": "../../samples/instruments/mt32_p74.wav",
+   "freq": 310.811,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 4,
+   "last_octave": 5,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 4800
+  },
+  {
+   "name": "mt32_organ",
+   "source": "../../samples/instruments/mt32_organ.wav",
+   "freq": 330.275,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 3,
+   "last_octave": 5,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 4800
+  },
+  {
+   "name": "mt32_p71",
+   "source": "../../samples/instruments/mt32_p71.wav",
+   "freq": 65.041,
+   "loop": "loop_with_filter",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 1,
+   "last_octave": 2,
+   "envelope": "adsr 15 1 7 0",
+   "loop_setting": 3200
+  },
+  {
+   "name": "mt32_drum_n42",
+   "source": "../../samples/instruments/mt32_drum_n42.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  },
+  {
+   "name": "mt32_drum_kick",
+   "source": "../../samples/instruments/mt32_drum_kick.wav",
+   "freq": 65.406,
+   "loop": "none",
+   "evaluator": "default",
+   "ignore_gaussian_overflow": false,
+   "first_octave": 2,
+   "last_octave": 2,
+   "envelope": "gain F127"
+  }
+ ],
+ "samples": [],
+ "default_sfx_flags": {
+  "one_channel": true,
+  "interruptible": true
+ },
+ "high_priority_sound_effects": [],
+ "sound_effects": [],
+ "low_priority_sound_effects": [],
+ "sound_effect_file": "",
+ "songs": [
+  {
+   "name": "r059_stans",
+   "source": "r059_stans.mml"
+  }
+ ]
+}

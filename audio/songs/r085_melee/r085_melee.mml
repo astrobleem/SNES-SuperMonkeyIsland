@@ -1,0 +1,445 @@
+#Title Mêlée Town
+#Composer M. Land / P. McConnell / C. Bajakian
+#Author SMI pipeline
+#Timer 167
+#ZenLen 192
+
+; Echo — tame defaults. Per-song MML can override if needed.
+#EchoLength 32
+#EchoFeedback 108
+#EchoVolume 24
+#FirFilter 64 63 0 0 0 0 0 0
+
+; Melodic instruments — one entry per SPC voice role.
+@0 mt32_p97
+@1 mt32_bottle
+@2 mt32_p71
+@3 mt32_marimba
+@4 mt32_xylophone
+@5 mt32_p41
+
+; Drum instruments — one @name per unique drum referenced by
+; the arrangement. Override names via plan["instruments"]["drums"].
+@mt32_drum_kick mt32_drum_kick
+@mt32_drum_rim mt32_drum_rim
+@mt32_drum_n45 mt32_drum_n45
+@mt32_drum_n42 mt32_drum_n42
+@mt32_drum_n48 mt32_drum_n48
+@mt32_drum_bongo mt32_drum_bongo
+@mt32_drum_conga_med mt32_drum_conga_med
+@mt32_drum_conga_hi mt32_drum_conga_hi
+@mt32_drum_n64 mt32_drum_n64
+@mt32_drum_claves mt32_drum_claves
+
+; SPC Voice 1 -- MIDI ch1 (top) -- role: lead
+A  @0 o5 v7 E1
+A L o4r1
+; bar 2
+A ^1
+; bar 3
+A ^1
+; bar 4
+A ^1
+; bar 5
+A ^1
+; bar 6
+A ^1
+; bar 7
+A ^2.^32.^%2v9q2,E21c32^%2d+32^%1q3,E21d32^%2q2,E21d+32^%2q1,E21c32
+; bar 8
+A ^%1q4,E21d+32^%2q2,E21d32^%1q4,E21f32^%2g32^%1q5,E21g+32^%2q4,E21g32
+A ^%1q7,E21f32.q3,E21d32^%2q4,E21d+32^%1q3,E21d32^%2q4,E21f32^%2q3,E21
+A g32^%2c32^%1f32^%1d32^%2d+32^%1q48,E21c4^32^%1r16^%2
+; bar 9
+A ^1
+; bar 10
+A ^1
+; bar 11
+A ^1
+; bar 12
+A ^1
+; bar 13
+A ^1
+; bar 14
+A ^1
+; bar 15
+A ^2v7q1,E21>c32^%2v8d+32^%1v6q0c32^%1v8g+32^%2v6q2,E21c32^%2v8q0d+32^%1
+A v6c32^%1v8f32^%2v6c32^%2v8d+32.v7c32^%1q2,E21d32^%2q6,E21c64^%1
+; bar 16
+A ^64^%1q5,E21<a+32^%2q3,E21g+32g32.v8q4,E21g+32.v7a+32^%1v8q2,E21g+32
+A ^%1q4,E21g32.^%1
+
+; SPC Voice 2 -- MIDI ch2 (top) -- role: ornament
+B  @5 o5 v5 p56 E1
+B L o7r1
+; bar 2
+B ^1
+; bar 3
+B ^1
+; bar 4
+B ^4.v5q48,E20c2^8
+; bar 5
+B ^8.^32r2.^32
+; bar 6
+B ^4^32.^%1v4q15,E20c8.q48,E20c2^%2
+; bar 7
+B ^4^64^%2r2^8.q0<g+32^%1
+; bar 8
+B ^8^32.^%1d+8.^32^%1q48,E20>c2^16.^%1
+; bar 9
+B ^4.^64r2^16.^64
+; bar 10
+B ^2.^16.^%2c8^64^%1
+; bar 11
+B ^1
+; bar 12
+B ^16r2.^8.
+; bar 13
+B ^8.^64^%2q2,E20<e8^32v3q0g8.^%1v4q48,E20>c4.^16
+; bar 14
+B ^8.^32.r2.^64
+; bar 15
+B ^2^32^%2q0<g+8.^%1d+8^32^%2g+16.^%1
+; bar 16
+B ^64>c4^16^64^%2
+
+; SPC Voice 3 -- MIDI ch3 (top) -- role: arp
+C  @4 o5 v6 E1
+C L o5r8v6q9,E20e16^%2q5,E20e8^32^%1q0e64q10,E20c16q7,E20e8^32^%1q11,E20
+C e16^64^%1q2,E20e8^32q9,E20e16^64^%1q5,E20e16^64
+; bar 2
+C ^16^64q0g+32q8,E20c32.^%1q4,E20g+8^32^%1q0g+32^%1q6,E20c32^%2q0g+8^%2
+C q3,E20c64^%2q9,E20g16^64q5,E20g8^32^%1q7,E20g16^64q5,E20g16.^64^%2
+; bar 3
+C ^32^%2q8,E20e16^64^%1q6,E20e8^32q8,E20e16^64^%1q4,E20e8^32q8,E20e16^64
+C q6,E20e8^32^%1q8,E20e16^64^%1q6,E20e8^32
+; bar 4
+C q9,E20g16^64^%1q6,E20g8^32q8,E20g16^64^%1q0g8q4,E20e32q0e64^%2q9,E20
+C c32.^%2q5,E20e8^32^%1q8,E20e16^64q7,E20e8^32^%1q0f64^%2q8,E20d%2
+; bar 5
+C ^32^%2q5,E20f8^32^%1q0f64^%2q9,E20d32.^%2q0f16.^64^%2q5,E20d32^%1q0g64
+C ^%1q10,E20d16q6,E20g8^32^%1q0g64^%1q9,E20d32.^%2q6,E20g8^32^%1q0f64^%2
+C q8,E20d32.
+; bar 6
+C ^%1q6,E20f8^32^%2q10,E20g16^64q7,E20g8^32^%1q10,E20f16^64q6,E20f8^32
+C ^%1q0g32q7,E20d32.q0g32.^%1q19,E20d16.^64q9,E20e16^64q6,E20e32
+; bar 7
+C ^8q9,E20e16^64q6,E20e8^32^%1q9,E20e16^64q6,E20e8^32^%1q9,E20e16^64^%1
+C q7,E20e8^32^%1q8,E20g+16^64q5,E20g+16^%2
+; bar 8
+C ^16^64^%2q8,E20g+16^64q3,E20g+8^32^%1q9,E20g16^64q5,E20g8^32q7,E20g16
+C ^64^%1q4,E20g8^32^%1q9,E20e16^64q5,E20e16.^64^%1
+; bar 9
+C ^32.q0e64q10,E20c16q8,E20e8^32^%2q12,E20e16^64^%1q2,E20e8^32q9,E20e16
+C ^64q4,E20e8^32^%1q0g+32q8,E20c32.^%1q3,E20g+8^64^%1
+; bar 10
+C ^%2q0g+32^%2q5,E20c32^%1q0g+8^64q2,E20c64^%1q9,E20g16^64q5,E20g8^32^%1
+C q8,E20g16^64^%1q5,E20g8^32q9,E20e16^64^%1q6,E20e8^32q9,E20e32
+; bar 11
+C ^32.^%1q4,E20e8^32^%1q8,E20e16^64q6,E20e8^32^%1q8,E20e16^64q5,E20e8^32
+C q9,E20g16^64^%1q7,E20g8^32^%1g16^%1
+; bar 12
+C ^%2q0g8^%1q4,E20e32q0e64^%2q8,E20c32.^%1q4,E20e8^32^%1q8,E20e16^64^%1
+C q7,E20e8^32q0f32q8,E20d32.^%1q5,E20f8^32^%1q0f64^%1q9,E20d32.^%2q0f64
+C ^%2
+; bar 13
+C ^16.^%1q5,E20d32^%1q0g64^%1q9,E20d32.^%2q6,E20g8^32^%1q0g64^%1q9,E20
+C d32.^%2q6,E20g8^32^%1q0f64^%2q9,E20d32.^%2q5,E20f8^32^%1q10,E20g16^64
+C q7,E20g16
+; bar 14
+C ^16.^%1q10,E20f16^64q6,E20f8^32^%1q0g32q7,E20d32.q0g32.^%1q19,E20d16.
+C ^64q9,E20e16^64q7,E20e8^32^%1q9,E20e16^64q7,E20e16.^%2
+; bar 15
+C ^32.^%2q9,E20e16^64q6,E20e8^32^%1q8,E20e16^64q7,E20e8^32^%1q8,E20g+16
+C ^64q5,E20g+8^32^%1q9,E20g+16^64^%1q3,E20g+8^64
+; bar 16
+C ^64q10,E20g16^64^%1q6,E20g8^32q2,E20g32.^%2
+
+; SPC Voice 4 -- MIDI ch4 (top) -- role: doubler
+D  @1 o5 v5 p72 E1
+D L o4r8v4q8,E20g16.^64^%1q4,E20g16.^64^%2q2,E20e16^64q0f32^%2g16^64^%1e32
+D ^%1q2,E20f8q21,E20e4^64^%2
+; bar 2
+D ^16^64q0d+8.^32.^%2f8^%2d+16.^%2d16^64q21,E20c4^16.^64
+; bar 3
+D ^32^%2q7,E20g16.^64^%2q4,E20g16.^64^%2q2,E20e16^64^%1q0f32^%1q2,E20g16
+D ^64^%1q0e32^%1f8q3,E20e8.^32.q4,E20c16.^64^%2
+; bar 4
+D ^16^64^%1q0<g16.^64^%2a32^%1b16.^64^%2>c16.^64^%2q1,E20d8q18,E20c8.
+D ^32.^%1q7,E20d16.^64^%2q8,E20d32^%1
+; bar 5
+D ^16^64^%1q6,E20d16.^64^%2q0<a+16^64^%1>c32^%1d16^64^%2<a+32>c16.^64^%2
+D q3,E20<a+8.^32.^%1q1,E20f8.^%2
+; bar 6
+D ^%1q0a+8^32^%2>d16.^64^%2f8.^%2d8^32^%1q23,E20e8.^32.^%1q8,E20e16.^64
+; bar 7
+D ^%1e16.^64^%2q0c16^64d32.e16^%2c32^%2d8^64q40,E20c4^16.q0d+8^64^%2
+; bar 8
+D ^16^64^%2f8^%2d+16.^64^%1d16^%2q23,E20c4.^64^%1q8,E20g16.^64^%2q4,E20
+D g16^%2
+; bar 9
+D ^32.q2,E20e16^64q0f32.g16^64e32^%2q1,E20f16.^64^%2q21,E20e4^16.^64q0
+D d+8.^32^%2
+; bar 10
+D ^%2f8^%2d+16.^%2d16^64q21,E20c4.^64^%2q7,E20g16.^64^%2q4,E20g16.^64^%2
+D q2,E20e32
+; bar 11
+D ^32.^%1q0f32^%1q2,E20g16^64^%1q0e32^%2f16.^64^%2q4,E20e8.^32.^%1c8.^%2
+D q0<g16.^64^%2a32^%2b16^%1
+; bar 12
+D ^32.^%1>c16.^64^%2d16.^64^%2q19,E20c8.^32.^%2q7,E20d16.^64^%1q9,E20d8
+D q6,E20d16.^64^%2q0<a+16^64>c64^%2
+; bar 13
+D ^64d16^64^%2<a+32q1,E20>c16.^64^%2q4,E20<a+8.^32.^%2q2,E20f8.^%2q0a+8
+D ^32^%1>d16.^64^%2q1,E20f64^%1
+; bar 14
+D ^8^32.^%1q0d8^32^%1q23,E20e8.^32.^%1q9,E20e16.^64^%2q8,E20e16.^64^%2q0
+D c16^64d32^%2q1,E20e16
+; bar 15
+D ^64q0c32^%2d8^64q39,E20c4^16^64^%2q0d+8.^32.^%1f8^%2d+16^64^%2
+; bar 16
+D ^64^%2d16^64c4^%2
+
+; SPC Voice 5 -- MIDI ch5 (top) -- role: bass
+E  @2 o3 v7 E0
+E L o2v9q0c8.^%2v10g8^32^%2v9<g16.^64^%1>c8.^64g8^%1f32^%1e16.^64c32^%2
+; bar 2
+E ^8^32^%1g8^32^%2v8<g16.^64g+8>d+8v9q4,E23c8.^32.q12,E23c16^64
+; bar 3
+E ^8q0g8^32^%1v8<g16.^64^%1q1,E23>c8.^%2v9q0g8^%2v8f32v9e16.^64^%1q1,E23
+E c16.^64^%2
+; bar 4
+E ^16^64^%1q0g8^32.^%1v8<g16.^%1v9q5,E23>c8.^32.^%2v8q0<g16.^64^%2>c16.
+E ^64^%2<a+8^32
+; bar 5
+E ^32^%2v9>f8^32.^%1v8<f16.^%2q1,E23a+8.^64q0>d8^32^%1v9f8v8q1,E23<a+8.
+; bar 6
+E ^%1v9q0>f8^32.v8<f16.^64^%1a+16.^64^%2v9q10,E23>d16^64v8q0d32.^%2
+E q1,E23<a+16.^%2v9q0b16.^64^%2q8,E23>c8.^%2q0g32
+; bar 7
+E ^8^%2v8<g16.^64^%1v9>c8.^%1v10g8^%2v8f32^%1v9e16.^64^%1v8c8.^%2v9g16
+E ^%2
+; bar 8
+E ^16^64^%2v5<g16.^64^%2v8g+16.^64^%2v9>d+8q2,E23c8.^32.q0c8.^%2v10g16.
+E ^64^%1
+; bar 9
+E ^32.^%1v9<g16.^64^%2q1,E23>c8.^64q0g8f32^%1q1,E23e16.^64^%1q0c8.^64g8
+E ^64^%1
+; bar 10
+E ^64v8<g16.^64^%1g+16.^64^%2>d+8v9q4,E23c8.^32.q12,E23c8.^64q0g8^32^%1
+E v8<g64^%2
+; bar 11
+E ^16^64^%2q1,E23>c8.^64v9q0g8^%1v8f32v9e16.^64^%2q1,E23c8.^%2q0g8^32.
+E ^%2v8<g32.
+; bar 12
+E ^32.^%1v9q4,E23>c8.^32.^%1v8q0<g16.^64^%2>c8q1,E23<a+8.^%2v9q0>f8^32.
+E v8<f16.
+; bar 13
+E ^64q1,E23a+8.^%2q0>d8^32^%1v9f8v8q1,E23<a+8.^%2v9q0>f8^32.v8<f16.^64
+E a+64^%1
+; bar 14
+E ^16.^%1v9q10,E23>d16^64v8q0d32.^%2q1,E23<a+16.^%2v9q0b16.^64^%2q8,E23
+E >c8.^%2q0g8^32^%2v8<g16.^64^%1v9>c16
+; bar 15
+E ^8^%2v10g8^%2v8f32^%2v9e16.^64v8c8.^%1v9g8^32^%1v5<g8v8g+16.^%1
+; bar 16
+E ^64v9>d+8^%1c8.^32
+
+; SPC Voice 6 -- MIDI ch6 (top) -- role: pad
+F  @3 o4 v5 E1
+F L o4r1
+; bar 2
+F ^1
+; bar 3
+F ^1
+; bar 4
+F ^1
+; bar 5
+F ^32^%2v3q48,E21a+4^64^%2r4^16^64q27,E21f8^32q32,E21d8.^%2
+; bar 6
+F ^%1q28,E21f8^32^%2v4q48,E21<a+4^64^%2r4.^16^%1v3q16,E21>e16.^64
+; bar 7
+F ^%1v4q18,E21e16.^64^%2q17,E21c8q16,E21e16.^64^%1q18,E21d16.^64^%2
+F q48,E21c4^32^%1r8.^32^%2
+; bar 8
+F ^1
+; bar 9
+F ^1
+; bar 10
+F ^1
+; bar 11
+F ^1
+; bar 12
+F ^2^8.^32.v3a+4^64
+; bar 13
+F ^%2r4^16^%2q28,E21f8^32^%2q33,E21d8.^%2q27,E21f8^32^%1v4q48,E21<a+8^64
+; bar 14
+F ^8^%2r4.^16^%1v3q17,E21>e16.^64^%2v4q19,E21e16.^64^%2q16,E21c16.^64^%2
+F e16
+; bar 15
+F ^32.^%2q18,E21d16.^64^%2q48,E21c4^32r2^32^%2
+; bar 16
+F ^4^16
+
+; SPC Voice 7 -- MIDI ch9 (drum_string) -- role: drums
+G  o2 v7 l32
+G L v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%14 v6
+G @mt32_drum_claves c%9 v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%16
+G @mt32_drum_rim c%7 v10 @mt32_drum_n42 c%15 v6 @mt32_drum_claves c%8
+G v12 @mt32_drum_kick c%24 v10 @mt32_drum_n42 c%15 v12
+G @mt32_drum_bongo c%7 @mt32_drum_kick c%8 @mt32_drum_rim c%7 v6
+G @mt32_drum_claves c%8 v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%2
+G v6 @mt32_drum_claves c%14 v12 @mt32_drum_n64 c%8 v10
+G @mt32_drum_n42 c%15 v12 @mt32_drum_n64 c%8 @mt32_drum_kick c%15
+G @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%14 v6
+G @mt32_drum_claves c%9 v10 @mt32_drum_n42 c%7 v12
+G @mt32_drum_conga_med c%8 v6 @mt32_drum_claves c%8 v12
+G @mt32_drum_kick c%2 @mt32_drum_n48 c%3 v6 @mt32_drum_claves c%2 v12
+G @mt32_drum_rim c%16 v10 @mt32_drum_n42 c%16 v12
+G @mt32_drum_conga_med c%7 @mt32_drum_kick c%16 @mt32_drum_bongo c%7 v10
+G @mt32_drum_n42 c%14 v6 @mt32_drum_claves c%9 v12 @mt32_drum_kick c%16
+G @mt32_drum_rim c%7 v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%15
+G @mt32_drum_n64 c%8 v10 @mt32_drum_n42 c%8 v12 @mt32_drum_n64 c%8 c%7
+G @mt32_drum_kick c%8 @mt32_drum_rim c%15 v10 @mt32_drum_n42 c%14 v6
+G @mt32_drum_claves c%10 v12 @mt32_drum_kick c%22 v10
+G @mt32_drum_n42 c%16 v12 @mt32_drum_conga_hi c%7 @mt32_drum_kick c%8
+G @mt32_drum_conga_hi c%8 @mt32_drum_rim c%7 v10 @mt32_drum_n42 c%3 v12
+G @mt32_drum_n48 c%12 v6 @mt32_drum_claves c%8 v12 @mt32_drum_kick c%15
+G v6 @mt32_drum_claves c%2 v12 @mt32_drum_n45 c%7 v10 @mt32_drum_n42 c%6
+G v6 @mt32_drum_claves c%9 v12 @mt32_drum_conga_hi c%8
+G @mt32_drum_kick c%2 @mt32_drum_n45 c%6 @mt32_drum_rim c%15
+G @mt32_drum_n64 c%23 @mt32_drum_kick c%23 v10 @mt32_drum_n42 c%14 v6
+G @mt32_drum_claves c%9 v12 @mt32_drum_kick c%16 @mt32_drum_rim c%7 v10
+G @mt32_drum_n42 c%8 v12 @mt32_drum_conga_med c%8 c%7
+G @mt32_drum_kick c%14 v6 @mt32_drum_claves c%9 v10 @mt32_drum_n42 c%23
+G v12 @mt32_drum_kick c%8 @mt32_drum_rim c%15 v10 @mt32_drum_n42 c%14 v6
+G @mt32_drum_claves c%4 v10 @mt32_drum_n48 c%6 v12 @mt32_drum_kick c%15
+G @mt32_drum_n45 c%8 v10 @mt32_drum_n42 c%8 v12 @mt32_drum_bongo c%7
+G @mt32_drum_n45 c%9 @mt32_drum_kick c%7 @mt32_drum_n64 c%6 v6
+G @mt32_drum_claves c%2 v12 @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%14
+G v6 @mt32_drum_claves c%9 v12 @mt32_drum_kick c%7
+G @mt32_drum_conga_med c%7 v6 @mt32_drum_claves c%9 v10
+G @mt32_drum_n42 c%7 v12 @mt32_drum_conga_med c%6 v6
+G @mt32_drum_claves c%8 c%2 v12 @mt32_drum_kick c%5 v6
+G @mt32_drum_claves c%3 v12 @mt32_drum_rim c%15 v10 @mt32_drum_n42 c%23
+G v12 @mt32_drum_kick c%8 @mt32_drum_n64 c%6 v6 @mt32_drum_claves c%8
+G v10 @mt32_drum_n42 c%8 v12 @mt32_drum_n64 c%8 @mt32_drum_bongo c%7
+G @mt32_drum_kick c%15 @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%14 v6
+G @mt32_drum_claves c%9 v12 @mt32_drum_kick c%23 v10 @mt32_drum_n42 c%8
+G v12 @mt32_drum_bongo c%8 @mt32_drum_conga_med c%7 @mt32_drum_kick c%8
+G @mt32_drum_rim c%6 v6 @mt32_drum_claves c%10 v10 @mt32_drum_n42 c%15
+G v12 @mt32_drum_n64 c%8 @mt32_drum_kick c%15 @mt32_drum_n64 c%8
+G @mt32_drum_conga_hi c%8 c%5 v6 @mt32_drum_claves c%2 v12
+G @mt32_drum_n64 c%8 @mt32_drum_kick c%8 @mt32_drum_conga_med c%7
+G @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%3 v12 @mt32_drum_n45 c%20
+G @mt32_drum_kick c%14 v6 @mt32_drum_claves c%9 v10 @mt32_drum_n42 c%8
+G v12 @mt32_drum_n64 c%5 v6 @mt32_drum_claves c%2 v12 @mt32_drum_rim c%8
+G @mt32_drum_kick c%23 v10 @mt32_drum_n42 c%14 v12 @mt32_drum_n45 c%9
+G @mt32_drum_kick c%13 v6 @mt32_drum_claves c%2 v12 @mt32_drum_n64 c%8
+G @mt32_drum_conga_hi c%23 @mt32_drum_kick c%16 @mt32_drum_rim c%8
+G @mt32_drum_n64 c%13 v6 @mt32_drum_claves c%2 v12
+G @mt32_drum_conga_hi c%8 @mt32_drum_kick c%23 v10 @mt32_drum_n42 c%7
+G v12 @mt32_drum_n64 c%8 @mt32_drum_conga_med c%8 @mt32_drum_kick c%8
+G @mt32_drum_rim c%4 v6 @mt32_drum_claves c%11 v10 @mt32_drum_n42 c%23
+G v12 @mt32_drum_kick c%16 @mt32_drum_n64 c%7 @mt32_drum_conga_hi c%14
+G v6 @mt32_drum_claves c%9 v12 @mt32_drum_kick c%15 @mt32_drum_rim c%2
+G @mt32_drum_n48 c%6 v10 @mt32_drum_n42 c%8 v12 @mt32_drum_n64 c%8
+G @mt32_drum_conga_med c%7 @mt32_drum_kick c%15 @mt32_drum_n48 c%8 v10
+G @mt32_drum_n42 c%8 v12 @mt32_drum_n64 c%8 v6 @mt32_drum_claves c%7 v12
+G @mt32_drum_kick c%8 @mt32_drum_rim c%8 @mt32_drum_n64 c%7 v10
+G @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%14 v6 @mt32_drum_claves c%9
+G v10 @mt32_drum_n42 c%15 v12 @mt32_drum_bongo c%8 @mt32_drum_kick c%8
+G @mt32_drum_bongo c%8 @mt32_drum_rim c%7 v10 @mt32_drum_n42 c%14 v6
+G @mt32_drum_claves c%2 v12 @mt32_drum_bongo c%8 @mt32_drum_kick c%7
+G @mt32_drum_conga_med c%8 c%8 v10 @mt32_drum_n42 c%7 v12
+G @mt32_drum_n64 c%16 @mt32_drum_kick c%7 @mt32_drum_rim c%16 v10
+G @mt32_drum_n42 c%14 v6 @mt32_drum_claves c%9 v12 @mt32_drum_kick c%7
+G @mt32_drum_conga_hi c%16 v10 @mt32_drum_n42 c%7 v12
+G @mt32_drum_conga_hi c%8 c%8 @mt32_drum_kick c%15 @mt32_drum_rim c%6 v6
+G @mt32_drum_claves c%2 v10 @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%23
+G v10 @mt32_drum_n42 c%8 v12 @mt32_drum_conga_med c%8 @mt32_drum_n64 c%7
+G @mt32_drum_kick c%2 v10 @mt32_drum_n45 c%6 v12 @mt32_drum_rim c%6 v6
+G @mt32_drum_claves c%8 c%2 v10 @mt32_drum_n42 c%15 v12
+G @mt32_drum_n48 c%7 @mt32_drum_kick c%15 v6 @mt32_drum_claves c%9 v10
+G @mt32_drum_n42 c%7 v12 @mt32_drum_bongo c%8 @mt32_drum_n64 c%8
+G @mt32_drum_kick c%7 @mt32_drum_conga_med c%8 @mt32_drum_rim c%8 v10
+G @mt32_drum_n42 c%23 v12 @mt32_drum_kick c%8 @mt32_drum_bongo c%7
+G @mt32_drum_n64 c%8 c%8 @mt32_drum_conga_med c%6 v6
+G @mt32_drum_claves c%9 v12 @mt32_drum_kick c%8 @mt32_drum_rim c%5 v6
+G @mt32_drum_claves c%2 v12 @mt32_drum_n64 c%8 c%8
+G @mt32_drum_conga_med c%5 v6 @mt32_drum_claves c%10 v12
+G @mt32_drum_kick c%15 v10 @mt32_drum_n48 c%2 v12 c%7 v10
+G @mt32_drum_n42 c%15 @mt32_drum_n45 c%8 v12 @mt32_drum_kick c%7
+G @mt32_drum_n64 c%8 @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%15 v6
+G @mt32_drum_claves c%8 v12 @mt32_drum_kick c%15 v6
+G @mt32_drum_claves c%8 v10 @mt32_drum_n42 c%7 v12
+G @mt32_drum_conga_hi c%8 c%8 @mt32_drum_kick c%8 @mt32_drum_rim c%7 v9
+G @mt32_drum_n45 c%8 v10 @mt32_drum_n42 c%7 v12 @mt32_drum_n64 c%8 c%8
+G @mt32_drum_kick c%14 v6 @mt32_drum_claves c%9 v10 @mt32_drum_n42 c%8
+G v12 @mt32_drum_bongo c%7 @mt32_drum_n64 c%8 @mt32_drum_kick c%8
+G @mt32_drum_conga_med c%7 @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%15 v9
+G @mt32_drum_n48 c%3 v10 c%5 v12 @mt32_drum_kick c%7 @mt32_drum_n64 c%8
+G c%8 v10 @mt32_drum_n42 c%16 v12 @mt32_drum_n48 c%7 @mt32_drum_kick c%8
+G @mt32_drum_rim c%8 @mt32_drum_n64 c%7 c%2 v10 @mt32_drum_n45 c%6 v12
+G @mt32_drum_conga_med c%15 @mt32_drum_kick c%7 @mt32_drum_bongo c%16
+G v10 @mt32_drum_n42 c%8 v12 @mt32_drum_n64 c%7 v6 @mt32_drum_claves c%8
+G v12 @mt32_drum_kick c%16 @mt32_drum_rim c%8 v10 @mt32_drum_n42 c%8 v9
+G @mt32_drum_n48 c%6 v6 @mt32_drum_claves c%8 v12 @mt32_drum_kick c%9 v8
+G @mt32_drum_n45 c%7 v6 @mt32_drum_claves c%8 v10 @mt32_drum_n42 c%7 v12
+G @mt32_drum_conga_med c%8 @mt32_drum_rim c%7 @mt32_drum_kick c%11
+
+; SPC Voice 8 -- drum overflow (collision-dropped second-priority hits)
+H  o2 l32
+H L v6 @mt32_drum_claves c%23 v10 @mt32_drum_n42 c%46 v12
+H @mt32_drum_rim c%46 v10 @mt32_drum_n42 c%24 v6 @mt32_drum_claves c%22
+H v12 @mt32_drum_rim c%8 @mt32_drum_bongo c%38 v10 @mt32_drum_n42 c%38
+H v6 @mt32_drum_claves c%9 v12 @mt32_drum_rim c%23 v6
+H @mt32_drum_claves c%23 v10 @mt32_drum_n42 c%15 v12
+H @mt32_drum_conga_med c%8 c%23 @mt32_drum_rim c%40 @mt32_drum_n48 c%6
+H v10 @mt32_drum_n42 c%23 v12 @mt32_drum_bongo c%23 @mt32_drum_rim c%16
+H v10 @mt32_drum_n45 c%8 v6 @mt32_drum_claves c%22 v10
+H @mt32_drum_n42 c%14 v6 @mt32_drum_claves c%2 v9 @mt32_drum_n45 c%30
+H v12 @mt32_drum_rim c%8 @mt32_drum_bongo c%39 v10 @mt32_drum_n42 c%23
+H v6 @mt32_drum_claves c%22 v12 @mt32_drum_rim c%24 v6
+H @mt32_drum_claves c%15 v12 @mt32_drum_conga_med c%7 v10
+H @mt32_drum_n42 c%24 v6 @mt32_drum_claves c%23 v12 @mt32_drum_rim c%8
+H @mt32_drum_n64 c%15 v10 @mt32_drum_n42 c%23 c%46 v12
+H @mt32_drum_rim c%16 @mt32_drum_conga_med c%8 v6 @mt32_drum_claves c%22
+H v10 @mt32_drum_n42 c%46 v12 @mt32_drum_rim c%47 v10
+H @mt32_drum_n42 c%23 v6 @mt32_drum_claves c%16 v12
+H @mt32_drum_conga_med c%8 @mt32_drum_rim c%15 @mt32_drum_conga_hi c%8
+H @mt32_drum_conga_med c%15 @mt32_drum_n48 c%8 v10 @mt32_drum_n42 c%14
+H v12 @mt32_drum_n45 c%9 @mt32_drum_bongo c%14 @mt32_drum_n45 c%9
+H @mt32_drum_rim c%23 v6 @mt32_drum_claves c%23 v10 @mt32_drum_n42 c%15
+H v12 @mt32_drum_conga_med c%7 c%23 @mt32_drum_rim c%46 v10
+H @mt32_drum_n42 c%24 v6 @mt32_drum_claves c%22 v12 @mt32_drum_rim c%47
+H @mt32_drum_conga_hi c%23 v10 @mt32_drum_n42 c%23 v12
+H @mt32_drum_rim c%15 v6 @mt32_drum_claves c%8 c%23 v10
+H @mt32_drum_n42 c%15 v12 @mt32_drum_n48 c%9 c%7 v10 @mt32_drum_n45 c%7
+H v12 @mt32_drum_n64 c%8 @mt32_drum_rim c%24 v6 @mt32_drum_claves c%22
+H v10 @mt32_drum_n42 c%23 c%23 v12 @mt32_drum_rim c%24 v10
+H @mt32_drum_n42 c%23 c%24 v6 @mt32_drum_claves c%22 v12
+H @mt32_drum_rim c%46 v10 @mt32_drum_n42 c%23 c%23 v12
+H @mt32_drum_rim c%24 v6 @mt32_drum_claves c%22 v10 @mt32_drum_n42 c%15
+H v6 @mt32_drum_claves c%31 v12 @mt32_drum_rim c%15 v9
+H @mt32_drum_n45 c%8 v6 @mt32_drum_claves c%23 v10 @mt32_drum_n42 c%46
+H v12 @mt32_drum_rim c%47 v10 @mt32_drum_n42 c%23 v12
+H @mt32_drum_conga_med c%23 @mt32_drum_rim c%46 v10 @mt32_drum_n42 c%31
+H v6 @mt32_drum_claves c%15 v12 @mt32_drum_rim c%46 v10
+H @mt32_drum_n42 c%23 v12 @mt32_drum_bongo c%16 v6 @mt32_drum_claves c%7
+H v12 @mt32_drum_rim c%7 v6 @mt32_drum_claves c%39 v10
+H @mt32_drum_n42 c%47 v12 @mt32_drum_rim c%14 v6 @mt32_drum_claves c%32
+H v10 @mt32_drum_n42 c%15 v6 @mt32_drum_claves c%8 v10
+H @mt32_drum_n42 c%23 v12 @mt32_drum_rim c%8 @mt32_drum_bongo c%15 v10
+H @mt32_drum_n42 c%23 c%16 v6 @mt32_drum_claves c%7 c%16 v12
+H @mt32_drum_bongo c%8 @mt32_drum_rim c%23 @mt32_drum_conga_med c%23 v10
+H @mt32_drum_n42 c%37 v6 @mt32_drum_claves c%9 v12 @mt32_drum_rim c%24
+H v6 @mt32_drum_claves c%22 v10 @mt32_drum_n42 c%46 v12
+H @mt32_drum_rim c%38 v6 @mt32_drum_claves c%8 v10 @mt32_drum_n42 c%23
+H v12 @mt32_drum_conga_med c%23 @mt32_drum_rim c%8 @mt32_drum_bongo c%7
+H v9 @mt32_drum_n45 c%8 v10 @mt32_drum_n42 c%23 c%23 v6
+H @mt32_drum_claves c%7 c%8 v12 @mt32_drum_n45 c%8 @mt32_drum_rim c%17
+H v9 @mt32_drum_n48 c%8 c%6 v12 @mt32_drum_bongo c%8 v9
+H @mt32_drum_n48 c%7 v10 @mt32_drum_n42 c%17 v9 @mt32_drum_n45 c%8 v6
+H @mt32_drum_claves c%7 v9 @mt32_drum_n45 c%7 c%7 v12
+H @mt32_drum_rim c%11

@@ -1,0 +1,105 @@
+#Title Part One: The Three Trials
+#Composer M. Land / P. McConnell / C. Bajakian
+#Author SMI pipeline
+#Timer 167
+#ZenLen 192
+
+; Echo — tame defaults. Per-song MML can override if needed.
+#EchoLength 32
+#EchoFeedback 108
+#EchoVolume 24
+#FirFilter 64 63 0 0 0 0 0 0
+
+; Melodic instruments — one entry per SPC voice role.
+@0 mt32_lead_flute
+@1 mt32_lead_flute
+@2 ph_bass
+@3 mt32_organ
+@4 mt32_marimba
+@5 mt32_lead_flute
+
+; Drum instruments — one @name per unique drum referenced by
+; the arrangement. Override names via plan["instruments"]["drums"].
+@mt32_drum_kick mt32_drum_kick
+@mt32_drum_rim mt32_drum_rim
+@mt32_drum_conga_med mt32_drum_conga_med
+@mt32_drum_conga_hi mt32_drum_conga_hi
+
+; SPC Voice 1 -- MIDI ch1 (top) -- role: lead
+A  @0 o5 v7 E1 MP30,2,12
+A o5r2^32.^%2v9q9,E21f+16.^%2q3,E21f+8^32^%2v8q0d32.^%1v9f+32.^%2v10g32.
+A ^%1v8q8,E21a%2
+; bar 2
+A ^16.v10q0g16^%1v8f+32.q13,E21e16.^64v9q9,E21f16.^%2v10q0f32.^%1v9e32.
+A ^%1v10f16q1,E21e32.^%1v9q12,E21d16.^64v10q43,E21d4
+; bar 3
+A ^4
+
+; SPC Voice 2 -- MIDI ch3 (top) -- role: pad
+B  @3 o4 v5 E1
+B o4r32.^%1v2q0d%2q7,E21<a32.v3q2,E21>>d16^%1q18,E21<<a16.^%2v2q7,E21
+B f+32.v3q2,E21>>d16^%2v2q0<d%2v3q25,E21<f+8^64q1,E21>>d16v2q17,E21<d16.
+B ^%1q9,E21<f+32.^%2v3q1,E21>>d16^%1q15,E21<<f+16^64^%2q10,E21f+16q0
+B >>d%2
+; bar 2
+B ^16^64q10,E21<a16^%2v2q8,E21<g32.^%2v3q0>>c16.^64^%1v2q6,E21<e32^%2v3
+B q10,E21<a+16q9,E21>a+8^32q8,E21<f32.^%2q0>a16.^64q20,E21<a16.^64^%1
+B q1,E21>g16^64q0<d64^%1v2q21,E21<b32^%1
+; bar 3
+B ^16^64^%1v3q10,E21>>g8^32^%2
+
+; SPC Voice 3 -- MIDI ch3 (bottom) -- role: pad
+C  @3 o4 v5 E1
+C o3r16v2q7,E21a32.v3q2,E21>f+32.^%2q0<f+64q17,E21a16.^%1v2q7,E21f+32.v3
+C q1,E21>f+16q27,E21<f+8^32^%1q1,E21>f+32.^%2q17,E21<f+16.^%2v2q9,E21
+C f+32.^%2v3q0>f+32.^%1q17,E21<f+16.^%2q9,E21f+32.^%2q0>a64
+; bar 2
+C a32^%1q10,E21d16.^64^%1v2q8,E21<g32.^%2v3q0>e32^%2c32.^%1g64^%1v2
+C q6,E21e32^%2v3q9,E21<a+32.^%2q0>d32.^%1q1,E21<a+16q7,E21>a+32.q8,E21
+C <f32.^%2q0>c32.^%2q20,E21<a8^32^%1q1,E21b32^%2q0b64v2q22,E21<b16^64^%1
+; bar 3
+C ^16^64^%1v3q1,E21>b32.^%2v2q10,E21<b16.^64
+
+; SPC Voice 4 -- MIDI ch4 (top) -- role: arp
+D  @4 o5 v6 E1
+D o3r8.^64^%2v4q0d32.^%2v3a16^%1v4>d32.^%1q48,E20f+4^16r8^32.v3q0<d16
+D a32.^%1v4q1,E20>d%2
+; bar 2
+D ^32^%2v5q0f+16q14,E20e16.^%2q12,E20c16.^%2q2,E20d32.^%1v4q42,E20<a+4
+D ^64^%1q0>c32.^%1q3,E20<f16v5q48,E20b4
+; bar 3
+D ^64^%2v4q0g32.^%2b32.^%1>d32.^%2v5q2,E20g32.^%2
+
+; SPC Voice 5 -- MIDI ch5 (top) -- role: bass
+E  @2 o3 v7 E0
+E o2v9q7,E23d32.^%1v8q11,E23d16.^64^%1q6,E23d32.^%1v9q21,E23d4^16^64v8
+E q7,E23d32.^%1v9q8,E23d16q10,E23d8^32^%1q7,E23<a32.^%1q5,E23>d32.^%2
+E q10,E23d16^%1
+; bar 2
+E ^32^%1q0d32.^%2q6,E23c32.v8q8,E23c16.^64q0c16v9q8,E23<a+8^32v7q9,E23
+E >d32.^%2v9q8,E23f32.^%2q6,E23<f8^32^%2v8q7,E23g16q8,E23g16.^%2q0g32.
+E ^%1v7q4,E23b32
+; bar 3
+E ^64^%1v9q0b16q7,E23>d16.^%2q0g32.v8<g16
+
+; SPC Voice 7 -- MIDI ch9 (drum_string) -- role: drums
+G  o2 v7 l32
+G v9 @mt32_drum_kick c%21 v8 @mt32_drum_rim c%11 @mt32_drum_kick c%11 v9
+G c%20 v7 @mt32_drum_rim c%10 v9 @mt32_drum_conga_hi c%12 v7
+G @mt32_drum_rim c%10 v8 c%11 v9 @mt32_drum_kick c%21 c%10 v8 c%11 v9
+G @mt32_drum_rim c%20 @mt32_drum_kick c%21 v8 @mt32_drum_conga_hi c%2
+G @mt32_drum_kick c%8 v7 @mt32_drum_conga_hi c%2 v8 @mt32_drum_kick c%9
+G v9 @mt32_drum_conga_med c%11 v8 @mt32_drum_conga_hi c%10 v9
+G @mt32_drum_kick c%10 v8 @mt32_drum_rim c%11 v9 @mt32_drum_kick c%21
+G @mt32_drum_conga_med c%10 v8 @mt32_drum_kick c%11
+G @mt32_drum_conga_med c%9 v7 @mt32_drum_rim c%22 v9
+G @mt32_drum_kick c%10 v8 c%11 @mt32_drum_rim c%22 v9
+G @mt32_drum_kick c%21 @mt32_drum_rim c%10 v10 @mt32_drum_conga_med c%11
+G v9 @mt32_drum_kick c%12 c%10
+
+; SPC Voice 8 -- drum overflow (collision-dropped second-priority hits)
+H  o2 l32
+H r%64 v7 @mt32_drum_conga_hi c%21 v9 @mt32_drum_conga_med c%22 c%48
+H r%14 @mt32_drum_rim c%31 v8 c%30 v9 c%2 @mt32_drum_conga_hi c%21 c%48
+H r%68 v7 @mt32_drum_conga_med c%20 v8 c%21 v9 @mt32_drum_conga_hi c%11
+H v12 c%11

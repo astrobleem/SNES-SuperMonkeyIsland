@@ -88,7 +88,8 @@
       "midi_ch": 2,
       "reduction": "top",
       "role": "bass",
-      "vol_scale": 1.18
+      "vol_scale": 1.18,
+      "echo": false
     },
     {
       "spc": 7,
@@ -98,5 +99,17 @@
       "vol_scale": 1.15
     }
   ],
-  "_balance_note": "vol_scales from tools/audio/balance.py vs build/mt32_scummbar refs. B/C and D/E are split voices: joint power match (s^2*(pB+pC)=p_ref). Drums get HALF the measured correction in dB (r010 lesson: energy match reads way too loud on one-shot kits)."
+  "_balance_note": "vol_scales from tools/audio/balance.py vs build/mt32_scummbar refs. B/C and D/E are split voices: joint power match (s^2*(pB+pC)=p_ref). Drums get HALF the measured correction in dB (r010 lesson: energy match reads way too loud on one-shot kits).",
+  "drum_overflow_spc": 8,
+  "vibrato": {
+    "lead": "30,2,12"
+  },
+  "_vibrato_note": "MP vibrato: depth_cents,quarter_wavelength_ticks,delay_ticks. Lead 30c at ~6Hz (quarter-wl 2 ticks of 20.9ms) after 250ms delay \u2014 MT-32 flute character; per emberling comparison.",
+  "drum_echo": {
+    "drum_kick": false,
+    "drum_snare": true,
+    "drum_conga_med": true,
+    "drum_conga_hi": true,
+    "drum_claves": true
+  }
 }

@@ -35,16 +35,16 @@
     "ornament": "mt32_bar_pad",
     "drums": {
       "drum_kick": "mt32_drum_kick",
-      "drum_snare": "mt32_drum_rim",
       "drum_conga_med": "mt32_drum_conga_med",
       "drum_conga_hi": "mt32_drum_conga_hi",
-      "drum_cabasa": "mt32_drum_cabasa"
+      "drum_cabasa": "mt32_drum_cabasa",
+      "drum_claves": "mt32_drum_claves"
     }
   },
   "drum_note_overrides": {
     "62": "drum_conga_med",
     "63": "drum_conga_hi",
-    "75": "drum_cabasa"
+    "37": "drum_cabasa"
   },
   "assignments": [
     {
@@ -107,5 +107,6 @@
   },
   "_vibrato_note": "MP vibrato: depth_cents,quarter_wavelength_ticks,delay_ticks. Lead 30c at ~6Hz (quarter-wl 2 ticks of 20.9ms) after 250ms delay \u2014 MT-32 flute character; per emberling comparison.",
   "_echo_note": "Bak Sangwoo room (Chad-approved A/B): NEGATIVE feedback (-86/128) phase-inverts each repeat -- no DC buildup, hollow instead of metallic, so the room can run wetter (EVOL 36 vs 24) without flutter. All percussion + bass stay dry (their echo mask).",
-  "_horn_note": "bar_pad (horn) at 0.90 vs measured-MT-32 0.54: both human arrangers feature the horn near lead level (Bak v161 vs flute v170); Chad: horn forward."
+  "_horn_note": "bar_pad (horn) at 0.90 vs measured-MT-32 0.54: both human arrangers feature the horn near lead level (Bak v161 vs flute v170); Chad: horn forward.",
+  "_ride_note": "The stiff click was the rim/side-stick (note 37): 43 hits, vel to 127, steady 0.4s ride pattern. Mapped to MT-32 cabasa (brush sweep). Claves (note 75, vel 61-80, sparse accents) was wrongly suspected first; restored to its authentic sample."
 }

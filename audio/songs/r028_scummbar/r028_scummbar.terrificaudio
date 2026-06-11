@@ -115,7 +115,19 @@
       "first_octave": 2,
       "last_octave": 2,
       "envelope": "gain F127",
-      "comment": "MT-32 rhythm note 69 cabasa: soft noise sweep. Substitutes the claves ride figure per both human arrangements (Bak: maracas; emberling: brushy w)."
+      "comment": "MT-32 rhythm note 69 cabasa: 80ms soft noise sweep. Substitutes the rim/side-stick RIDE figure (43 hits, vel to 127 \u2014 the stiff click both human arrangers avoided; Bak: maracas)."
+    },
+    {
+      "name": "mt32_drum_claves",
+      "source": "../../samples/instruments/mt32_drum_claves.wav",
+      "freq": 65.406,
+      "loop": "none",
+      "evaluator": "default",
+      "ignore_gaussian_overflow": false,
+      "first_octave": 2,
+      "last_octave": 2,
+      "envelope": "gain F127",
+      "comment": "MT-32 rhythm one-shot (claves) \u2014 soft sparse accents (vel 61-80 in the bar groove)."
     }
   ],
   "samples": [],

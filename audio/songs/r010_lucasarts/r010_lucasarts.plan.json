@@ -93,7 +93,7 @@
       "midi_ch": 9,
       "reduction": "drum_string",
       "role": "drums",
-      "vol_scale": 2.66
+      "vol_scale": 1.6
     }
   ],
   "min_note_mml_ticks": 2,
@@ -117,5 +117,7 @@
     "pad": "E21",
     "arp": "E20",
     "ornament": "E18"
-  }
+  },
+  "drum_slot_policy": "solo",
+  "drum_timing": "tick"
 }

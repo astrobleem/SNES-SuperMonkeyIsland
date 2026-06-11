@@ -10,7 +10,7 @@
   "instruments": {
     "lead": "r010_mt32_lead",
     "doubler": "r010_mt32_xylo",
-    "bass": "r010_mt32_bass",
+    "bass": "ph_bass",
     "pad": "r010_mt32_organ",
     "arp": "r010_mt32_marimba",
     "ornament": "r010_mt32_bottle",
@@ -70,6 +70,7 @@
       "reduction": "top",
       "role": "bass",
       "vol_scale": 1.07,
+      "echo": false,
       "merge_ch": 3,
       "merge_instrument": "r010_mt32_organ",
       "merge_reduction": "middle",
@@ -127,6 +128,10 @@
   },
   "drum_slot_policy": "solo",
   "drum_timing": "tick",
+  "vibrato": {
+    "lead": "30,2,12"
+  },
+  "_hybrid_note": "2026-06-11 hybrid doctrine from the r028 A/B/C: ph_bass replaces mt32_acoubass (same MT-32 patch 65 chair Bak's ToP bass won in the bar theme); dry bass + delayed lead vibrato are the r028-approved expressive knobs back-ported. Lead/organ/kit stay MT-32 (they won their chairs). Echo room stays the positive-feedback bloom - the fantasia bell's 700ms ring needs it; the bar's negative-feedback room is an interior, this is the vista.",
   "_bass_zone_note": "Bass low-zone REJECTED 2026-06-11 after measurement: dry Munt render of E1 vs the C2 sample stretched -8st = harm dist 0.31 (vs 0.34 for a dedicated G1 sample) and identical attack envelopes - MT-32 patch 65 stretches the same PCM across this range too. The iter-7 \"dist 0.8-2.9 by register\" was probe noise on dense runs (a sample at NATURAL pitch still probed 2.45). Sample/extractor entry kept at tools/audio + audio/samples for provenance.",
   "loop": true
 }

@@ -45,17 +45,16 @@
       "comment": "MT-32 patch 9 Elec Org 2 - intro chord bed. Loop 6976 = 72 pitch cycles = one full ~4.6Hz tremolo cycle; the old 100ms loop pulsed at 10Hz (the \"seams\")."
     },
     {
-      "name": "r010_mt32_bass",
-      "source": "../../samples/instruments/mt32_acoubass.wav",
-      "freq": 65.0,
-      "loop": "loop_with_filter",
-      "loop_setting": 4800,
+      "name": "ph_bass",
+      "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+      "freq": 111.111,
+      "loop": "none",
       "evaluator": "default",
       "ignore_gaussian_overflow": false,
       "first_octave": 1,
       "last_octave": 2,
-      "envelope": "adsr 15 2 7 16",
-      "comment": "MT-32 patch 65 acoustic bass. Loop 6400 = 13 cycles exact (period 492)."
+      "envelope": "adsr 15 7 7 12",
+      "comment": "ToP soft bass (r028 hybrid winner over MT-32 patch 65; same chair, same patch). 810B vs 6.3KB. Bottom D1 is -19st below natural - ear-gate the stretch."
     },
     {
       "name": "r010_mt32_marimba",

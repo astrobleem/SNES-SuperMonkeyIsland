@@ -69,7 +69,14 @@
       "midi_ch": 5,
       "reduction": "top",
       "role": "bass",
-      "vol_scale": 1.07
+      "vol_scale": 1.07,
+      "merge_ch": 3,
+      "merge_instrument": "r010_mt32_organ",
+      "merge_reduction": "middle",
+      "merge_mode": "fill",
+      "merge_min_gap_quarters": 2,
+      "merge_vol_scale": 0.45,
+      "merge_fold_below": 48
     },
     {
       "spc": 6,
@@ -93,7 +100,7 @@
       "midi_ch": 9,
       "reduction": "drum_string",
       "role": "drums",
-      "vol_scale": 1.6
+      "vol_scale": 1.0
     }
   ],
   "min_note_mml_ticks": 2,

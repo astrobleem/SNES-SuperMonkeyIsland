@@ -53,6 +53,10 @@ INSTRUMENTS = {
     # sample stretched down to E1 (-8st) drifts timbre; G1 keeps every
     # low note within ±4st of natural
     'acoubass_low': (31, 48.6, 150, 6592),
+    # scumm bar (room 28) ch4 pad, MT-32 program 91: flat sustain, gentle
+    # rolloff, shallow 4.5Hz chorus AM -- loop spans one AM cycle (88 pitch
+    # cycles of ~81 samples)
+    'bar_pad':    (67, 395.1, 150, 7136),
 }
 
 

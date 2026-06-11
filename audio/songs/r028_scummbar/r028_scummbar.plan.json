@@ -1,0 +1,102 @@
+{
+  "_about": "Scumm Bar theme (room 28 soun_001), MT-32/Munt direction. Frame copied from r010: 30 BPM type-2 iMUSE -> zenlen 192 + timer 167 + note_scale 2 (quarters as halves, 2004ms).",
+  "dialect": "terrific",
+  "title": "Scumm Bar",
+  "composer": "M. Land / P. McConnell / C. Bajakian",
+  "arranger": "SMI pipeline",
+  "tempo": 30,
+  "timer": 167,
+  "zenlen": 192,
+  "note_scale": 2,
+  "grid": "32nd",
+  "grid_tolerance": 1,
+  "min_note_mml_ticks": 2,
+  "release_through_rests": true,
+  "release_rates": {
+    "lead": "E21",
+    "doubler": "E20",
+    "bass": "E23",
+    "pad": "E21",
+    "arp": "E20",
+    "ornament": "E20"
+  },
+  "drum_timing": "tick",
+  "loop": true,
+  "echo_length": 32,
+  "echo_feedback": 108,
+  "echo_volume": 24,
+  "echo_fir": "64 63 0 0 0 0 0 0",
+  "instruments": {
+    "lead": "mt32_lead_flute",
+    "doubler": "mt32_bar_pad",
+    "bass": "mt32_bass",
+    "pad": "mt32_organ",
+    "arp": "mt32_organ",
+    "ornament": "mt32_bar_pad",
+    "drums": {
+      "drum_kick": "mt32_drum_kick",
+      "drum_snare": "mt32_drum_rim",
+      "drum_conga_med": "mt32_drum_conga_med",
+      "drum_conga_hi": "mt32_drum_conga_hi",
+      "drum_claves": "mt32_drum_claves"
+    }
+  },
+  "drum_note_overrides": {
+    "62": "drum_conga_med",
+    "63": "drum_conga_hi"
+  },
+  "assignments": [
+    {
+      "spc": 1,
+      "midi_ch": 1,
+      "reduction": "top",
+      "role": "lead",
+      "vol_scale": 1.16
+    },
+    {
+      "spc": 2,
+      "midi_ch": 3,
+      "reduction": "top",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 3,
+      "midi_ch": 3,
+      "reduction": "bottom",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 4,
+      "midi_ch": 4,
+      "reduction": "top",
+      "role": "doubler",
+      "vol_scale": 0.54
+    },
+    {
+      "spc": 5,
+      "midi_ch": 4,
+      "reduction": "bottom",
+      "role": "ornament",
+      "vol_scale": 0.54
+    },
+    {
+      "spc": 6,
+      "midi_ch": 2,
+      "reduction": "top",
+      "role": "bass",
+      "vol_scale": 1.18
+    },
+    {
+      "spc": 7,
+      "midi_ch": 9,
+      "reduction": "drum_string",
+      "role": "drums",
+      "vol_scale": 1.15
+    }
+  ],
+  "_balance_note": "vol_scales from tools/audio/balance.py vs build/mt32_scummbar refs. B/C and D/E are split voices: joint power match (s^2*(pB+pC)=p_ref). Drums get HALF the measured correction in dB (r010 lesson: energy match reads way too loud on one-shot kits)."
+}

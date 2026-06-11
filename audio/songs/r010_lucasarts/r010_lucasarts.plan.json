@@ -37,40 +37,46 @@
       "zone_below": {
         "note": 48,
         "instrument": "r010_mt32_lead_low"
-      }
+      },
+      "vol_scale": 1.13
     },
     {
       "spc": 2,
       "midi_ch": 3,
       "reduction": "top",
       "role": "pad",
-      "fold_below": 48
+      "fold_below": 48,
+      "vol_scale": 0.49
     },
     {
       "spc": 3,
       "midi_ch": 3,
       "reduction": "bottom",
       "role": "pad",
-      "fold_below": 48
+      "fold_below": 48,
+      "vol_scale": 0.47
     },
     {
       "spc": 4,
       "midi_ch": 4,
       "reduction": "top",
       "role": "arp",
-      "fold_above": 83
+      "fold_above": 83,
+      "vol_scale": 0.78
     },
     {
       "spc": 5,
       "midi_ch": 5,
       "reduction": "top",
-      "role": "bass"
+      "role": "bass",
+      "vol_scale": 1.07
     },
     {
       "spc": 6,
       "midi_ch": 2,
       "reduction": "top",
-      "role": "doubler"
+      "role": "doubler",
+      "vol_scale": 1.04
     },
     {
       "spc": 7,
@@ -79,13 +85,15 @@
       "role": "ornament",
       "fold_above": 83,
       "merge_ch": 6,
-      "merge_instrument": "r010_mt32_fantasia"
+      "merge_instrument": "r010_mt32_fantasia",
+      "vol_scale": 0.42
     },
     {
       "spc": 8,
       "midi_ch": 9,
       "reduction": "drum_string",
-      "role": "drums"
+      "role": "drums",
+      "vol_scale": 2.66
     }
   ],
   "min_note_mml_ticks": 2,
@@ -98,7 +106,16 @@
   "_timer_note": "TAD caps timer at 256 (tick <= 32ms) and zenlen at 255, so a 2000ms quarter cannot be zenlen/4. note_scale=2 writes quarters as halves: 96 ticks x 20.875ms (timer 167) = 2004ms = 29.94 BPM (+0.2%). All musical lengths integer (64th = 6 ticks).",
   "note_scale": 2,
   "echo_feedback": 108,
-  "echo_volume": 32,
+  "echo_volume": 24,
   "_echo_note": "Faking MT-32 reverb with the 32ms echo unit: a single-tap flutter reads as echo far more aggressively than diffuse reverb at equal energy, so run the level/feedback BELOW the energy-match point. EFB 116/EVOL 48 matched the ref tail dB-for-dB but Chad called it too much echo; EFB 108/EVOL 32 = ~46dB/s, ~0.6s audible bloom.",
-  "echo_fir": "64 63 0 0 0 0 0 0"
+  "echo_fir": "64 63 0 0 0 0 0 0",
+  "release_through_rests": true,
+  "release_rates": {
+    "lead": "E21",
+    "doubler": "E20",
+    "bass": "E23",
+    "pad": "E21",
+    "arp": "E20",
+    "ornament": "E18"
+  }
 }

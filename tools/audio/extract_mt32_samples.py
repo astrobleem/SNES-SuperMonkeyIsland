@@ -49,6 +49,10 @@ INSTRUMENTS = {
     'marimba':    (66, 371.2, 50, 1280),
     'xylophone':  (76, 669.5, 50, 960),
     'acoubass':   (36, 65.0,  150, 6400),
+    # low zone for the bassline's bottom register (notes 28-35): the C2
+    # sample stretched down to E1 (-8st) drifts timbre; G1 keeps every
+    # low note within ±4st of natural
+    'acoubass_low': (31, 48.6, 150, 6592),
 }
 
 

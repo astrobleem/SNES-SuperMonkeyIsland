@@ -1,0 +1,2809 @@
+[
+ {
+  "file": "s000_loop.brr",
+  "blocks": 2119,
+  "samples": 33904,
+  "bytes": 19073,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 33904,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "33 Morning is Here.spc:srcn184",
+   "33 Morning is Here.spc:srcn185",
+   "33 Morning is Here.spc:srcn186",
+   "33 Morning is Here.spc:srcn187",
+   "33 Morning is Here.spc:srcn188",
+   "33 Morning is Here.spc:srcn189",
+   "33 Morning is Here.spc:srcn190",
+   "33 Morning is Here.spc:srcn191"
+  ]
+ },
+ {
+  "file": "s001_175hz.brr",
+  "blocks": 944,
+  "samples": 15104,
+  "bytes": 8498,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 13664,
+  "est_f0_hz": 174.86,
+  "est_natural_midi": 53.02,
+  "f0_confidence": 0.306,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn37",
+   "14 Secret of the Arid Sands.spc:srcn41",
+   "20 Calm Before the Storm.spc:srcn41",
+   "27 Monarch on the Shore.spc:srcn38",
+   "28 The Dark Star (No Echo).spc:srcn37",
+   "28 The Dark Star.spc:srcn37",
+   "30 Steel and Snare.spc:srcn38",
+   "32 Ceremony.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s002_593hz.brr",
+  "blocks": 746,
+  "samples": 11936,
+  "bytes": 6716,
+  "looped": true,
+  "loop_offset_bytes": 828,
+  "loop_samples": 10464,
+  "est_f0_hz": 592.59,
+  "est_natural_midi": 74.15,
+  "f0_confidence": 0.991,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn32",
+   "02 A Curious Tale.spc:srcn34",
+   "03 Phantom and a Rose.spc:srcn32",
+   "06 Into the Thick of it (Echo).spc:srcn35",
+   "06 Into the Thick of it.spc:srcn35",
+   "07 The Color of the Summer Sky.spc:srcn36",
+   "10 The Little Sprite.spc:srcn32",
+   "12 In the Dead of the Night.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s003_oneshot.brr",
+  "blocks": 730,
+  "samples": 11680,
+  "bytes": 6572,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1882.35,
+  "est_natural_midi": 94.16,
+  "f0_confidence": 0.465,
+  "found_in": [
+   "19 Danger.spc:srcn35",
+   "93 Victory.spc:srcn38",
+   "96 Boss Defeated.spc:srcn34",
+   "96 Boss Defeated.spc:srcn35",
+   "98 Cannon Travel Launch.spc:srcn32",
+   "98 Cannon Travel Launch.spc:srcn41",
+   "99 Cannon Travel.spc:srcn41",
+   "9a Flammie Coming.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s004_oneshot.brr",
+  "blocks": 625,
+  "samples": 10000,
+  "bytes": 5627,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.227,
+  "found_in": [
+   "09 Distant Thunder.spc:srcn42",
+   "10 The Little Sprite.spc:srcn43",
+   "13 Mystic Invasion.spc:srcn35",
+   "16 A Wish.spc:srcn35",
+   "18 Did You See the Ocean_.spc:srcn34",
+   "22 Flight into the Unknown.spc:srcn35",
+   "26 A Curious Happening.spc:srcn35",
+   "30 Steel and Snare.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s005_oneshot.brr",
+  "blocks": 500,
+  "samples": 8000,
+  "bytes": 4502,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.139,
+  "found_in": [
+   "04 Together Always.spc:srcn33",
+   "07 The Color of the Summer Sky.spc:srcn33",
+   "08 Dancing Animals (Echo).spc:srcn33",
+   "08 Dancing Animals.spc:srcn33",
+   "09 Distant Thunder.spc:srcn37",
+   "13 Mystic Invasion.spc:srcn33",
+   "14 Secret of the Arid Sands.spc:srcn37",
+   "18 Did You See the Ocean_.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s006_195hz.brr",
+  "blocks": 448,
+  "samples": 7168,
+  "bytes": 4034,
+  "looped": true,
+  "loop_offset_bytes": 864,
+  "loop_samples": 5632,
+  "est_f0_hz": 195.12,
+  "est_natural_midi": 54.92,
+  "f0_confidence": 1.005,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn34",
+   "07 The Color of the Summer Sky.spc:srcn34",
+   "11 It Happened Late One Evening.spc:srcn38",
+   "14 Secret of the Arid Sands.spc:srcn34",
+   "15 What the Forest Taught Me.spc:srcn34",
+   "16 A Wish.spc:srcn37",
+   "19 Danger.spc:srcn34",
+   "20 Calm Before the Storm.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s007_221hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 2628,
+  "loop_samples": 2464,
+  "est_f0_hz": 220.69,
+  "est_natural_midi": 57.05,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn35",
+   "02 A Curious Tale.spc:srcn35",
+   "03 Phantom and a Rose.spc:srcn35",
+   "04 Together Always.spc:srcn39",
+   "06 Into the Thick of it (Echo).spc:srcn33",
+   "06 Into the Thick of it.spc:srcn33",
+   "06 Into the Thick of it.spc:srcn39",
+   "07 The Color of the Summer Sky.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s008_1333hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 2934,
+  "loop_samples": 1920,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.991,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn36",
+   "03 Phantom and a Rose.spc:srcn38",
+   "05 Fond Memories.spc:srcn34",
+   "05 Fond Memories.spc:srcn37",
+   "06 Into the Thick of it (Echo).spc:srcn37",
+   "06 Into the Thick of it.spc:srcn37",
+   "07 The Color of the Summer Sky.spc:srcn37",
+   "09 Distant Thunder.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s009_500hz.brr",
+  "blocks": 378,
+  "samples": 6048,
+  "bytes": 3404,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 6000,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.989,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn33",
+   "02 A Curious Tale.spc:srcn41",
+   "03 Phantom and a Rose.spc:srcn37",
+   "06 Into the Thick of it (Echo).spc:srcn34",
+   "06 Into the Thick of it.spc:srcn34",
+   "12 In the Dead of the Night.spc:srcn35",
+   "18 Did You See the Ocean_.spc:srcn36",
+   "20 Calm Before the Storm.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s010_oneshot.brr",
+  "blocks": 375,
+  "samples": 6000,
+  "bytes": 3377,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 226.95,
+  "est_natural_midi": 57.54,
+  "f0_confidence": 0.497,
+  "found_in": [
+   "27 Monarch on the Shore.spc:srcn36",
+   "28 The Dark Star (No Echo).spc:srcn36",
+   "28 The Dark Star.spc:srcn36",
+   "33 Morning is Here.spc:srcn36",
+   "91 Unused Jingle 2.spc:srcn35",
+   "93 Victory.spc:srcn33",
+   "94 Midge Mallet.spc:srcn35",
+   "96 Got Weapon Orb.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s011_36hz.brr",
+  "blocks": 308,
+  "samples": 4928,
+  "bytes": 2774,
+  "looped": true,
+  "loop_offset_bytes": 2727,
+  "loop_samples": 80,
+  "est_f0_hz": 36.36,
+  "est_natural_midi": 25.84,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Danger.spc:srcn33",
+   "27 Monarch on the Shore.spc:srcn33",
+   "37 The Oracle.spc:srcn38",
+   "41 Meridian Dance.spc:srcn39",
+   "43 The Second Truth From the Left.spc:srcn33",
+   "91 Unused Jingle 1.spc:srcn32",
+   "91 Unused Jingle 2.spc:srcn32",
+   "93 Victory.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s012_oneshot.brr",
+  "blocks": 300,
+  "samples": 4800,
+  "bytes": 2702,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1185.19,
+  "est_natural_midi": 86.15,
+  "f0_confidence": 0.4,
+  "found_in": [
+   "04 Together Always.spc:srcn34",
+   "08 Dancing Animals (Echo).spc:srcn34",
+   "08 Dancing Animals.spc:srcn34",
+   "09 Distant Thunder.spc:srcn38",
+   "10 The Little Sprite.spc:srcn38",
+   "11 It Happened Late One Evening.spc:srcn33",
+   "14 Secret of the Arid Sands.spc:srcn38",
+   "20 Calm Before the Storm.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s013_oneshot.brr",
+  "blocks": 237,
+  "samples": 3792,
+  "bytes": 2135,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1882.35,
+  "est_natural_midi": 94.16,
+  "f0_confidence": 0.932,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn32",
+   "04 Together Always.spc:srcn32",
+   "07 The Color of the Summer Sky.spc:srcn32",
+   "08 Dancing Animals (Echo).spc:srcn32",
+   "08 Dancing Animals (Echo).spc:srcn38",
+   "08 Dancing Animals.spc:srcn32",
+   "09 Distant Thunder.spc:srcn36",
+   "10 The Little Sprite.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s014_32hz.brr",
+  "blocks": 205,
+  "samples": 3280,
+  "bytes": 1847,
+  "looped": true,
+  "loop_offset_bytes": 1764,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Together Always.spc:srcn37",
+   "07 The Color of the Summer Sky.spc:srcn39",
+   "08 Dancing Animals (Echo).spc:srcn37",
+   "08 Dancing Animals.spc:srcn37",
+   "09 Distant Thunder.spc:srcn33",
+   "10 The Little Sprite.spc:srcn33",
+   "11 It Happened Late One Evening.spc:srcn36",
+   "14 Secret of the Arid Sands.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s015_37hz.brr",
+  "blocks": 201,
+  "samples": 3216,
+  "bytes": 1811,
+  "looped": true,
+  "loop_offset_bytes": 1323,
+  "loop_samples": 864,
+  "est_f0_hz": 37.04,
+  "est_natural_midi": 26.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn39",
+   "04 Together Always.spc:srcn38",
+   "05 Fond Memories.spc:srcn32",
+   "07 The Color of the Summer Sky.spc:srcn40",
+   "09 Distant Thunder.spc:srcn40",
+   "10 The Little Sprite.spc:srcn40",
+   "11 It Happened Late One Evening.spc:srcn34",
+   "14 Secret of the Arid Sands.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s016_28hz.brr",
+  "blocks": 138,
+  "samples": 2208,
+  "bytes": 1244,
+  "looped": true,
+  "loop_offset_bytes": 1026,
+  "loop_samples": 384,
+  "est_f0_hz": 27.78,
+  "est_natural_midi": 21.18,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Danger.spc:srcn39",
+   "20 Calm Before the Storm.spc:srcn40",
+   "22 Flight into the Unknown.spc:srcn39",
+   "24 The Legend.spc:srcn35",
+   "30 Steel and Snare.spc:srcn36",
+   "33 Morning is Here.spc:srcn38",
+   "40 One of Them is Hope.spc:srcn34",
+   "41 Meridian Dance.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s017_oneshot.brr",
+  "blocks": 125,
+  "samples": 2000,
+  "bytes": 1127,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.259,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn33",
+   "09 Distant Thunder.spc:srcn41",
+   "10 The Little Sprite.spc:srcn42",
+   "13 Mystic Invasion.spc:srcn34",
+   "16 A Wish.spc:srcn34",
+   "22 Flight into the Unknown.spc:srcn34",
+   "26 A Curious Happening.spc:srcn34",
+   "30 Steel and Snare.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s018_167hz.brr",
+  "blocks": 115,
+  "samples": 1840,
+  "bytes": 1037,
+  "looped": true,
+  "loop_offset_bytes": 927,
+  "loop_samples": 192,
+  "est_f0_hz": 166.67,
+  "est_natural_midi": 52.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn38",
+   "02 A Curious Tale.spc:srcn38",
+   "04 Together Always.spc:srcn35",
+   "09 Distant Thunder.spc:srcn39",
+   "13 Mystic Invasion.spc:srcn37",
+   "14 Secret of the Arid Sands.spc:srcn39",
+   "17 Spirit of the Night.spc:srcn34",
+   "20 Calm Before the Storm.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s019_500hz.brr",
+  "blocks": 98,
+  "samples": 1568,
+  "bytes": 884,
+  "looped": true,
+  "loop_offset_bytes": 846,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn36",
+   "03 Phantom and a Rose.spc:srcn33",
+   "04 Together Always.spc:srcn36",
+   "05 Fond Memories.spc:srcn36",
+   "06 Into the Thick of it (Echo).spc:srcn36",
+   "06 Into the Thick of it.spc:srcn36",
+   "07 The Color of the Summer Sky.spc:srcn38",
+   "12 In the Dead of the Night.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s020_1000hz.brr",
+  "blocks": 83,
+  "samples": 1328,
+  "bytes": 749,
+  "looped": true,
+  "loop_offset_bytes": 729,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn37",
+   "03 Phantom and a Rose.spc:srcn36",
+   "17 Spirit of the Night.spc:srcn38",
+   "20 Calm Before the Storm.spc:srcn44",
+   "23 Eternal Recurrence.spc:srcn37",
+   "24 The Legend.spc:srcn40",
+   "25 A Bell is Tolling.spc:srcn38",
+   "35 Still of the Night.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s021_100hz.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": true,
+  "loop_offset_bytes": 423,
+  "loop_samples": 320,
+  "est_f0_hz": 100.0,
+  "est_natural_midi": 43.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 The Little Sprite.spc:srcn39",
+   "11 It Happened Late One Evening.spc:srcn35",
+   "19 Danger.spc:srcn41",
+   "20 Calm Before the Storm.spc:srcn43",
+   "31 Whisper and Mantra (Echo).spc:srcn35",
+   "34 Leave Time for Love.spc:srcn41",
+   "94 Midge Mallet.spc:srcn33",
+   "95 Elemental Acquired.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s022_32hz.brr",
+  "blocks": 66,
+  "samples": 1056,
+  "bytes": 596,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 1008,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn7",
+   "02 A Curious Tale.spc:srcn7",
+   "03 Phantom and a Rose.spc:srcn7",
+   "04 Together Always.spc:srcn7",
+   "05 Fond Memories.spc:srcn7",
+   "06 Into the Thick of it (Echo).spc:srcn7",
+   "06 Into the Thick of it.spc:srcn7",
+   "07 The Color of the Summer Sky.spc:srcn7"
+  ]
+ },
+ {
+  "file": "s023_36hz.brr",
+  "blocks": 49,
+  "samples": 784,
+  "bytes": 443,
+  "looped": true,
+  "loop_offset_bytes": 315,
+  "loop_samples": 224,
+  "est_f0_hz": 35.71,
+  "est_natural_midi": 25.52,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "20 Calm Before the Storm.spc:srcn42",
+   "23 Eternal Recurrence.spc:srcn36",
+   "27 Monarch on the Shore.spc:srcn37",
+   "28 The Dark Star (No Echo).spc:srcn38",
+   "28 The Dark Star.spc:srcn38",
+   "32 Ceremony.spc:srcn35",
+   "37 The Oracle.spc:srcn39",
+   "40 One of Them is Hope.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s024_32hz.brr",
+  "blocks": 34,
+  "samples": 544,
+  "bytes": 308,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 496,
+  "est_f0_hz": 32.26,
+  "est_natural_midi": 23.76,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn8",
+   "02 A Curious Tale.spc:srcn8",
+   "03 Phantom and a Rose.spc:srcn8",
+   "04 Together Always.spc:srcn8",
+   "05 Fond Memories.spc:srcn8",
+   "06 Into the Thick of it (Echo).spc:srcn8",
+   "06 Into the Thick of it.spc:srcn8",
+   "07 The Color of the Summer Sky.spc:srcn8"
+  ]
+ },
+ {
+  "file": "s025_91hz.brr",
+  "blocks": 25,
+  "samples": 400,
+  "bytes": 227,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 352,
+  "est_f0_hz": 90.91,
+  "est_natural_midi": 41.7,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn9",
+   "02 A Curious Tale.spc:srcn9",
+   "03 Phantom and a Rose.spc:srcn9",
+   "04 Together Always.spc:srcn9",
+   "05 Fond Memories.spc:srcn9",
+   "06 Into the Thick of it (Echo).spc:srcn9",
+   "06 Into the Thick of it.spc:srcn9",
+   "07 The Color of the Summer Sky.spc:srcn9"
+  ]
+ },
+ {
+  "file": "s026_154hz.brr",
+  "blocks": 16,
+  "samples": 256,
+  "bytes": 146,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn10",
+   "02 A Curious Tale.spc:srcn10",
+   "03 Phantom and a Rose.spc:srcn10",
+   "04 Together Always.spc:srcn10",
+   "05 Fond Memories.spc:srcn10",
+   "06 Into the Thick of it (Echo).spc:srcn10",
+   "06 Into the Thick of it.spc:srcn10",
+   "07 The Color of the Summer Sky.spc:srcn10"
+  ]
+ },
+ {
+  "file": "s027_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.567,
+  "found_in": [
+   "07 The Color of the Summer Sky.spc:srcn102",
+   "07 The Color of the Summer Sky.spc:srcn105",
+   "07 The Color of the Summer Sky.spc:srcn108",
+   "07 The Color of the Summer Sky.spc:srcn111",
+   "07 The Color of the Summer Sky.spc:srcn114",
+   "07 The Color of the Summer Sky.spc:srcn117",
+   "07 The Color of the Summer Sky.spc:srcn120",
+   "07 The Color of the Summer Sky.spc:srcn123"
+  ]
+ },
+ {
+  "file": "s028_500hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn3",
+   "02 A Curious Tale.spc:srcn3",
+   "03 Phantom and a Rose.spc:srcn3",
+   "04 Together Always.spc:srcn3",
+   "05 Fond Memories.spc:srcn3",
+   "06 Into the Thick of it (Echo).spc:srcn3",
+   "06 Into the Thick of it.spc:srcn3",
+   "07 The Color of the Summer Sky.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s029_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.191,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn71",
+   "03 Phantom and a Rose.spc:srcn73",
+   "08 Dancing Animals.spc:srcn73",
+   "08 Dancing Animals.spc:srcn77",
+   "08 Dancing Animals.spc:srcn83",
+   "08 Dancing Animals.spc:srcn102",
+   "08 Dancing Animals.spc:srcn111",
+   "31 Whisper and Mantra.spc:srcn71"
+  ]
+ },
+ {
+  "file": "s030_1000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn4",
+   "02 A Curious Tale.spc:srcn4",
+   "03 Phantom and a Rose.spc:srcn4",
+   "04 Together Always.spc:srcn4",
+   "05 Fond Memories.spc:srcn4",
+   "06 Into the Thick of it (Echo).spc:srcn4",
+   "06 Into the Thick of it.spc:srcn4",
+   "07 The Color of the Summer Sky.spc:srcn4"
+  ]
+ },
+ {
+  "file": "s031_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn0",
+   "02 A Curious Tale.spc:srcn0",
+   "04 Together Always.spc:srcn0",
+   "05 Fond Memories.spc:srcn0",
+   "06 Into the Thick of it (Echo).spc:srcn0",
+   "06 Into the Thick of it.spc:srcn0",
+   "07 The Color of the Summer Sky.spc:srcn0",
+   "08 Dancing Animals (Echo).spc:srcn0"
+  ]
+ },
+ {
+  "file": "s032_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn1",
+   "02 A Curious Tale.spc:srcn1",
+   "04 Together Always.spc:srcn1",
+   "05 Fond Memories.spc:srcn1",
+   "06 Into the Thick of it (Echo).spc:srcn1",
+   "06 Into the Thick of it.spc:srcn1",
+   "07 The Color of the Summer Sky.spc:srcn1",
+   "08 Dancing Animals (Echo).spc:srcn1"
+  ]
+ },
+ {
+  "file": "s033_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn2",
+   "03 Phantom and a Rose.spc:srcn2",
+   "04 Together Always.spc:srcn2",
+   "05 Fond Memories.spc:srcn2",
+   "06 Into the Thick of it (Echo).spc:srcn2",
+   "06 Into the Thick of it.spc:srcn2",
+   "07 The Color of the Summer Sky.spc:srcn2",
+   "08 Dancing Animals (Echo).spc:srcn2"
+  ]
+ },
+ {
+  "file": "s034_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "08 Dancing Animals (Echo).spc:srcn244",
+   "08 Dancing Animals (Echo).spc:srcn247",
+   "08 Dancing Animals (Echo).spc:srcn250",
+   "08 Dancing Animals (Echo).spc:srcn254",
+   "08 Dancing Animals.spc:srcn244",
+   "08 Dancing Animals.spc:srcn247",
+   "08 Dancing Animals.spc:srcn250",
+   "08 Dancing Animals.spc:srcn254"
+  ]
+ },
+ {
+  "file": "s035_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.006,
+  "found_in": [
+   "13 Mystic Invasion.spc:srcn72",
+   "13 Mystic Invasion.spc:srcn90",
+   "13 Mystic Invasion.spc:srcn93",
+   "13 Mystic Invasion.spc:srcn111",
+   "13 Mystic Invasion.spc:srcn125",
+   "13 Mystic Invasion.spc:srcn128",
+   "26 A Curious Happening.spc:srcn91",
+   "26 A Curious Happening.spc:srcn107"
+  ]
+ },
+ {
+  "file": "s036_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "28 The Dark Star.spc:srcn164",
+   "28 The Dark Star.spc:srcn168",
+   "28 The Dark Star.spc:srcn192",
+   "28 The Dark Star.spc:srcn195",
+   "28 The Dark Star.spc:srcn198",
+   "28 The Dark Star.spc:srcn201",
+   "28 The Dark Star.spc:srcn204",
+   "28 The Dark Star.spc:srcn207"
+  ]
+ },
+ {
+  "file": "s037_111hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 1602,
+  "loop_samples": 288,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn40",
+   "06 Into the Thick of it (Echo).spc:srcn32",
+   "06 Into the Thick of it.spc:srcn32",
+   "18 Did You See the Ocean_.spc:srcn35",
+   "30 Steel and Snare.spc:srcn40",
+   "95 Mara's Key.spc:srcn40",
+   "9a Flammie Coming.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s038_1000hz.brr",
+  "blocks": 42,
+  "samples": 672,
+  "bytes": 380,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "05 Fond Memories.spc:srcn33",
+   "05 Fond Memories.spc:srcn35",
+   "17 Spirit of the Night.spc:srcn37",
+   "42 Now Flightless Wings.spc:srcn33",
+   "44 I Closed My Eyes.spc:srcn32",
+   "93 Ally Joins.spc:srcn35",
+   "9a New Continent Rises.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s039_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.01,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn68",
+   "91 Unused Jingle 1.spc:srcn90",
+   "96 Level Up!.spc:srcn90",
+   "96 Weapon Level Up!.spc:srcn90",
+   "97 Magic Level Up!.spc:srcn90",
+   "99 Flammie Drum.spc:srcn90",
+   "9a Flammie Voice.spc:srcn90"
+  ]
+ },
+ {
+  "file": "s040_oneshot.brr",
+  "blocks": 469,
+  "samples": 7504,
+  "bytes": 4223,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 603.77,
+  "est_natural_midi": 74.48,
+  "f0_confidence": 0.303,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn39",
+   "31 Whisper and Mantra (Echo).spc:srcn34",
+   "31 Whisper and Mantra.spc:srcn34",
+   "36 The Curse.spc:srcn34",
+   "94 Got an Item.spc:srcn39",
+   "9b Mysterious Moaning.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s041_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "31 Whisper and Mantra (Echo).spc:srcn184",
+   "31 Whisper and Mantra (Echo).spc:srcn189",
+   "31 Whisper and Mantra.spc:srcn184",
+   "31 Whisper and Mantra.spc:srcn189",
+   "95 Elemental Acquired.spc:srcn184",
+   "95 Elemental Acquired.spc:srcn189"
+  ]
+ },
+ {
+  "file": "s042_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.009,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn173",
+   "21 The Wind Never Ceases.spc:srcn184",
+   "21 The Wind Never Ceases.spc:srcn206",
+   "33 Morning is Here.spc:srcn96",
+   "42 Now Flightless Wings.spc:srcn208",
+   "93 Ally Joins.spc:srcn173"
+  ]
+ },
+ {
+  "file": "s043_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.121,
+  "found_in": [
+   "93 Victory.spc:srcn77",
+   "93 Victory.spc:srcn81",
+   "93 Victory.spc:srcn107",
+   "96 Got Weapon Orb.spc:srcn77",
+   "96 Got Weapon Orb.spc:srcn81",
+   "96 Got Weapon Orb.spc:srcn107"
+  ]
+ },
+ {
+  "file": "s044_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.359,
+  "found_in": [
+   "33 Morning is Here.spc:srcn223",
+   "33 Morning is Here.spc:srcn225",
+   "33 Morning is Here.spc:srcn230",
+   "40 One of Them is Hope.spc:srcn225",
+   "40 One of Them is Hope.spc:srcn230"
+  ]
+ },
+ {
+  "file": "s045_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "25 A Bell is Tolling.spc:srcn220",
+   "25 A Bell is Tolling.spc:srcn237",
+   "25 A Bell is Tolling.spc:srcn239",
+   "25 A Bell is Tolling.spc:srcn252",
+   "25 A Bell is Tolling.spc:srcn254"
+  ]
+ },
+ {
+  "file": "s046_294hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 5696,
+  "est_f0_hz": 293.58,
+  "est_natural_midi": 62.0,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn41",
+   "15 What the Forest Taught Me.spc:srcn41",
+   "17 Spirit of the Night.spc:srcn41",
+   "39 I Won't Forget.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s047_oneshot.brr",
+  "blocks": 250,
+  "samples": 4000,
+  "bytes": 2252,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.348,
+  "found_in": [
+   "08 Dancing Animals (Echo).spc:srcn35",
+   "08 Dancing Animals.spc:srcn35",
+   "10 The Little Sprite.spc:srcn34",
+   "11 It Happened Late One Evening.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s048_37hz.brr",
+  "blocks": 245,
+  "samples": 3920,
+  "bytes": 2207,
+  "looped": true,
+  "loop_offset_bytes": 2043,
+  "loop_samples": 288,
+  "est_f0_hz": 37.04,
+  "est_natural_midi": 26.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Dancing Animals (Echo).spc:srcn36",
+   "08 Dancing Animals.spc:srcn36",
+   "09 Distant Thunder.spc:srcn34",
+   "19 Danger.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s049_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.453,
+  "found_in": [
+   "13 Mystic Invasion.spc:srcn240",
+   "31 Whisper and Mantra (Echo).spc:srcn138",
+   "31 Whisper and Mantra.spc:srcn138",
+   "95 Elemental Acquired.spc:srcn138"
+  ]
+ },
+ {
+  "file": "s050_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.14,
+  "found_in": [
+   "17 Spirit of the Night.spc:srcn234",
+   "17 Spirit of the Night.spc:srcn241",
+   "9a New Continent Rises.spc:srcn234",
+   "9a New Continent Rises.spc:srcn241"
+  ]
+ },
+ {
+  "file": "s051_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn220",
+   "23 Eternal Recurrence.spc:srcn225",
+   "94 Got an Item.spc:srcn220",
+   "94 Got an Item.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s052_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.081,
+  "found_in": [
+   "31 Whisper and Mantra.spc:srcn249",
+   "31 Whisper and Mantra.spc:srcn250",
+   "98 Cannon Travel Launch.spc:srcn249",
+   "98 Cannon Travel Launch.spc:srcn250"
+  ]
+ },
+ {
+  "file": "s053_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "36 The Curse.spc:srcn83",
+   "96 Boss Defeated.spc:srcn90",
+   "9a Flammie Coming.spc:srcn102",
+   "9a Flammie Coming.spc:srcn139"
+  ]
+ },
+ {
+  "file": "s054_1000hz.brr",
+  "blocks": 674,
+  "samples": 10784,
+  "bytes": 6068,
+  "looped": true,
+  "loop_offset_bytes": 3744,
+  "loop_samples": 4128,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 0.996,
+  "found_in": [
+   "32 Ceremony.spc:srcn33",
+   "36 The Curse.spc:srcn33",
+   "37 The Oracle.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s055_262hz.brr",
+  "blocks": 569,
+  "samples": 9104,
+  "bytes": 5123,
+  "looped": true,
+  "loop_offset_bytes": 2556,
+  "loop_samples": 4560,
+  "est_f0_hz": 262.3,
+  "est_natural_midi": 60.04,
+  "f0_confidence": 0.866,
+  "found_in": [
+   "09 Distant Thunder.spc:srcn43",
+   "10 The Little Sprite.spc:srcn41",
+   "26 A Curious Happening.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s056_132hz.brr",
+  "blocks": 435,
+  "samples": 6960,
+  "bytes": 3917,
+  "looped": true,
+  "loop_offset_bytes": 1998,
+  "loop_samples": 3408,
+  "est_f0_hz": 131.69,
+  "est_natural_midi": 48.12,
+  "f0_confidence": 0.993,
+  "found_in": [
+   "12 In the Dead of the Night.spc:srcn32",
+   "19 Danger.spc:srcn40",
+   "40 One of Them is Hope.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s057_oneshot.brr",
+  "blocks": 300,
+  "samples": 4800,
+  "bytes": 2702,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 744.19,
+  "est_natural_midi": 78.1,
+  "f0_confidence": 0.408,
+  "found_in": [
+   "09 Distant Thunder.spc:srcn44",
+   "20 Calm Before the Storm.spc:srcn37",
+   "37 The Oracle.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s058_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.333,
+  "found_in": [
+   "05 Fond Memories.spc:srcn141",
+   "05 Fond Memories.spc:srcn169",
+   "36 The Curse.spc:srcn169"
+  ]
+ },
+ {
+  "file": "s059_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn128",
+   "38 A Conclusion.spc:srcn71",
+   "38 A Conclusion.spc:srcn114"
+  ]
+ },
+ {
+  "file": "s060_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.123,
+  "found_in": [
+   "05 Fond Memories.spc:srcn138",
+   "05 Fond Memories.spc:srcn166",
+   "36 The Curse.spc:srcn166"
+  ]
+ },
+ {
+  "file": "s061_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.46,
+  "found_in": [
+   "32 Ceremony.spc:srcn159",
+   "98 Cannon Travel Launch.spc:srcn89",
+   "98 Cannon Travel Launch.spc:srcn93"
+  ]
+ },
+ {
+  "file": "s062_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn214",
+   "03 Phantom and a Rose.spc:srcn222",
+   "03 Phantom and a Rose.spc:srcn254"
+  ]
+ },
+ {
+  "file": "s063_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Dancing Animals (Echo).spc:srcn159",
+   "08 Dancing Animals (Echo).spc:srcn162",
+   "08 Dancing Animals (Echo).spc:srcn200"
+  ]
+ },
+ {
+  "file": "s064_1333hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 5696,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "08 Dancing Animals.spc:srcn41",
+   "31 Whisper and Mantra.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s065_oneshot.brr",
+  "blocks": 318,
+  "samples": 5088,
+  "bytes": 2864,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.294,
+  "found_in": [
+   "36 The Curse.spc:srcn32",
+   "37 The Oracle.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s066_oneshot.brr",
+  "blocks": 187,
+  "samples": 2992,
+  "bytes": 1685,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.532,
+  "found_in": [
+   "10 The Little Sprite.spc:srcn37",
+   "37 The Oracle.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s067_oneshot.brr",
+  "blocks": 181,
+  "samples": 2896,
+  "bytes": 1631,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.466,
+  "found_in": [
+   "13 Mystic Invasion.spc:srcn39",
+   "94 Midge Mallet.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s068_oneshot.brr",
+  "blocks": 165,
+  "samples": 2640,
+  "bytes": 1487,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.405,
+  "found_in": [
+   "13 Mystic Invasion.spc:srcn41",
+   "94 Midge Mallet.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s069_oneshot.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.894,
+  "found_in": [
+   "29 Prophecy.spc:srcn227",
+   "29 Prophecy.spc:srcn228"
+  ]
+ },
+ {
+  "file": "s070_oneshot.brr",
+  "blocks": 11,
+  "samples": 176,
+  "bytes": 101,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.166,
+  "found_in": [
+   "21 The Wind Never Ceases.spc:srcn136",
+   "40 One of Them is Hope.spc:srcn141"
+  ]
+ },
+ {
+  "file": "s071_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.455,
+  "found_in": [
+   "25 A Bell is Tolling.spc:srcn114",
+   "25 A Bell is Tolling.spc:srcn117"
+  ]
+ },
+ {
+  "file": "s072_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 484.85,
+  "est_natural_midi": 70.68,
+  "f0_confidence": 0.42,
+  "found_in": [
+   "38 A Conclusion.spc:srcn81",
+   "38 A Conclusion.spc:srcn86"
+  ]
+ },
+ {
+  "file": "s073_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.012,
+  "found_in": [
+   "32 Ceremony.spc:srcn135",
+   "32 Ceremony.spc:srcn174"
+  ]
+ },
+ {
+  "file": "s074_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.212,
+  "found_in": [
+   "35 Still of the Night.spc:srcn111",
+   "35 Still of the Night.spc:srcn115"
+  ]
+ },
+ {
+  "file": "s075_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 680.85,
+  "est_natural_midi": 76.56,
+  "f0_confidence": 0.377,
+  "found_in": [
+   "06 Into the Thick of it (Echo).spc:srcn65",
+   "06 Into the Thick of it.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s076_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.442,
+  "found_in": [
+   "06 Into the Thick of it (Echo).spc:srcn67",
+   "06 Into the Thick of it.spc:srcn67"
+  ]
+ },
+ {
+  "file": "s077_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.073,
+  "found_in": [
+   "21 The Wind Never Ceases.spc:srcn208",
+   "21 The Wind Never Ceases.spc:srcn214"
+  ]
+ },
+ {
+  "file": "s078_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "14 Secret of the Arid Sands.spc:srcn235",
+   "44 I Closed My Eyes.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s079_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.107,
+  "found_in": [
+   "15 What the Forest Taught Me.spc:srcn126",
+   "15 What the Forest Taught Me.spc:srcn144"
+  ]
+ },
+ {
+  "file": "s080_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "29 Prophecy.spc:srcn66",
+   "29 Prophecy.spc:srcn218"
+  ]
+ },
+ {
+  "file": "s081_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "40 One of Them is Hope.spc:srcn165",
+   "40 One of Them is Hope.spc:srcn168"
+  ]
+ },
+ {
+  "file": "s082_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.255,
+  "found_in": [
+   "44 I Closed My Eyes.spc:srcn101",
+   "44 I Closed My Eyes.spc:srcn103"
+  ]
+ },
+ {
+  "file": "s083_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.071,
+  "found_in": [
+   "01 Fear of the Heavens.spc:srcn129",
+   "01 Fear of the Heavens.spc:srcn142"
+  ]
+ },
+ {
+  "file": "s084_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.188,
+  "found_in": [
+   "05 Fond Memories.spc:srcn204",
+   "36 The Curse.spc:srcn204"
+  ]
+ },
+ {
+  "file": "s085_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn177",
+   "94 Got an Item.spc:srcn177"
+  ]
+ },
+ {
+  "file": "s086_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn215",
+   "94 Got an Item.spc:srcn215"
+  ]
+ },
+ {
+  "file": "s087_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "28 The Dark Star (No Echo).spc:srcn90",
+   "28 The Dark Star (No Echo).spc:srcn110"
+  ]
+ },
+ {
+  "file": "s088_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "28 The Dark Star (No Echo).spc:srcn225",
+   "28 The Dark Star.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s089_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "28 The Dark Star (No Echo).spc:srcn255",
+   "28 The Dark Star.spc:srcn255"
+  ]
+ },
+ {
+  "file": "s090_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "40 One of Them is Hope.spc:srcn190",
+   "40 One of Them is Hope.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s091_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "40 One of Them is Hope.spc:srcn236",
+   "40 One of Them is Hope.spc:srcn238"
+  ]
+ },
+ {
+  "file": "s092_loop.brr",
+  "blocks": 2017,
+  "samples": 32272,
+  "bytes": 18155,
+  "looped": true,
+  "loop_offset_bytes": 927,
+  "loop_samples": 30624,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "11 It Happened Late One Evening.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s093_175hz.brr",
+  "blocks": 944,
+  "samples": 15104,
+  "bytes": 8498,
+  "looped": true,
+  "loop_offset_bytes": 927,
+  "loop_samples": 13456,
+  "est_f0_hz": 174.86,
+  "est_natural_midi": 53.02,
+  "f0_confidence": 0.31,
+  "found_in": [
+   "9a New Continent Rises.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s094_593hz.brr",
+  "blocks": 746,
+  "samples": 11936,
+  "bytes": 6716,
+  "looped": true,
+  "loop_offset_bytes": 2628,
+  "loop_samples": 7264,
+  "est_f0_hz": 592.59,
+  "est_natural_midi": 74.15,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "95 Elemental Acquired.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s095_294hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 729,
+  "loop_samples": 5840,
+  "est_f0_hz": 293.58,
+  "est_natural_midi": 62.0,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "05 Fond Memories.spc:srcn44"
+  ]
+ },
+ {
+  "file": "s096_98hz.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": true,
+  "loop_offset_bytes": 2934,
+  "loop_samples": 1920,
+  "est_f0_hz": 98.16,
+  "est_natural_midi": 43.03,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "32 Ceremony.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s097_oneshot.brr",
+  "blocks": 446,
+  "samples": 7136,
+  "bytes": 4016,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 603.77,
+  "est_natural_midi": 74.48,
+  "f0_confidence": 0.334,
+  "found_in": [
+   "95 Elemental Acquired.spc:srcn181"
+  ]
+ },
+ {
+  "file": "s098_593hz.brr",
+  "blocks": 378,
+  "samples": 6048,
+  "bytes": 3404,
+  "looped": true,
+  "loop_offset_bytes": 846,
+  "loop_samples": 4544,
+  "est_f0_hz": 592.59,
+  "est_natural_midi": 74.15,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "08 Dancing Animals.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s099_500hz.brr",
+  "blocks": 378,
+  "samples": 6048,
+  "bytes": 3404,
+  "looped": true,
+  "loop_offset_bytes": 828,
+  "loop_samples": 4576,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.993,
+  "found_in": [
+   "31 Whisper and Mantra.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s100_38hz.brr",
+  "blocks": 336,
+  "samples": 5376,
+  "bytes": 3026,
+  "looped": true,
+  "loop_offset_bytes": 2556,
+  "loop_samples": 832,
+  "est_f0_hz": 38.46,
+  "est_natural_midi": 26.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "26 A Curious Happening.spc:srcn43"
+  ]
+ },
+ {
+  "file": "s101_1333hz.brr",
+  "blocks": 297,
+  "samples": 4752,
+  "bytes": 2675,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 4752,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.957,
+  "found_in": [
+   "95 Mara's Key.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s102_oneshot.brr",
+  "blocks": 279,
+  "samples": 4464,
+  "bytes": 2513,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.22,
+  "found_in": [
+   "04 Together Always.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s103_593hz.brr",
+  "blocks": 264,
+  "samples": 4224,
+  "bytes": 2378,
+  "looped": true,
+  "loop_offset_bytes": 1323,
+  "loop_samples": 1872,
+  "est_f0_hz": 592.59,
+  "est_natural_midi": 74.15,
+  "f0_confidence": 0.977,
+  "found_in": [
+   "32 Ceremony.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s104_oneshot.brr",
+  "blocks": 119,
+  "samples": 1904,
+  "bytes": 1073,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.268,
+  "found_in": [
+   "27 Monarch on the Shore.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s105_22hz.brr",
+  "blocks": 101,
+  "samples": 1616,
+  "bytes": 911,
+  "looped": true,
+  "loop_offset_bytes": 90,
+  "loop_samples": 1456,
+  "est_f0_hz": 21.99,
+  "est_natural_midi": 17.13,
+  "f0_confidence": 0.995,
+  "found_in": [
+   "96 Boss Defeated.spc:srcn102"
+  ]
+ },
+ {
+  "file": "s106_oneshot.brr",
+  "blocks": 41,
+  "samples": 656,
+  "bytes": 371,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 914.29,
+  "est_natural_midi": 81.66,
+  "f0_confidence": 0.525,
+  "found_in": [
+   "96 Boss Defeated.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s107_oneshot.brr",
+  "blocks": 22,
+  "samples": 352,
+  "bytes": 200,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.283,
+  "found_in": [
+   "03 Phantom and a Rose.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s108_oneshot.brr",
+  "blocks": 22,
+  "samples": 352,
+  "bytes": 200,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.406,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn78"
+  ]
+ },
+ {
+  "file": "s109_32hz.brr",
+  "blocks": 21,
+  "samples": 336,
+  "bytes": 191,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 336,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Together Always.spc:srcn68"
+  ]
+ },
+ {
+  "file": "s110_oneshot.brr",
+  "blocks": 16,
+  "samples": 256,
+  "bytes": 146,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.543,
+  "found_in": [
+   "39 I Won't Forget.spc:srcn82"
+  ]
+ },
+ {
+  "file": "s111_oneshot.brr",
+  "blocks": 11,
+  "samples": 176,
+  "bytes": 101,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.506,
+  "found_in": [
+   "20 Calm Before the Storm.spc:srcn217"
+  ]
+ },
+ {
+  "file": "s112_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.085,
+  "found_in": [
+   "38 A Conclusion.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s113_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.723,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn74"
+  ]
+ },
+ {
+  "file": "s114_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.029,
+  "found_in": [
+   "93 Ally Joins.spc:srcn73"
+  ]
+ },
+ {
+  "file": "s115_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.214,
+  "found_in": [
+   "94 Got an Item.spc:srcn113"
+  ]
+ },
+ {
+  "file": "s116_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 653.06,
+  "est_natural_midi": 75.84,
+  "f0_confidence": 0.31,
+  "found_in": [
+   "15 What the Forest Taught Me.spc:srcn103"
+  ]
+ },
+ {
+  "file": "s117_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.488,
+  "found_in": [
+   "31 Whisper and Mantra.spc:srcn175"
+  ]
+ },
+ {
+  "file": "s118_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 0.307,
+  "found_in": [
+   "37 The Oracle.spc:srcn168"
+  ]
+ },
+ {
+  "file": "s119_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.065,
+  "found_in": [
+   "11 It Happened Late One Evening.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s120_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "19 Danger.spc:srcn68"
+  ]
+ },
+ {
+  "file": "s121_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "27 Monarch on the Shore.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s122_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.609,
+  "found_in": [
+   "94 Got an Item.spc:srcn233"
+  ]
+ },
+ {
+  "file": "s123_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.242,
+  "found_in": [
+   "99 Cannon Travel.spc:srcn224"
+  ]
+ },
+ {
+  "file": "s124_83hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 83.33,
+  "est_natural_midi": 40.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 A Curious Tale.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s125_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.329,
+  "found_in": [
+   "18 Did You See the Ocean_.spc:srcn145"
+  ]
+ },
+ {
+  "file": "s126_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 711.11,
+  "est_natural_midi": 77.31,
+  "f0_confidence": 0.355,
+  "found_in": [
+   "18 Did You See the Ocean_.spc:srcn221"
+  ]
+ },
+ {
+  "file": "s127_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.101,
+  "found_in": [
+   "27 Monarch on the Shore.spc:srcn206"
+  ]
+ },
+ {
+  "file": "s128_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "38 A Conclusion.spc:srcn69"
+  ]
+ },
+ {
+  "file": "s129_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "39 I Won't Forget.spc:srcn116"
+  ]
+ },
+ {
+  "file": "s130_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "95 Mara's Key.spc:srcn113"
+  ]
+ },
+ {
+  "file": "s131_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Together Always.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s132_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.068,
+  "found_in": [
+   "15 What the Forest Taught Me.spc:srcn203"
+  ]
+ },
+ {
+  "file": "s133_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.034,
+  "found_in": [
+   "17 Spirit of the Night.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s134_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.702,
+  "found_in": [
+   "25 A Bell is Tolling.spc:srcn121"
+  ]
+ },
+ {
+  "file": "s135_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.488,
+  "found_in": [
+   "25 A Bell is Tolling.spc:srcn155"
+  ]
+ },
+ {
+  "file": "s136_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.116,
+  "found_in": [
+   "35 Still of the Night.spc:srcn147"
+  ]
+ },
+ {
+  "file": "s137_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.411,
+  "found_in": [
+   "37 The Oracle.spc:srcn211"
+  ]
+ },
+ {
+  "file": "s138_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.133,
+  "found_in": [
+   "42 Now Flightless Wings.spc:srcn89"
+  ]
+ },
+ {
+  "file": "s139_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "93 Ally Joins.spc:srcn69"
+  ]
+ },
+ {
+  "file": "s140_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "94 Midge Mallet.spc:srcn95"
+  ]
+ },
+ {
+  "file": "s141_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "10 The Little Sprite.spc:srcn220"
+  ]
+ },
+ {
+  "file": "s142_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "13 Mystic Invasion.spc:srcn70"
+  ]
+ },
+ {
+  "file": "s143_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "16 A Wish.spc:srcn116"
+  ]
+ },
+ {
+  "file": "s144_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "16 A Wish.spc:srcn126"
+  ]
+ },
+ {
+  "file": "s145_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.288,
+  "found_in": [
+   "18 Did You See the Ocean_.spc:srcn220"
+  ]
+ },
+ {
+  "file": "s146_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.337,
+  "found_in": [
+   "21 The Wind Never Ceases.spc:srcn66"
+  ]
+ },
+ {
+  "file": "s147_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.067,
+  "found_in": [
+   "23 Eternal Recurrence.spc:srcn80"
+  ]
+ },
+ {
+  "file": "s148_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.125,
+  "found_in": [
+   "35 Still of the Night.spc:srcn103"
+  ]
+ },
+ {
+  "file": "s149_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "37 The Oracle.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s150_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "37 The Oracle.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s151_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "38 A Conclusion.spc:srcn251"
+  ]
+ },
+ {
+  "file": "s152_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "39 I Won't Forget.spc:srcn114"
+  ]
+ },
+ {
+  "file": "s153_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "42 Now Flightless Wings.spc:srcn200"
+  ]
+ },
+ {
+  "file": "s154_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.297,
+  "found_in": [
+   "43 The Second Truth From the Left.spc:srcn77"
+  ]
+ },
+ {
+  "file": "s155_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "44 I Closed My Eyes.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s156_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.053,
+  "found_in": [
+   "44 I Closed My Eyes.spc:srcn132"
+  ]
+ },
+ {
+  "file": "s157_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "93 Ally Joins.spc:srcn84"
+  ]
+ },
+ {
+  "file": "s158_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.084,
+  "found_in": [
+   "93 Ally Joins.spc:srcn90"
+  ]
+ },
+ {
+  "file": "s159_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "93 Ally Joins.spc:srcn180"
+  ]
+ },
+ {
+  "file": "s160_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.377,
+  "found_in": [
+   "94 Midge Mallet.spc:srcn112"
+  ]
+ },
+ {
+  "file": "s161_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "95 Elemental Acquired.spc:srcn69"
+  ]
+ }
+]

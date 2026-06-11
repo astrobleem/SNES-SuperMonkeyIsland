@@ -1,0 +1,4109 @@
+[
+ {
+  "file": "s000_970hz.brr",
+  "blocks": 829,
+  "samples": 13264,
+  "bytes": 7463,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 13216,
+  "est_f0_hz": 969.7,
+  "est_natural_midi": 82.68,
+  "f0_confidence": 0.985,
+  "found_in": [
+   "101 Presentiment.spc:srcn32",
+   "102 Chrono Trigger (Looped).spc:srcn33",
+   "102 Chrono Trigger.spc:srcn33",
+   "103 Morning Sunlight.spc:srcn32",
+   "104 Peaceful Days.spc:srcn32",
+   "105 Memories of Green.spc:srcn32",
+   "108 A Strange Happening.spc:srcn32",
+   "109 Wind Scene.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s001_356hz.brr",
+  "blocks": 781,
+  "samples": 12496,
+  "bytes": 7031,
+  "looped": true,
+  "loop_offset_bytes": 1287,
+  "loop_samples": 10208,
+  "est_f0_hz": 355.56,
+  "est_natural_midi": 65.31,
+  "f0_confidence": 0.973,
+  "found_in": [
+   "101 Presentiment.spc:srcn34",
+   "111 Secret of the Forest.spc:srcn34",
+   "112 Battle 1.spc:srcn39",
+   "115 Manoria Cathedral.spc:srcn32",
+   "117 Silent Light.spc:srcn34",
+   "202 Mystery of the Past.spc:srcn37",
+   "204 People Without Hope (Variant 1).spc:srcn35",
+   "204 People Without Hope (Variant 2).spc:srcn35"
+  ]
+ },
+ {
+  "file": "s002_200hz.brr",
+  "blocks": 574,
+  "samples": 9184,
+  "bytes": 5168,
+  "looped": true,
+  "loop_offset_bytes": 5076,
+  "loop_samples": 160,
+  "est_f0_hz": 200.0,
+  "est_natural_midi": 55.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn34",
+   "117 Silent Light.spc:srcn32",
+   "121 Kingdom Trial.spc:srcn33",
+   "207 Robo Gang Johnny.spc:srcn33",
+   "214 Delightful Spekkio.spc:srcn34",
+   "216 Underground Sewer (No Water).spc:srcn33",
+   "216 Underground Sewer.spc:srcn33",
+   "218 Primitive Mountain.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s003_oneshot.brr",
+  "blocks": 561,
+  "samples": 8976,
+  "bytes": 5051,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 175.82,
+  "est_natural_midi": 53.12,
+  "f0_confidence": 0.607,
+  "found_in": [
+   "101 Presentiment.spc:srcn35",
+   "102 Chrono Trigger (Looped).spc:srcn36",
+   "102 Chrono Trigger.spc:srcn36",
+   "107 Gato's Song.spc:srcn35",
+   "113 Courage and Pride.spc:srcn35",
+   "119 Frog's Theme.spc:srcn35",
+   "122 The Hidden Truth (Looped).spc:srcn36",
+   "122 The Hidden Truth.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s004_oneshot.brr",
+  "blocks": 550,
+  "samples": 8800,
+  "bytes": 4952,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.915,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn33",
+   "109 Wind Scene.spc:srcn33",
+   "121 Kingdom Trial.spc:srcn36",
+   "202 Mystery of the Past.spc:srcn35",
+   "202 Mystery of the Past.spc:srcn40",
+   "213 Brink of Time.spc:srcn35",
+   "216 Underground Sewer (No Water).spc:srcn34",
+   "216 Underground Sewer.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s005_oneshot.brr",
+  "blocks": 500,
+  "samples": 8000,
+  "bytes": 4502,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.223,
+  "found_in": [
+   "112 Battle 1.spc:srcn33",
+   "118 Boss Battle 1.spc:srcn40",
+   "123 A Shot of Crisis.spc:srcn36",
+   "203 Lab 16's Ruin.spc:srcn35",
+   "208 Bike Chase.spc:srcn36",
+   "209 Robo's Theme.spc:srcn36",
+   "210 Remains of the Factory.spc:srcn37",
+   "211 Battle 2.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s006_oneshot.brr",
+  "blocks": 500,
+  "samples": 8000,
+  "bytes": 4502,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.881,
+  "found_in": [
+   "112 Battle 1.spc:srcn37",
+   "118 Boss Battle 1.spc:srcn41",
+   "203 Lab 16's Ruin.spc:srcn38",
+   "207 Robo Gang Johnny.spc:srcn39",
+   "218 Primitive Mountain.spc:srcn40",
+   "219 Ayla's Theme.spc:srcn36",
+   "221 Burn! Bobonga!.spc:srcn35",
+   "314 Last Battle.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s007_330hz.brr",
+  "blocks": 474,
+  "samples": 7584,
+  "bytes": 4268,
+  "looped": true,
+  "loop_offset_bytes": 2124,
+  "loop_samples": 3808,
+  "est_f0_hz": 329.9,
+  "est_natural_midi": 64.01,
+  "f0_confidence": 0.36,
+  "found_in": [
+   "101 Presentiment.spc:srcn36",
+   "102 Chrono Trigger (Looped).spc:srcn38",
+   "102 Chrono Trigger.spc:srcn38",
+   "109 Wind Scene.spc:srcn35",
+   "112 Battle 1.spc:srcn36",
+   "113 Courage and Pride.spc:srcn37",
+   "118 Boss Battle 1.spc:srcn38",
+   "119 Frog's Theme.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s008_37hz.brr",
+  "blocks": 455,
+  "samples": 7280,
+  "bytes": 4097,
+  "looped": true,
+  "loop_offset_bytes": 3933,
+  "loop_samples": 288,
+  "est_f0_hz": 37.04,
+  "est_natural_midi": 26.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn33",
+   "105 Memories of Green.spc:srcn33",
+   "105 Memories of Green.spc:srcn37",
+   "108 A Strange Happening.spc:srcn34",
+   "111 Secret of the Forest.spc:srcn37",
+   "115 Manoria Cathedral.spc:srcn33",
+   "116 A Prayer to the Road that Leads.spc:srcn33",
+   "117 Silent Light.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s009_oneshot.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.49,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn38",
+   "108 A Strange Happening.spc:srcn39",
+   "109 Wind Scene.spc:srcn36",
+   "111 Secret of the Forest.spc:srcn40",
+   "121 Kingdom Trial.spc:srcn37",
+   "214 Delightful Spekkio.spc:srcn40",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn38",
+   "224 Battle with Magus.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s010_oneshot.brr",
+  "blocks": 437,
+  "samples": 6992,
+  "bytes": 3935,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.399,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn41",
+   "315 First Festival of Stars.spc:srcn40",
+   "999 Breath of Lavos.spc:srcn33",
+   "999 Breath of Lavos.spc:srcn41",
+   "999 Lavos Stirs (Faster).spc:srcn32",
+   "999 Lavos Stirs.spc:srcn32",
+   "999 Prison Tower.spc:srcn41",
+   "999 Voice of Lavos.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s011_oneshot.brr",
+  "blocks": 416,
+  "samples": 6656,
+  "bytes": 3746,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.185,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn40",
+   "107 Gato's Song.spc:srcn37",
+   "203 Lab 16's Ruin.spc:srcn40",
+   "207 Robo Gang Johnny.spc:srcn42",
+   "208 Bike Chase.spc:srcn42",
+   "218 Primitive Mountain.spc:srcn39",
+   "999 Breath of Lavos.spc:srcn40",
+   "999 Prison Tower.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s012_133hz.brr",
+  "blocks": 412,
+  "samples": 6592,
+  "bytes": 3710,
+  "looped": true,
+  "loop_offset_bytes": 3573,
+  "loop_samples": 240,
+  "est_f0_hz": 133.33,
+  "est_natural_midi": 48.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn32",
+   "102 Chrono Trigger.spc:srcn32",
+   "204 People Without Hope (Variant 1).spc:srcn34",
+   "204 People Without Hope (Variant 2).spc:srcn34",
+   "204 People Without Hope.spc:srcn34",
+   "209 Robo's Theme.spc:srcn32",
+   "218 Primitive Mountain.spc:srcn32",
+   "310 Wings That Cross Time.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s013_oneshot.brr",
+  "blocks": 406,
+  "samples": 6496,
+  "bytes": 3656,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.68,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn37",
+   "113 Courage and Pride.spc:srcn36",
+   "119 Frog's Theme.spc:srcn36",
+   "120 Fanfare 1.spc:srcn37",
+   "207 Robo Gang Johnny.spc:srcn37",
+   "212 Fanfare 2.spc:srcn35",
+   "215 Fanfare 3.spc:srcn35",
+   "217 Boss Battle 2.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s014_oneshot.brr",
+  "blocks": 375,
+  "samples": 6000,
+  "bytes": 3377,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.115,
+  "found_in": [
+   "112 Battle 1.spc:srcn35",
+   "118 Boss Battle 1.spc:srcn37",
+   "120 Fanfare 1.spc:srcn39",
+   "123 A Shot of Crisis.spc:srcn37",
+   "203 Lab 16's Ruin.spc:srcn37",
+   "207 Robo Gang Johnny.spc:srcn41",
+   "208 Bike Chase.spc:srcn38",
+   "208 Bike Chase.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s015_154hz.brr",
+  "blocks": 345,
+  "samples": 5520,
+  "bytes": 3107,
+  "looped": true,
+  "loop_offset_bytes": 2988,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn35",
+   "107 Gato's Song.spc:srcn34",
+   "108 A Strange Happening.spc:srcn40",
+   "109 Wind Scene.spc:srcn38",
+   "204 People Without Hope (Variant 1).spc:srcn33",
+   "204 People Without Hope (Variant 2).spc:srcn33",
+   "204 People Without Hope.spc:srcn33",
+   "207 Robo Gang Johnny.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s016_22hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 1980,
+  "loop_samples": 1920,
+  "est_f0_hz": 22.08,
+  "est_natural_midi": 17.2,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "104 Peaceful Days.spc:srcn34",
+   "105 Memories of Green.spc:srcn34",
+   "109 Wind Scene.spc:srcn37",
+   "111 Secret of the Forest.spc:srcn32",
+   "113 Courage and Pride.spc:srcn32",
+   "114 Huh_!.spc:srcn33",
+   "119 Frog's Theme.spc:srcn34",
+   "121 Kingdom Trial.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s017_oneshot.brr",
+  "blocks": 312,
+  "samples": 4992,
+  "bytes": 2810,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.157,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn39",
+   "102 Chrono Trigger.spc:srcn39",
+   "106 Guardia Millennial Fair.spc:srcn39",
+   "107 Gato's Song.spc:srcn38",
+   "108 A Strange Happening.spc:srcn38",
+   "214 Delightful Spekkio.spc:srcn39",
+   "218 Primitive Mountain.spc:srcn38",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s018_41hz.brr",
+  "blocks": 309,
+  "samples": 4944,
+  "bytes": 2783,
+  "looped": true,
+  "loop_offset_bytes": 612,
+  "loop_samples": 3856,
+  "est_f0_hz": 41.13,
+  "est_natural_midi": 27.97,
+  "f0_confidence": 1.004,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn32",
+   "117 Silent Light.spc:srcn35",
+   "214 Delightful Spekkio.spc:srcn32",
+   "216 Underground Sewer (No Water).spc:srcn36",
+   "216 Underground Sewer.spc:srcn36",
+   "224 Battle with Magus.spc:srcn33",
+   "315 First Festival of Stars.spc:srcn32",
+   "999 Mystic Chanting.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s019_500hz.brr",
+  "blocks": 301,
+  "samples": 4816,
+  "bytes": 2711,
+  "looped": true,
+  "loop_offset_bytes": 2673,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "217 Boss Battle 2.spc:srcn34",
+   "219 Ayla's Theme.spc:srcn38",
+   "222 Magus' Castle.spc:srcn34",
+   "224 Battle with Magus.spc:srcn35",
+   "308 Undersea Palace.spc:srcn35",
+   "313 World Revolution.spc:srcn36",
+   "317 To Far Away Times.spc:srcn37",
+   "999 Ozzie Laugh.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s020_oneshot.brr",
+  "blocks": 284,
+  "samples": 4544,
+  "bytes": 2558,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.106,
+  "found_in": [
+   "112 Battle 1.spc:srcn34",
+   "118 Boss Battle 1.spc:srcn36",
+   "120 Fanfare 1.spc:srcn38",
+   "123 A Shot of Crisis.spc:srcn38",
+   "203 Lab 16's Ruin.spc:srcn36",
+   "207 Robo Gang Johnny.spc:srcn40",
+   "208 Bike Chase.spc:srcn37",
+   "209 Robo's Theme.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s021_oneshot.brr",
+  "blocks": 274,
+  "samples": 4384,
+  "bytes": 2468,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 347.83,
+  "est_natural_midi": 64.93,
+  "f0_confidence": 0.931,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn36",
+   "112 Battle 1.spc:srcn40",
+   "204 People Without Hope (Variant 1).spc:srcn41",
+   "210 Remains of the Factory.spc:srcn32",
+   "211 Battle 2.spc:srcn38",
+   "214 Delightful Spekkio.spc:srcn35",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn41",
+   "315 First Festival of Stars.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s022_83hz.brr",
+  "blocks": 231,
+  "samples": 3696,
+  "bytes": 2081,
+  "looped": true,
+  "loop_offset_bytes": 1863,
+  "loop_samples": 384,
+  "est_f0_hz": 83.33,
+  "est_natural_midi": 40.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "118 Boss Battle 1.spc:srcn35",
+   "123 A Shot of Crisis.spc:srcn33",
+   "208 Bike Chase.spc:srcn32",
+   "211 Battle 2.spc:srcn39",
+   "218 Primitive Mountain.spc:srcn37",
+   "310 Wings That Cross Time.spc:srcn35",
+   "999 Strong Wind.spc:srcn35",
+   "999 Unknown Fanfare.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s023_oneshot.brr",
+  "blocks": 218,
+  "samples": 3488,
+  "bytes": 1964,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.928,
+  "found_in": [
+   "107 Gato's Song.spc:srcn36",
+   "112 Battle 1.spc:srcn32",
+   "118 Boss Battle 1.spc:srcn39",
+   "120 Fanfare 1.spc:srcn36",
+   "123 A Shot of Crisis.spc:srcn35",
+   "203 Lab 16's Ruin.spc:srcn34",
+   "204 People Without Hope.spc:srcn39",
+   "207 Robo Gang Johnny.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s024_oneshot.brr",
+  "blocks": 217,
+  "samples": 3472,
+  "bytes": 1955,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 182.86,
+  "est_natural_midi": 53.8,
+  "f0_confidence": 0.795,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn36",
+   "111 Secret of the Forest.spc:srcn38",
+   "123 A Shot of Crisis.spc:srcn40",
+   "210 Remains of the Factory.spc:srcn38",
+   "214 Delightful Spekkio.spc:srcn37",
+   "221 Burn! Bobonga!.spc:srcn36",
+   "999 Breath of Lavos.spc:srcn36",
+   "999 Prison Tower.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s025_32hz.brr",
+  "blocks": 215,
+  "samples": 3440,
+  "bytes": 1937,
+  "looped": true,
+  "loop_offset_bytes": 1602,
+  "loop_samples": 592,
+  "est_f0_hz": 32.42,
+  "est_natural_midi": 23.85,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn34",
+   "102 Chrono Trigger.spc:srcn34",
+   "111 Secret of the Forest.spc:srcn35",
+   "112 Battle 1.spc:srcn38",
+   "117 Silent Light.spc:srcn37",
+   "120 Fanfare 1.spc:srcn34",
+   "203 Lab 16's Ruin.spc:srcn33",
+   "209 Robo's Theme.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s026_500hz.brr",
+  "blocks": 192,
+  "samples": 3072,
+  "bytes": 1730,
+  "looped": true,
+  "loop_offset_bytes": 1692,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Gato's Song.spc:srcn32",
+   "113 Courage and Pride.spc:srcn34",
+   "118 Boss Battle 1.spc:srcn32",
+   "119 Frog's Theme.spc:srcn32",
+   "120 Fanfare 1.spc:srcn32",
+   "207 Robo Gang Johnny.spc:srcn32",
+   "211 Battle 2.spc:srcn36",
+   "212 Fanfare 2.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s027_667hz.brr",
+  "blocks": 173,
+  "samples": 2768,
+  "bytes": 1559,
+  "looped": true,
+  "loop_offset_bytes": 1530,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "112 Battle 1.spc:srcn41",
+   "114 Huh_!.spc:srcn32",
+   "118 Boss Battle 1.spc:srcn33",
+   "120 Fanfare 1.spc:srcn35",
+   "123 A Shot of Crisis.spc:srcn34",
+   "207 Robo Gang Johnny.spc:srcn34",
+   "208 Bike Chase.spc:srcn34",
+   "217 Boss Battle 2.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s028_333hz.brr",
+  "blocks": 161,
+  "samples": 2576,
+  "bytes": 1451,
+  "looped": true,
+  "loop_offset_bytes": 1395,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn35",
+   "102 Chrono Trigger.spc:srcn35",
+   "103 Morning Sunlight.spc:srcn33",
+   "104 Peaceful Days.spc:srcn33",
+   "111 Secret of the Forest.spc:srcn36",
+   "202 Mystery of the Past.spc:srcn32",
+   "205 Lavos' Theme (Extended).spc:srcn34",
+   "205 Lavos' Theme.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s029_24hz.brr",
+  "blocks": 161,
+  "samples": 2576,
+  "bytes": 1451,
+  "looped": true,
+  "loop_offset_bytes": 1395,
+  "loop_samples": 96,
+  "est_f0_hz": 23.81,
+  "est_natural_midi": 18.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Goodnight.spc:srcn32",
+   "204 People Without Hope (Variant 1).spc:srcn32",
+   "204 People Without Hope (Variant 2).spc:srcn32",
+   "204 People Without Hope.spc:srcn32",
+   "206 The Day the World Revived.spc:srcn32",
+   "209 Robo's Theme.spc:srcn33",
+   "302 Tyran Castle.spc:srcn41",
+   "303 At the Bottom of Night.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s030_167hz.brr",
+  "blocks": 111,
+  "samples": 1776,
+  "bytes": 1001,
+  "looped": true,
+  "loop_offset_bytes": 891,
+  "loop_samples": 192,
+  "est_f0_hz": 166.67,
+  "est_natural_midi": 52.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn35",
+   "121 Kingdom Trial.spc:srcn35",
+   "122 The Hidden Truth (Looped).spc:srcn34",
+   "122 The Hidden Truth.spc:srcn34",
+   "201 Ruined World.spc:srcn33",
+   "205 Lavos' Theme (Extended).spc:srcn33",
+   "205 Lavos' Theme.spc:srcn33",
+   "213 Brink of Time.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s031_oneshot.brr",
+  "blocks": 62,
+  "samples": 992,
+  "bytes": 560,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 615.38,
+  "est_natural_midi": 74.81,
+  "f0_confidence": 0.577,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn37",
+   "123 A Shot of Crisis.spc:srcn41",
+   "210 Remains of the Factory.spc:srcn39",
+   "212 Fanfare 2.spc:srcn38",
+   "214 Delightful Spekkio.spc:srcn38",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn33",
+   "999 Breath of Lavos.spc:srcn37",
+   "999 Prison Tower.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s032_20hz.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 112,
+  "est_f0_hz": 20.41,
+  "est_natural_midi": 15.84,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn1",
+   "102 Chrono Trigger (Looped).spc:srcn1",
+   "102 Chrono Trigger.spc:srcn1",
+   "103 Morning Sunlight.spc:srcn1",
+   "104 Peaceful Days.spc:srcn1",
+   "105 Memories of Green.spc:srcn1",
+   "106 Guardia Millennial Fair.spc:srcn1",
+   "107 Gato's Song.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s033_48hz.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 112,
+  "est_f0_hz": 47.62,
+  "est_natural_midi": 30.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn7",
+   "102 Chrono Trigger (Looped).spc:srcn7",
+   "102 Chrono Trigger.spc:srcn7",
+   "103 Morning Sunlight.spc:srcn7",
+   "104 Peaceful Days.spc:srcn7",
+   "105 Memories of Green.spc:srcn7",
+   "106 Guardia Millennial Fair.spc:srcn7",
+   "107 Gato's Song.spc:srcn7"
+  ]
+ },
+ {
+  "file": "s034_333hz.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn8",
+   "102 Chrono Trigger (Looped).spc:srcn8",
+   "102 Chrono Trigger.spc:srcn8",
+   "103 Morning Sunlight.spc:srcn8",
+   "104 Peaceful Days.spc:srcn8",
+   "105 Memories of Green.spc:srcn8",
+   "106 Guardia Millennial Fair.spc:srcn8",
+   "107 Gato's Song.spc:srcn8"
+  ]
+ },
+ {
+  "file": "s035_500hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn3",
+   "102 Chrono Trigger (Looped).spc:srcn3",
+   "102 Chrono Trigger.spc:srcn3",
+   "103 Morning Sunlight.spc:srcn3",
+   "104 Peaceful Days.spc:srcn3",
+   "105 Memories of Green.spc:srcn3",
+   "106 Guardia Millennial Fair.spc:srcn3",
+   "107 Gato's Song.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s036_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 969.7,
+  "est_natural_midi": 82.68,
+  "f0_confidence": 0.426,
+  "found_in": [
+   "112 Battle 1.spc:srcn244",
+   "112 Battle 1.spc:srcn248",
+   "112 Battle 1.spc:srcn252",
+   "999 Blackbird (Inside).spc:srcn244",
+   "999 Blackbird (Inside).spc:srcn248",
+   "999 Blackbird (Inside).spc:srcn252",
+   "999 Blackbird (Outside).spc:srcn244",
+   "999 Blackbird (Outside).spc:srcn248"
+  ]
+ },
+ {
+  "file": "s037_1000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn2",
+   "102 Chrono Trigger (Looped).spc:srcn2",
+   "102 Chrono Trigger.spc:srcn2",
+   "103 Morning Sunlight.spc:srcn2",
+   "104 Peaceful Days.spc:srcn2",
+   "105 Memories of Green.spc:srcn2",
+   "106 Guardia Millennial Fair.spc:srcn2",
+   "107 Gato's Song.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s038_1000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn4",
+   "102 Chrono Trigger (Looped).spc:srcn4",
+   "102 Chrono Trigger.spc:srcn4",
+   "103 Morning Sunlight.spc:srcn4",
+   "104 Peaceful Days.spc:srcn4",
+   "105 Memories of Green.spc:srcn4",
+   "106 Guardia Millennial Fair.spc:srcn4",
+   "107 Gato's Song.spc:srcn4"
+  ]
+ },
+ {
+  "file": "s039_1000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn6",
+   "102 Chrono Trigger (Looped).spc:srcn6",
+   "102 Chrono Trigger.spc:srcn6",
+   "103 Morning Sunlight.spc:srcn6",
+   "104 Peaceful Days.spc:srcn6",
+   "105 Memories of Green.spc:srcn6",
+   "106 Guardia Millennial Fair.spc:srcn6",
+   "107 Gato's Song.spc:srcn6"
+  ]
+ },
+ {
+  "file": "s040_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn0",
+   "102 Chrono Trigger (Looped).spc:srcn0",
+   "102 Chrono Trigger.spc:srcn0",
+   "103 Morning Sunlight.spc:srcn0",
+   "104 Peaceful Days.spc:srcn0",
+   "105 Memories of Green.spc:srcn0",
+   "106 Guardia Millennial Fair.spc:srcn0",
+   "107 Gato's Song.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s041_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.411,
+  "found_in": [
+   "101 Presentiment.spc:srcn210",
+   "101 Presentiment.spc:srcn234",
+   "108 A Strange Happening.spc:srcn221",
+   "111 Secret of the Forest.spc:srcn151",
+   "122 The Hidden Truth (Looped).spc:srcn235",
+   "122 The Hidden Truth.spc:srcn235",
+   "211 Battle 2.spc:srcn145",
+   "999 Leene's Bell.spc:srcn210"
+  ]
+ },
+ {
+  "file": "s042_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "105 Memories of Green.spc:srcn167",
+   "105 Memories of Green.spc:srcn171",
+   "105 Memories of Green.spc:srcn188",
+   "105 Memories of Green.spc:srcn192",
+   "105 Memories of Green.spc:srcn196",
+   "105 Memories of Green.spc:srcn217",
+   "105 Memories of Green.spc:srcn246",
+   "105 Memories of Green.spc:srcn250"
+  ]
+ },
+ {
+  "file": "s043_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.078,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn228",
+   "106 Guardia Millennial Fair.spc:srcn242",
+   "106 Guardia Millennial Fair.spc:srcn253",
+   "107 Gato's Song.spc:srcn228",
+   "107 Gato's Song.spc:srcn242",
+   "107 Gato's Song.spc:srcn253",
+   "999 Breath of Lavos.spc:srcn228",
+   "999 Breath of Lavos.spc:srcn242"
+  ]
+ },
+ {
+  "file": "s044_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.18,
+  "found_in": [
+   "109 Wind Scene.spc:srcn213",
+   "109 Wind Scene.spc:srcn218",
+   "110 Goodnight.spc:srcn213",
+   "110 Goodnight.spc:srcn218",
+   "113 Courage and Pride.spc:srcn159",
+   "115 Manoria Cathedral.spc:srcn213",
+   "115 Manoria Cathedral.spc:srcn218",
+   "116 A Prayer to the Road that Leads.spc:srcn213"
+  ]
+ },
+ {
+  "file": "s045_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.454,
+  "found_in": [
+   "201 Ruined World.spc:srcn239",
+   "204 People Without Hope (Variant 1).spc:srcn178",
+   "204 People Without Hope (Variant 1).spc:srcn200",
+   "204 People Without Hope (Variant 1).spc:srcn239",
+   "204 People Without Hope (Variant 2).spc:srcn178",
+   "204 People Without Hope (Variant 2).spc:srcn200",
+   "204 People Without Hope (Variant 2).spc:srcn239",
+   "204 People Without Hope.spc:srcn178"
+  ]
+ },
+ {
+  "file": "s046_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Blackbird (Inside).spc:srcn139",
+   "999 Blackbird (Outside).spc:srcn139",
+   "999 Ocean Waves.spc:srcn139",
+   "999 Ocean Waves.spc:srcn211",
+   "999 Prison Tower.spc:srcn139",
+   "999 Quiet Beach.spc:srcn139",
+   "999 Strong Wind.spc:srcn139",
+   "999 Tsunami.spc:srcn211"
+  ]
+ },
+ {
+  "file": "s047_oneshot.brr",
+  "blocks": 437,
+  "samples": 6992,
+  "bytes": 3935,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1777.78,
+  "est_natural_midi": 93.17,
+  "f0_confidence": 0.506,
+  "found_in": [
+   "222 Magus' Castle.spc:srcn36",
+   "223 Confusing Melody.spc:srcn33",
+   "224 Battle with Magus.spc:srcn40",
+   "999 Lavos Stirs (Faster).spc:srcn33",
+   "999 Lavos Stirs.spc:srcn33",
+   "999 Ozzie Laugh.spc:srcn36",
+   "999 Ozzie Scream.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s048_oneshot.brr",
+  "blocks": 92,
+  "samples": 1472,
+  "bytes": 830,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 432.43,
+  "est_natural_midi": 68.7,
+  "f0_confidence": 0.416,
+  "found_in": [
+   "101 Presentiment.spc:srcn37",
+   "121 Kingdom Trial.spc:srcn38",
+   "122 The Hidden Truth (Looped).spc:srcn38",
+   "317 To Far Away Times.spc:srcn39",
+   "999 Leene's Bell.spc:srcn37",
+   "999 Prison Tower.spc:srcn34",
+   "999 Quiet Beach.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s049_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.037,
+  "found_in": [
+   "215 Fanfare 3.spc:srcn220",
+   "216 Underground Sewer (No Water).spc:srcn220",
+   "216 Underground Sewer.spc:srcn220",
+   "218 Primitive Mountain.spc:srcn178",
+   "218 Primitive Mountain.spc:srcn181",
+   "218 Primitive Mountain.spc:srcn195",
+   "218 Primitive Mountain.spc:srcn255"
+  ]
+ },
+ {
+  "file": "s050_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.192,
+  "found_in": [
+   "205 Lavos' Theme (Extended).spc:srcn236",
+   "205 Lavos' Theme.spc:srcn236",
+   "999 Fall of Zeal.spc:srcn236",
+   "999 Lavos Stirs (Faster).spc:srcn236",
+   "999 Ocean Waves.spc:srcn236",
+   "999 Tsunami.spc:srcn236",
+   "999 Voice of Lavos.spc:srcn236"
+  ]
+ },
+ {
+  "file": "s051_oneshot.brr",
+  "blocks": 414,
+  "samples": 6624,
+  "bytes": 3728,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.823,
+  "found_in": [
+   "111 Secret of the Forest.spc:srcn39",
+   "214 Delightful Spekkio.spc:srcn36",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn35",
+   "221 Burn! Bobonga!.spc:srcn38",
+   "304 Corridors of Time.spc:srcn36",
+   "306 Schala's Theme.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s052_oneshot.brr",
+  "blocks": 116,
+  "samples": 1856,
+  "bytes": 1046,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.971,
+  "found_in": [
+   "109 Wind Scene.spc:srcn34",
+   "214 Delightful Spekkio.spc:srcn41",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn39",
+   "305 Zeal Palace.spc:srcn36",
+   "999 Lavos Stirs.spc:srcn41",
+   "999 Truce Canyon.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s053_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.377,
+  "found_in": [
+   "312 Determination.spc:srcn190",
+   "312 Determination.spc:srcn194",
+   "312 Determination.spc:srcn205",
+   "312 Determination.spc:srcn220",
+   "312 Determination.spc:srcn222",
+   "312 Determination.spc:srcn239"
+  ]
+ },
+ {
+  "file": "s054_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.114,
+  "found_in": [
+   "120 Fanfare 1.spc:srcn209",
+   "120 Fanfare 1.spc:srcn214",
+   "120 Fanfare 1.spc:srcn246",
+   "209 Robo's Theme.spc:srcn247",
+   "309 Far Off Promise.spc:srcn214",
+   "309 Far Off Promise.spc:srcn246"
+  ]
+ },
+ {
+  "file": "s055_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn16",
+   "122 The Hidden Truth.spc:srcn16",
+   "211 Battle 2.spc:srcn16",
+   "999 Ocean Waves.spc:srcn16",
+   "999 Strong Wind.spc:srcn16",
+   "999 Tsunami.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s056_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "113 Courage and Pride.spc:srcn16",
+   "206 The Day the World Revived.spc:srcn16",
+   "214 Delightful Spekkio.spc:srcn16",
+   "217 Boss Battle 2.spc:srcn16",
+   "221 Burn! Bobonga!.spc:srcn16",
+   "306 Schala's Theme.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s057_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.01,
+  "found_in": [
+   "204 People Without Hope (Variant 1).spc:srcn131",
+   "204 People Without Hope (Variant 1).spc:srcn135",
+   "204 People Without Hope (Variant 2).spc:srcn131",
+   "204 People Without Hope (Variant 2).spc:srcn135",
+   "204 People Without Hope.spc:srcn131",
+   "204 People Without Hope.spc:srcn135"
+  ]
+ },
+ {
+  "file": "s058_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "222 Magus' Castle.spc:srcn16",
+   "311 Black Omen.spc:srcn16",
+   "313 World Revolution.spc:srcn16",
+   "316 Epilogue ~ To Good Friends.spc:srcn16",
+   "317 To Far Away Times.spc:srcn16",
+   "999 Lavos Stirs.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s059_333hz.brr",
+  "blocks": 445,
+  "samples": 7120,
+  "bytes": 4007,
+  "looped": true,
+  "loop_offset_bytes": 3951,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "116 A Prayer to the Road that Leads.spc:srcn32",
+   "205 Lavos' Theme (Extended).spc:srcn38",
+   "205 Lavos' Theme.spc:srcn38",
+   "313 World Revolution.spc:srcn34",
+   "999 Lavos Stirs (Faster).spc:srcn38"
+  ]
+ },
+ {
+  "file": "s060_60hz.brr",
+  "blocks": 425,
+  "samples": 6800,
+  "bytes": 3827,
+  "looped": true,
+  "loop_offset_bytes": 2619,
+  "loop_samples": 2144,
+  "est_f0_hz": 59.59,
+  "est_natural_midi": 34.39,
+  "f0_confidence": 0.37,
+  "found_in": [
+   "204 People Without Hope (Variant 1).spc:srcn36",
+   "204 People Without Hope (Variant 2).spc:srcn36",
+   "204 People Without Hope.spc:srcn36",
+   "210 Remains of the Factory.spc:srcn41",
+   "310 Wings That Cross Time.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s061_177hz.brr",
+  "blocks": 371,
+  "samples": 5936,
+  "bytes": 3341,
+  "looped": true,
+  "loop_offset_bytes": 1350,
+  "loop_samples": 3536,
+  "est_f0_hz": 176.8,
+  "est_natural_midi": 53.22,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "118 Boss Battle 1.spc:srcn34",
+   "208 Bike Chase.spc:srcn33",
+   "302 Tyran Castle.spc:srcn34",
+   "314 Last Battle.spc:srcn34",
+   "999 Strong Wind.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s062_32hz.brr",
+  "blocks": 370,
+  "samples": 5920,
+  "bytes": 3332,
+  "looped": true,
+  "loop_offset_bytes": 2655,
+  "loop_samples": 1200,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "103 Morning Sunlight.spc:srcn34",
+   "216 Underground Sewer (No Water).spc:srcn37",
+   "216 Underground Sewer.spc:srcn37",
+   "306 Schala's Theme.spc:srcn33",
+   "999 Unknown Fanfare.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s063_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.184,
+  "found_in": [
+   "307 Sealed Door.spc:srcn228",
+   "307 Sealed Door.spc:srcn233",
+   "307 Sealed Door.spc:srcn239",
+   "307 Sealed Door.spc:srcn244",
+   "307 Sealed Door.spc:srcn249"
+  ]
+ },
+ {
+  "file": "s064_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "118 Boss Battle 1.spc:srcn16",
+   "121 Kingdom Trial.spc:srcn16",
+   "202 Mystery of the Past.spc:srcn16",
+   "215 Fanfare 3.spc:srcn16",
+   "304 Corridors of Time.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s065_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "208 Bike Chase.spc:srcn250",
+   "208 Bike Chase.spc:srcn251",
+   "208 Bike Chase.spc:srcn252",
+   "208 Bike Chase.spc:srcn253",
+   "224 Battle with Magus.spc:srcn220"
+  ]
+ },
+ {
+  "file": "s066_330hz.brr",
+  "blocks": 867,
+  "samples": 13872,
+  "bytes": 7805,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 13824,
+  "est_f0_hz": 329.9,
+  "est_natural_midi": 64.01,
+  "f0_confidence": 0.948,
+  "found_in": [
+   "201 Ruined World.spc:srcn32",
+   "203 Lab 16's Ruin.spc:srcn32",
+   "210 Remains of the Factory.spc:srcn34",
+   "999 Time Vortex.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s067_oneshot.brr",
+  "blocks": 492,
+  "samples": 7872,
+  "bytes": 4430,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.75,
+  "found_in": [
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn36",
+   "221 Burn! Bobonga!.spc:srcn37",
+   "304 Corridors of Time.spc:srcn39",
+   "306 Schala's Theme.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s068_352hz.brr",
+  "blocks": 410,
+  "samples": 6560,
+  "bytes": 3692,
+  "looped": true,
+  "loop_offset_bytes": 1143,
+  "loop_samples": 4528,
+  "est_f0_hz": 351.65,
+  "est_natural_midi": 65.12,
+  "f0_confidence": 0.957,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn33",
+   "107 Gato's Song.spc:srcn33",
+   "307 Sealed Door.spc:srcn37",
+   "315 First Festival of Stars.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s069_32hz.brr",
+  "blocks": 308,
+  "samples": 4928,
+  "bytes": 2774,
+  "looped": true,
+  "loop_offset_bytes": 2691,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "204 People Without Hope (Variant 1).spc:srcn37",
+   "204 People Without Hope (Variant 2).spc:srcn37",
+   "204 People Without Hope.spc:srcn37",
+   "304 Corridors of Time.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s070_oneshot.brr",
+  "blocks": 26,
+  "samples": 416,
+  "bytes": 236,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 842.11,
+  "est_natural_midi": 80.24,
+  "f0_confidence": 0.524,
+  "found_in": [
+   "123 A Shot of Crisis.spc:srcn242",
+   "123 A Shot of Crisis.spc:srcn245",
+   "123 A Shot of Crisis.spc:srcn248",
+   "123 A Shot of Crisis.spc:srcn251"
+  ]
+ },
+ {
+  "file": "s071_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 820.51,
+  "est_natural_midi": 79.79,
+  "f0_confidence": 0.615,
+  "found_in": [
+   "122 The Hidden Truth (Looped).spc:srcn131",
+   "122 The Hidden Truth (Looped).spc:srcn135",
+   "122 The Hidden Truth.spc:srcn131",
+   "122 The Hidden Truth.spc:srcn135"
+  ]
+ },
+ {
+  "file": "s072_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.018,
+  "found_in": [
+   "999 Fall of Zeal.spc:srcn238",
+   "999 Lavos Stirs (Faster).spc:srcn238",
+   "999 Ocean Waves.spc:srcn238",
+   "999 Tsunami.spc:srcn238"
+  ]
+ },
+ {
+  "file": "s073_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "114 Huh_!.spc:srcn165",
+   "114 Huh_!.spc:srcn174",
+   "114 Huh_!.spc:srcn183",
+   "114 Huh_!.spc:srcn192"
+  ]
+ },
+ {
+  "file": "s074_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "123 A Shot of Crisis.spc:srcn16",
+   "205 Lavos' Theme.spc:srcn16",
+   "999 Breath of Lavos.spc:srcn16",
+   "999 Earthquake.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s075_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Unknown Fanfare.spc:srcn116",
+   "999 Unknown Fanfare.spc:srcn117",
+   "999 Unknown Fanfare.spc:srcn118",
+   "999 Unknown Fanfare.spc:srcn119"
+  ]
+ },
+ {
+  "file": "s076_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "109 Wind Scene.spc:srcn193",
+   "110 Goodnight.spc:srcn193",
+   "202 Mystery of the Past.spc:srcn193",
+   "999 Truce Canyon.spc:srcn193"
+  ]
+ },
+ {
+  "file": "s077_105hz.brr",
+  "blocks": 527,
+  "samples": 8432,
+  "bytes": 4745,
+  "looped": true,
+  "loop_offset_bytes": 3951,
+  "loop_samples": 1408,
+  "est_f0_hz": 104.58,
+  "est_natural_midi": 44.13,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "213 Brink of Time.spc:srcn34",
+   "309 Far Off Promise.spc:srcn32",
+   "316 Epilogue ~ To Good Friends.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s078_loop.brr",
+  "blocks": 409,
+  "samples": 6544,
+  "bytes": 3683,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 6496,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.068,
+  "found_in": [
+   "216 Underground Sewer (No Water).spc:srcn32",
+   "216 Underground Sewer.spc:srcn32",
+   "999 Truce Canyon.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s079_250hz.brr",
+  "blocks": 294,
+  "samples": 4704,
+  "bytes": 2648,
+  "looped": true,
+  "loop_offset_bytes": 2574,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "104 Peaceful Days.spc:srcn35",
+   "308 Undersea Palace.spc:srcn33",
+   "999 Lavos Stirs.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s080_oneshot.brr",
+  "blocks": 278,
+  "samples": 4448,
+  "bytes": 2504,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 223.78,
+  "est_natural_midi": 57.29,
+  "f0_confidence": 0.934,
+  "found_in": [
+   "209 Robo's Theme.spc:srcn34",
+   "210 Remains of the Factory.spc:srcn35",
+   "310 Wings That Cross Time.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s081_oneshot.brr",
+  "blocks": 250,
+  "samples": 4000,
+  "bytes": 2252,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.51,
+  "found_in": [
+   "999 Prison Tower.spc:srcn32",
+   "999 Quiet Beach.spc:srcn33",
+   "999 Truce Canyon.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s082_oneshot.brr",
+  "blocks": 240,
+  "samples": 3840,
+  "bytes": 2162,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 301.89,
+  "est_natural_midi": 62.48,
+  "f0_confidence": 0.474,
+  "found_in": [
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn37",
+   "304 Corridors of Time.spc:srcn38",
+   "306 Schala's Theme.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s083_oneshot.brr",
+  "blocks": 209,
+  "samples": 3344,
+  "bytes": 1883,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.245,
+  "found_in": [
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn34",
+   "304 Corridors of Time.spc:srcn37",
+   "306 Schala's Theme.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s084_oneshot.brr",
+  "blocks": 203,
+  "samples": 3248,
+  "bytes": 1829,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.942,
+  "found_in": [
+   "999 Blackbird (Inside).spc:srcn186",
+   "999 Blackbird (Inside).spc:srcn208",
+   "999 Blackbird (Inside).spc:srcn210"
+  ]
+ },
+ {
+  "file": "s085_200hz.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 160,
+  "est_f0_hz": 200.0,
+  "est_natural_midi": 55.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "117 Silent Light.spc:srcn42",
+   "121 Kingdom Trial.spc:srcn42",
+   "999 Truce Canyon.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s086_28hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 27.78,
+  "est_natural_midi": 21.18,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "121 Kingdom Trial.spc:srcn203",
+   "121 Kingdom Trial.spc:srcn204",
+   "121 Kingdom Trial.spc:srcn205"
+  ]
+ },
+ {
+  "file": "s087_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 Chrono Trigger.spc:srcn16",
+   "312 Determination.spc:srcn16",
+   "999 Time Vortex.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s088_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "103 Morning Sunlight.spc:srcn16",
+   "119 Frog's Theme.spc:srcn16",
+   "216 Underground Sewer (No Water).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s089_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn16",
+   "201 Ruined World.spc:srcn16",
+   "307 Sealed Door.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s090_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Gato's Song.spc:srcn16",
+   "109 Wind Scene.spc:srcn16",
+   "999 Leene's Bell.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s091_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "111 Secret of the Forest.spc:srcn16",
+   "116 A Prayer to the Road that Leads.spc:srcn16",
+   "218 Primitive Mountain.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s092_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "301 Singing Mountain.spc:srcn16",
+   "302 Tyran Castle.spc:srcn16",
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s093_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Truce Canyon.spc:srcn128",
+   "999 Truce Canyon.spc:srcn129",
+   "999 Truce Canyon.spc:srcn133"
+  ]
+ },
+ {
+  "file": "s094_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "121 Kingdom Trial.spc:srcn180",
+   "214 Delightful Spekkio.spc:srcn178",
+   "218 Primitive Mountain.spc:srcn246"
+  ]
+ },
+ {
+  "file": "s095_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.001,
+  "found_in": [
+   "215 Fanfare 3.spc:srcn197",
+   "215 Fanfare 3.spc:srcn206",
+   "215 Fanfare 3.spc:srcn229"
+  ]
+ },
+ {
+  "file": "s096_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "311 Black Omen.spc:srcn230",
+   "311 Black Omen.spc:srcn231",
+   "311 Black Omen.spc:srcn232"
+  ]
+ },
+ {
+  "file": "s097_1231hz.brr",
+  "blocks": 1314,
+  "samples": 21024,
+  "bytes": 11828,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 20960,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.553,
+  "found_in": [
+   "201 Ruined World.spc:srcn34",
+   "999 Unknown Fanfare.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s098_oneshot.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 842.11,
+  "est_natural_midi": 80.24,
+  "f0_confidence": 0.369,
+  "found_in": [
+   "207 Robo Gang Johnny.spc:srcn38",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s099_oneshot.brr",
+  "blocks": 73,
+  "samples": 1168,
+  "bytes": 659,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 363.64,
+  "est_natural_midi": 65.7,
+  "f0_confidence": 0.929,
+  "found_in": [
+   "121 Kingdom Trial.spc:srcn229",
+   "121 Kingdom Trial.spc:srcn248"
+  ]
+ },
+ {
+  "file": "s100_oneshot.brr",
+  "blocks": 28,
+  "samples": 448,
+  "bytes": 254,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.272,
+  "found_in": [
+   "224 Battle with Magus.spc:srcn130",
+   "224 Battle with Magus.spc:srcn134"
+  ]
+ },
+ {
+  "file": "s101_oneshot.brr",
+  "blocks": 23,
+  "samples": 368,
+  "bytes": 209,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 711.11,
+  "est_natural_midi": 77.31,
+  "f0_confidence": 0.896,
+  "found_in": [
+   "304 Corridors of Time.spc:srcn222",
+   "304 Corridors of Time.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s102_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 450.7,
+  "est_natural_midi": 69.42,
+  "f0_confidence": 0.345,
+  "found_in": [
+   "221 Burn! Bobonga!.spc:srcn247",
+   "313 World Revolution.spc:srcn231"
+  ]
+ },
+ {
+  "file": "s103_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.517,
+  "found_in": [
+   "999 Earthquake.spc:srcn154",
+   "999 Fall of Zeal.spc:srcn147"
+  ]
+ },
+ {
+  "file": "s104_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.559,
+  "found_in": [
+   "101 Presentiment.spc:srcn166",
+   "101 Presentiment.spc:srcn168"
+  ]
+ },
+ {
+  "file": "s105_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 914.29,
+  "est_natural_midi": 81.66,
+  "f0_confidence": 0.631,
+  "found_in": [
+   "115 Manoria Cathedral.spc:srcn201",
+   "116 A Prayer to the Road that Leads.spc:srcn201"
+  ]
+ },
+ {
+  "file": "s106_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.095,
+  "found_in": [
+   "113 Courage and Pride.spc:srcn255",
+   "118 Boss Battle 1.spc:srcn154"
+  ]
+ },
+ {
+  "file": "s107_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.304,
+  "found_in": [
+   "119 Frog's Theme.spc:srcn205",
+   "119 Frog's Theme.spc:srcn220"
+  ]
+ },
+ {
+  "file": "s108_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 0.344,
+  "found_in": [
+   "122 The Hidden Truth (Looped).spc:srcn143",
+   "122 The Hidden Truth.spc:srcn143"
+  ]
+ },
+ {
+  "file": "s109_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "105 Memories of Green.spc:srcn16",
+   "224 Battle with Magus.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s110_2000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 16,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn131",
+   "108 A Strange Happening.spc:srcn135"
+  ]
+ },
+ {
+  "file": "s111_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "112 Battle 1.spc:srcn16",
+   "999 Truce Canyon.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s112_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "114 Huh_!.spc:srcn16",
+   "213 Brink of Time.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s113_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "115 Manoria Cathedral.spc:srcn16",
+   "223 Confusing Melody.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s114_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "117 Silent Light.spc:srcn16",
+   "219 Ayla's Theme.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s115_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.351,
+  "found_in": [
+   "119 Frog's Theme.spc:srcn223",
+   "119 Frog's Theme.spc:srcn239"
+  ]
+ },
+ {
+  "file": "s116_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "122 The Hidden Truth (Looped).spc:srcn16",
+   "999 Fall of Zeal.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s117_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.237,
+  "found_in": [
+   "123 A Shot of Crisis.spc:srcn144",
+   "123 A Shot of Crisis.spc:srcn151"
+  ]
+ },
+ {
+  "file": "s118_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "203 Lab 16's Ruin.spc:srcn16",
+   "308 Undersea Palace.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s119_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "204 People Without Hope (Variant 1).spc:srcn16",
+   "204 People Without Hope.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s120_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "205 Lavos' Theme (Extended).spc:srcn16",
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s121_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "208 Bike Chase.spc:srcn16",
+   "999 Rain and Flowing Water.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s122_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "209 Robo's Theme.spc:srcn16",
+   "309 Far Off Promise.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s123_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "212 Fanfare 2.spc:srcn16",
+   "999 Ozzie Scream.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s124_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "219 Ayla's Theme.spc:srcn178",
+   "219 Ayla's Theme.spc:srcn189"
+  ]
+ },
+ {
+  "file": "s125_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.028,
+  "found_in": [
+   "301 Singing Mountain.spc:srcn144",
+   "301 Singing Mountain.spc:srcn192"
+  ]
+ },
+ {
+  "file": "s126_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.054,
+  "found_in": [
+   "304 Corridors of Time.spc:srcn220",
+   "304 Corridors of Time.spc:srcn241"
+  ]
+ },
+ {
+  "file": "s127_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "310 Wings That Cross Time.spc:srcn16",
+   "999 Lavos Stirs (Faster).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s128_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.047,
+  "found_in": [
+   "317 To Far Away Times.spc:srcn232",
+   "317 To Far Away Times.spc:srcn241"
+  ]
+ },
+ {
+  "file": "s129_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Blackbird (Outside).spc:srcn16",
+   "999 Ozzie Laugh.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s130_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Quiet Beach.spc:srcn16",
+   "999 Voice of Lavos.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s131_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1185.19,
+  "est_natural_midi": 86.15,
+  "f0_confidence": 0.35,
+  "found_in": [
+   "110 Goodnight.spc:srcn130",
+   "110 Goodnight.spc:srcn134"
+  ]
+ },
+ {
+  "file": "s132_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Goodnight.spc:srcn132",
+   "110 Goodnight.spc:srcn136"
+  ]
+ },
+ {
+  "file": "s133_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "206 The Day the World Revived.spc:srcn171",
+   "206 The Day the World Revived.spc:srcn183"
+  ]
+ },
+ {
+  "file": "s134_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.077,
+  "found_in": [
+   "218 Primitive Mountain.spc:srcn191",
+   "218 Primitive Mountain.spc:srcn250"
+  ]
+ },
+ {
+  "file": "s135_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "219 Ayla's Theme.spc:srcn206",
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn143"
+  ]
+ },
+ {
+  "file": "s136_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.049,
+  "found_in": [
+   "223 Confusing Melody.spc:srcn144",
+   "999 Ozzie Scream.spc:srcn144"
+  ]
+ },
+ {
+  "file": "s137_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.588,
+  "found_in": [
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn157",
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn168"
+  ]
+ },
+ {
+  "file": "s138_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn177",
+   "999 Rat-a-Tat-Tat It's... Mitsuda.spc:srcn182"
+  ]
+ },
+ {
+  "file": "s139_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.211,
+  "found_in": [
+   "999 Unknown Fanfare.spc:srcn174",
+   "999 Unknown Fanfare.spc:srcn183"
+  ]
+ },
+ {
+  "file": "s140_330hz.brr",
+  "blocks": 867,
+  "samples": 13872,
+  "bytes": 7805,
+  "looped": true,
+  "loop_offset_bytes": 1287,
+  "loop_samples": 11584,
+  "est_f0_hz": 329.9,
+  "est_natural_midi": 64.01,
+  "f0_confidence": 0.931,
+  "found_in": [
+   "201 Ruined World.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s141_970hz.brr",
+  "blocks": 829,
+  "samples": 13264,
+  "bytes": 7463,
+  "looped": true,
+  "loop_offset_bytes": 1692,
+  "loop_samples": 10256,
+  "est_f0_hz": 969.7,
+  "est_natural_midi": 82.68,
+  "f0_confidence": 0.985,
+  "found_in": [
+   "303 At the Bottom of Night.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s142_525hz.brr",
+  "blocks": 527,
+  "samples": 8432,
+  "bytes": 4745,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 8384,
+  "est_f0_hz": 524.59,
+  "est_natural_midi": 72.04,
+  "f0_confidence": 0.993,
+  "found_in": [
+   "309 Far Off Promise.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s143_582hz.brr",
+  "blocks": 474,
+  "samples": 7584,
+  "bytes": 4268,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 7584,
+  "est_f0_hz": 581.82,
+  "est_natural_midi": 73.84,
+  "f0_confidence": 0.467,
+  "found_in": [
+   "113 Courage and Pride.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s144_oneshot.brr",
+  "blocks": 437,
+  "samples": 6992,
+  "bytes": 3935,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.052,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s145_41hz.brr",
+  "blocks": 388,
+  "samples": 6208,
+  "bytes": 3494,
+  "looped": true,
+  "loop_offset_bytes": 1656,
+  "loop_samples": 3264,
+  "est_f0_hz": 41.4,
+  "est_natural_midi": 28.08,
+  "f0_confidence": 0.915,
+  "found_in": [
+   "999 Leene's Bell.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s146_oneshot.brr",
+  "blocks": 375,
+  "samples": 6000,
+  "bytes": 3377,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 258.06,
+  "est_natural_midi": 59.76,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "306 Schala's Theme.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s147_oneshot.brr",
+  "blocks": 354,
+  "samples": 5664,
+  "bytes": 3188,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.143,
+  "found_in": [
+   "999 Quiet Beach.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s148_889hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 5440,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.995,
+  "found_in": [
+   "121 Kingdom Trial.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s149_83hz.brr",
+  "blocks": 326,
+  "samples": 5216,
+  "bytes": 2936,
+  "looped": true,
+  "loop_offset_bytes": 2718,
+  "loop_samples": 384,
+  "est_f0_hz": 83.33,
+  "est_natural_midi": 40.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "304 Corridors of Time.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s150_oneshot.brr",
+  "blocks": 264,
+  "samples": 4224,
+  "bytes": 2378,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.536,
+  "found_in": [
+   "221 Burn! Bobonga!.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s151_oneshot.brr",
+  "blocks": 228,
+  "samples": 3648,
+  "bytes": 2054,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 87.19,
+  "est_natural_midi": 40.98,
+  "f0_confidence": 0.998,
+  "found_in": [
+   "999 Strong Wind.spc:srcn178"
+  ]
+ },
+ {
+  "file": "s152_oneshot.brr",
+  "blocks": 210,
+  "samples": 3360,
+  "bytes": 1892,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.988,
+  "found_in": [
+   "999 Truce Canyon.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s153_oneshot.brr",
+  "blocks": 189,
+  "samples": 3024,
+  "bytes": 1703,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 231.88,
+  "est_natural_midi": 57.91,
+  "f0_confidence": 0.841,
+  "found_in": [
+   "999 Rain and Flowing Water.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s154_oneshot.brr",
+  "blocks": 167,
+  "samples": 2672,
+  "bytes": 1505,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 359.55,
+  "est_natural_midi": 65.5,
+  "f0_confidence": 0.885,
+  "found_in": [
+   "999 Truce Canyon.spc:srcn163"
+  ]
+ },
+ {
+  "file": "s155_222hz.brr",
+  "blocks": 161,
+  "samples": 2576,
+  "bytes": 1451,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 2576,
+  "est_f0_hz": 222.22,
+  "est_natural_midi": 57.17,
+  "f0_confidence": 0.977,
+  "found_in": [
+   "103 Morning Sunlight.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s156_333hz.brr",
+  "blocks": 139,
+  "samples": 2224,
+  "bytes": 1253,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 2224,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 0.99,
+  "found_in": [
+   "312 Determination.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s157_oneshot.brr",
+  "blocks": 125,
+  "samples": 2000,
+  "bytes": 1127,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "999 Breath of Lavos.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s158_oneshot.brr",
+  "blocks": 95,
+  "samples": 1520,
+  "bytes": 857,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.9,
+  "found_in": [
+   "999 Lavos Stirs.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s159_oneshot.brr",
+  "blocks": 93,
+  "samples": 1488,
+  "bytes": 839,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 727.27,
+  "est_natural_midi": 77.7,
+  "f0_confidence": 0.653,
+  "found_in": [
+   "999 Mystic Chanting.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s160_oneshot.brr",
+  "blocks": 93,
+  "samples": 1488,
+  "bytes": 839,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 592.59,
+  "est_natural_midi": 74.15,
+  "f0_confidence": 0.961,
+  "found_in": [
+   "999 Mystic Chanting.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s161_oneshot.brr",
+  "blocks": 40,
+  "samples": 640,
+  "bytes": 362,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 0.36,
+  "found_in": [
+   "203 Lab 16's Ruin.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s162_50hz.brr",
+  "blocks": 40,
+  "samples": 640,
+  "bytes": 362,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 640,
+  "est_f0_hz": 50.0,
+  "est_natural_midi": 31.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "220 Rhythm of Wind, Sky and Earth.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s163_oneshot.brr",
+  "blocks": 37,
+  "samples": 592,
+  "bytes": 335,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.258,
+  "found_in": [
+   "307 Sealed Door.spc:srcn143"
+  ]
+ },
+ {
+  "file": "s164_oneshot.brr",
+  "blocks": 36,
+  "samples": 576,
+  "bytes": 326,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.255,
+  "found_in": [
+   "206 The Day the World Revived.spc:srcn145"
+  ]
+ },
+ {
+  "file": "s165_oneshot.brr",
+  "blocks": 28,
+  "samples": 448,
+  "bytes": 254,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 0.354,
+  "found_in": [
+   "316 Epilogue ~ To Good Friends.spc:srcn171"
+  ]
+ },
+ {
+  "file": "s166_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.146,
+  "found_in": [
+   "312 Determination.spc:srcn253"
+  ]
+ },
+ {
+  "file": "s167_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.438,
+  "found_in": [
+   "106 Guardia Millennial Fair.spc:srcn142"
+  ]
+ },
+ {
+  "file": "s168_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.053,
+  "found_in": [
+   "110 Goodnight.spc:srcn137"
+  ]
+ },
+ {
+  "file": "s169_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.217,
+  "found_in": [
+   "309 Far Off Promise.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s170_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.291,
+  "found_in": [
+   "302 Tyran Castle.spc:srcn249"
+  ]
+ },
+ {
+  "file": "s171_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.596,
+  "found_in": [
+   "999 Lavos Stirs (Faster).spc:srcn165"
+  ]
+ },
+ {
+  "file": "s172_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.153,
+  "found_in": [
+   "224 Battle with Magus.spc:srcn180"
+  ]
+ },
+ {
+  "file": "s173_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.141,
+  "found_in": [
+   "307 Sealed Door.spc:srcn252"
+  ]
+ },
+ {
+  "file": "s174_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.051,
+  "found_in": [
+   "308 Undersea Palace.spc:srcn161"
+  ]
+ },
+ {
+  "file": "s175_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.229,
+  "found_in": [
+   "999 Time Vortex.spc:srcn188"
+  ]
+ },
+ {
+  "file": "s176_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.137,
+  "found_in": [
+   "999 Truce Canyon.spc:srcn228"
+  ]
+ },
+ {
+  "file": "s177_22hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 22.22,
+  "est_natural_midi": 17.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Gato's Song.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s178_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "113 Courage and Pride.spc:srcn181"
+  ]
+ },
+ {
+  "file": "s179_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.178,
+  "found_in": [
+   "117 Silent Light.spc:srcn183"
+  ]
+ },
+ {
+  "file": "s180_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 780.49,
+  "est_natural_midi": 78.92,
+  "f0_confidence": 0.312,
+  "found_in": [
+   "203 Lab 16's Ruin.spc:srcn182"
+  ]
+ },
+ {
+  "file": "s181_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "309 Far Off Promise.spc:srcn192"
+  ]
+ },
+ {
+  "file": "s182_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.096,
+  "found_in": [
+   "999 Ozzie Laugh.spc:srcn249"
+  ]
+ },
+ {
+  "file": "s183_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Presentiment.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s184_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 Chrono Trigger (Looped).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s185_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "104 Peaceful Days.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s186_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.078,
+  "found_in": [
+   "107 Gato's Song.spc:srcn142"
+  ]
+ },
+ {
+  "file": "s187_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Goodnight.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s188_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "120 Fanfare 1.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s189_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "120 Fanfare 1.spc:srcn172"
+  ]
+ },
+ {
+  "file": "s190_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1882.35,
+  "est_natural_midi": 94.16,
+  "f0_confidence": 0.409,
+  "found_in": [
+   "120 Fanfare 1.spc:srcn174"
+  ]
+ },
+ {
+  "file": "s191_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "204 People Without Hope (Variant 2).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s192_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "207 Robo Gang Johnny.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s193_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "210 Remains of the Factory.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s194_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.347,
+  "found_in": [
+   "215 Fanfare 3.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s195_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "216 Underground Sewer.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s196_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.157,
+  "found_in": [
+   "217 Boss Battle 2.spc:srcn141"
+  ]
+ },
+ {
+  "file": "s197_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "301 Singing Mountain.spc:srcn155"
+  ]
+ },
+ {
+  "file": "s198_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.008,
+  "found_in": [
+   "302 Tyran Castle.spc:srcn255"
+  ]
+ },
+ {
+  "file": "s199_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "303 At the Bottom of Night.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s200_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "305 Zeal Palace.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s201_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.171,
+  "found_in": [
+   "307 Sealed Door.spc:srcn222"
+  ]
+ },
+ {
+  "file": "s202_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.309,
+  "found_in": [
+   "309 Far Off Promise.spc:srcn210"
+  ]
+ },
+ {
+  "file": "s203_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "310 Wings That Cross Time.spc:srcn216"
+  ]
+ },
+ {
+  "file": "s204_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 0.653,
+  "found_in": [
+   "312 Determination.spc:srcn174"
+  ]
+ },
+ {
+  "file": "s205_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.253,
+  "found_in": [
+   "312 Determination.spc:srcn176"
+  ]
+ },
+ {
+  "file": "s206_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "314 Last Battle.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s207_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "314 Last Battle.spc:srcn161"
+  ]
+ },
+ {
+  "file": "s208_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "315 First Festival of Stars.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s209_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Blackbird (Inside).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s210_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Blackbird (Outside).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s211_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Mystic Chanting.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s212_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Mystic Chanting.spc:srcn215"
+  ]
+ },
+ {
+  "file": "s213_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Prison Tower.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s214_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.301,
+  "found_in": [
+   "999 Prison Tower.spc:srcn171"
+  ]
+ },
+ {
+  "file": "s215_500hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "999 Unknown Fanfare.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s216_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.007,
+  "found_in": [
+   "108 A Strange Happening.spc:srcn154"
+  ]
+ },
+ {
+  "file": "s217_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "110 Goodnight.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s218_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.146,
+  "found_in": [
+   "116 A Prayer to the Road that Leads.spc:srcn249"
+  ]
+ },
+ {
+  "file": "s219_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.267,
+  "found_in": [
+   "121 Kingdom Trial.spc:srcn145"
+  ]
+ },
+ {
+  "file": "s220_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.018,
+  "found_in": [
+   "204 People Without Hope.spc:srcn182"
+  ]
+ },
+ {
+  "file": "s221_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.269,
+  "found_in": [
+   "206 The Day the World Revived.spc:srcn156"
+  ]
+ },
+ {
+  "file": "s222_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "210 Remains of the Factory.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s223_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "211 Battle 2.spc:srcn169"
+  ]
+ },
+ {
+  "file": "s224_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "211 Battle 2.spc:srcn171"
+  ]
+ },
+ {
+  "file": "s225_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "213 Brink of Time.spc:srcn162"
+  ]
+ },
+ {
+  "file": "s226_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.629,
+  "found_in": [
+   "301 Singing Mountain.spc:srcn209"
+  ]
+ },
+ {
+  "file": "s227_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.229,
+  "found_in": [
+   "303 At the Bottom of Night.spc:srcn239"
+  ]
+ },
+ {
+  "file": "s228_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "304 Corridors of Time.spc:srcn194"
+  ]
+ },
+ {
+  "file": "s229_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "307 Sealed Door.spc:srcn226"
+  ]
+ },
+ {
+  "file": "s230_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "308 Undersea Palace.spc:srcn249"
+  ]
+ },
+ {
+  "file": "s231_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "310 Wings That Cross Time.spc:srcn197"
+  ]
+ },
+ {
+  "file": "s232_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.05,
+  "found_in": [
+   "316 Epilogue ~ To Good Friends.spc:srcn244"
+  ]
+ },
+ {
+  "file": "s233_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.205,
+  "found_in": [
+   "317 To Far Away Times.spc:srcn148"
+  ]
+ },
+ {
+  "file": "s234_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "317 To Far Away Times.spc:srcn185"
+  ]
+ },
+ {
+  "file": "s235_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.275,
+  "found_in": [
+   "999 Blackbird (Inside).spc:srcn169"
+  ]
+ },
+ {
+  "file": "s236_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Lavos Stirs.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s237_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Prison Tower.spc:srcn216"
+  ]
+ }
+]

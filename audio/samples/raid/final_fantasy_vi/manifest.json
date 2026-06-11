@@ -1,0 +1,3460 @@
+[
+ {
+  "file": "s000_640hz.brr",
+  "blocks": 1046,
+  "samples": 16736,
+  "bytes": 9416,
+  "looped": true,
+  "loop_offset_bytes": 801,
+  "loop_samples": 15312,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 0.963,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn32",
+   "101c Opening Theme (part 3).spc:srcn33",
+   "102 The Mines of Narshe.spc:srcn32",
+   "103 Awakening.spc:srcn35",
+   "104 Locke.spc:srcn32",
+   "105 Battle Theme.spc:srcn32",
+   "107 Edgar and Sabin.spc:srcn33",
+   "108 Kefka.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s001_640hz.brr",
+  "blocks": 785,
+  "samples": 12560,
+  "bytes": 7067,
+  "looped": true,
+  "loop_offset_bytes": 5265,
+  "loop_samples": 3200,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn35",
+   "102 The Mines of Narshe.spc:srcn36",
+   "103 Awakening.spc:srcn32",
+   "206 Spinach Rag.spc:srcn32",
+   "212 Johnny C. Bad.spc:srcn32",
+   "220 Another World of Beasts.spc:srcn32",
+   "305 Dark World.spc:srcn36",
+   "999 Good Night.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s002_oneshot.brr",
+  "blocks": 537,
+  "samples": 8592,
+  "bytes": 4835,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.182,
+  "found_in": [
+   "105 Battle Theme.spc:srcn37",
+   "106 Fanfare.spc:srcn37",
+   "111 Shadow.spc:srcn37",
+   "121 Under Martial Law.spc:srcn38",
+   "124 The Decisive Battle.spc:srcn38",
+   "203 Techno de Chocobo.spc:srcn36",
+   "215 Blackjack.spc:srcn37",
+   "216 ____.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s003_36hz.brr",
+  "blocks": 492,
+  "samples": 7872,
+  "bytes": 4430,
+  "looped": true,
+  "loop_offset_bytes": 1143,
+  "loop_samples": 5840,
+  "est_f0_hz": 35.56,
+  "est_natural_midi": 25.45,
+  "f0_confidence": 0.946,
+  "found_in": [
+   "104 Locke.spc:srcn37",
+   "108 Kefka.spc:srcn42",
+   "110 Returners.spc:srcn35",
+   "113 Cyan.spc:srcn38",
+   "114 The Unforgiven.spc:srcn39",
+   "116 The Phantom Train.spc:srcn35",
+   "117 Wild West.spc:srcn39",
+   "119 The Serpent Trench.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s004_loop.brr",
+  "blocks": 477,
+  "samples": 7632,
+  "bytes": 4295,
+  "looped": true,
+  "loop_offset_bytes": 2700,
+  "loop_samples": 2832,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.245,
+  "found_in": [
+   "104 Locke.spc:srcn34",
+   "105 Battle Theme.spc:srcn38",
+   "107 Edgar and Sabin.spc:srcn35",
+   "108 Kefka.spc:srcn41",
+   "110 Returners.spc:srcn36",
+   "113 Cyan.spc:srcn36",
+   "114 The Unforgiven.spc:srcn36",
+   "123 Save Them!.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s005_227hz.brr",
+  "blocks": 414,
+  "samples": 6624,
+  "bytes": 3728,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 6576,
+  "est_f0_hz": 226.95,
+  "est_natural_midi": 57.54,
+  "f0_confidence": 0.603,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn34",
+   "209c The Wedding Waltz-Duel (part 3).spc:srcn36",
+   "312 Fanatics.spc:srcn32",
+   "314a Dancing Mad (part 1).spc:srcn35",
+   "314b Dancing Mad (part 2).spc:srcn35",
+   "314c Dancing Mad (part 3).spc:srcn35",
+   "314d Dancing Mad (part 4).spc:srcn34",
+   "999 Dancing Mad (Full).spc:srcn35"
+  ]
+ },
+ {
+  "file": "s006_oneshot.brr",
+  "blocks": 400,
+  "samples": 6400,
+  "bytes": 3602,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 115.52,
+  "est_natural_midi": 45.85,
+  "f0_confidence": 0.595,
+  "found_in": [
+   "104 Locke.spc:srcn36",
+   "107 Edgar and Sabin.spc:srcn36",
+   "108 Kefka.spc:srcn39",
+   "112 Troops March on.spc:srcn37",
+   "113 Cyan.spc:srcn37",
+   "114 The Unforgiven.spc:srcn38",
+   "116 The Phantom Train.spc:srcn37",
+   "123 Save Them!.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s007_337hz.brr",
+  "blocks": 389,
+  "samples": 6224,
+  "bytes": 3503,
+  "looped": true,
+  "loop_offset_bytes": 729,
+  "loop_samples": 4928,
+  "est_f0_hz": 336.84,
+  "est_natural_midi": 64.37,
+  "f0_confidence": 0.984,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn32",
+   "305 Dark World.spc:srcn32",
+   "312 Fanatics.spc:srcn38",
+   "314a Dancing Mad (part 1).spc:srcn32",
+   "314b Dancing Mad (part 2).spc:srcn32",
+   "314c Dancing Mad (part 3).spc:srcn32",
+   "314d Dancing Mad (part 4).spc:srcn32",
+   "314e Dancing Mad (part 5).spc:srcn41"
+  ]
+ },
+ {
+  "file": "s008_62hz.brr",
+  "blocks": 373,
+  "samples": 5968,
+  "bytes": 3359,
+  "looped": true,
+  "loop_offset_bytes": 3069,
+  "loop_samples": 512,
+  "est_f0_hz": 62.5,
+  "est_natural_midi": 35.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "111 Shadow.spc:srcn34",
+   "115 The Phantom Forest.spc:srcn35",
+   "116 The Phantom Train.spc:srcn32",
+   "118 Gau.spc:srcn34",
+   "120 Kids Run Through the City.spc:srcn34",
+   "207c Overture (part 3).spc:srcn40",
+   "212 Johnny C. Bad.spc:srcn33",
+   "217 Mog.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s009_744hz.brr",
+  "blocks": 344,
+  "samples": 5504,
+  "bytes": 3098,
+  "looped": true,
+  "loop_offset_bytes": 531,
+  "loop_samples": 4560,
+  "est_f0_hz": 744.19,
+  "est_natural_midi": 78.1,
+  "f0_confidence": 0.971,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn33",
+   "208 Aria de Mezzo Carattere.spc:srcn32",
+   "208 Aria de Mezzo Carattere.spc:srcn37",
+   "209c The Wedding Waltz-Duel (part 3).spc:srcn35",
+   "312 Fanatics.spc:srcn33",
+   "314a Dancing Mad (part 1).spc:srcn34",
+   "314b Dancing Mad (part 2).spc:srcn34",
+   "314c Dancing Mad (part 3).spc:srcn34"
+  ]
+ },
+ {
+  "file": "s010_111hz.brr",
+  "blocks": 262,
+  "samples": 4192,
+  "bytes": 2360,
+  "looped": true,
+  "loop_offset_bytes": 2196,
+  "loop_samples": 288,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn39",
+   "107 Edgar and Sabin.spc:srcn37",
+   "116 The Phantom Train.spc:srcn36",
+   "123 Save Them!.spc:srcn38",
+   "217 Mog.spc:srcn42",
+   "301 New Continent.spc:srcn35",
+   "315a Ending Theme (part 1).spc:srcn38",
+   "315b Ending Theme (part 2).spc:srcn38"
+  ]
+ },
+ {
+  "file": "s011_oneshot.brr",
+  "blocks": 250,
+  "samples": 4000,
+  "bytes": 2252,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 217.69,
+  "est_natural_midi": 56.82,
+  "f0_confidence": 0.714,
+  "found_in": [
+   "101c Opening Theme (part 3).spc:srcn36",
+   "104 Locke.spc:srcn35",
+   "105 Battle Theme.spc:srcn40",
+   "106 Fanfare.spc:srcn35",
+   "108 Kefka.spc:srcn40",
+   "110 Returners.spc:srcn38",
+   "111 Shadow.spc:srcn39",
+   "112 Troops March on.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s012_111hz.brr",
+  "blocks": 237,
+  "samples": 3792,
+  "bytes": 2135,
+  "looped": true,
+  "loop_offset_bytes": 2052,
+  "loop_samples": 144,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn33",
+   "101c Opening Theme (part 3).spc:srcn35",
+   "104 Locke.spc:srcn33",
+   "107 Edgar and Sabin.spc:srcn34",
+   "108 Kefka.spc:srcn35",
+   "109 Mt. Koltz.spc:srcn33",
+   "110 Returners.spc:srcn32",
+   "112 Troops March on.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s013_667hz.brr",
+  "blocks": 169,
+  "samples": 2704,
+  "bytes": 1523,
+  "looped": true,
+  "loop_offset_bytes": 1494,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101c Opening Theme (part 3).spc:srcn32",
+   "102 The Mines of Narshe.spc:srcn37",
+   "103 Awakening.spc:srcn37",
+   "108 Kefka.spc:srcn36",
+   "115 The Phantom Forest.spc:srcn37",
+   "117 Wild West.spc:srcn35",
+   "121 Under Martial Law.spc:srcn34",
+   "202 Coin Song.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s014_111hz.brr",
+  "blocks": 146,
+  "samples": 2336,
+  "bytes": 1316,
+  "looped": true,
+  "loop_offset_bytes": 1152,
+  "loop_samples": 288,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn36",
+   "103 Awakening.spc:srcn36",
+   "110 Returners.spc:srcn37",
+   "118 Gau.spc:srcn38",
+   "124 The Decisive Battle.spc:srcn35",
+   "201 Terra.spc:srcn38",
+   "202 Coin Song.spc:srcn35",
+   "203 Techno de Chocobo.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s015_oneshot.brr",
+  "blocks": 137,
+  "samples": 2192,
+  "bytes": 1235,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.938,
+  "found_in": [
+   "105 Battle Theme.spc:srcn39",
+   "106 Fanfare.spc:srcn38",
+   "111 Shadow.spc:srcn38",
+   "117 Wild West.spc:srcn33",
+   "121 Under Martial Law.spc:srcn39",
+   "124 The Decisive Battle.spc:srcn39",
+   "125 Metamorphasis.spc:srcn37",
+   "203 Techno de Chocobo.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s016_42hz.brr",
+  "blocks": 129,
+  "samples": 2064,
+  "bytes": 1163,
+  "looped": true,
+  "loop_offset_bytes": 945,
+  "loop_samples": 384,
+  "est_f0_hz": 41.67,
+  "est_natural_midi": 28.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101c Opening Theme (part 3).spc:srcn37",
+   "105 Battle Theme.spc:srcn35",
+   "106 Fanfare.spc:srcn33",
+   "109 Mt. Koltz.spc:srcn37",
+   "112 Troops March on.spc:srcn35",
+   "121 Under Martial Law.spc:srcn36",
+   "125 Metamorphasis.spc:srcn35",
+   "215 Blackjack.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s017_1000hz.brr",
+  "blocks": 123,
+  "samples": 1968,
+  "bytes": 1109,
+  "looped": true,
+  "loop_offset_bytes": 1089,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn37",
+   "103 Awakening.spc:srcn33",
+   "108 Kefka.spc:srcn37",
+   "114 The Unforgiven.spc:srcn34",
+   "115 The Phantom Forest.spc:srcn32",
+   "116 The Phantom Train.spc:srcn38",
+   "118 Gau.spc:srcn33",
+   "122 Celes.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s018_333hz.brr",
+  "blocks": 120,
+  "samples": 1920,
+  "bytes": 1082,
+  "looped": true,
+  "loop_offset_bytes": 1026,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn35",
+   "105 Battle Theme.spc:srcn33",
+   "106 Fanfare.spc:srcn32",
+   "107 Edgar and Sabin.spc:srcn32",
+   "108 Kefka.spc:srcn34",
+   "110 Returners.spc:srcn33",
+   "112 Troops March on.spc:srcn33",
+   "114 The Unforgiven.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s019_48hz.brr",
+  "blocks": 106,
+  "samples": 1696,
+  "bytes": 956,
+  "looped": true,
+  "loop_offset_bytes": 927,
+  "loop_samples": 48,
+  "est_f0_hz": 47.62,
+  "est_natural_midi": 30.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn34",
+   "101c Opening Theme (part 3).spc:srcn34",
+   "102 The Mines of Narshe.spc:srcn34",
+   "103 Awakening.spc:srcn34",
+   "108 Kefka.spc:srcn38",
+   "109 Mt. Koltz.spc:srcn35",
+   "118 Gau.spc:srcn37",
+   "121 Under Martial Law.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s020_oneshot.brr",
+  "blocks": 81,
+  "samples": 1296,
+  "bytes": 731,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.116,
+  "found_in": [
+   "105 Battle Theme.spc:srcn36",
+   "106 Fanfare.spc:srcn36",
+   "111 Shadow.spc:srcn36",
+   "116 The Phantom Train.spc:srcn40",
+   "121 Under Martial Law.spc:srcn37",
+   "124 The Decisive Battle.spc:srcn37",
+   "203 Techno de Chocobo.spc:srcn35",
+   "215 Blackjack.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s021_333hz.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn7",
+   "101b Opening Theme (part 2).spc:srcn7",
+   "101c Opening Theme (part 3).spc:srcn7",
+   "102 The Mines of Narshe.spc:srcn7",
+   "103 Awakening.spc:srcn7",
+   "104 Locke.spc:srcn7",
+   "105 Battle Theme.spc:srcn7",
+   "106 Fanfare.spc:srcn7"
+  ]
+ },
+ {
+  "file": "s022_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.196,
+  "found_in": [
+   "124 The Decisive Battle.spc:srcn130",
+   "124 The Decisive Battle.spc:srcn229",
+   "203 Techno de Chocobo.spc:srcn165",
+   "203 Techno de Chocobo.spc:srcn175",
+   "203 Techno de Chocobo.spc:srcn185",
+   "203 Techno de Chocobo.spc:srcn227",
+   "203 Techno de Chocobo.spc:srcn228",
+   "203 Techno de Chocobo.spc:srcn241"
+  ]
+ },
+ {
+  "file": "s023_500hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn3",
+   "101b Opening Theme (part 2).spc:srcn3",
+   "101c Opening Theme (part 3).spc:srcn3",
+   "102 The Mines of Narshe.spc:srcn3",
+   "103 Awakening.spc:srcn3",
+   "104 Locke.spc:srcn3",
+   "105 Battle Theme.spc:srcn3",
+   "106 Fanfare.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s024_1000hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn4",
+   "101b Opening Theme (part 2).spc:srcn4",
+   "101c Opening Theme (part 3).spc:srcn4",
+   "102 The Mines of Narshe.spc:srcn4",
+   "103 Awakening.spc:srcn4",
+   "104 Locke.spc:srcn4",
+   "105 Battle Theme.spc:srcn4",
+   "106 Fanfare.spc:srcn4"
+  ]
+ },
+ {
+  "file": "s025_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.099,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn179",
+   "101a Opening Theme (part 1).spc:srcn222",
+   "106 Fanfare.spc:srcn120",
+   "107 Edgar and Sabin.spc:srcn103",
+   "109 Mt. Koltz.spc:srcn158",
+   "109 Mt. Koltz.spc:srcn196",
+   "111 Shadow.spc:srcn82",
+   "114 The Unforgiven.spc:srcn182"
+  ]
+ },
+ {
+  "file": "s026_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1066.67,
+  "est_natural_midi": 84.33,
+  "f0_confidence": 0.314,
+  "found_in": [
+   "106 Fanfare.spc:srcn118",
+   "115 The Phantom Forest.spc:srcn205",
+   "117 Wild West.spc:srcn169",
+   "117 Wild West.spc:srcn171",
+   "117 Wild West.spc:srcn189",
+   "117 Wild West.spc:srcn237",
+   "117 Wild West.spc:srcn240",
+   "117 Wild West.spc:srcn255"
+  ]
+ },
+ {
+  "file": "s027_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "113 Cyan.spc:srcn164",
+   "113 Cyan.spc:srcn167",
+   "114 The Unforgiven.spc:srcn107",
+   "207b Overture (part 2).spc:srcn166",
+   "210a Grand Finale (part 1).spc:srcn166",
+   "218 Strago.spc:srcn211",
+   "304 Rest in Peace.spc:srcn166",
+   "312 Fanatics.spc:srcn166"
+  ]
+ },
+ {
+  "file": "s028_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn0",
+   "101b Opening Theme (part 2).spc:srcn0",
+   "101c Opening Theme (part 3).spc:srcn0",
+   "102 The Mines of Narshe.spc:srcn0",
+   "103 Awakening.spc:srcn0",
+   "104 Locke.spc:srcn0",
+   "105 Battle Theme.spc:srcn0",
+   "106 Fanfare.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s029_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn1",
+   "101b Opening Theme (part 2).spc:srcn1",
+   "101c Opening Theme (part 3).spc:srcn1",
+   "102 The Mines of Narshe.spc:srcn1",
+   "103 Awakening.spc:srcn1",
+   "104 Locke.spc:srcn1",
+   "105 Battle Theme.spc:srcn1",
+   "106 Fanfare.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s030_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn2",
+   "101b Opening Theme (part 2).spc:srcn2",
+   "101c Opening Theme (part 3).spc:srcn2",
+   "102 The Mines of Narshe.spc:srcn2",
+   "103 Awakening.spc:srcn2",
+   "104 Locke.spc:srcn2",
+   "105 Battle Theme.spc:srcn2",
+   "106 Fanfare.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s031_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.138,
+  "found_in": [
+   "103 Awakening.spc:srcn86",
+   "207b Overture (part 2).spc:srcn124",
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn119",
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn164",
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn231",
+   "210a Grand Finale (part 1).spc:srcn124",
+   "316 The Prelude.spc:srcn124",
+   "999 Good Night.spc:srcn124"
+  ]
+ },
+ {
+  "file": "s032_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.383,
+  "found_in": [
+   "103 Awakening.spc:srcn135",
+   "124 The Decisive Battle.spc:srcn193",
+   "124 The Decisive Battle.spc:srcn206",
+   "124 The Decisive Battle.spc:srcn212",
+   "209b The Wedding Waltz-Duel (part 2).spc:srcn87",
+   "209b The Wedding Waltz-Duel (part 2).spc:srcn188",
+   "316 The Prelude.spc:srcn85",
+   "316 The Prelude.spc:srcn94"
+  ]
+ },
+ {
+  "file": "s033_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.032,
+  "found_in": [
+   "121 Under Martial Law.spc:srcn164",
+   "214 Devil's Lab.spc:srcn233",
+   "307 Searching for Friends.spc:srcn204",
+   "307 Searching for Friends.spc:srcn220",
+   "307 Searching for Friends.spc:srcn234",
+   "999 Quiet Beach.spc:srcn204",
+   "999 Quiet Beach.spc:srcn220",
+   "999 Quiet Beach.spc:srcn234"
+  ]
+ },
+ {
+  "file": "s034_22hz.brr",
+  "blocks": 605,
+  "samples": 9680,
+  "bytes": 5447,
+  "looped": true,
+  "loop_offset_bytes": 3393,
+  "loop_samples": 3648,
+  "est_f0_hz": 22.04,
+  "est_natural_midi": 17.17,
+  "f0_confidence": 0.981,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn38",
+   "213 The Empire Gestahl.spc:srcn36",
+   "305 Dark World.spc:srcn34",
+   "314a Dancing Mad (part 1).spc:srcn39",
+   "314b Dancing Mad (part 2).spc:srcn39",
+   "314c Dancing Mad (part 3).spc:srcn39",
+   "999 Dancing Mad (Full).spc:srcn39"
+  ]
+ },
+ {
+  "file": "s035_oneshot.brr",
+  "blocks": 500,
+  "samples": 8000,
+  "bytes": 4502,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.248,
+  "found_in": [
+   "124 The Decisive Battle.spc:srcn40",
+   "125 Metamorphasis.spc:srcn38",
+   "214 Devil's Lab.spc:srcn39",
+   "217 Mog.spc:srcn41",
+   "314e Dancing Mad (part 5).spc:srcn39",
+   "999 Rumbling.spc:srcn32",
+   "999 Strong Wind.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s036_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "107 Edgar and Sabin.spc:srcn156",
+   "107 Edgar and Sabin.spc:srcn162",
+   "206 Spinach Rag.spc:srcn146",
+   "209a The Wedding Waltz-Duel (part 1).spc:srcn160",
+   "216 ____.spc:srcn111",
+   "216 ____.spc:srcn112",
+   "314e Dancing Mad (part 5).spc:srcn149"
+  ]
+ },
+ {
+  "file": "s037_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "120 Kids Run Through the City.spc:srcn186",
+   "120 Kids Run Through the City.spc:srcn200",
+   "120 Kids Run Through the City.spc:srcn218",
+   "120 Kids Run Through the City.spc:srcn232",
+   "120 Kids Run Through the City.spc:srcn252",
+   "203 Techno de Chocobo.spc:srcn105",
+   "301 New Continent.spc:srcn154"
+  ]
+ },
+ {
+  "file": "s038_47hz.brr",
+  "blocks": 444,
+  "samples": 7104,
+  "bytes": 3998,
+  "looped": true,
+  "loop_offset_bytes": 1530,
+  "loop_samples": 4384,
+  "est_f0_hz": 47.48,
+  "est_natural_midi": 30.45,
+  "f0_confidence": 0.767,
+  "found_in": [
+   "105 Battle Theme.spc:srcn34",
+   "106 Fanfare.spc:srcn34",
+   "109 Mt. Koltz.spc:srcn36",
+   "124 The Decisive Battle.spc:srcn34",
+   "203 Techno de Chocobo.spc:srcn32",
+   "314e Dancing Mad (part 5).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s039_oneshot.brr",
+  "blocks": 375,
+  "samples": 6000,
+  "bytes": 3377,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.162,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn38",
+   "115 The Phantom Forest.spc:srcn38",
+   "314a Dancing Mad (part 1).spc:srcn41",
+   "314b Dancing Mad (part 2).spc:srcn41",
+   "314c Dancing Mad (part 3).spc:srcn41",
+   "999 Dancing Mad (Full).spc:srcn41"
+  ]
+ },
+ {
+  "file": "s040_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.276,
+  "found_in": [
+   "112 Troops March on.spc:srcn144",
+   "306 The Day After.spc:srcn214",
+   "306 The Day After.spc:srcn216",
+   "306 The Day After.spc:srcn225",
+   "306 The Day After.spc:srcn245",
+   "306 The Day After.spc:srcn247"
+  ]
+ },
+ {
+  "file": "s041_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.12,
+  "found_in": [
+   "218 Strago.spc:srcn86",
+   "314a Dancing Mad (part 1).spc:srcn203",
+   "314b Dancing Mad (part 2).spc:srcn203",
+   "314c Dancing Mad (part 3).spc:srcn203",
+   "999 Dancing Mad (Full).spc:srcn187",
+   "999 Dancing Mad (Full).spc:srcn198"
+  ]
+ },
+ {
+  "file": "s042_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.099,
+  "found_in": [
+   "314a Dancing Mad (part 1).spc:srcn125",
+   "314a Dancing Mad (part 1).spc:srcn245",
+   "314b Dancing Mad (part 2).spc:srcn125",
+   "314b Dancing Mad (part 2).spc:srcn245",
+   "314c Dancing Mad (part 3).spc:srcn125",
+   "314c Dancing Mad (part 3).spc:srcn245"
+  ]
+ },
+ {
+  "file": "s043_oneshot.brr",
+  "blocks": 750,
+  "samples": 12000,
+  "bytes": 6752,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 278.26,
+  "est_natural_midi": 61.07,
+  "f0_confidence": 0.707,
+  "found_in": [
+   "109 Mt. Koltz.spc:srcn38",
+   "117 Wild West.spc:srcn32",
+   "125 Metamorphasis.spc:srcn39",
+   "216 ____.spc:srcn39",
+   "314e Dancing Mad (part 5).spc:srcn38"
+  ]
+ },
+ {
+  "file": "s044_154hz.brr",
+  "blocks": 197,
+  "samples": 3152,
+  "bytes": 1775,
+  "looped": true,
+  "loop_offset_bytes": 1656,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn33",
+   "111 Shadow.spc:srcn35",
+   "115 The Phantom Forest.spc:srcn36",
+   "120 Kids Run Through the City.spc:srcn33",
+   "212 Johnny C. Bad.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s045_99hz.brr",
+  "blocks": 116,
+  "samples": 1856,
+  "bytes": 1046,
+  "looped": true,
+  "loop_offset_bytes": 315,
+  "loop_samples": 1296,
+  "est_f0_hz": 98.77,
+  "est_natural_midi": 43.14,
+  "f0_confidence": 1.006,
+  "found_in": [
+   "109 Mt. Koltz.spc:srcn34",
+   "124 The Decisive Battle.spc:srcn33",
+   "203 Techno de Chocobo.spc:srcn33",
+   "218 Strago.spc:srcn33",
+   "314e Dancing Mad (part 5).spc:srcn32"
+  ]
+ },
+ {
+  "file": "s046_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "109 Mt. Koltz.spc:srcn198",
+   "110 Returners.spc:srcn225",
+   "110 Returners.spc:srcn247",
+   "121 Under Martial Law.spc:srcn127",
+   "310 The Magic House.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s047_189hz.brr",
+  "blocks": 299,
+  "samples": 4784,
+  "bytes": 2693,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 4736,
+  "est_f0_hz": 189.35,
+  "est_natural_midi": 54.4,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "314a Dancing Mad (part 1).spc:srcn33",
+   "314b Dancing Mad (part 2).spc:srcn33",
+   "314c Dancing Mad (part 3).spc:srcn33",
+   "999 Dancing Mad (Full).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s048_oneshot.brr",
+  "blocks": 243,
+  "samples": 3888,
+  "bytes": 2189,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.101,
+  "found_in": [
+   "117 Wild West.spc:srcn34",
+   "203 Techno de Chocobo.spc:srcn37",
+   "216 ____.spc:srcn37",
+   "306 The Day After.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s049_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.197,
+  "found_in": [
+   "118 Gau.spc:srcn225",
+   "206 Spinach Rag.spc:srcn252",
+   "999 Blazing Fire.spc:srcn103",
+   "999 Good Night.spc:srcn103"
+  ]
+ },
+ {
+  "file": "s050_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "210a Grand Finale (part 1).spc:srcn180",
+   "314d Dancing Mad (part 4).spc:srcn180",
+   "999 Good Night.spc:srcn180",
+   "999 Unused Fanfare.spc:srcn180"
+  ]
+ },
+ {
+  "file": "s051_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "207c Overture (part 3).spc:srcn82",
+   "207c Overture (part 3).spc:srcn89",
+   "207c Overture (part 3).spc:srcn151",
+   "207c Overture (part 3).spc:srcn158"
+  ]
+ },
+ {
+  "file": "s052_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "101b Opening Theme (part 2).spc:srcn184",
+   "101b Opening Theme (part 2).spc:srcn186",
+   "313 Last Dungeon.spc:srcn110",
+   "999 Unused Fanfare.spc:srcn94"
+  ]
+ },
+ {
+  "file": "s053_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.542,
+  "found_in": [
+   "105 Battle Theme.spc:srcn185",
+   "111 Shadow.spc:srcn87",
+   "111 Shadow.spc:srcn94",
+   "999 Unused Fanfare.spc:srcn82"
+  ]
+ },
+ {
+  "file": "s054_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.091,
+  "found_in": [
+   "202 Coin Song.spc:srcn100",
+   "206 Spinach Rag.spc:srcn141",
+   "208 Aria de Mezzo Carattere.spc:srcn247",
+   "302 Catastrophe.spc:srcn152"
+  ]
+ },
+ {
+  "file": "s055_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "210a Grand Finale (part 1).spc:srcn67",
+   "210a Grand Finale (part 1).spc:srcn68",
+   "210a Grand Finale (part 1).spc:srcn71",
+   "210a Grand Finale (part 1).spc:srcn72"
+  ]
+ },
+ {
+  "file": "s056_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "218 Strago.spc:srcn113",
+   "218 Strago.spc:srcn120",
+   "999 Blazing Fire.spc:srcn113",
+   "999 Blazing Fire.spc:srcn120"
+  ]
+ },
+ {
+  "file": "s057_oneshot.brr",
+  "blocks": 625,
+  "samples": 10000,
+  "bytes": 5627,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.393,
+  "found_in": [
+   "113 Cyan.spc:srcn35",
+   "216 ____.spc:srcn36",
+   "312 Fanatics.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s058_640hz.brr",
+  "blocks": 573,
+  "samples": 9168,
+  "bytes": 5159,
+  "looped": true,
+  "loop_offset_bytes": 1593,
+  "loop_samples": 6336,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 1.001,
+  "found_in": [
+   "115 The Phantom Forest.spc:srcn34",
+   "307 Searching for Friends.spc:srcn37",
+   "316 The Prelude.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s059_204hz.brr",
+  "blocks": 496,
+  "samples": 7936,
+  "bytes": 4466,
+  "looped": true,
+  "loop_offset_bytes": 1143,
+  "loop_samples": 5904,
+  "est_f0_hz": 203.82,
+  "est_natural_midi": 55.68,
+  "f0_confidence": 0.533,
+  "found_in": [
+   "207b Overture (part 2).spc:srcn34",
+   "209c The Wedding Waltz-Duel (part 3).spc:srcn34",
+   "312 Fanatics.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s060_oneshot.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1684.21,
+  "est_natural_midi": 92.24,
+  "f0_confidence": 0.943,
+  "found_in": [
+   "216 ____.spc:srcn34",
+   "218 Strago.spc:srcn40",
+   "311 Umaro.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s061_222hz.brr",
+  "blocks": 108,
+  "samples": 1728,
+  "bytes": 974,
+  "looped": true,
+  "loop_offset_bytes": 891,
+  "loop_samples": 144,
+  "est_f0_hz": 222.22,
+  "est_natural_midi": 57.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "201 Terra.spc:srcn35",
+   "219 Relm.spc:srcn36",
+   "306 The Day After.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s062_oneshot.brr",
+  "blocks": 20,
+  "samples": 320,
+  "bytes": 182,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.773,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn235",
+   "999 Blazing Fire.spc:srcn243",
+   "999 Blazing Fire.spc:srcn251"
+  ]
+ },
+ {
+  "file": "s063_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.187,
+  "found_in": [
+   "122 Celes.spc:srcn101",
+   "122 Celes.spc:srcn106",
+   "122 Celes.spc:srcn136"
+  ]
+ },
+ {
+  "file": "s064_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.196,
+  "found_in": [
+   "113 Cyan.spc:srcn193",
+   "118 Gau.spc:srcn79",
+   "306 The Day After.spc:srcn101"
+  ]
+ },
+ {
+  "file": "s065_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "101a Opening Theme (part 1).spc:srcn187",
+   "101a Opening Theme (part 1).spc:srcn192",
+   "101a Opening Theme (part 1).spc:srcn207"
+  ]
+ },
+ {
+  "file": "s066_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.089,
+  "found_in": [
+   "305 Dark World.spc:srcn201",
+   "999 Rumbling.spc:srcn89",
+   "999 Strong Wind.spc:srcn89"
+  ]
+ },
+ {
+  "file": "s067_215hz.brr",
+  "blocks": 554,
+  "samples": 8864,
+  "bytes": 4988,
+  "looped": true,
+  "loop_offset_bytes": 3897,
+  "loop_samples": 1936,
+  "est_f0_hz": 214.77,
+  "est_natural_midi": 56.58,
+  "f0_confidence": 0.998,
+  "found_in": [
+   "217 Mog.spc:srcn36",
+   "218 Strago.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s068_1280hz.brr",
+  "blocks": 489,
+  "samples": 7824,
+  "bytes": 4403,
+  "looped": true,
+  "loop_offset_bytes": 1881,
+  "loop_samples": 4480,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.998,
+  "found_in": [
+   "201 Terra.spc:srcn32",
+   "307 Searching for Friends.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s069_oneshot.brr",
+  "blocks": 412,
+  "samples": 6592,
+  "bytes": 3710,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.168,
+  "found_in": [
+   "117 Wild West.spc:srcn38",
+   "216 ____.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s070_37hz.brr",
+  "blocks": 337,
+  "samples": 5392,
+  "bytes": 3035,
+  "looped": true,
+  "loop_offset_bytes": 2952,
+  "loop_samples": 144,
+  "est_f0_hz": 37.04,
+  "est_natural_midi": 26.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "118 Gau.spc:srcn36",
+   "309 Epitaph.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s071_oneshot.brr",
+  "blocks": 50,
+  "samples": 800,
+  "bytes": 452,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 262.3,
+  "est_natural_midi": 60.04,
+  "f0_confidence": 0.731,
+  "found_in": [
+   "117 Wild West.spc:srcn40",
+   "218 Strago.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s072_oneshot.brr",
+  "blocks": 13,
+  "samples": 208,
+  "bytes": 119,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.127,
+  "found_in": [
+   "207a Overture (part 1).spc:srcn188",
+   "207a Overture (part 1).spc:srcn198"
+  ]
+ },
+ {
+  "file": "s073_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.659,
+  "found_in": [
+   "209a The Wedding Waltz-Duel (part 1).spc:srcn66",
+   "209a The Wedding Waltz-Duel (part 1).spc:srcn70"
+  ]
+ },
+ {
+  "file": "s074_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.046,
+  "found_in": [
+   "206 Spinach Rag.spc:srcn177",
+   "206 Spinach Rag.spc:srcn187"
+  ]
+ },
+ {
+  "file": "s075_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "113 Cyan.spc:srcn157",
+   "310 The Magic House.spc:srcn218"
+  ]
+ },
+ {
+  "file": "s076_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.183,
+  "found_in": [
+   "309 Epitaph.spc:srcn67",
+   "309 Epitaph.spc:srcn71"
+  ]
+ },
+ {
+  "file": "s077_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.147,
+  "found_in": [
+   "313 Last Dungeon.spc:srcn233",
+   "313 Last Dungeon.spc:srcn234"
+  ]
+ },
+ {
+  "file": "s078_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.159,
+  "found_in": [
+   "314e Dancing Mad (part 5).spc:srcn89",
+   "314e Dancing Mad (part 5).spc:srcn147"
+  ]
+ },
+ {
+  "file": "s079_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.015,
+  "found_in": [
+   "999 Rumbling.spc:srcn113",
+   "999 Strong Wind.spc:srcn113"
+  ]
+ },
+ {
+  "file": "s080_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.079,
+  "found_in": [
+   "101c Opening Theme (part 3).spc:srcn140",
+   "122 Celes.spc:srcn146"
+  ]
+ },
+ {
+  "file": "s081_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.277,
+  "found_in": [
+   "104 Locke.spc:srcn143",
+   "104 Locke.spc:srcn149"
+  ]
+ },
+ {
+  "file": "s082_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.085,
+  "found_in": [
+   "112 Troops March on.spc:srcn227",
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn251"
+  ]
+ },
+ {
+  "file": "s083_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.501,
+  "found_in": [
+   "202 Coin Song.spc:srcn141",
+   "313 Last Dungeon.spc:srcn81"
+  ]
+ },
+ {
+  "file": "s084_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "209b The Wedding Waltz-Duel (part 2).spc:srcn89",
+   "209b The Wedding Waltz-Duel (part 2).spc:srcn148"
+  ]
+ },
+ {
+  "file": "s085_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.009,
+  "found_in": [
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn66",
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn70"
+  ]
+ },
+ {
+  "file": "s086_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.02,
+  "found_in": [
+   "309 Epitaph.spc:srcn151",
+   "309 Epitaph.spc:srcn176"
+  ]
+ },
+ {
+  "file": "s087_50hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 50.0,
+  "est_natural_midi": 31.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "313 Last Dungeon.spc:srcn240",
+   "313 Last Dungeon.spc:srcn241"
+  ]
+ },
+ {
+  "file": "s088_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "110 Returners.spc:srcn111",
+   "307 Searching for Friends.spc:srcn87"
+  ]
+ },
+ {
+  "file": "s089_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "123 Save Them!.spc:srcn124",
+   "123 Save Them!.spc:srcn190"
+  ]
+ },
+ {
+  "file": "s090_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.234,
+  "found_in": [
+   "202 Coin Song.spc:srcn131",
+   "310 The Magic House.spc:srcn133"
+  ]
+ },
+ {
+  "file": "s091_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "204 Forever Rachel!.spc:srcn196",
+   "204 Forever Rachel!.spc:srcn207"
+  ]
+ },
+ {
+  "file": "s092_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.273,
+  "found_in": [
+   "205 Slam Shuffle.spc:srcn66",
+   "205 Slam Shuffle.spc:srcn70"
+  ]
+ },
+ {
+  "file": "s093_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "212 Johnny C. Bad.spc:srcn196",
+   "212 Johnny C. Bad.spc:srcn202"
+  ]
+ },
+ {
+  "file": "s094_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "213 The Empire Gestahl.spc:srcn132",
+   "219 Relm.spc:srcn169"
+  ]
+ },
+ {
+  "file": "s095_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "312 Fanatics.spc:srcn87",
+   "312 Fanatics.spc:srcn115"
+  ]
+ },
+ {
+  "file": "s096_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Rumbling.spc:srcn172",
+   "999 Rumbling.spc:srcn201"
+  ]
+ },
+ {
+  "file": "s097_oneshot.brr",
+  "blocks": 900,
+  "samples": 14400,
+  "bytes": 8102,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 180.79,
+  "est_natural_midi": 53.6,
+  "f0_confidence": 0.717,
+  "found_in": [
+   "111 Shadow.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s098_640hz.brr",
+  "blocks": 763,
+  "samples": 12208,
+  "bytes": 6869,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 12208,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 0.976,
+  "found_in": [
+   "206 Spinach Rag.spc:srcn144"
+  ]
+ },
+ {
+  "file": "s099_640hz.brr",
+  "blocks": 737,
+  "samples": 11792,
+  "bytes": 6635,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 11792,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 0.932,
+  "found_in": [
+   "999 Rumbling.spc:srcn133"
+  ]
+ },
+ {
+  "file": "s100_loop.brr",
+  "blocks": 717,
+  "samples": 11472,
+  "bytes": 6455,
+  "looped": true,
+  "loop_offset_bytes": 18,
+  "loop_samples": 11440,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.231,
+  "found_in": [
+   "210a Grand Finale (part 1).spc:srcn32"
+  ]
+ },
+ {
+  "file": "s101_64hz.brr",
+  "blocks": 663,
+  "samples": 10608,
+  "bytes": 5969,
+  "looped": true,
+  "loop_offset_bytes": 4167,
+  "loop_samples": 3200,
+  "est_f0_hz": 64.0,
+  "est_natural_midi": 35.62,
+  "f0_confidence": 1.003,
+  "found_in": [
+   "118 Gau.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s102_889hz.brr",
+  "blocks": 485,
+  "samples": 7760,
+  "bytes": 4367,
+  "looped": true,
+  "loop_offset_bytes": 1602,
+  "loop_samples": 4912,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.977,
+  "found_in": [
+   "309 Epitaph.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s103_oneshot.brr",
+  "blocks": 460,
+  "samples": 7360,
+  "bytes": 4142,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 228.57,
+  "est_natural_midi": 57.66,
+  "f0_confidence": 0.536,
+  "found_in": [
+   "214 Devil's Lab.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s104_oneshot.brr",
+  "blocks": 450,
+  "samples": 7200,
+  "bytes": 4052,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.071,
+  "found_in": [
+   "214 Devil's Lab.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s105_oneshot.brr",
+  "blocks": 410,
+  "samples": 6560,
+  "bytes": 3692,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.195,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn73"
+  ]
+ },
+ {
+  "file": "s106_131hz.brr",
+  "blocks": 379,
+  "samples": 6064,
+  "bytes": 3413,
+  "looped": true,
+  "loop_offset_bytes": 909,
+  "loop_samples": 4448,
+  "est_f0_hz": 130.61,
+  "est_natural_midi": 47.97,
+  "f0_confidence": 0.995,
+  "found_in": [
+   "303 The Fierce Battle.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s107_889hz.brr",
+  "blocks": 367,
+  "samples": 5872,
+  "bytes": 3305,
+  "looped": true,
+  "loop_offset_bytes": 1143,
+  "loop_samples": 3840,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.994,
+  "found_in": [
+   "113 Cyan.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s108_oneshot.brr",
+  "blocks": 359,
+  "samples": 5744,
+  "bytes": 3233,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 86.96,
+  "est_natural_midi": 40.93,
+  "f0_confidence": 0.948,
+  "found_in": [
+   "203 Techno de Chocobo.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s109_154hz.brr",
+  "blocks": 351,
+  "samples": 5616,
+  "bytes": 3161,
+  "looped": true,
+  "loop_offset_bytes": 3042,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "219 Relm.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s110_22hz.brr",
+  "blocks": 350,
+  "samples": 5600,
+  "bytes": 3152,
+  "looped": true,
+  "loop_offset_bytes": 3096,
+  "loop_samples": 96,
+  "est_f0_hz": 22.22,
+  "est_natural_midi": 17.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "122 Celes.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s111_24hz.brr",
+  "blocks": 334,
+  "samples": 5344,
+  "bytes": 3008,
+  "looped": true,
+  "loop_offset_bytes": 2268,
+  "loop_samples": 1312,
+  "est_f0_hz": 24.41,
+  "est_natural_midi": 18.94,
+  "f0_confidence": 0.995,
+  "found_in": [
+   "117 Wild West.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s112_oneshot.brr",
+  "blocks": 313,
+  "samples": 5008,
+  "bytes": 2819,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 86.72,
+  "est_natural_midi": 40.88,
+  "f0_confidence": 1.001,
+  "found_in": [
+   "203 Techno de Chocobo.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s113_oneshot.brr",
+  "blocks": 310,
+  "samples": 4960,
+  "bytes": 2792,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.325,
+  "found_in": [
+   "999 Quiet Beach.spc:srcn81"
+  ]
+ },
+ {
+  "file": "s114_oneshot.brr",
+  "blocks": 293,
+  "samples": 4688,
+  "bytes": 2639,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 115.11,
+  "est_natural_midi": 45.79,
+  "f0_confidence": 0.799,
+  "found_in": [
+   "999 Rumbling.spc:srcn203"
+  ]
+ },
+ {
+  "file": "s115_31hz.brr",
+  "blocks": 292,
+  "samples": 4672,
+  "bytes": 2630,
+  "looped": true,
+  "loop_offset_bytes": 2583,
+  "loop_samples": 80,
+  "est_f0_hz": 30.77,
+  "est_natural_midi": 22.95,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "120 Kids Run Through the City.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s116_oneshot.brr",
+  "blocks": 222,
+  "samples": 3552,
+  "bytes": 2000,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 86.72,
+  "est_natural_midi": 40.88,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "203 Techno de Chocobo.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s117_oneshot.brr",
+  "blocks": 212,
+  "samples": 3392,
+  "bytes": 1910,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.166,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s118_20hz.brr",
+  "blocks": 195,
+  "samples": 3120,
+  "bytes": 1757,
+  "looped": true,
+  "loop_offset_bytes": 1620,
+  "loop_samples": 240,
+  "est_f0_hz": 20.2,
+  "est_natural_midi": 15.66,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "216 ____.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s119_oneshot.brr",
+  "blocks": 192,
+  "samples": 3072,
+  "bytes": 1730,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 653.06,
+  "est_natural_midi": 75.84,
+  "f0_confidence": 0.937,
+  "found_in": [
+   "216 ____.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s120_154hz.brr",
+  "blocks": 178,
+  "samples": 2848,
+  "bytes": 1604,
+  "looped": true,
+  "loop_offset_bytes": 1485,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 Kefka.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s121_667hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 1260,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "120 Kids Run Through the City.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s122_24hz.brr",
+  "blocks": 139,
+  "samples": 2224,
+  "bytes": 1253,
+  "looped": true,
+  "loop_offset_bytes": 999,
+  "loop_samples": 448,
+  "est_f0_hz": 23.81,
+  "est_natural_midi": 18.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "111 Shadow.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s123_oneshot.brr",
+  "blocks": 98,
+  "samples": 1568,
+  "bytes": 884,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 54.89,
+  "est_natural_midi": 32.97,
+  "f0_confidence": 0.309,
+  "found_in": [
+   "218 Strago.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s124_oneshot.brr",
+  "blocks": 81,
+  "samples": 1296,
+  "bytes": 731,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.25,
+  "found_in": [
+   "111 Shadow.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s125_oneshot.brr",
+  "blocks": 71,
+  "samples": 1136,
+  "bytes": 641,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 196.32,
+  "est_natural_midi": 55.03,
+  "f0_confidence": 0.524,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s126_oneshot.brr",
+  "blocks": 32,
+  "samples": 512,
+  "bytes": 290,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 761.9,
+  "est_natural_midi": 78.51,
+  "f0_confidence": 0.752,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn212"
+  ]
+ },
+ {
+  "file": "s127_oneshot.brr",
+  "blocks": 23,
+  "samples": 368,
+  "bytes": 209,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.747,
+  "found_in": [
+   "111 Shadow.spc:srcn214"
+  ]
+ },
+ {
+  "file": "s128_oneshot.brr",
+  "blocks": 15,
+  "samples": 240,
+  "bytes": 137,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.278,
+  "found_in": [
+   "104 Locke.spc:srcn215"
+  ]
+ },
+ {
+  "file": "s129_oneshot.brr",
+  "blocks": 15,
+  "samples": 240,
+  "bytes": 137,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1684.21,
+  "est_natural_midi": 92.24,
+  "f0_confidence": 0.407,
+  "found_in": [
+   "217 Mog.spc:srcn211"
+  ]
+ },
+ {
+  "file": "s130_22hz.brr",
+  "blocks": 13,
+  "samples": 208,
+  "bytes": 119,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 208,
+  "est_f0_hz": 21.98,
+  "est_natural_midi": 17.12,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "220 Another World of Beasts.spc:srcn142"
+  ]
+ },
+ {
+  "file": "s131_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 484.85,
+  "est_natural_midi": 70.68,
+  "f0_confidence": 0.447,
+  "found_in": [
+   "104 Locke.spc:srcn138"
+  ]
+ },
+ {
+  "file": "s132_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn123"
+  ]
+ },
+ {
+  "file": "s133_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.627,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn160"
+  ]
+ },
+ {
+  "file": "s134_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 561.4,
+  "est_natural_midi": 73.22,
+  "f0_confidence": 0.326,
+  "found_in": [
+   "210b Grand Finale (part 2).spc:srcn209"
+  ]
+ },
+ {
+  "file": "s135_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.127,
+  "found_in": [
+   "107 Edgar and Sabin.spc:srcn143"
+  ]
+ },
+ {
+  "file": "s136_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.268,
+  "found_in": [
+   "206 Spinach Rag.spc:srcn152"
+  ]
+ },
+ {
+  "file": "s137_286hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 112,
+  "est_f0_hz": 285.71,
+  "est_natural_midi": 61.52,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "207b Overture (part 2).spc:srcn88"
+  ]
+ },
+ {
+  "file": "s138_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.516,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn169"
+  ]
+ },
+ {
+  "file": "s139_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.444,
+  "found_in": [
+   "207b Overture (part 2).spc:srcn104"
+  ]
+ },
+ {
+  "file": "s140_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 727.27,
+  "est_natural_midi": 77.7,
+  "f0_confidence": 0.418,
+  "found_in": [
+   "208 Aria de Mezzo Carattere.spc:srcn214"
+  ]
+ },
+ {
+  "file": "s141_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.252,
+  "found_in": [
+   "209c The Wedding Waltz-Duel (part 3).spc:srcn133"
+  ]
+ },
+ {
+  "file": "s142_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.181,
+  "found_in": [
+   "302 Catastrophe.spc:srcn254"
+  ]
+ },
+ {
+  "file": "s143_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.178,
+  "found_in": [
+   "309 Epitaph.spc:srcn221"
+  ]
+ },
+ {
+  "file": "s144_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.146,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn205"
+  ]
+ },
+ {
+  "file": "s145_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn109"
+  ]
+ },
+ {
+  "file": "s146_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "104 Locke.spc:srcn104"
+  ]
+ },
+ {
+  "file": "s147_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.234,
+  "found_in": [
+   "118 Gau.spc:srcn239"
+  ]
+ },
+ {
+  "file": "s148_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 820.51,
+  "est_natural_midi": 79.79,
+  "f0_confidence": 0.503,
+  "found_in": [
+   "119 The Serpent Trench.spc:srcn181"
+  ]
+ },
+ {
+  "file": "s149_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.391,
+  "found_in": [
+   "122 Celes.spc:srcn156"
+  ]
+ },
+ {
+  "file": "s150_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "202 Coin Song.spc:srcn151"
+  ]
+ },
+ {
+  "file": "s151_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "205 Slam Shuffle.spc:srcn122"
+  ]
+ },
+ {
+  "file": "s152_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "212 Johnny C. Bad.spc:srcn201"
+  ]
+ },
+ {
+  "file": "s153_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "212 Johnny C. Bad.spc:srcn232"
+  ]
+ },
+ {
+  "file": "s154_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "307 Searching for Friends.spc:srcn105"
+  ]
+ },
+ {
+  "file": "s155_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.048,
+  "found_in": [
+   "307 Searching for Friends.spc:srcn200"
+  ]
+ },
+ {
+  "file": "s156_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "308 Gogo.spc:srcn204"
+  ]
+ },
+ {
+  "file": "s157_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.007,
+  "found_in": [
+   "313 Last Dungeon.spc:srcn157"
+  ]
+ },
+ {
+  "file": "s158_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.068,
+  "found_in": [
+   "314d Dancing Mad (part 4).spc:srcn102"
+  ]
+ },
+ {
+  "file": "s159_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "314e Dancing Mad (part 5).spc:srcn229"
+  ]
+ },
+ {
+  "file": "s160_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Blazing Fire.spc:srcn94"
+  ]
+ },
+ {
+  "file": "s161_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.096,
+  "found_in": [
+   "999 Rumbling.spc:srcn170"
+  ]
+ },
+ {
+  "file": "s162_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Strong Wind.spc:srcn81"
+  ]
+ },
+ {
+  "file": "s163_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.063,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn95"
+  ]
+ },
+ {
+  "file": "s164_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.16,
+  "found_in": [
+   "102 The Mines of Narshe.spc:srcn98"
+  ]
+ },
+ {
+  "file": "s165_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1103.45,
+  "est_natural_midi": 84.92,
+  "f0_confidence": 0.367,
+  "found_in": [
+   "103 Awakening.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s166_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "104 Locke.spc:srcn164"
+  ]
+ },
+ {
+  "file": "s167_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.169,
+  "found_in": [
+   "106 Fanfare.spc:srcn73"
+  ]
+ },
+ {
+  "file": "s168_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "107 Edgar and Sabin.spc:srcn133"
+  ]
+ },
+ {
+  "file": "s169_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "113 Cyan.spc:srcn124"
+  ]
+ },
+ {
+  "file": "s170_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "116 The Phantom Train.spc:srcn187"
+  ]
+ },
+ {
+  "file": "s171_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "118 Gau.spc:srcn222"
+  ]
+ },
+ {
+  "file": "s172_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.12,
+  "found_in": [
+   "120 Kids Run Through the City.spc:srcn148"
+  ]
+ },
+ {
+  "file": "s173_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.104,
+  "found_in": [
+   "121 Under Martial Law.spc:srcn152"
+  ]
+ },
+ {
+  "file": "s174_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.262,
+  "found_in": [
+   "122 Celes.spc:srcn84"
+  ]
+ },
+ {
+  "file": "s175_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.015,
+  "found_in": [
+   "123 Save Them!.spc:srcn92"
+  ]
+ },
+ {
+  "file": "s176_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "123 Save Them!.spc:srcn171"
+  ]
+ },
+ {
+  "file": "s177_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "204 Forever Rachel!.spc:srcn99"
+  ]
+ },
+ {
+  "file": "s178_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.193,
+  "found_in": [
+   "204 Forever Rachel!.spc:srcn104"
+  ]
+ },
+ {
+  "file": "s179_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "204 Forever Rachel!.spc:srcn187"
+  ]
+ },
+ {
+  "file": "s180_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "205 Slam Shuffle.spc:srcn103"
+  ]
+ },
+ {
+  "file": "s181_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.502,
+  "found_in": [
+   "207b Overture (part 2).spc:srcn121"
+  ]
+ },
+ {
+  "file": "s182_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "209b The Wedding Waltz-Duel (part 2).spc:srcn80"
+  ]
+ },
+ {
+  "file": "s183_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "209d The Wedding Waltz-Duel (part 4).spc:srcn221"
+  ]
+ },
+ {
+  "file": "s184_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "210b Grand Finale (part 2).spc:srcn80"
+  ]
+ },
+ {
+  "file": "s185_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "210b Grand Finale (part 2).spc:srcn189"
+  ]
+ },
+ {
+  "file": "s186_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "216 ____.spc:srcn167"
+  ]
+ },
+ {
+  "file": "s187_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "219 Relm.spc:srcn84"
+  ]
+ },
+ {
+  "file": "s188_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.224,
+  "found_in": [
+   "219 Relm.spc:srcn131"
+  ]
+ },
+ {
+  "file": "s189_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.047,
+  "found_in": [
+   "219 Relm.spc:srcn238"
+  ]
+ },
+ {
+  "file": "s190_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "302 Catastrophe.spc:srcn208"
+  ]
+ },
+ {
+  "file": "s191_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "303 The Fierce Battle.spc:srcn220"
+  ]
+ },
+ {
+  "file": "s192_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "304 Rest in Peace.spc:srcn111"
+  ]
+ },
+ {
+  "file": "s193_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "306 The Day After.spc:srcn114"
+  ]
+ },
+ {
+  "file": "s194_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.048,
+  "found_in": [
+   "306 The Day After.spc:srcn194"
+  ]
+ },
+ {
+  "file": "s195_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.238,
+  "found_in": [
+   "308 Gogo.spc:srcn253"
+  ]
+ },
+ {
+  "file": "s196_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "309 Epitaph.spc:srcn118"
+  ]
+ },
+ {
+  "file": "s197_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "309 Epitaph.spc:srcn252"
+  ]
+ },
+ {
+  "file": "s198_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "310 The Magic House.spc:srcn76"
+  ]
+ },
+ {
+  "file": "s199_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "311 Umaro.spc:srcn79"
+  ]
+ },
+ {
+  "file": "s200_1000hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 18,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "312 Fanatics.spc:srcn126"
+  ]
+ },
+ {
+  "file": "s201_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.618,
+  "found_in": [
+   "999 Quiet Beach.spc:srcn98"
+  ]
+ },
+ {
+  "file": "s202_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Rumbling.spc:srcn188"
+  ]
+ },
+ {
+  "file": "s203_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Rumbling.spc:srcn237"
+  ]
+ },
+ {
+  "file": "s204_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "999 Strong Wind.spc:srcn115"
+  ]
+ }
+]

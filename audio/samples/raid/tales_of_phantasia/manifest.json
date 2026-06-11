@@ -1,0 +1,3532 @@
+[
+ {
+  "file": "s000_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 8160,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn48",
+   "103 Defiance.spc:srcn48",
+   "105 Hydropolis.spc:srcn48",
+   "109 Freeze.spc:srcn48",
+   "114 Retaliation.spc:srcn48",
+   "115 Morlia Gallery.spc:srcn48",
+   "116a Field of Sunset (part 1).spc:srcn48",
+   "116b Field of Sunset (part 2).spc:srcn48"
+  ]
+ },
+ {
+  "file": "s001_250hz.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": true,
+  "loop_offset_bytes": 3996,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn55",
+   "104 Harmonious Moment.spc:srcn55",
+   "113 Sylphis'.spc:srcn55",
+   "114 Retaliation.spc:srcn55",
+   "122 Triumph.spc:srcn55",
+   "126 Aviators.spc:srcn55",
+   "204 Premonition.spc:srcn55",
+   "227 I Miss You.spc:srcn55"
+  ]
+ },
+ {
+  "file": "s002_1032hz.brr",
+  "blocks": 437,
+  "samples": 6992,
+  "bytes": 3935,
+  "looped": true,
+  "loop_offset_bytes": 621,
+  "loop_samples": 5888,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.969,
+  "found_in": [
+   "101 Decisive.spc:srcn50",
+   "102 The Stream of Time.spc:srcn50",
+   "103 Defiance.spc:srcn50",
+   "104 Harmonious Moment.spc:srcn50",
+   "105 Hydropolis.spc:srcn50",
+   "106 Vigorous Town.spc:srcn50",
+   "107 Serene Weather.spc:srcn50",
+   "108 Mystic Forest.spc:srcn50"
+  ]
+ },
+ {
+  "file": "s003_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 3285,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn58",
+   "116b Field of Sunset (part 2).spc:srcn58",
+   "118 Arche.spc:srcn58",
+   "119 Tasteful.spc:srcn58",
+   "127 Burning Tower.spc:srcn58",
+   "135 Conclusion.spc:srcn58",
+   "138 The Second Act.spc:srcn58",
+   "201 Olive Village.spc:srcn58"
+  ]
+ },
+ {
+  "file": "s004_780hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 3184,
+  "est_f0_hz": 780.49,
+  "est_natural_midi": 78.92,
+  "f0_confidence": 0.958,
+  "found_in": [
+   "108 Mystic Forest.spc:srcn49",
+   "110 Underground Way.spc:srcn49",
+   "111 Mint.spc:srcn49",
+   "113 Sylphis'.spc:srcn49",
+   "117 Martel.spc:srcn49",
+   "126 Aviators.spc:srcn49",
+   "131 Be Absentminded.spc:srcn49",
+   "202 Awakening.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s005_oneshot.brr",
+  "blocks": 337,
+  "samples": 5392,
+  "bytes": 3035,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 421.05,
+  "est_natural_midi": 68.24,
+  "f0_confidence": 0.315,
+  "found_in": [
+   "101 Decisive.spc:srcn27",
+   "102 The Stream of Time.spc:srcn27",
+   "103 Defiance.spc:srcn27",
+   "109 Freeze.spc:srcn27",
+   "111 Mint.spc:srcn27",
+   "115 Morlia Gallery.spc:srcn27",
+   "116a Field of Sunset (part 1).spc:srcn27",
+   "116b Field of Sunset (part 2).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s006_1231hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 1791,
+  "loop_samples": 2128,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.444,
+  "found_in": [
+   "105 Hydropolis.spc:srcn2",
+   "107 Serene Weather.spc:srcn2",
+   "109 Freeze.spc:srcn2",
+   "121 Lake on Ymir.spc:srcn2",
+   "203 Euclid.spc:srcn2",
+   "219 Mysterious Ja''p''on.spc:srcn2",
+   "228 Good-by Friends.spc:srcn2",
+   "230 Lonely Twilight.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s007_oneshot.brr",
+  "blocks": 282,
+  "samples": 4512,
+  "bytes": 2540,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.2,
+  "found_in": [
+   "101 Decisive.spc:srcn29",
+   "106 Vigorous Town.spc:srcn29",
+   "107 Serene Weather.spc:srcn29",
+   "111 Mint.spc:srcn29",
+   "121 Lake on Ymir.spc:srcn29",
+   "124 Open Fire.spc:srcn29",
+   "125 Threatening Sky.spc:srcn29",
+   "130 Hurry Up.spc:srcn29"
+  ]
+ },
+ {
+  "file": "s008_35hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 2240,
+  "est_f0_hz": 35.05,
+  "est_natural_midi": 25.2,
+  "f0_confidence": 0.837,
+  "found_in": [
+   "103 Defiance.spc:srcn14",
+   "108 Mystic Forest.spc:srcn14",
+   "110 Underground Way.spc:srcn14",
+   "121 Lake on Ymir.spc:srcn14",
+   "122 Triumph.spc:srcn14",
+   "128 Perverse Religion.spc:srcn14",
+   "136 Who is Good or Evil.spc:srcn14",
+   "204 Premonition.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s009_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1971,
+  "loop_samples": 16,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "105 Hydropolis.spc:srcn59",
+   "108 Mystic Forest.spc:srcn59",
+   "109 Freeze.spc:srcn59",
+   "110 Underground Way.spc:srcn59",
+   "116a Field of Sunset (part 1).spc:srcn59",
+   "116b Field of Sunset (part 2).spc:srcn59",
+   "117 Martel.spc:srcn59",
+   "120 Good Wine Makes Good Blood.spc:srcn59"
+  ]
+ },
+ {
+  "file": "s010_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 900,
+  "loop_samples": 1808,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.266,
+  "found_in": [
+   "101 Decisive.spc:srcn31",
+   "102 The Stream of Time.spc:srcn31",
+   "103 Defiance.spc:srcn31",
+   "104 Harmonious Moment.spc:srcn31",
+   "107 Serene Weather.spc:srcn31",
+   "108 Mystic Forest.spc:srcn31",
+   "110 Underground Way.spc:srcn31",
+   "112 Desolate Road.spc:srcn31"
+  ]
+ },
+ {
+  "file": "s011_250hz.brr",
+  "blocks": 198,
+  "samples": 3168,
+  "bytes": 1784,
+  "looped": true,
+  "loop_offset_bytes": 1710,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Underground Way.spc:srcn42",
+   "111 Mint.spc:srcn42",
+   "112 Desolate Road.spc:srcn42",
+   "113 Sylphis'.spc:srcn42",
+   "205 As Time Goes On.spc:srcn42",
+   "207 Emergency.spc:srcn42",
+   "219 Mysterious Ja''p''on.spc:srcn42",
+   "231 Harvest Festival.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s012_500hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn24",
+   "112 Desolate Road.spc:srcn24",
+   "121 Lake on Ymir.spc:srcn24",
+   "125 Threatening Sky.spc:srcn24",
+   "131 Be Absentminded.spc:srcn24",
+   "137 Raising a Curtain.spc:srcn24",
+   "205 As Time Goes On.spc:srcn24",
+   "211 Oasis.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s013_oneshot.brr",
+  "blocks": 172,
+  "samples": 2752,
+  "bytes": 1550,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 533.33,
+  "est_natural_midi": 72.33,
+  "f0_confidence": 0.451,
+  "found_in": [
+   "107 Serene Weather.spc:srcn26",
+   "113 Sylphis'.spc:srcn26",
+   "114 Retaliation.spc:srcn26",
+   "118 Arche.spc:srcn26",
+   "120 Good Wine Makes Good Blood.spc:srcn26",
+   "121 Lake on Ymir.spc:srcn22",
+   "121 Lake on Ymir.spc:srcn26",
+   "121 Lake on Ymir.spc:srcn51"
+  ]
+ },
+ {
+  "file": "s014_500hz.brr",
+  "blocks": 165,
+  "samples": 2640,
+  "bytes": 1487,
+  "looped": true,
+  "loop_offset_bytes": 1449,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn17",
+   "104 Harmonious Moment.spc:srcn17",
+   "106 Vigorous Town.spc:srcn17",
+   "113 Sylphis'.spc:srcn17",
+   "120 Good Wine Makes Good Blood.spc:srcn17",
+   "125 Threatening Sky.spc:srcn17",
+   "134 Overcome Difficulties.spc:srcn17",
+   "135 Conclusion.spc:srcn17"
+  ]
+ },
+ {
+  "file": "s015_loop.brr",
+  "blocks": 153,
+  "samples": 2448,
+  "bytes": 1379,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 2432,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.14,
+  "found_in": [
+   "101 Decisive.spc:srcn12",
+   "102 The Stream of Time.spc:srcn12",
+   "103 Defiance.spc:srcn12",
+   "104 Harmonious Moment.spc:srcn12",
+   "105 Hydropolis.spc:srcn12",
+   "106 Vigorous Town.spc:srcn12",
+   "107 Serene Weather.spc:srcn12",
+   "108 Mystic Forest.spc:srcn12"
+  ]
+ },
+ {
+  "file": "s016_oneshot.brr",
+  "blocks": 149,
+  "samples": 2384,
+  "bytes": 1343,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 275.86,
+  "est_natural_midi": 60.92,
+  "f0_confidence": 0.849,
+  "found_in": [
+   "104 Harmonious Moment.spc:srcn37",
+   "106 Vigorous Town.spc:srcn37",
+   "107 Serene Weather.spc:srcn37",
+   "108 Mystic Forest.spc:srcn37",
+   "112 Desolate Road.spc:srcn37",
+   "125 Threatening Sky.spc:srcn37",
+   "202 Awakening.spc:srcn37",
+   "205 As Time Goes On.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s017_1000hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Serene Weather.spc:srcn53",
+   "108 Mystic Forest.spc:srcn53",
+   "112 Desolate Road.spc:srcn53",
+   "117 Martel.spc:srcn53",
+   "121 Lake on Ymir.spc:srcn53",
+   "136 Who is Good or Evil.spc:srcn53",
+   "205 As Time Goes On.spc:srcn49",
+   "205 As Time Goes On.spc:srcn53"
+  ]
+ },
+ {
+  "file": "s018_250hz.brr",
+  "blocks": 135,
+  "samples": 2160,
+  "bytes": 1217,
+  "looped": true,
+  "loop_offset_bytes": 1143,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn47",
+   "102 The Stream of Time.spc:srcn47",
+   "103 Defiance.spc:srcn47",
+   "104 Harmonious Moment.spc:srcn47",
+   "105 Hydropolis.spc:srcn47",
+   "106 Vigorous Town.spc:srcn47",
+   "107 Serene Weather.spc:srcn47",
+   "108 Mystic Forest.spc:srcn47"
+  ]
+ },
+ {
+  "file": "s019_1000hz.brr",
+  "blocks": 134,
+  "samples": 2144,
+  "bytes": 1208,
+  "looped": true,
+  "loop_offset_bytes": 1188,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn46",
+   "103 Defiance.spc:srcn46",
+   "104 Harmonious Moment.spc:srcn46",
+   "105 Hydropolis.spc:srcn46",
+   "107 Serene Weather.spc:srcn46",
+   "108 Mystic Forest.spc:srcn46",
+   "109 Freeze.spc:srcn46",
+   "111 Mint.spc:srcn46"
+  ]
+ },
+ {
+  "file": "s020_oneshot.brr",
+  "blocks": 125,
+  "samples": 2000,
+  "bytes": 1127,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.132,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn2",
+   "133 Go a Step Further.spc:srcn2",
+   "134 Overcome Difficulties.spc:srcn2",
+   "139 Final Act.spc:srcn2",
+   "139 Final Act.spc:srcn51",
+   "209 Dark Cave.spc:srcn2",
+   "211 Oasis.spc:srcn2",
+   "212 Mid Galds.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s021_500hz.brr",
+  "blocks": 123,
+  "samples": 1968,
+  "bytes": 1109,
+  "looped": true,
+  "loop_offset_bytes": 1071,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn56",
+   "102 The Stream of Time.spc:srcn56",
+   "103 Defiance.spc:srcn56",
+   "104 Harmonious Moment.spc:srcn56",
+   "105 Hydropolis.spc:srcn56",
+   "106 Vigorous Town.spc:srcn56",
+   "107 Serene Weather.spc:srcn56",
+   "108 Mystic Forest.spc:srcn56"
+  ]
+ },
+ {
+  "file": "s022_oneshot.brr",
+  "blocks": 94,
+  "samples": 1504,
+  "bytes": 848,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1777.78,
+  "est_natural_midi": 93.17,
+  "f0_confidence": 0.666,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn1",
+   "125 Threatening Sky.spc:srcn1",
+   "133 Go a Step Further.spc:srcn1",
+   "134 Overcome Difficulties.spc:srcn1",
+   "209 Dark Cave.spc:srcn1",
+   "211 Oasis.spc:srcn1",
+   "212 Mid Galds.spc:srcn1",
+   "214 Castle of the Dhaos.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s023_oneshot.brr",
+  "blocks": 91,
+  "samples": 1456,
+  "bytes": 821,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.2,
+  "found_in": [
+   "101 Decisive.spc:srcn44",
+   "102 The Stream of Time.spc:srcn44",
+   "103 Defiance.spc:srcn44",
+   "104 Harmonious Moment.spc:srcn44",
+   "105 Hydropolis.spc:srcn44",
+   "106 Vigorous Town.spc:srcn44",
+   "107 Serene Weather.spc:srcn44",
+   "108 Mystic Forest.spc:srcn44"
+  ]
+ },
+ {
+  "file": "s024_111hz.brr",
+  "blocks": 90,
+  "samples": 1440,
+  "bytes": 812,
+  "looped": true,
+  "loop_offset_bytes": 648,
+  "loop_samples": 288,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn34",
+   "102 The Stream of Time.spc:srcn34",
+   "103 Defiance.spc:srcn34",
+   "104 Harmonious Moment.spc:srcn34",
+   "105 Hydropolis.spc:srcn34",
+   "106 Vigorous Town.spc:srcn34",
+   "107 Serene Weather.spc:srcn34",
+   "108 Mystic Forest.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s025_loop.brr",
+  "blocks": 86,
+  "samples": 1376,
+  "bytes": 776,
+  "looped": true,
+  "loop_offset_bytes": 747,
+  "loop_samples": 48,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "101 Decisive.spc:srcn43",
+   "103 Defiance.spc:srcn43",
+   "104 Harmonious Moment.spc:srcn43",
+   "106 Vigorous Town.spc:srcn43",
+   "107 Serene Weather.spc:srcn43",
+   "108 Mystic Forest.spc:srcn43",
+   "111 Mint.spc:srcn43",
+   "115 Morlia Gallery.spc:srcn43"
+  ]
+ },
+ {
+  "file": "s026_oneshot.brr",
+  "blocks": 85,
+  "samples": 1360,
+  "bytes": 767,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.119,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn28",
+   "111 Mint.spc:srcn28",
+   "118 Arche.spc:srcn28",
+   "119 Tasteful.spc:srcn28",
+   "126 Aviators.spc:srcn28",
+   "138 The Second Act.spc:srcn28",
+   "221 Fighting of the Spirit.spc:srcn28",
+   "226 Tomorrow is a Holiday.spc:srcn28"
+  ]
+ },
+ {
+  "file": "s027_1000hz.brr",
+  "blocks": 79,
+  "samples": 1264,
+  "bytes": 713,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 Mystic Forest.spc:srcn45",
+   "114 Retaliation.spc:srcn45",
+   "122 Triumph.spc:srcn45",
+   "203 Euclid.spc:srcn45",
+   "230 Lonely Twilight.spc:srcn45",
+   "232 Piano Lesson 6.spc:srcn45",
+   "236 Ridge Racer.spc:srcn45",
+   "999 Credits.spc:srcn45"
+  ]
+ },
+ {
+  "file": "s028_oneshot.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.302,
+  "found_in": [
+   "101 Decisive.spc:srcn25",
+   "102 The Stream of Time.spc:srcn25",
+   "103 Defiance.spc:srcn25",
+   "104 Harmonious Moment.spc:srcn25",
+   "105 Hydropolis.spc:srcn25",
+   "106 Vigorous Town.spc:srcn25",
+   "107 Serene Weather.spc:srcn25",
+   "108 Mystic Forest.spc:srcn25"
+  ]
+ },
+ {
+  "file": "s029_oneshot.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.649,
+  "found_in": [
+   "104 Harmonious Moment.spc:srcn38",
+   "106 Vigorous Town.spc:srcn38",
+   "107 Serene Weather.spc:srcn30",
+   "107 Serene Weather.spc:srcn38",
+   "108 Mystic Forest.spc:srcn38",
+   "112 Desolate Road.spc:srcn38",
+   "125 Threatening Sky.spc:srcn38",
+   "127 Burning Tower.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s030_400hz.brr",
+  "blocks": 64,
+  "samples": 1024,
+  "bytes": 578,
+  "looped": true,
+  "loop_offset_bytes": 531,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn63",
+   "102 The Stream of Time.spc:srcn63",
+   "103 Defiance.spc:srcn63",
+   "104 Harmonious Moment.spc:srcn63",
+   "105 Hydropolis.spc:srcn63",
+   "106 Vigorous Town.spc:srcn63",
+   "107 Serene Weather.spc:srcn63",
+   "108 Mystic Forest.spc:srcn63"
+  ]
+ },
+ {
+  "file": "s031_32hz.brr",
+  "blocks": 61,
+  "samples": 976,
+  "bytes": 551,
+  "looped": true,
+  "loop_offset_bytes": 468,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn32",
+   "112 Desolate Road.spc:srcn32",
+   "121 Lake on Ymir.spc:srcn32",
+   "125 Threatening Sky.spc:srcn32",
+   "126 Aviators.spc:srcn32",
+   "132 Take up the Cross.spc:srcn32",
+   "134 Overcome Difficulties.spc:srcn32",
+   "135 Conclusion.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s032_1000hz.brr",
+  "blocks": 53,
+  "samples": 848,
+  "bytes": 479,
+  "looped": true,
+  "loop_offset_bytes": 459,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn8",
+   "102 The Stream of Time.spc:srcn8",
+   "103 Defiance.spc:srcn8",
+   "104 Harmonious Moment.spc:srcn8",
+   "105 Hydropolis.spc:srcn8",
+   "106 Vigorous Town.spc:srcn8",
+   "107 Serene Weather.spc:srcn8",
+   "108 Mystic Forest.spc:srcn8"
+  ]
+ },
+ {
+  "file": "s033_1000hz.brr",
+  "blocks": 49,
+  "samples": 784,
+  "bytes": 443,
+  "looped": true,
+  "loop_offset_bytes": 423,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn3",
+   "113 Sylphis'.spc:srcn3",
+   "118 Arche.spc:srcn3",
+   "121 Lake on Ymir.spc:srcn3",
+   "139 Final Act.spc:srcn3",
+   "202 Awakening.spc:srcn3",
+   "209 Dark Cave.spc:srcn3",
+   "210 Bright Moonlit Night.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s034_1000hz.brr",
+  "blocks": 42,
+  "samples": 672,
+  "bytes": 380,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn62",
+   "103 Defiance.spc:srcn62",
+   "104 Harmonious Moment.spc:srcn62",
+   "111 Mint.spc:srcn62",
+   "115 Morlia Gallery.spc:srcn62",
+   "118 Arche.spc:srcn62",
+   "121 Lake on Ymir.spc:srcn62",
+   "132 Take up the Cross.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s035_oneshot.brr",
+  "blocks": 36,
+  "samples": 576,
+  "bytes": 326,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.28,
+  "found_in": [
+   "101 Decisive.spc:srcn0",
+   "101 Decisive.spc:srcn1",
+   "107 Serene Weather.spc:srcn0",
+   "107 Serene Weather.spc:srcn1",
+   "124 Open Fire.spc:srcn0",
+   "124 Open Fire.spc:srcn1",
+   "132 Take up the Cross.spc:srcn0",
+   "132 Take up the Cross.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s036_1000hz.brr",
+  "blocks": 24,
+  "samples": 384,
+  "bytes": 218,
+  "looped": true,
+  "loop_offset_bytes": 198,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn5",
+   "102 The Stream of Time.spc:srcn5",
+   "103 Defiance.spc:srcn5",
+   "104 Harmonious Moment.spc:srcn5",
+   "105 Hydropolis.spc:srcn5",
+   "106 Vigorous Town.spc:srcn5",
+   "107 Serene Weather.spc:srcn5",
+   "108 Mystic Forest.spc:srcn5"
+  ]
+ },
+ {
+  "file": "s037_44hz.brr",
+  "blocks": 13,
+  "samples": 208,
+  "bytes": 119,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 144,
+  "est_f0_hz": 44.44,
+  "est_natural_midi": 29.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn6",
+   "102 The Stream of Time.spc:srcn6",
+   "103 Defiance.spc:srcn6",
+   "104 Harmonious Moment.spc:srcn6",
+   "105 Hydropolis.spc:srcn6",
+   "106 Vigorous Town.spc:srcn6",
+   "107 Serene Weather.spc:srcn6",
+   "108 Mystic Forest.spc:srcn6"
+  ]
+ },
+ {
+  "file": "s038_500hz.brr",
+  "blocks": 11,
+  "samples": 176,
+  "bytes": 101,
+  "looped": true,
+  "loop_offset_bytes": 63,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn10",
+   "102 The Stream of Time.spc:srcn10",
+   "103 Defiance.spc:srcn10",
+   "104 Harmonious Moment.spc:srcn10",
+   "105 Hydropolis.spc:srcn10",
+   "106 Vigorous Town.spc:srcn10",
+   "107 Serene Weather.spc:srcn10",
+   "108 Mystic Forest.spc:srcn10"
+  ]
+ },
+ {
+  "file": "s039_500hz.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": true,
+  "loop_offset_bytes": 54,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn13",
+   "102 The Stream of Time.spc:srcn13",
+   "103 Defiance.spc:srcn13",
+   "104 Harmonious Moment.spc:srcn13",
+   "105 Hydropolis.spc:srcn13",
+   "106 Vigorous Town.spc:srcn13",
+   "107 Serene Weather.spc:srcn13",
+   "108 Mystic Forest.spc:srcn13"
+  ]
+ },
+ {
+  "file": "s040_500hz.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn4",
+   "102 The Stream of Time.spc:srcn4",
+   "103 Defiance.spc:srcn4",
+   "104 Harmonious Moment.spc:srcn4",
+   "105 Hydropolis.spc:srcn4",
+   "106 Vigorous Town.spc:srcn4",
+   "107 Serene Weather.spc:srcn4",
+   "108 Mystic Forest.spc:srcn4"
+  ]
+ },
+ {
+  "file": "s041_500hz.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn7",
+   "102 The Stream of Time.spc:srcn7",
+   "103 Defiance.spc:srcn7",
+   "104 Harmonious Moment.spc:srcn7",
+   "105 Hydropolis.spc:srcn7",
+   "106 Vigorous Town.spc:srcn7",
+   "107 Serene Weather.spc:srcn7",
+   "108 Mystic Forest.spc:srcn7"
+  ]
+ },
+ {
+  "file": "s042_500hz.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": true,
+  "loop_offset_bytes": 36,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn19",
+   "102 The Stream of Time.spc:srcn19",
+   "103 Defiance.spc:srcn19",
+   "104 Harmonious Moment.spc:srcn19",
+   "105 Hydropolis.spc:srcn19",
+   "106 Vigorous Town.spc:srcn19",
+   "107 Serene Weather.spc:srcn19",
+   "108 Mystic Forest.spc:srcn19"
+  ]
+ },
+ {
+  "file": "s043_500hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 27,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn9",
+   "102 The Stream of Time.spc:srcn9",
+   "103 Defiance.spc:srcn9",
+   "104 Harmonious Moment.spc:srcn9",
+   "105 Hydropolis.spc:srcn9",
+   "106 Vigorous Town.spc:srcn9",
+   "107 Serene Weather.spc:srcn9",
+   "108 Mystic Forest.spc:srcn9"
+  ]
+ },
+ {
+  "file": "s044_22hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 22.22,
+  "est_natural_midi": 17.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "105 Hydropolis.spc:srcn0",
+   "106 Vigorous Town.spc:srcn0",
+   "108 Mystic Forest.spc:srcn0",
+   "110 Underground Way.spc:srcn0",
+   "112 Desolate Road.spc:srcn0",
+   "113 Sylphis'.spc:srcn0",
+   "114 Retaliation.spc:srcn0",
+   "115 Morlia Gallery.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s045_111hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 2124,
+  "loop_samples": 288,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn57",
+   "105 Hydropolis.spc:srcn57",
+   "115 Morlia Gallery.spc:srcn57",
+   "129 Fulfill Mission.spc:srcn57",
+   "207 Emergency.spc:srcn57",
+   "208 Resurrection.spc:srcn57",
+   "999 Sakuraba Solo.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s046_oneshot.brr",
+  "blocks": 164,
+  "samples": 2624,
+  "bytes": 1478,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 359.55,
+  "est_natural_midi": 65.5,
+  "f0_confidence": 0.446,
+  "found_in": [
+   "127 Burning Tower.spc:srcn41",
+   "128 Perverse Religion.spc:srcn41",
+   "129 Fulfill Mission.spc:srcn41",
+   "130 Hurry Up.spc:srcn41",
+   "131 Be Absentminded.spc:srcn41",
+   "201 Olive Village.spc:srcn41",
+   "205 As Time Goes On.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s047_95hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "103 Defiance.spc:srcn36",
+   "126 Aviators.spc:srcn36",
+   "132 Take up the Cross.spc:srcn36",
+   "233 Rally X Round Start.spc:srcn36",
+   "234 Rally X.spc:srcn36",
+   "235 Rally X Round Clear.spc:srcn36",
+   "236 Ridge Racer.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s048_oneshot.brr",
+  "blocks": 677,
+  "samples": 10832,
+  "bytes": 6095,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.19,
+  "found_in": [
+   "119 Tasteful.spc:srcn33",
+   "120 Good Wine Makes Good Blood.spc:srcn33",
+   "218 Biting Cold.spc:srcn33",
+   "233 Rally X Round Start.spc:srcn33",
+   "234 Rally X.spc:srcn33",
+   "235 Rally X Round Clear.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s049_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 3648,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.988,
+  "found_in": [
+   "118 Arche.spc:srcn49",
+   "127 Burning Tower.spc:srcn49",
+   "135 Conclusion.spc:srcn49",
+   "201 Olive Village.spc:srcn49",
+   "223 Contract.spc:srcn49",
+   "999 Sakuraba Solo.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s050_182hz.brr",
+  "blocks": 132,
+  "samples": 2112,
+  "bytes": 1190,
+  "looped": true,
+  "loop_offset_bytes": 1089,
+  "loop_samples": 176,
+  "est_f0_hz": 181.82,
+  "est_natural_midi": 53.7,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "119 Tasteful.spc:srcn35",
+   "120 Good Wine Makes Good Blood.spc:srcn35",
+   "121 Lake on Ymir.spc:srcn35",
+   "123 Abyss of Thor.spc:srcn35",
+   "211 Oasis.spc:srcn35",
+   "215 Forest of the Treant.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s051_48hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 47.62,
+  "est_natural_midi": 30.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn0",
+   "103 Defiance.spc:srcn0",
+   "122 Triumph.spc:srcn0",
+   "204 Premonition.spc:srcn0",
+   "221 Fighting of the Spirit.spc:srcn0",
+   "999 Sakuraba Solo.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s052_48hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 47.62,
+  "est_natural_midi": 30.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "133 Go a Step Further.spc:srcn0",
+   "134 Overcome Difficulties.spc:srcn0",
+   "202 Awakening.spc:srcn0",
+   "206 Penetrate.spc:srcn0",
+   "210 Bright Moonlit Night.spc:srcn0",
+   "223 Contract.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s053_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 8048,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "103 Defiance.spc:srcn49",
+   "137 Raising a Curtain.spc:srcn49",
+   "204 Premonition.spc:srcn49",
+   "218 Biting Cold.spc:srcn49",
+   "225 Ah My God....spc:srcn49"
+  ]
+ },
+ {
+  "file": "s054_500hz.brr",
+  "blocks": 246,
+  "samples": 3936,
+  "bytes": 2216,
+  "looped": true,
+  "loop_offset_bytes": 2178,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "111 Mint.spc:srcn22",
+   "203 Euclid.spc:srcn22",
+   "206 Penetrate.spc:srcn22",
+   "207 Emergency.spc:srcn22",
+   "230 Lonely Twilight.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s055_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 1152,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.263,
+  "found_in": [
+   "138 The Second Act.spc:srcn49",
+   "221 Fighting of the Spirit.spc:srcn49",
+   "233 Rally X Round Start.spc:srcn53",
+   "234 Rally X.spc:srcn53",
+   "235 Rally X Round Clear.spc:srcn53"
+  ]
+ },
+ {
+  "file": "s056_32hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn36",
+   "129 Fulfill Mission.spc:srcn36",
+   "139 Final Act.spc:srcn36",
+   "212 Mid Galds.spc:srcn36",
+   "214 Castle of the Dhaos.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s057_222hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 2448,
+  "loop_samples": 144,
+  "est_f0_hz": 222.22,
+  "est_natural_midi": 57.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn51",
+   "119 Tasteful.spc:srcn51",
+   "120 Good Wine Makes Good Blood.spc:srcn51",
+   "209 Dark Cave.spc:srcn51"
+  ]
+ },
+ {
+  "file": "s058_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 1264,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn49",
+   "116b Field of Sunset (part 2).spc:srcn49",
+   "123 Abyss of Thor.spc:srcn49",
+   "206 Penetrate.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s059_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 1968,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.259,
+  "found_in": [
+   "138 The Second Act.spc:srcn18",
+   "233 Rally X Round Start.spc:srcn18",
+   "234 Rally X.spc:srcn18",
+   "235 Rally X Round Clear.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s060_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 1264,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.286,
+  "found_in": [
+   "138 The Second Act.spc:srcn48",
+   "233 Rally X Round Start.spc:srcn48",
+   "234 Rally X.spc:srcn48",
+   "235 Rally X Round Clear.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s061_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 2176,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.254,
+  "found_in": [
+   "221 Fighting of the Spirit.spc:srcn23",
+   "233 Rally X Round Start.spc:srcn23",
+   "234 Rally X.spc:srcn23",
+   "235 Rally X Round Clear.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s062_oneshot.brr",
+  "blocks": 166,
+  "samples": 2656,
+  "bytes": 1496,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1391.3,
+  "est_natural_midi": 88.93,
+  "f0_confidence": 0.938,
+  "found_in": [
+   "127 Burning Tower.spc:srcn21",
+   "128 Perverse Religion.spc:srcn21",
+   "136 Who is Good or Evil.spc:srcn21",
+   "201 Olive Village.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s063_95hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "125 Threatening Sky.spc:srcn36",
+   "130 Hurry Up.spc:srcn36",
+   "133 Go a Step Further.spc:srcn36",
+   "134 Overcome Difficulties.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s064_oneshot.brr",
+  "blocks": 108,
+  "samples": 1728,
+  "bytes": 974,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 914.29,
+  "est_natural_midi": 81.66,
+  "f0_confidence": 0.62,
+  "found_in": [
+   "127 Burning Tower.spc:srcn20",
+   "128 Perverse Religion.spc:srcn20",
+   "201 Olive Village.spc:srcn20",
+   "219 Mysterious Ja''p''on.spc:srcn20"
+  ]
+ },
+ {
+  "file": "s065_20hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1600,
+  "est_f0_hz": 20.01,
+  "est_natural_midi": 15.5,
+  "f0_confidence": 0.985,
+  "found_in": [
+   "202 Awakening.spc:srcn1",
+   "206 Penetrate.spc:srcn1",
+   "210 Bright Moonlit Night.spc:srcn1",
+   "223 Contract.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s066_56hz.brr",
+  "blocks": 83,
+  "samples": 1328,
+  "bytes": 749,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 96,
+  "est_f0_hz": 55.56,
+  "est_natural_midi": 33.18,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "112 Desolate Road.spc:srcn23",
+   "138 The Second Act.spc:srcn23",
+   "209 Dark Cave.spc:srcn23",
+   "219 Mysterious Ja''p''on.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s067_oneshot.brr",
+  "blocks": 74,
+  "samples": 1184,
+  "bytes": 668,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.272,
+  "found_in": [
+   "101 Decisive.spc:srcn2",
+   "124 Open Fire.spc:srcn2",
+   "132 Take up the Cross.spc:srcn2",
+   "208 Resurrection.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s068_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 9072,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.969,
+  "found_in": [
+   "103 Defiance.spc:srcn23",
+   "204 Premonition.spc:srcn23",
+   "225 Ah My God....spc:srcn23"
+  ]
+ },
+ {
+  "file": "s069_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 2124,
+  "loop_samples": 2128,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "135 Conclusion.spc:srcn57",
+   "201 Olive Village.spc:srcn57",
+   "232 Piano Lesson 6.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s070_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 4672,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.98,
+  "found_in": [
+   "223 Contract.spc:srcn23",
+   "232 Piano Lesson 6.spc:srcn23",
+   "999 Sakuraba Solo.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s071_780hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 3296,
+  "est_f0_hz": 780.49,
+  "est_natural_midi": 78.92,
+  "f0_confidence": 0.95,
+  "found_in": [
+   "110 Underground Way.spc:srcn48",
+   "117 Martel.spc:srcn48",
+   "239 Yume wa Owaranai (instrumental).spc:srcn48"
+  ]
+ },
+ {
+  "file": "s072_500hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 2493,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn54",
+   "112 Desolate Road.spc:srcn54",
+   "219 Mysterious Ja''p''on.spc:srcn54"
+  ]
+ },
+ {
+  "file": "s073_111hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 1808,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 0.775,
+  "found_in": [
+   "129 Fulfill Mission.spc:srcn49",
+   "207 Emergency.spc:srcn53",
+   "208 Resurrection.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s074_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 1920,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.251,
+  "found_in": [
+   "233 Rally X Round Start.spc:srcn14",
+   "234 Rally X.spc:srcn14",
+   "235 Rally X Round Clear.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s075_500hz.brr",
+  "blocks": 207,
+  "samples": 3312,
+  "bytes": 1865,
+  "looped": true,
+  "loop_offset_bytes": 1827,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Underground Way.spc:srcn30",
+   "232 Piano Lesson 6.spc:srcn30",
+   "236 Ridge Racer.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s076_oneshot.brr",
+  "blocks": 207,
+  "samples": 3312,
+  "bytes": 1865,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1391.3,
+  "est_natural_midi": 88.93,
+  "f0_confidence": 0.325,
+  "found_in": [
+   "205 As Time Goes On.spc:srcn3",
+   "211 Oasis.spc:srcn3",
+   "231 Harvest Festival.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s077_35hz.brr",
+  "blocks": 134,
+  "samples": 2144,
+  "bytes": 1208,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 912,
+  "est_f0_hz": 35.09,
+  "est_natural_midi": 25.22,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn23",
+   "210 Bright Moonlit Night.spc:srcn23",
+   "226 Tomorrow is a Holiday.spc:srcn45"
+  ]
+ },
+ {
+  "file": "s078_500hz.brr",
+  "blocks": 94,
+  "samples": 1504,
+  "bytes": 848,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "128 Perverse Religion.spc:srcn18",
+   "136 Who is Good or Evil.spc:srcn18",
+   "227 I Miss You.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s079_oneshot.brr",
+  "blocks": 27,
+  "samples": 432,
+  "bytes": 245,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.183,
+  "found_in": [
+   "230 Lonely Twilight.spc:srcn1",
+   "231 Harvest Festival.spc:srcn0",
+   "231 Harvest Festival.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s080_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.093,
+  "found_in": [
+   "111 Mint.spc:srcn57",
+   "118 Arche.spc:srcn57",
+   "239 Yume wa Owaranai (instrumental).spc:srcn57"
+  ]
+ },
+ {
+  "file": "s081_111hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 1904,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 0.821,
+  "found_in": [
+   "207 Emergency.spc:srcn36",
+   "208 Resurrection.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s082_22hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 1472,
+  "est_f0_hz": 21.75,
+  "est_natural_midi": 16.94,
+  "f0_confidence": 0.946,
+  "found_in": [
+   "122 Triumph.spc:srcn49",
+   "212 Mid Galds.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s083_38hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1503,
+  "loop_samples": 848,
+  "est_f0_hz": 37.74,
+  "est_natural_midi": 26.48,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn16",
+   "116b Field of Sunset (part 2).spc:srcn16"
+  ]
+ },
+ {
+  "file": "s084_34hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1449,
+  "loop_samples": 944,
+  "est_f0_hz": 33.9,
+  "est_natural_midi": 24.62,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn17",
+   "116b Field of Sunset (part 2).spc:srcn17"
+  ]
+ },
+ {
+  "file": "s085_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1089,
+  "loop_samples": 1584,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.991,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn35",
+   "116b Field of Sunset (part 2).spc:srcn35"
+  ]
+ },
+ {
+  "file": "s086_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1188,
+  "loop_samples": 1408,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "116a Field of Sunset (part 1).spc:srcn46",
+   "116b Field of Sunset (part 2).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s087_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 2880,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.996,
+  "found_in": [
+   "117 Martel.spc:srcn62",
+   "123 Abyss of Thor.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s088_oneshot.brr",
+  "blocks": 219,
+  "samples": 3504,
+  "bytes": 1973,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 196.32,
+  "est_natural_midi": 55.03,
+  "f0_confidence": 0.861,
+  "found_in": [
+   "205 As Time Goes On.spc:srcn15",
+   "231 Harvest Festival.spc:srcn15"
+  ]
+ },
+ {
+  "file": "s089_201hz.brr",
+  "blocks": 172,
+  "samples": 2752,
+  "bytes": 1550,
+  "looped": true,
+  "loop_offset_bytes": 477,
+  "loop_samples": 1904,
+  "est_f0_hz": 201.26,
+  "est_natural_midi": 55.46,
+  "f0_confidence": 0.927,
+  "found_in": [
+   "201 Olive Village.spc:srcn40",
+   "207 Emergency.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s090_133hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 240,
+  "est_f0_hz": 133.33,
+  "est_natural_midi": 48.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn49",
+   "139 Final Act.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s091_27hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 240,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "125 Threatening Sky.spc:srcn49",
+   "133 Go a Step Further.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s092_95hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "127 Burning Tower.spc:srcn36",
+   "128 Perverse Religion.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s093_250hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Serene Weather.spc:srcn36",
+   "231 Harvest Festival.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s094_32hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Serene Weather.spc:srcn48",
+   "205 As Time Goes On.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s095_500hz.brr",
+  "blocks": 137,
+  "samples": 2192,
+  "bytes": 1235,
+  "looped": true,
+  "loop_offset_bytes": 1197,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "132 Take up the Cross.spc:srcn52",
+   "211 Oasis.spc:srcn52"
+  ]
+ },
+ {
+  "file": "s096_49hz.brr",
+  "blocks": 134,
+  "samples": 2144,
+  "bytes": 1208,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 656,
+  "est_f0_hz": 48.78,
+  "est_natural_midi": 30.92,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "109 Freeze.spc:srcn14",
+   "217 Cave of Illusion.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s097_22hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 765,
+  "loop_samples": 240,
+  "est_f0_hz": 22.22,
+  "est_natural_midi": 17.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "110 Underground Way.spc:srcn28",
+   "112 Desolate Road.spc:srcn28"
+  ]
+ },
+ {
+  "file": "s098_20hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1600,
+  "est_f0_hz": 20.01,
+  "est_natural_midi": 15.5,
+  "f0_confidence": 0.785,
+  "found_in": [
+   "226 Tomorrow is a Holiday.spc:srcn1",
+   "999 Credits.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s099_oneshot.brr",
+  "blocks": 29,
+  "samples": 464,
+  "bytes": 263,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.435,
+  "found_in": [
+   "111 Mint.spc:srcn0",
+   "118 Arche.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s100_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.596,
+  "found_in": [
+   "110 Underground Way.spc:srcn55",
+   "112 Desolate Road.spc:srcn55"
+  ]
+ },
+ {
+  "file": "s101_333hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "214 Castle of the Dhaos.spc:srcn0",
+   "225 Ah My God....spc:srcn0"
+  ]
+ },
+ {
+  "file": "s102_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "202 Awakening.spc:srcn14",
+   "210 Bright Moonlit Night.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s103_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 8864,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.97,
+  "found_in": [
+   "137 Raising a Curtain.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s104_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 2124,
+  "loop_samples": 6528,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.982,
+  "found_in": [
+   "137 Raising a Curtain.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s105_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 3285,
+  "loop_samples": 4464,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.98,
+  "found_in": [
+   "137 Raising a Curtain.spc:srcn58"
+  ]
+ },
+ {
+  "file": "s106_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 7232,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "225 Ah My God....spc:srcn24"
+  ]
+ },
+ {
+  "file": "s107_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 8144,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "225 Ah My God....spc:srcn36"
+  ]
+ },
+ {
+  "file": "s108_696hz.brr",
+  "blocks": 644,
+  "samples": 10304,
+  "bytes": 5798,
+  "looped": true,
+  "loop_offset_bytes": 1971,
+  "loop_samples": 6800,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.98,
+  "found_in": [
+   "225 Ah My God....spc:srcn59"
+  ]
+ },
+ {
+  "file": "s109_696hz.brr",
+  "blocks": 575,
+  "samples": 9200,
+  "bytes": 5177,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 8560,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "210 Bright Moonlit Night.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s110_696hz.brr",
+  "blocks": 551,
+  "samples": 8816,
+  "bytes": 4961,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 7328,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.975,
+  "found_in": [
+   "124 Open Fire.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s111_oneshot.brr",
+  "blocks": 533,
+  "samples": 8528,
+  "bytes": 4799,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.275,
+  "found_in": [
+   "123 Abyss of Thor.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s112_696hz.brr",
+  "blocks": 464,
+  "samples": 7424,
+  "bytes": 4178,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 5936,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.982,
+  "found_in": [
+   "999 Sakuraba Solo.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s113_500hz.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 4976,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.988,
+  "found_in": [
+   "114 Retaliation.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s114_500hz.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": true,
+  "loop_offset_bytes": 2493,
+  "loop_samples": 2800,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "114 Retaliation.spc:srcn54"
+  ]
+ },
+ {
+  "file": "s115_250hz.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": true,
+  "loop_offset_bytes": 3996,
+  "loop_samples": 128,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "203 Euclid.spc:srcn55"
+  ]
+ },
+ {
+  "file": "s116_500hz.brr",
+  "blocks": 452,
+  "samples": 7232,
+  "bytes": 4070,
+  "looped": true,
+  "loop_offset_bytes": 3033,
+  "loop_samples": 1840,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.973,
+  "found_in": [
+   "204 Premonition.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s117_250hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 4944,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 0.693,
+  "found_in": [
+   "130 Hurry Up.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s118_500hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 2178,
+  "loop_samples": 2512,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.981,
+  "found_in": [
+   "130 Hurry Up.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s119_500hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 2448,
+  "loop_samples": 2032,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.97,
+  "found_in": [
+   "130 Hurry Up.spc:srcn51"
+  ]
+ },
+ {
+  "file": "s120_500hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 2493,
+  "loop_samples": 1952,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "130 Hurry Up.spc:srcn54"
+  ]
+ },
+ {
+  "file": "s121_500hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 2124,
+  "loop_samples": 2608,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.978,
+  "found_in": [
+   "130 Hurry Up.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s122_59hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 3285,
+  "loop_samples": 544,
+  "est_f0_hz": 58.82,
+  "est_natural_midi": 34.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "130 Hurry Up.spc:srcn58"
+  ]
+ },
+ {
+  "file": "s123_250hz.brr",
+  "blocks": 399,
+  "samples": 6384,
+  "bytes": 3593,
+  "looped": true,
+  "loop_offset_bytes": 1971,
+  "loop_samples": 2880,
+  "est_f0_hz": 250.0,
+  "est_natural_midi": 59.21,
+  "f0_confidence": 0.919,
+  "found_in": [
+   "130 Hurry Up.spc:srcn59"
+  ]
+ },
+ {
+  "file": "s124_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 4464,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.982,
+  "found_in": [
+   "201 Olive Village.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s125_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 3760,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "201 Olive Village.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s126_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 2832,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "223 Contract.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s127_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 3744,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "223 Contract.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s128_508hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 9,
+  "loop_samples": 5888,
+  "est_f0_hz": 507.94,
+  "est_natural_midi": 71.49,
+  "f0_confidence": 0.922,
+  "found_in": [
+   "232 Piano Lesson 6.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s129_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1503,
+  "loop_samples": 3232,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.986,
+  "found_in": [
+   "232 Piano Lesson 6.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s130_62hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 3033,
+  "loop_samples": 512,
+  "est_f0_hz": 62.5,
+  "est_natural_midi": 35.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "232 Piano Lesson 6.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s131_500hz.brr",
+  "blocks": 369,
+  "samples": 5904,
+  "bytes": 3323,
+  "looped": true,
+  "loop_offset_bytes": 1188,
+  "loop_samples": 3792,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "232 Piano Lesson 6.spc:srcn46"
+  ]
+ },
+ {
+  "file": "s132_780hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 2368,
+  "est_f0_hz": 780.49,
+  "est_natural_midi": 78.92,
+  "f0_confidence": 0.961,
+  "found_in": [
+   "110 Underground Way.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s133_oneshot.brr",
+  "blocks": 337,
+  "samples": 5392,
+  "bytes": 3035,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.219,
+  "found_in": [
+   "139 Final Act.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s134_1231hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 1341,
+  "loop_samples": 2928,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.389,
+  "found_in": [
+   "105 Hydropolis.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s135_1231hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 3056,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.382,
+  "found_in": [
+   "105 Hydropolis.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s136_1231hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 423,
+  "loop_samples": 4560,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.352,
+  "found_in": [
+   "109 Freeze.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s137_1231hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 2178,
+  "loop_samples": 1440,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.436,
+  "found_in": [
+   "109 Freeze.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s138_500hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 2352,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "112 Desolate Road.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s139_500hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 2240,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.999,
+  "found_in": [
+   "112 Desolate Road.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s140_222hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 2240,
+  "est_f0_hz": 222.22,
+  "est_natural_midi": 57.17,
+  "f0_confidence": 0.995,
+  "found_in": [
+   "120 Good Wine Makes Good Blood.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s141_500hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 2493,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "120 Good Wine Makes Good Blood.spc:srcn54"
+  ]
+ },
+ {
+  "file": "s142_74hz.brr",
+  "blocks": 281,
+  "samples": 4496,
+  "bytes": 2531,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 3856,
+  "est_f0_hz": 73.9,
+  "est_natural_midi": 38.11,
+  "f0_confidence": 1.02,
+  "found_in": [
+   "120 Good Wine Makes Good Blood.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s143_696hz.brr",
+  "blocks": 269,
+  "samples": 4304,
+  "bytes": 2423,
+  "looped": true,
+  "loop_offset_bytes": 1710,
+  "loop_samples": 1264,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.95,
+  "found_in": [
+   "117 Martel.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s144_oneshot.brr",
+  "blocks": 268,
+  "samples": 4288,
+  "bytes": 2414,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 457.14,
+  "est_natural_midi": 69.66,
+  "f0_confidence": 0.356,
+  "found_in": [
+   "221 Fighting of the Spirit.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s145_111hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 2624,
+  "est_f0_hz": 111.11,
+  "est_natural_midi": 45.17,
+  "f0_confidence": 0.869,
+  "found_in": [
+   "207 Emergency.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s146_57hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 1971,
+  "loop_samples": 560,
+  "est_f0_hz": 57.14,
+  "est_natural_midi": 33.66,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "207 Emergency.spc:srcn59"
+  ]
+ },
+ {
+  "file": "s147_24hz.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": true,
+  "loop_offset_bytes": 1548,
+  "loop_samples": 1312,
+  "est_f0_hz": 24.41,
+  "est_natural_midi": 18.94,
+  "f0_confidence": 0.953,
+  "found_in": [
+   "999 Sakuraba Solo.spc:srcn26"
+  ]
+ },
+ {
+  "file": "s148_500hz.brr",
+  "blocks": 246,
+  "samples": 3936,
+  "bytes": 2216,
+  "looped": true,
+  "loop_offset_bytes": 2178,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "107 Serene Weather.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s149_500hz.brr",
+  "blocks": 246,
+  "samples": 3936,
+  "bytes": 2216,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 1792,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.983,
+  "found_in": [
+   "111 Mint.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s150_oneshot.brr",
+  "blocks": 234,
+  "samples": 3744,
+  "bytes": 2108,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.254,
+  "found_in": [
+   "230 Lonely Twilight.spc:srcn55"
+  ]
+ },
+ {
+  "file": "s151_35hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 2240,
+  "est_f0_hz": 35.05,
+  "est_natural_midi": 25.2,
+  "f0_confidence": 0.837,
+  "found_in": [
+   "105 Hydropolis.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s152_49hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 656,
+  "est_f0_hz": 48.78,
+  "est_natural_midi": 30.92,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "108 Mystic Forest.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s153_20hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 1584,
+  "est_f0_hz": 20.21,
+  "est_natural_midi": 15.67,
+  "f0_confidence": 0.946,
+  "found_in": [
+   "108 Mystic Forest.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s154_438hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 2496,
+  "est_f0_hz": 438.36,
+  "est_natural_midi": 68.94,
+  "f0_confidence": 0.8,
+  "found_in": [
+   "122 Triumph.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s155_35hz.brr",
+  "blocks": 233,
+  "samples": 3728,
+  "bytes": 2099,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 2240,
+  "est_f0_hz": 35.05,
+  "est_natural_midi": 25.2,
+  "f0_confidence": 0.837,
+  "found_in": [
+   "227 I Miss You.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s156_35hz.brr",
+  "blocks": 221,
+  "samples": 3536,
+  "bytes": 1991,
+  "looped": true,
+  "loop_offset_bytes": 1476,
+  "loop_samples": 912,
+  "est_f0_hz": 35.09,
+  "est_natural_midi": 25.22,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "207 Emergency.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s157_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 468,
+  "loop_samples": 2688,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "120 Good Wine Makes Good Blood.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s158_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 2288,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "206 Penetrate.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s159_2000hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 1360,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "206 Penetrate.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s160_42hz.brr",
+  "blocks": 220,
+  "samples": 3520,
+  "bytes": 1982,
+  "looped": true,
+  "loop_offset_bytes": 1548,
+  "loop_samples": 768,
+  "est_f0_hz": 41.67,
+  "est_natural_midi": 28.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "223 Contract.spc:srcn26"
+  ]
+ },
+ {
+  "file": "s161_oneshot.brr",
+  "blocks": 218,
+  "samples": 3488,
+  "bytes": 1964,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 457.14,
+  "est_natural_midi": 69.66,
+  "f0_confidence": 0.446,
+  "found_in": [
+   "133 Go a Step Further.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s162_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 972,
+  "loop_samples": 1680,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.263,
+  "found_in": [
+   "135 Conclusion.spc:srcn20"
+  ]
+ },
+ {
+  "file": "s163_loop.brr",
+  "blocks": 213,
+  "samples": 3408,
+  "bytes": 1919,
+  "looped": true,
+  "loop_offset_bytes": 1188,
+  "loop_samples": 1296,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.283,
+  "found_in": [
+   "221 Fighting of the Spirit.spc:srcn46"
+  ]
+ },
+ {
+  "file": "s164_32hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 992,
+  "est_f0_hz": 32.26,
+  "est_natural_midi": 23.76,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s165_36hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 880,
+  "est_f0_hz": 36.36,
+  "est_natural_midi": 25.84,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "106 Vigorous Town.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s166_500hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 1696,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.967,
+  "found_in": [
+   "131 Be Absentminded.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s167_500hz.brr",
+  "blocks": 196,
+  "samples": 3136,
+  "bytes": 1766,
+  "looped": true,
+  "loop_offset_bytes": 1728,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "206 Penetrate.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s168_65hz.brr",
+  "blocks": 165,
+  "samples": 2640,
+  "bytes": 1487,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 496,
+  "est_f0_hz": 64.52,
+  "est_natural_midi": 35.76,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "113 Sylphis'.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s169_500hz.brr",
+  "blocks": 165,
+  "samples": 2640,
+  "bytes": 1487,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 1408,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.979,
+  "found_in": [
+   "134 Overcome Difficulties.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s170_28hz.brr",
+  "blocks": 165,
+  "samples": 2640,
+  "bytes": 1487,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 384,
+  "est_f0_hz": 27.78,
+  "est_natural_midi": 21.18,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "134 Overcome Difficulties.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s171_91hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 352,
+  "est_f0_hz": 90.91,
+  "est_natural_midi": 41.7,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "101 Decisive.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s172_32hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "124 Open Fire.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s173_91hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1206,
+  "loop_samples": 352,
+  "est_f0_hz": 90.91,
+  "est_natural_midi": 41.7,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "132 Take up the Cross.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s174_133hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1269,
+  "loop_samples": 240,
+  "est_f0_hz": 133.33,
+  "est_natural_midi": 48.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "132 Take up the Cross.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s175_25hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 1264,
+  "est_f0_hz": 25.34,
+  "est_natural_midi": 19.58,
+  "f0_confidence": 0.965,
+  "found_in": [
+   "133 Go a Step Further.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s176_32hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "135 Conclusion.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s177_95hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "209 Dark Cave.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s178_95hz.brr",
+  "blocks": 156,
+  "samples": 2496,
+  "bytes": 1406,
+  "looped": true,
+  "loop_offset_bytes": 1215,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "220 Go Over Adversity.spc:srcn36"
+  ]
+ },
+ {
+  "file": "s179_oneshot.brr",
+  "blocks": 152,
+  "samples": 2432,
+  "bytes": 1370,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 463.77,
+  "est_natural_midi": 69.91,
+  "f0_confidence": 0.487,
+  "found_in": [
+   "232 Piano Lesson 6.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s180_oneshot.brr",
+  "blocks": 148,
+  "samples": 2368,
+  "bytes": 1334,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 463.77,
+  "est_natural_midi": 69.91,
+  "f0_confidence": 0.508,
+  "found_in": [
+   "213 Ary.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s181_38hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 848,
+  "est_f0_hz": 37.74,
+  "est_natural_midi": 26.48,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "205 As Time Goes On.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s182_40hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 837,
+  "loop_samples": 800,
+  "est_f0_hz": 40.0,
+  "est_natural_midi": 27.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "231 Harvest Festival.spc:srcn14"
+  ]
+ },
+ {
+  "file": "s183_47hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 900,
+  "loop_samples": 688,
+  "est_f0_hz": 46.51,
+  "est_natural_midi": 30.1,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "231 Harvest Festival.spc:srcn31"
+  ]
+ },
+ {
+  "file": "s184_30hz.brr",
+  "blocks": 143,
+  "samples": 2288,
+  "bytes": 1289,
+  "looped": true,
+  "loop_offset_bytes": 1089,
+  "loop_samples": 352,
+  "est_f0_hz": 30.3,
+  "est_natural_midi": 22.68,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "231 Harvest Festival.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s185_32hz.brr",
+  "blocks": 134,
+  "samples": 2144,
+  "bytes": 1208,
+  "looped": true,
+  "loop_offset_bytes": 1125,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "118 Arche.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s186_22hz.brr",
+  "blocks": 134,
+  "samples": 2144,
+  "bytes": 1208,
+  "looped": true,
+  "loop_offset_bytes": 1089,
+  "loop_samples": 208,
+  "est_f0_hz": 21.98,
+  "est_natural_midi": 17.12,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "230 Lonely Twilight.spc:srcn35"
+  ]
+ },
+ {
+  "file": "s187_22hz.brr",
+  "blocks": 132,
+  "samples": 2112,
+  "bytes": 1190,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 1472,
+  "est_f0_hz": 21.75,
+  "est_natural_midi": 16.94,
+  "f0_confidence": 0.998,
+  "found_in": [
+   "119 Tasteful.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s188_400hz.brr",
+  "blocks": 130,
+  "samples": 2080,
+  "bytes": 1172,
+  "looped": true,
+  "loop_offset_bytes": 1125,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "138 The Second Act.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s189_oneshot.brr",
+  "blocks": 111,
+  "samples": 1776,
+  "bytes": 1001,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 457.14,
+  "est_natural_midi": 69.66,
+  "f0_confidence": 0.584,
+  "found_in": [
+   "136 Who is Good or Evil.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s190_20hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1600,
+  "est_f0_hz": 20.01,
+  "est_natural_midi": 15.5,
+  "f0_confidence": 0.914,
+  "found_in": [
+   "104 Harmonious Moment.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s191_20hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1600,
+  "est_f0_hz": 20.01,
+  "est_natural_midi": 15.5,
+  "f0_confidence": 0.761,
+  "found_in": [
+   "203 Euclid.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s192_20hz.brr",
+  "blocks": 100,
+  "samples": 1600,
+  "bytes": 902,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1600,
+  "est_f0_hz": 20.01,
+  "est_natural_midi": 15.5,
+  "f0_confidence": 0.882,
+  "found_in": [
+   "204 Premonition.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s193_oneshot.brr",
+  "blocks": 95,
+  "samples": 1520,
+  "bytes": 857,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 457.14,
+  "est_natural_midi": 69.66,
+  "f0_confidence": 0.633,
+  "found_in": [
+   "236 Ridge Racer.spc:srcn55"
+  ]
+ },
+ {
+  "file": "s194_oneshot.brr",
+  "blocks": 94,
+  "samples": 1504,
+  "bytes": 848,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "239 Yume wa Owaranai (instrumental).spc:srcn1"
+  ]
+ },
+ {
+  "file": "s195_oneshot.brr",
+  "blocks": 87,
+  "samples": 1392,
+  "bytes": 785,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 780.49,
+  "est_natural_midi": 78.92,
+  "f0_confidence": 0.96,
+  "found_in": [
+   "126 Aviators.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s196_oneshot.brr",
+  "blocks": 86,
+  "samples": 1376,
+  "bytes": 776,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.116,
+  "found_in": [
+   "215 Forest of the Treant.spc:srcn31"
+  ]
+ },
+ {
+  "file": "s197_1000hz.brr",
+  "blocks": 79,
+  "samples": 1264,
+  "bytes": 713,
+  "looped": true,
+  "loop_offset_bytes": 693,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "113 Sylphis'.spc:srcn45"
+  ]
+ },
+ {
+  "file": "s198_oneshot.brr",
+  "blocks": 64,
+  "samples": 1024,
+  "bytes": 578,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.823,
+  "found_in": [
+   "130 Hurry Up.spc:srcn49"
+  ]
+ },
+ {
+  "file": "s199_oneshot.brr",
+  "blocks": 54,
+  "samples": 864,
+  "bytes": 488,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.291,
+  "found_in": [
+   "230 Lonely Twilight.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s200_32hz.brr",
+  "blocks": 49,
+  "samples": 784,
+  "bytes": 443,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 144,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "218 Biting Cold.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s201_1000hz.brr",
+  "blocks": 42,
+  "samples": 672,
+  "bytes": 380,
+  "looped": true,
+  "loop_offset_bytes": 360,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "102 The Stream of Time.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s202_oneshot.brr",
+  "blocks": 38,
+  "samples": 608,
+  "bytes": 344,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.296,
+  "found_in": [
+   "220 Go Over Adversity.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s203_oneshot.brr",
+  "blocks": 21,
+  "samples": 336,
+  "bytes": 191,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 695.65,
+  "est_natural_midi": 76.93,
+  "f0_confidence": 0.682,
+  "found_in": [
+   "126 Aviators.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s204_333hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "109 Freeze.spc:srcn0"
+  ]
+ }
+]

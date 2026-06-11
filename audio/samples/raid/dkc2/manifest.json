@@ -1,0 +1,5782 @@
+[
+ {
+  "file": "s000_1280hz.brr",
+  "blocks": 506,
+  "samples": 8096,
+  "bytes": 4556,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 8096,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.764,
+  "found_in": [
+   "05 Jib Jig.spc:srcn28",
+   "10 Forest Interlude.spc:srcn66",
+   "17 Stickerbrush Symphony.spc:srcn64",
+   "18 Bad Bird Rag.spc:srcn64",
+   "28 Crocodile Cacophony.spc:srcn33",
+   "33 Player Down (Jib Jig).spc:srcn28",
+   "36 Player Down (Forest Interlude).spc:srcn66",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn64"
+  ]
+ },
+ {
+  "file": "s001_loop.brr",
+  "blocks": 442,
+  "samples": 7072,
+  "bytes": 3980,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 7072,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.141,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn46",
+   "05 Jib Jig.spc:srcn33",
+   "25 In a Snow-Bound Land .spc:srcn47",
+   "30 Opening.spc:srcn46",
+   "32 Player Down (Lockjaw's Saga).spc:srcn46",
+   "33 Player Down (Jib Jig).spc:srcn33",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn47",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s002_25hz.brr",
+  "blocks": 434,
+  "samples": 6944,
+  "bytes": 3908,
+  "looped": true,
+  "loop_offset_bytes": 3195,
+  "loop_samples": 1264,
+  "est_f0_hz": 25.34,
+  "est_natural_midi": 19.58,
+  "f0_confidence": 0.997,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn26",
+   "17 Stickerbrush Symphony.spc:srcn32",
+   "18 Bad Bird Rag.spc:srcn32",
+   "26 Lost World Anthem.spc:srcn25",
+   "27 Primal Rave.spc:srcn31",
+   "28 Crocodile Cacophony.spc:srcn27",
+   "29 Donkey Kong Rescued.spc:srcn23",
+   "32 Player Down (Lockjaw's Saga).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s003_loop.brr",
+  "blocks": 395,
+  "samples": 6320,
+  "bytes": 3557,
+  "looped": true,
+  "loop_offset_bytes": 1809,
+  "loop_samples": 3104,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.291,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn27",
+   "03 Klomp's Romp.spc:srcn30",
+   "07 Snakey Chantey.spc:srcn33",
+   "08 Bayou Boogie.spc:srcn51",
+   "20 Boss Bossanova.spc:srcn43",
+   "28 Crocodile Cacophony.spc:srcn40",
+   "31 Player Down (Klomp's Romp).spc:srcn30",
+   "34 Player Down (Snakey Chantey).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s004_1280hz.brr",
+  "blocks": 364,
+  "samples": 5824,
+  "bytes": 3278,
+  "looped": true,
+  "loop_offset_bytes": 2160,
+  "loop_samples": 1984,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.987,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn25",
+   "05 Jib Jig.spc:srcn20",
+   "31 Player Down (Klomp's Romp).spc:srcn25",
+   "33 Player Down (Jib Jig).spc:srcn20",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn25",
+   "46c Diddy Clear (Jib Jig).spc:srcn20",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn25",
+   "47c Dixie Clear (Jib Jig).spc:srcn20"
+  ]
+ },
+ {
+  "file": "s005_138hz.brr",
+  "blocks": 340,
+  "samples": 5440,
+  "bytes": 3062,
+  "looped": true,
+  "loop_offset_bytes": 2070,
+  "loop_samples": 1760,
+  "est_f0_hz": 137.93,
+  "est_natural_midi": 48.92,
+  "f0_confidence": 0.707,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn28",
+   "02 Welcome to Crocodile Isle.spc:srcn24",
+   "20 Boss Bossanova.spc:srcn29",
+   "22 Krook's March.spc:srcn23",
+   "23 Klubba's Reveille.spc:srcn25",
+   "24 Haunted Chase.spc:srcn29",
+   "30 Opening.spc:srcn23",
+   "42 Player Down (Krook's March).spc:srcn23"
+  ]
+ },
+ {
+  "file": "s006_1280hz.brr",
+  "blocks": 332,
+  "samples": 5312,
+  "bytes": 2990,
+  "looped": true,
+  "loop_offset_bytes": 2016,
+  "loop_samples": 1728,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.978,
+  "found_in": [
+   "07 Snakey Chantey.spc:srcn27",
+   "16a Token Tango.spc:srcn25",
+   "16b Lose.spc:srcn25",
+   "16c Win.spc:srcn25",
+   "17 Stickerbrush Symphony.spc:srcn27",
+   "18 Bad Bird Rag.spc:srcn27",
+   "34 Player Down (Snakey Chantey).spc:srcn27",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s007_oneshot.brr",
+  "blocks": 328,
+  "samples": 5248,
+  "bytes": 2954,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.645,
+  "found_in": [
+   "28 Crocodile Cacophony.spc:srcn38",
+   "41 Player Down (Mining Melancholy).spc:srcn23",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn23",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn23",
+   "49a Player Down (Crocodile Cacophony).spc:srcn38",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn38",
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn38",
+   "99 Mining Melancholy.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s008_451hz.brr",
+  "blocks": 305,
+  "samples": 4880,
+  "bytes": 2747,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 4880,
+  "est_f0_hz": 450.7,
+  "est_natural_midi": 69.42,
+  "f0_confidence": 0.315,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn22",
+   "15 Run, Rambi! Run!.spc:srcn22",
+   "26 Lost World Anthem.spc:srcn26",
+   "28 Crocodile Cacophony.spc:srcn26",
+   "29 Donkey Kong Rescued.spc:srcn24",
+   "37 Player Down (Flight of the Zinger).spc:srcn22",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn22",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s009_27hz.brr",
+  "blocks": 305,
+  "samples": 4880,
+  "bytes": 2747,
+  "looped": true,
+  "loop_offset_bytes": 2700,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "16a Token Tango.spc:srcn21",
+   "16b Lose.spc:srcn21",
+   "16c Win.spc:srcn21",
+   "23 Klubba's Reveille.spc:srcn24",
+   "24 Haunted Chase.spc:srcn24",
+   "29 Donkey Kong Rescued.spc:srcn29",
+   "43 Player Down (Haunted Chase).spc:srcn24",
+   "46m Diddy Clear (Haunted Chase).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s010_loop.brr",
+  "blocks": 283,
+  "samples": 4528,
+  "bytes": 2549,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 4528,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.1,
+  "found_in": [
+   "19 Disco Train.spc:srcn69",
+   "24 Haunted Chase.spc:srcn36",
+   "40 Player Down (Disco Train).spc:srcn69",
+   "43 Player Down (Haunted Chase).spc:srcn36",
+   "46j Diddy Clear (Disco Train).spc:srcn69",
+   "46m Diddy Clear (Haunted Chase).spc:srcn36",
+   "47j Dixie Clear (Disco Train).spc:srcn69",
+   "47m Dixie Clear (Haunted Chase).spc:srcn36"
+  ]
+ },
+ {
+  "file": "s011_438hz.brr",
+  "blocks": 275,
+  "samples": 4400,
+  "bytes": 2477,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 4400,
+  "est_f0_hz": 438.36,
+  "est_natural_midi": 68.94,
+  "f0_confidence": 0.994,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn30",
+   "02 Welcome to Crocodile Isle.spc:srcn25",
+   "04 Lockjaw's Saga.spc:srcn21",
+   "05 Jib Jig.spc:srcn29",
+   "06 Swanky's Swing.spc:srcn20",
+   "07 Snakey Chantey.spc:srcn20",
+   "08 Bayou Boogie.spc:srcn20",
+   "10 Forest Interlude.spc:srcn34"
+  ]
+ },
+ {
+  "file": "s012_oneshot.brr",
+  "blocks": 252,
+  "samples": 4032,
+  "bytes": 2270,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 603.77,
+  "est_natural_midi": 74.48,
+  "f0_confidence": 0.884,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn31",
+   "15 Run, Rambi! Run!.spc:srcn31",
+   "16a Token Tango.spc:srcn20",
+   "16b Lose.spc:srcn20",
+   "16c Win.spc:srcn20",
+   "30 Opening.spc:srcn24",
+   "37 Player Down (Flight of the Zinger).spc:srcn31",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn31"
+  ]
+ },
+ {
+  "file": "s013_oneshot.brr",
+  "blocks": 239,
+  "samples": 3824,
+  "bytes": 2153,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.249,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn32",
+   "04 Lockjaw's Saga.spc:srcn40",
+   "05 Jib Jig.spc:srcn31",
+   "07 Snakey Chantey.spc:srcn35",
+   "08 Bayou Boogie.spc:srcn40",
+   "10 Forest Interlude.spc:srcn56",
+   "11 Funky the Main Monkey.spc:srcn57",
+   "14 Hot-Head Bop.spc:srcn45"
+  ]
+ },
+ {
+  "file": "s014_62hz.brr",
+  "blocks": 234,
+  "samples": 3744,
+  "bytes": 2108,
+  "looped": true,
+  "loop_offset_bytes": 1818,
+  "loop_samples": 512,
+  "est_f0_hz": 62.5,
+  "est_natural_midi": 35.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Bayou Boogie.spc:srcn29",
+   "10 Forest Interlude.spc:srcn41",
+   "13 Cranky's Conga.spc:srcn22",
+   "27 Primal Rave.spc:srcn25",
+   "35a Player Down (Bayou Boogie 1).spc:srcn29",
+   "35b Player Down (Bayou Boogie 2).spc:srcn29",
+   "36 Player Down (Forest Interlude).spc:srcn41",
+   "45 Player Down (Primal Rave).spc:srcn25"
+  ]
+ },
+ {
+  "file": "s015_oneshot.brr",
+  "blocks": 234,
+  "samples": 3744,
+  "bytes": 2108,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 571.43,
+  "est_natural_midi": 73.52,
+  "f0_confidence": 0.755,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn38",
+   "36 Player Down (Forest Interlude).spc:srcn38",
+   "41 Player Down (Mining Melancholy).spc:srcn21",
+   "46f Diddy Clear (Forest Interlude).spc:srcn38",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn21",
+   "47f Dixie Clear (Forest Interlude).spc:srcn38",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn21",
+   "99 Mining Melancholy.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s016_45hz.brr",
+  "blocks": 232,
+  "samples": 3712,
+  "bytes": 2090,
+  "looped": true,
+  "loop_offset_bytes": 1692,
+  "loop_samples": 704,
+  "est_f0_hz": 45.45,
+  "est_natural_midi": 29.7,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn26",
+   "14 Hot-Head Bop.spc:srcn24",
+   "30 Opening.spc:srcn25",
+   "31 Player Down (Klomp's Romp).spc:srcn26",
+   "38 Player Down (Hot Head Bop).spc:srcn24",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn26",
+   "46h Diddy Clear (Hot Head Bop).spc:srcn24",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s017_oneshot.brr",
+  "blocks": 230,
+  "samples": 3680,
+  "bytes": 2072,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.252,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn26",
+   "03 Klomp's Romp.spc:srcn33",
+   "04 Lockjaw's Saga.spc:srcn41",
+   "05 Jib Jig.spc:srcn32",
+   "06 Swanky's Swing.spc:srcn41",
+   "07 Snakey Chantey.spc:srcn36",
+   "08 Bayou Boogie.spc:srcn41",
+   "10 Forest Interlude.spc:srcn57"
+  ]
+ },
+ {
+  "file": "s018_1280hz.brr",
+  "blocks": 227,
+  "samples": 3632,
+  "bytes": 2045,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 3632,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.99,
+  "found_in": [
+   "09 School House Harmony.spc:srcn22",
+   "25 In a Snow-Bound Land .spc:srcn36",
+   "27 Primal Rave.spc:srcn30",
+   "29 Donkey Kong Rescued.spc:srcn22",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn36",
+   "45 Player Down (Primal Rave).spc:srcn30",
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn36",
+   "46o Diddy Clear (Primal Rave).spc:srcn30"
+  ]
+ },
+ {
+  "file": "s019_222hz.brr",
+  "blocks": 219,
+  "samples": 3504,
+  "bytes": 1973,
+  "looped": true,
+  "loop_offset_bytes": 1890,
+  "loop_samples": 144,
+  "est_f0_hz": 222.22,
+  "est_natural_midi": 57.17,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn21",
+   "04 Lockjaw's Saga.spc:srcn25",
+   "08 Bayou Boogie.spc:srcn27",
+   "12 Flight of the Zinger .spc:srcn32",
+   "15 Run, Rambi! Run!.spc:srcn32",
+   "32 Player Down (Lockjaw's Saga).spc:srcn25",
+   "35a Player Down (Bayou Boogie 1).spc:srcn27",
+   "35b Player Down (Bayou Boogie 2).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s020_oneshot.brr",
+  "blocks": 216,
+  "samples": 3456,
+  "bytes": 1946,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.275,
+  "found_in": [
+   "09 School House Harmony.spc:srcn42",
+   "12 Flight of the Zinger .spc:srcn42",
+   "14 Hot-Head Bop.spc:srcn41",
+   "15 Run, Rambi! Run!.spc:srcn42",
+   "22 Krook's March.spc:srcn46",
+   "37 Player Down (Flight of the Zinger).spc:srcn42",
+   "38 Player Down (Hot Head Bop).spc:srcn41",
+   "42 Player Down (Krook's March).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s021_oneshot.brr",
+  "blocks": 210,
+  "samples": 3360,
+  "bytes": 1892,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1103.45,
+  "est_natural_midi": 84.92,
+  "f0_confidence": 0.928,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn20",
+   "04 Lockjaw's Saga.spc:srcn22",
+   "20 Boss Bossanova.spc:srcn26",
+   "22 Krook's March.spc:srcn21",
+   "26 Lost World Anthem.spc:srcn23",
+   "32 Player Down (Lockjaw's Saga).spc:srcn22",
+   "42 Player Down (Krook's March).spc:srcn21",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s022_1455hz.brr",
+  "blocks": 208,
+  "samples": 3328,
+  "bytes": 1874,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 3328,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.499,
+  "found_in": [
+   "19 Disco Train.spc:srcn72",
+   "24 Haunted Chase.spc:srcn39",
+   "28 Crocodile Cacophony.spc:srcn36",
+   "40 Player Down (Disco Train).spc:srcn72",
+   "43 Player Down (Haunted Chase).spc:srcn39",
+   "46j Diddy Clear (Disco Train).spc:srcn72",
+   "46m Diddy Clear (Haunted Chase).spc:srcn39",
+   "47j Dixie Clear (Disco Train).spc:srcn72"
+  ]
+ },
+ {
+  "file": "s023_59hz.brr",
+  "blocks": 204,
+  "samples": 3264,
+  "bytes": 1838,
+  "looped": true,
+  "loop_offset_bytes": 1530,
+  "loop_samples": 544,
+  "est_f0_hz": 58.82,
+  "est_natural_midi": 34.16,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn31",
+   "06 Swanky's Swing.spc:srcn28",
+   "08 Bayou Boogie.spc:srcn31",
+   "09 School House Harmony.spc:srcn29",
+   "11 Funky the Main Monkey.spc:srcn33",
+   "13 Cranky's Conga.spc:srcn24",
+   "13 Cranky's Conga.spc:srcn30",
+   "16a Token Tango.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s024_oneshot.brr",
+  "blocks": 202,
+  "samples": 3232,
+  "bytes": 1820,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1684.21,
+  "est_natural_midi": 92.24,
+  "f0_confidence": 0.448,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn5",
+   "02 Welcome to Crocodile Isle.spc:srcn5",
+   "03 Klomp's Romp.spc:srcn5",
+   "04 Lockjaw's Saga.spc:srcn5",
+   "05 Jib Jig.spc:srcn5",
+   "06 Swanky's Swing.spc:srcn5",
+   "07 Snakey Chantey.spc:srcn5",
+   "08 Bayou Boogie.spc:srcn5"
+  ]
+ },
+ {
+  "file": "s025_653hz.brr",
+  "blocks": 197,
+  "samples": 3152,
+  "bytes": 1775,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 3152,
+  "est_f0_hz": 653.06,
+  "est_natural_midi": 75.84,
+  "f0_confidence": 0.993,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn20",
+   "08 Bayou Boogie.spc:srcn21",
+   "08 Bayou Boogie.spc:srcn36",
+   "10 Forest Interlude.spc:srcn42",
+   "12 Flight of the Zinger .spc:srcn21",
+   "13 Cranky's Conga.spc:srcn28",
+   "15 Run, Rambi! Run!.spc:srcn21",
+   "16a Token Tango.spc:srcn41"
+  ]
+ },
+ {
+  "file": "s026_38hz.brr",
+  "blocks": 197,
+  "samples": 3152,
+  "bytes": 1775,
+  "looped": true,
+  "loop_offset_bytes": 1305,
+  "loop_samples": 832,
+  "est_f0_hz": 38.46,
+  "est_natural_midi": 26.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn38",
+   "07 Snakey Chantey.spc:srcn30",
+   "10 Forest Interlude.spc:srcn39",
+   "12 Flight of the Zinger .spc:srcn29",
+   "13 Cranky's Conga.spc:srcn34",
+   "15 Run, Rambi! Run!.spc:srcn29",
+   "17 Stickerbrush Symphony.spc:srcn23",
+   "18 Bad Bird Rag.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s027_143hz.brr",
+  "blocks": 195,
+  "samples": 3120,
+  "bytes": 1757,
+  "looped": true,
+  "loop_offset_bytes": 1629,
+  "loop_samples": 224,
+  "est_f0_hz": 142.86,
+  "est_natural_midi": 49.53,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn20",
+   "13 Cranky's Conga.spc:srcn20",
+   "16a Token Tango.spc:srcn24",
+   "16b Lose.spc:srcn24",
+   "16c Win.spc:srcn24",
+   "24 Haunted Chase.spc:srcn21",
+   "26 Lost World Anthem.spc:srcn46",
+   "27 Primal Rave.spc:srcn46"
+  ]
+ },
+ {
+  "file": "s028_667hz.brr",
+  "blocks": 193,
+  "samples": 3088,
+  "bytes": 1739,
+  "looped": true,
+  "loop_offset_bytes": 1710,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "16a Token Tango.spc:srcn23",
+   "16b Lose.spc:srcn23",
+   "16c Win.spc:srcn23",
+   "17 Stickerbrush Symphony.spc:srcn29",
+   "18 Bad Bird Rag.spc:srcn29",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn29",
+   "41 Player Down (Mining Melancholy).spc:srcn20",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn29"
+  ]
+ },
+ {
+  "file": "s029_151hz.brr",
+  "blocks": 192,
+  "samples": 3072,
+  "bytes": 1730,
+  "looped": true,
+  "loop_offset_bytes": 666,
+  "loop_samples": 1888,
+  "est_f0_hz": 150.94,
+  "est_natural_midi": 50.48,
+  "f0_confidence": 0.467,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn25",
+   "07 Snakey Chantey.spc:srcn29",
+   "10 Forest Interlude.spc:srcn35",
+   "14 Hot-Head Bop.spc:srcn20",
+   "14 Hot-Head Bop.spc:srcn26",
+   "16a Token Tango.spc:srcn26",
+   "16a Token Tango.spc:srcn28",
+   "16b Lose.spc:srcn26"
+  ]
+ },
+ {
+  "file": "s030_33hz.brr",
+  "blocks": 186,
+  "samples": 2976,
+  "bytes": 1676,
+  "looped": true,
+  "loop_offset_bytes": 1125,
+  "loop_samples": 976,
+  "est_f0_hz": 32.79,
+  "est_natural_midi": 24.05,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn38",
+   "05 Jib Jig.spc:srcn40",
+   "06 Swanky's Swing.spc:srcn50",
+   "08 Bayou Boogie.spc:srcn50",
+   "09 School House Harmony.spc:srcn43",
+   "12 Flight of the Zinger .spc:srcn43",
+   "15 Run, Rambi! Run!.spc:srcn43",
+   "16a Token Tango.spc:srcn46"
+  ]
+ },
+ {
+  "file": "s031_500hz.brr",
+  "blocks": 175,
+  "samples": 2800,
+  "bytes": 1577,
+  "looped": true,
+  "loop_offset_bytes": 1539,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn23",
+   "14 Hot-Head Bop.spc:srcn27",
+   "22 Krook's March.spc:srcn20",
+   "25 In a Snow-Bound Land .spc:srcn32",
+   "38 Player Down (Hot Head Bop).spc:srcn27",
+   "42 Player Down (Krook's March).spc:srcn20",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn32",
+   "46h Diddy Clear (Hot Head Bop).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s032_203hz.brr",
+  "blocks": 169,
+  "samples": 2704,
+  "bytes": 1523,
+  "looped": true,
+  "loop_offset_bytes": 891,
+  "loop_samples": 1120,
+  "est_f0_hz": 202.53,
+  "est_natural_midi": 55.57,
+  "f0_confidence": 0.688,
+  "found_in": [
+   "09 School House Harmony.spc:srcn24",
+   "19 Disco Train.spc:srcn71",
+   "24 Haunted Chase.spc:srcn38",
+   "40 Player Down (Disco Train).spc:srcn71",
+   "43 Player Down (Haunted Chase).spc:srcn38",
+   "46j Diddy Clear (Disco Train).spc:srcn71",
+   "46m Diddy Clear (Haunted Chase).spc:srcn38",
+   "47j Dixie Clear (Disco Train).spc:srcn71"
+  ]
+ },
+ {
+  "file": "s033_oneshot.brr",
+  "blocks": 168,
+  "samples": 2688,
+  "bytes": 1514,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 640.0,
+  "est_natural_midi": 75.49,
+  "f0_confidence": 0.91,
+  "found_in": [
+   "24 Haunted Chase.spc:srcn23",
+   "28 Crocodile Cacophony.spc:srcn24",
+   "30 Opening.spc:srcn21",
+   "43 Player Down (Haunted Chase).spc:srcn23",
+   "46m Diddy Clear (Haunted Chase).spc:srcn23",
+   "47m Dixie Clear (Haunted Chase).spc:srcn23",
+   "49a Player Down (Crocodile Cacophony).spc:srcn24",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s034_1333hz.brr",
+  "blocks": 166,
+  "samples": 2656,
+  "bytes": 1496,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 2656,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.986,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn34",
+   "08 Bayou Boogie.spc:srcn34",
+   "25 In a Snow-Bound Land .spc:srcn33",
+   "35a Player Down (Bayou Boogie 1).spc:srcn34",
+   "35b Player Down (Bayou Boogie 2).spc:srcn34",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn33",
+   "46e Diddy Clear (Bayou Boogie).spc:srcn34",
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s035_oneshot.brr",
+  "blocks": 163,
+  "samples": 2608,
+  "bytes": 1469,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 888.89,
+  "est_natural_midi": 81.17,
+  "f0_confidence": 0.961,
+  "found_in": [
+   "07 Snakey Chantey.spc:srcn25",
+   "17 Stickerbrush Symphony.spc:srcn24",
+   "18 Bad Bird Rag.spc:srcn24",
+   "29 Donkey Kong Rescued.spc:srcn27",
+   "34 Player Down (Snakey Chantey).spc:srcn25",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn24",
+   "46d Diddy Clear (Snakey Chantey).spc:srcn25",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s036_oneshot.brr",
+  "blocks": 160,
+  "samples": 2560,
+  "bytes": 1442,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.175,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn28",
+   "04 Lockjaw's Saga.spc:srcn48",
+   "05 Jib Jig.spc:srcn35",
+   "08 Bayou Boogie.spc:srcn52",
+   "09 School House Harmony.spc:srcn37",
+   "10 Forest Interlude.spc:srcn61",
+   "11 Funky the Main Monkey.spc:srcn50",
+   "12 Flight of the Zinger .spc:srcn37"
+  ]
+ },
+ {
+  "file": "s037_667hz.brr",
+  "blocks": 150,
+  "samples": 2400,
+  "bytes": 1352,
+  "looped": true,
+  "loop_offset_bytes": 1323,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn27",
+   "02 Welcome to Crocodile Isle.spc:srcn22",
+   "06 Swanky's Swing.spc:srcn22",
+   "16a Token Tango.spc:srcn29",
+   "16b Lose.spc:srcn29",
+   "16c Win.spc:srcn29",
+   "20 Boss Bossanova.spc:srcn22",
+   "22 Krook's March.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s038_376hz.brr",
+  "blocks": 150,
+  "samples": 2400,
+  "bytes": 1352,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 2400,
+  "est_f0_hz": 376.47,
+  "est_natural_midi": 66.3,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn29",
+   "02 Welcome to Crocodile Isle.spc:srcn23",
+   "10 Forest Interlude.spc:srcn37",
+   "20 Boss Bossanova.spc:srcn28",
+   "36 Player Down (Forest Interlude).spc:srcn37",
+   "46f Diddy Clear (Forest Interlude).spc:srcn37",
+   "47f Dixie Clear (Forest Interlude).spc:srcn37",
+   "99 Diddy Clear (Boss Bossanova).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s039_oneshot.brr",
+  "blocks": 142,
+  "samples": 2272,
+  "bytes": 1280,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.745,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn34",
+   "04 Lockjaw's Saga.spc:srcn43",
+   "05 Jib Jig.spc:srcn37",
+   "06 Swanky's Swing.spc:srcn42",
+   "07 Snakey Chantey.spc:srcn37",
+   "08 Bayou Boogie.spc:srcn42",
+   "09 School House Harmony.spc:srcn34",
+   "10 Forest Interlude.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s040_2000hz.brr",
+  "blocks": 141,
+  "samples": 2256,
+  "bytes": 1271,
+  "looped": true,
+  "loop_offset_bytes": 1260,
+  "loop_samples": 16,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn27",
+   "07 Snakey Chantey.spc:srcn21",
+   "12 Flight of the Zinger .spc:srcn25",
+   "14 Hot-Head Bop.spc:srcn28",
+   "15 Run, Rambi! Run!.spc:srcn25",
+   "17 Stickerbrush Symphony.spc:srcn25",
+   "18 Bad Bird Rag.spc:srcn25",
+   "21 Steel Drum Rhumba.spc:srcn43"
+  ]
+ },
+ {
+  "file": "s041_43hz.brr",
+  "blocks": 136,
+  "samples": 2176,
+  "bytes": 1226,
+  "looped": true,
+  "loop_offset_bytes": 810,
+  "loop_samples": 736,
+  "est_f0_hz": 43.48,
+  "est_natural_midi": 28.93,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Bayou Boogie.spc:srcn22",
+   "09 School House Harmony.spc:srcn26",
+   "19 Disco Train.spc:srcn57",
+   "25 In a Snow-Bound Land .spc:srcn21",
+   "28 Crocodile Cacophony.spc:srcn39",
+   "35a Player Down (Bayou Boogie 1).spc:srcn22",
+   "35b Player Down (Bayou Boogie 2).spc:srcn22",
+   "40 Player Down (Disco Train).spc:srcn57"
+  ]
+ },
+ {
+  "file": "s042_oneshot.brr",
+  "blocks": 132,
+  "samples": 2112,
+  "bytes": 1190,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.121,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn13",
+   "02 Welcome to Crocodile Isle.spc:srcn13",
+   "03 Klomp's Romp.spc:srcn13",
+   "04 Lockjaw's Saga.spc:srcn13",
+   "05 Jib Jig.spc:srcn13",
+   "06 Swanky's Swing.spc:srcn13",
+   "07 Snakey Chantey.spc:srcn13",
+   "08 Bayou Boogie.spc:srcn13"
+  ]
+ },
+ {
+  "file": "s043_oneshot.brr",
+  "blocks": 132,
+  "samples": 2112,
+  "bytes": 1190,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 969.7,
+  "est_natural_midi": 82.68,
+  "f0_confidence": 0.412,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn31",
+   "03 Klomp's Romp.spc:srcn35",
+   "04 Lockjaw's Saga.spc:srcn50",
+   "05 Jib Jig.spc:srcn41",
+   "06 Swanky's Swing.spc:srcn44",
+   "07 Snakey Chantey.spc:srcn34",
+   "07 Snakey Chantey.spc:srcn38",
+   "08 Bayou Boogie.spc:srcn44"
+  ]
+ },
+ {
+  "file": "s044_oneshot.brr",
+  "blocks": 128,
+  "samples": 2048,
+  "bytes": 1154,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.121,
+  "found_in": [
+   "05 Jib Jig.spc:srcn26",
+   "06 Swanky's Swing.spc:srcn48",
+   "08 Bayou Boogie.spc:srcn48",
+   "10 Forest Interlude.spc:srcn55",
+   "11 Funky the Main Monkey.spc:srcn51",
+   "12 Flight of the Zinger .spc:srcn39",
+   "15 Run, Rambi! Run!.spc:srcn39",
+   "16a Token Tango.spc:srcn42"
+  ]
+ },
+ {
+  "file": "s045_oneshot.brr",
+  "blocks": 128,
+  "samples": 2048,
+  "bytes": 1154,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.27,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn49",
+   "08 Bayou Boogie.spc:srcn49",
+   "09 School House Harmony.spc:srcn40",
+   "10 Forest Interlude.spc:srcn65",
+   "11 Funky the Main Monkey.spc:srcn56",
+   "12 Flight of the Zinger .spc:srcn40",
+   "14 Hot-Head Bop.spc:srcn50",
+   "15 Run, Rambi! Run!.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s046_oneshot.brr",
+  "blocks": 119,
+  "samples": 1904,
+  "bytes": 1073,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.694,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn45",
+   "25 In a Snow-Bound Land .spc:srcn46",
+   "29 Donkey Kong Rescued.spc:srcn83",
+   "30 Opening.spc:srcn45",
+   "32 Player Down (Lockjaw's Saga).spc:srcn45",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn46",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn45",
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s047_oneshot.brr",
+  "blocks": 119,
+  "samples": 1904,
+  "bytes": 1073,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1185.19,
+  "est_natural_midi": 86.15,
+  "f0_confidence": 0.361,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn47",
+   "08 Bayou Boogie.spc:srcn47",
+   "10 Forest Interlude.spc:srcn54",
+   "11 Funky the Main Monkey.spc:srcn55",
+   "17 Stickerbrush Symphony.spc:srcn63",
+   "18 Bad Bird Rag.spc:srcn63",
+   "20 Boss Bossanova.spc:srcn37",
+   "22 Krook's March.spc:srcn37"
+  ]
+ },
+ {
+  "file": "s048_oneshot.brr",
+  "blocks": 118,
+  "samples": 1888,
+  "bytes": 1064,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 842.11,
+  "est_natural_midi": 80.24,
+  "f0_confidence": 0.972,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn24",
+   "03 Klomp's Romp.spc:srcn28",
+   "08 Bayou Boogie.spc:srcn30",
+   "20 Boss Bossanova.spc:srcn24",
+   "22 Krook's March.spc:srcn28",
+   "31 Player Down (Klomp's Romp).spc:srcn28",
+   "35a Player Down (Bayou Boogie 1).spc:srcn30",
+   "35b Player Down (Bayou Boogie 2).spc:srcn30"
+  ]
+ },
+ {
+  "file": "s049_oneshot.brr",
+  "blocks": 114,
+  "samples": 1824,
+  "bytes": 1028,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 450.7,
+  "est_natural_midi": 69.42,
+  "f0_confidence": 0.445,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn9",
+   "02 Welcome to Crocodile Isle.spc:srcn9",
+   "03 Klomp's Romp.spc:srcn9",
+   "04 Lockjaw's Saga.spc:srcn9",
+   "05 Jib Jig.spc:srcn9",
+   "06 Swanky's Swing.spc:srcn9",
+   "07 Snakey Chantey.spc:srcn9",
+   "07 Snakey Chantey.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s050_154hz.brr",
+  "blocks": 113,
+  "samples": 1808,
+  "bytes": 1019,
+  "looped": true,
+  "loop_offset_bytes": 900,
+  "loop_samples": 208,
+  "est_f0_hz": 153.85,
+  "est_natural_midi": 50.81,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "05 Jib Jig.spc:srcn22",
+   "07 Snakey Chantey.spc:srcn28",
+   "16a Token Tango.spc:srcn27",
+   "16a Token Tango.spc:srcn31",
+   "16b Lose.spc:srcn27",
+   "16b Lose.spc:srcn31",
+   "16c Win.spc:srcn27",
+   "16c Win.spc:srcn31"
+  ]
+ },
+ {
+  "file": "s051_oneshot.brr",
+  "blocks": 112,
+  "samples": 1792,
+  "bytes": 1010,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 820.51,
+  "est_natural_midi": 79.79,
+  "f0_confidence": 0.412,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn7",
+   "02 Welcome to Crocodile Isle.spc:srcn7",
+   "03 Klomp's Romp.spc:srcn7",
+   "04 Lockjaw's Saga.spc:srcn7",
+   "05 Jib Jig.spc:srcn7",
+   "06 Swanky's Swing.spc:srcn7",
+   "07 Snakey Chantey.spc:srcn7",
+   "08 Bayou Boogie.spc:srcn7"
+  ]
+ },
+ {
+  "file": "s052_oneshot.brr",
+  "blocks": 110,
+  "samples": 1760,
+  "bytes": 992,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1523.81,
+  "est_natural_midi": 90.51,
+  "f0_confidence": 0.3,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn4",
+   "02 Welcome to Crocodile Isle.spc:srcn4",
+   "03 Klomp's Romp.spc:srcn4",
+   "04 Lockjaw's Saga.spc:srcn4",
+   "05 Jib Jig.spc:srcn4",
+   "06 Swanky's Swing.spc:srcn4",
+   "07 Snakey Chantey.spc:srcn4",
+   "08 Bayou Boogie.spc:srcn4"
+  ]
+ },
+ {
+  "file": "s053_oneshot.brr",
+  "blocks": 109,
+  "samples": 1744,
+  "bytes": 983,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.635,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn12",
+   "02 Welcome to Crocodile Isle.spc:srcn12",
+   "03 Klomp's Romp.spc:srcn12",
+   "04 Lockjaw's Saga.spc:srcn12",
+   "05 Jib Jig.spc:srcn12",
+   "06 Swanky's Swing.spc:srcn12",
+   "07 Snakey Chantey.spc:srcn12",
+   "08 Bayou Boogie.spc:srcn12"
+  ]
+ },
+ {
+  "file": "s054_376hz.brr",
+  "blocks": 109,
+  "samples": 1744,
+  "bytes": 983,
+  "looped": true,
+  "loop_offset_bytes": 72,
+  "loop_samples": 1616,
+  "est_f0_hz": 376.47,
+  "est_natural_midi": 66.3,
+  "f0_confidence": 0.99,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn20",
+   "03 Klomp's Romp.spc:srcn24",
+   "04 Lockjaw's Saga.spc:srcn24",
+   "05 Jib Jig.spc:srcn21",
+   "20 Boss Bossanova.spc:srcn30",
+   "23 Klubba's Reveille.spc:srcn23",
+   "24 Haunted Chase.spc:srcn28",
+   "31 Player Down (Klomp's Romp).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s055_oneshot.brr",
+  "blocks": 108,
+  "samples": 1728,
+  "bytes": 974,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.268,
+  "found_in": [
+   "05 Jib Jig.spc:srcn25",
+   "20 Boss Bossanova.spc:srcn41",
+   "27 Primal Rave.spc:srcn27",
+   "28 Crocodile Cacophony.spc:srcn37",
+   "33 Player Down (Jib Jig).spc:srcn25",
+   "45 Player Down (Primal Rave).spc:srcn27",
+   "46c Diddy Clear (Jib Jig).spc:srcn25",
+   "46o Diddy Clear (Primal Rave).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s056_oneshot.brr",
+  "blocks": 96,
+  "samples": 1536,
+  "bytes": 866,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1066.67,
+  "est_natural_midi": 84.33,
+  "f0_confidence": 0.836,
+  "found_in": [
+   "27 Primal Rave.spc:srcn24",
+   "27 Primal Rave.spc:srcn32",
+   "45 Player Down (Primal Rave).spc:srcn24",
+   "45 Player Down (Primal Rave).spc:srcn32",
+   "46o Diddy Clear (Primal Rave).spc:srcn24",
+   "46o Diddy Clear (Primal Rave).spc:srcn32",
+   "47o Dixie Clear (Primal Rave).spc:srcn24",
+   "47o Dixie Clear (Primal Rave).spc:srcn32"
+  ]
+ },
+ {
+  "file": "s057_62hz.brr",
+  "blocks": 93,
+  "samples": 1488,
+  "bytes": 839,
+  "looped": true,
+  "loop_offset_bytes": 549,
+  "loop_samples": 512,
+  "est_f0_hz": 62.5,
+  "est_natural_midi": 35.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn26",
+   "07 Snakey Chantey.spc:srcn26",
+   "17 Stickerbrush Symphony.spc:srcn26",
+   "18 Bad Bird Rag.spc:srcn26",
+   "34 Player Down (Snakey Chantey).spc:srcn26",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn26",
+   "46d Diddy Clear (Snakey Chantey).spc:srcn26",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s058_24hz.brr",
+  "blocks": 83,
+  "samples": 1328,
+  "bytes": 749,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1328,
+  "est_f0_hz": 24.11,
+  "est_natural_midi": 18.72,
+  "f0_confidence": 0.951,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn36",
+   "05 Jib Jig.spc:srcn38",
+   "06 Swanky's Swing.spc:srcn45",
+   "07 Snakey Chantey.spc:srcn39",
+   "08 Bayou Boogie.spc:srcn45",
+   "10 Forest Interlude.spc:srcn59",
+   "11 Funky the Main Monkey.spc:srcn53",
+   "12 Flight of the Zinger .spc:srcn36"
+  ]
+ },
+ {
+  "file": "s059_286hz.brr",
+  "blocks": 81,
+  "samples": 1296,
+  "bytes": 731,
+  "looped": true,
+  "loop_offset_bytes": 666,
+  "loop_samples": 112,
+  "est_f0_hz": 285.71,
+  "est_natural_midi": 61.52,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn26",
+   "03 Klomp's Romp.spc:srcn29",
+   "04 Lockjaw's Saga.spc:srcn23",
+   "05 Jib Jig.spc:srcn23",
+   "07 Snakey Chantey.spc:srcn31",
+   "20 Boss Bossanova.spc:srcn27",
+   "22 Krook's March.spc:srcn26",
+   "31 Player Down (Klomp's Romp).spc:srcn29"
+  ]
+ },
+ {
+  "file": "s060_oneshot.brr",
+  "blocks": 76,
+  "samples": 1216,
+  "bytes": 686,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.941,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn1",
+   "02 Welcome to Crocodile Isle.spc:srcn1",
+   "03 Klomp's Romp.spc:srcn1",
+   "04 Lockjaw's Saga.spc:srcn1",
+   "05 Jib Jig.spc:srcn1",
+   "06 Swanky's Swing.spc:srcn1",
+   "07 Snakey Chantey.spc:srcn1",
+   "08 Bayou Boogie.spc:srcn1"
+  ]
+ },
+ {
+  "file": "s061_oneshot.brr",
+  "blocks": 75,
+  "samples": 1200,
+  "bytes": 677,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 58.29,
+  "est_natural_midi": 34.01,
+  "f0_confidence": 0.346,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn53",
+   "05 Jib Jig.spc:srcn42",
+   "25 In a Snow-Bound Land .spc:srcn53",
+   "26 Lost World Anthem.spc:srcn53",
+   "27 Primal Rave.spc:srcn53",
+   "32 Player Down (Lockjaw's Saga).spc:srcn53",
+   "33 Player Down (Jib Jig).spc:srcn42",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s062_51hz.brr",
+  "blocks": 71,
+  "samples": 1136,
+  "bytes": 641,
+  "looped": true,
+  "loop_offset_bytes": 612,
+  "loop_samples": 48,
+  "est_f0_hz": 51.28,
+  "est_natural_midi": 31.79,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn32",
+   "08 Bayou Boogie.spc:srcn32",
+   "12 Flight of the Zinger .spc:srcn23",
+   "13 Cranky's Conga.spc:srcn21",
+   "15 Run, Rambi! Run!.spc:srcn23",
+   "17 Stickerbrush Symphony.spc:srcn31",
+   "18 Bad Bird Rag.spc:srcn31",
+   "21 Steel Drum Rhumba.spc:srcn26"
+  ]
+ },
+ {
+  "file": "s063_61hz.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": true,
+  "loop_offset_bytes": 504,
+  "loop_samples": 176,
+  "est_f0_hz": 60.61,
+  "est_natural_midi": 34.68,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn37",
+   "06 Swanky's Swing.spc:srcn23",
+   "07 Snakey Chantey.spc:srcn23",
+   "08 Bayou Boogie.spc:srcn37",
+   "11 Funky the Main Monkey.spc:srcn21",
+   "14 Hot-Head Bop.spc:srcn22",
+   "17 Stickerbrush Symphony.spc:srcn22",
+   "18 Bad Bird Rag.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s064_oneshot.brr",
+  "blocks": 64,
+  "samples": 1024,
+  "bytes": 578,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.57,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn3",
+   "02 Welcome to Crocodile Isle.spc:srcn3",
+   "03 Klomp's Romp.spc:srcn3",
+   "04 Lockjaw's Saga.spc:srcn3",
+   "05 Jib Jig.spc:srcn3",
+   "06 Swanky's Swing.spc:srcn3",
+   "07 Snakey Chantey.spc:srcn3",
+   "08 Bayou Boogie.spc:srcn3"
+  ]
+ },
+ {
+  "file": "s065_oneshot.brr",
+  "blocks": 63,
+  "samples": 1008,
+  "bytes": 569,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.196,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn46",
+   "08 Bayou Boogie.spc:srcn46",
+   "10 Forest Interlude.spc:srcn62",
+   "17 Stickerbrush Symphony.spc:srcn62",
+   "18 Bad Bird Rag.spc:srcn62",
+   "23 Klubba's Reveille.spc:srcn62",
+   "35a Player Down (Bayou Boogie 1).spc:srcn46",
+   "35b Player Down (Bayou Boogie 2).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s066_oneshot.brr",
+  "blocks": 63,
+  "samples": 1008,
+  "bytes": 569,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.256,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn40",
+   "21 Steel Drum Rhumba.spc:srcn40",
+   "24 Haunted Chase.spc:srcn40",
+   "43 Player Down (Haunted Chase).spc:srcn40",
+   "46m Diddy Clear (Haunted Chase).spc:srcn40",
+   "47m Dixie Clear (Haunted Chase).spc:srcn40",
+   "99 Ending Ambience.spc:srcn25",
+   "99 Stage Clear (Haunted Chase).spc:srcn40"
+  ]
+ },
+ {
+  "file": "s067_oneshot.brr",
+  "blocks": 62,
+  "samples": 992,
+  "bytes": 560,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.282,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn41",
+   "21 Steel Drum Rhumba.spc:srcn41",
+   "24 Haunted Chase.spc:srcn41",
+   "43 Player Down (Haunted Chase).spc:srcn41",
+   "46m Diddy Clear (Haunted Chase).spc:srcn41",
+   "47m Dixie Clear (Haunted Chase).spc:srcn41",
+   "99 Ending Ambience.spc:srcn26",
+   "99 Stage Clear (Haunted Chase).spc:srcn41"
+  ]
+ },
+ {
+  "file": "s068_oneshot.brr",
+  "blocks": 59,
+  "samples": 944,
+  "bytes": 533,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.192,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn42",
+   "05 Jib Jig.spc:srcn36",
+   "08 Bayou Boogie.spc:srcn39",
+   "10 Forest Interlude.spc:srcn58",
+   "11 Funky the Main Monkey.spc:srcn54",
+   "12 Flight of the Zinger .spc:srcn33",
+   "14 Hot-Head Bop.spc:srcn43",
+   "15 Run, Rambi! Run!.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s069_oneshot.brr",
+  "blocks": 58,
+  "samples": 928,
+  "bytes": 524,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.55,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn10",
+   "02 Welcome to Crocodile Isle.spc:srcn10",
+   "03 Klomp's Romp.spc:srcn10",
+   "04 Lockjaw's Saga.spc:srcn10",
+   "05 Jib Jig.spc:srcn10",
+   "06 Swanky's Swing.spc:srcn10",
+   "07 Snakey Chantey.spc:srcn10",
+   "08 Bayou Boogie.spc:srcn10"
+  ]
+ },
+ {
+  "file": "s070_26hz.brr",
+  "blocks": 55,
+  "samples": 880,
+  "bytes": 497,
+  "looped": true,
+  "loop_offset_bytes": 396,
+  "loop_samples": 176,
+  "est_f0_hz": 25.97,
+  "est_natural_midi": 20.01,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn24",
+   "13 Cranky's Conga.spc:srcn27",
+   "14 Hot-Head Bop.spc:srcn21",
+   "16a Token Tango.spc:srcn30",
+   "16b Lose.spc:srcn30",
+   "16c Win.spc:srcn30",
+   "21 Steel Drum Rhumba.spc:srcn23",
+   "38 Player Down (Hot Head Bop).spc:srcn21"
+  ]
+ },
+ {
+  "file": "s071_oneshot.brr",
+  "blocks": 55,
+  "samples": 880,
+  "bytes": 497,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.162,
+  "found_in": [
+   "08 Bayou Boogie.spc:srcn23",
+   "09 School House Harmony.spc:srcn27",
+   "19 Disco Train.spc:srcn58",
+   "35a Player Down (Bayou Boogie 1).spc:srcn23",
+   "35b Player Down (Bayou Boogie 2).spc:srcn23",
+   "40 Player Down (Disco Train).spc:srcn58",
+   "46e Diddy Clear (Bayou Boogie).spc:srcn23",
+   "46j Diddy Clear (Disco Train).spc:srcn58"
+  ]
+ },
+ {
+  "file": "s072_oneshot.brr",
+  "blocks": 55,
+  "samples": 880,
+  "bytes": 497,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.316,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn42",
+   "21 Steel Drum Rhumba.spc:srcn42",
+   "24 Haunted Chase.spc:srcn42",
+   "43 Player Down (Haunted Chase).spc:srcn42",
+   "46m Diddy Clear (Haunted Chase).spc:srcn42",
+   "47m Dixie Clear (Haunted Chase).spc:srcn42",
+   "99 Ending Ambience.spc:srcn27",
+   "99 Stage Clear (Haunted Chase).spc:srcn42"
+  ]
+ },
+ {
+  "file": "s073_oneshot.brr",
+  "blocks": 54,
+  "samples": 864,
+  "bytes": 488,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn225",
+   "02 Welcome to Crocodile Isle.spc:srcn225",
+   "03 Klomp's Romp.spc:srcn225",
+   "04 Lockjaw's Saga.spc:srcn225",
+   "05 Jib Jig.spc:srcn225",
+   "06 Swanky's Swing.spc:srcn225",
+   "07 Snakey Chantey.spc:srcn225",
+   "08 Bayou Boogie.spc:srcn225"
+  ]
+ },
+ {
+  "file": "s074_oneshot.brr",
+  "blocks": 49,
+  "samples": 784,
+  "bytes": 443,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.853,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn2",
+   "02 Welcome to Crocodile Isle.spc:srcn2",
+   "03 Klomp's Romp.spc:srcn2",
+   "04 Lockjaw's Saga.spc:srcn2",
+   "05 Jib Jig.spc:srcn2",
+   "06 Swanky's Swing.spc:srcn2",
+   "07 Snakey Chantey.spc:srcn2",
+   "08 Bayou Boogie.spc:srcn2"
+  ]
+ },
+ {
+  "file": "s075_oneshot.brr",
+  "blocks": 46,
+  "samples": 736,
+  "bytes": 416,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 914.29,
+  "est_natural_midi": 81.66,
+  "f0_confidence": 0.629,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn37",
+   "19 Disco Train.spc:srcn70",
+   "21 Steel Drum Rhumba.spc:srcn37",
+   "24 Haunted Chase.spc:srcn37",
+   "40 Player Down (Disco Train).spc:srcn70",
+   "43 Player Down (Haunted Chase).spc:srcn37",
+   "46j Diddy Clear (Disco Train).spc:srcn70",
+   "46m Diddy Clear (Haunted Chase).spc:srcn37"
+  ]
+ },
+ {
+  "file": "s076_oneshot.brr",
+  "blocks": 45,
+  "samples": 720,
+  "bytes": 407,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.787,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn8",
+   "02 Welcome to Crocodile Isle.spc:srcn8",
+   "03 Klomp's Romp.spc:srcn8",
+   "04 Lockjaw's Saga.spc:srcn8",
+   "05 Jib Jig.spc:srcn8",
+   "06 Swanky's Swing.spc:srcn8",
+   "07 Snakey Chantey.spc:srcn8",
+   "08 Bayou Boogie.spc:srcn8"
+  ]
+ },
+ {
+  "file": "s077_oneshot.brr",
+  "blocks": 38,
+  "samples": 608,
+  "bytes": 344,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 444.44,
+  "est_natural_midi": 69.17,
+  "f0_confidence": 0.55,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn6",
+   "02 Welcome to Crocodile Isle.spc:srcn6",
+   "03 Klomp's Romp.spc:srcn6",
+   "04 Lockjaw's Saga.spc:srcn6",
+   "05 Jib Jig.spc:srcn6",
+   "06 Swanky's Swing.spc:srcn6",
+   "07 Snakey Chantey.spc:srcn6",
+   "08 Bayou Boogie.spc:srcn6"
+  ]
+ },
+ {
+  "file": "s078_oneshot.brr",
+  "blocks": 38,
+  "samples": 608,
+  "bytes": 344,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1454.55,
+  "est_natural_midi": 89.7,
+  "f0_confidence": 0.487,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn51",
+   "09 School House Harmony.spc:srcn44",
+   "11 Funky the Main Monkey.spc:srcn52",
+   "12 Flight of the Zinger .spc:srcn44",
+   "15 Run, Rambi! Run!.spc:srcn44",
+   "16a Token Tango.spc:srcn43",
+   "16b Lose.spc:srcn43",
+   "16c Win.spc:srcn43"
+  ]
+ },
+ {
+  "file": "s079_oneshot.brr",
+  "blocks": 23,
+  "samples": 368,
+  "bytes": 209,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1333.33,
+  "est_natural_midi": 88.19,
+  "f0_confidence": 0.34,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn11",
+   "02 Welcome to Crocodile Isle.spc:srcn11",
+   "03 Klomp's Romp.spc:srcn11",
+   "04 Lockjaw's Saga.spc:srcn11",
+   "05 Jib Jig.spc:srcn11",
+   "06 Swanky's Swing.spc:srcn11",
+   "07 Snakey Chantey.spc:srcn11",
+   "08 Bayou Boogie.spc:srcn11"
+  ]
+ },
+ {
+  "file": "s080_87hz.brr",
+  "blocks": 23,
+  "samples": 368,
+  "bytes": 209,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 368,
+  "est_f0_hz": 86.96,
+  "est_natural_midi": 40.93,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Bayou Boogie.spc:srcn24",
+   "13 Cranky's Conga.spc:srcn26",
+   "21 Steel Drum Rhumba.spc:srcn21",
+   "35a Player Down (Bayou Boogie 1).spc:srcn24",
+   "35b Player Down (Bayou Boogie 2).spc:srcn24",
+   "46e Diddy Clear (Bayou Boogie).spc:srcn24",
+   "47e Dixie Clear (Bayou Boogie).spc:srcn24",
+   "99 Stage Clear (Bayou Boogie).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s081_95hz.brr",
+  "blocks": 21,
+  "samples": 336,
+  "bytes": 191,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 336,
+  "est_f0_hz": 95.24,
+  "est_natural_midi": 42.51,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn55",
+   "26 Lost World Anthem.spc:srcn33",
+   "27 Primal Rave.spc:srcn33",
+   "28 Crocodile Cacophony.spc:srcn28",
+   "40 Player Down (Disco Train).spc:srcn55",
+   "45 Player Down (Primal Rave).spc:srcn33",
+   "46j Diddy Clear (Disco Train).spc:srcn55",
+   "46o Diddy Clear (Primal Rave).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s082_20hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 112,
+  "est_f0_hz": 20.41,
+  "est_natural_midi": 15.84,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn23",
+   "03 Klomp's Romp.spc:srcn27",
+   "05 Jib Jig.spc:srcn24",
+   "07 Snakey Chantey.spc:srcn24",
+   "10 Forest Interlude.spc:srcn40",
+   "14 Hot-Head Bop.spc:srcn29",
+   "20 Boss Bossanova.spc:srcn23",
+   "23 Klubba's Reveille.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s083_333hz.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 96,
+  "est_f0_hz": 333.33,
+  "est_natural_midi": 64.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "02 Welcome to Crocodile Isle.spc:srcn29",
+   "03 Klomp's Romp.spc:srcn23",
+   "04 Lockjaw's Saga.spc:srcn39",
+   "05 Jib Jig.spc:srcn30",
+   "06 Swanky's Swing.spc:srcn29",
+   "07 Snakey Chantey.spc:srcn32",
+   "08 Bayou Boogie.spc:srcn38",
+   "09 School House Harmony.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s084_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1600.0,
+  "est_natural_midi": 91.35,
+  "f0_confidence": 0.453,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn47",
+   "05 Jib Jig.spc:srcn34",
+   "06 Swanky's Swing.spc:srcn43",
+   "08 Bayou Boogie.spc:srcn43",
+   "09 School House Harmony.spc:srcn35",
+   "10 Forest Interlude.spc:srcn60",
+   "11 Funky the Main Monkey.spc:srcn49",
+   "12 Flight of the Zinger .spc:srcn35"
+  ]
+ },
+ {
+  "file": "s085_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn15",
+   "02 Welcome to Crocodile Isle.spc:srcn15",
+   "03 Klomp's Romp.spc:srcn15",
+   "04 Lockjaw's Saga.spc:srcn15",
+   "04 Lockjaw's Saga.spc:srcn33",
+   "05 Jib Jig.spc:srcn15",
+   "06 Swanky's Swing.spc:srcn15",
+   "07 Snakey Chantey.spc:srcn15"
+  ]
+ },
+ {
+  "file": "s086_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn16",
+   "02 Welcome to Crocodile Isle.spc:srcn16",
+   "03 Klomp's Romp.spc:srcn16",
+   "04 Lockjaw's Saga.spc:srcn16",
+   "04 Lockjaw's Saga.spc:srcn35",
+   "05 Jib Jig.spc:srcn16",
+   "06 Swanky's Swing.spc:srcn16",
+   "07 Snakey Chantey.spc:srcn16"
+  ]
+ },
+ {
+  "file": "s087_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn17",
+   "02 Welcome to Crocodile Isle.spc:srcn17",
+   "03 Klomp's Romp.spc:srcn17",
+   "04 Lockjaw's Saga.spc:srcn17",
+   "05 Jib Jig.spc:srcn17",
+   "06 Swanky's Swing.spc:srcn17",
+   "07 Snakey Chantey.spc:srcn17",
+   "08 Bayou Boogie.spc:srcn17"
+  ]
+ },
+ {
+  "file": "s088_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn18",
+   "02 Welcome to Crocodile Isle.spc:srcn18",
+   "03 Klomp's Romp.spc:srcn18",
+   "04 Lockjaw's Saga.spc:srcn18",
+   "05 Jib Jig.spc:srcn18",
+   "06 Swanky's Swing.spc:srcn18",
+   "07 Snakey Chantey.spc:srcn18",
+   "08 Bayou Boogie.spc:srcn18"
+  ]
+ },
+ {
+  "file": "s089_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn19",
+   "02 Welcome to Crocodile Isle.spc:srcn19",
+   "03 Klomp's Romp.spc:srcn19",
+   "04 Lockjaw's Saga.spc:srcn19",
+   "05 Jib Jig.spc:srcn19",
+   "06 Swanky's Swing.spc:srcn19",
+   "07 Snakey Chantey.spc:srcn19",
+   "08 Bayou Boogie.spc:srcn19"
+  ]
+ },
+ {
+  "file": "s090_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn27",
+   "10 Forest Interlude.spc:srcn20",
+   "17 Stickerbrush Symphony.spc:srcn43",
+   "18 Bad Bird Rag.spc:srcn43",
+   "23 Klubba's Reveille.spc:srcn43",
+   "25 In a Snow-Bound Land .spc:srcn22",
+   "29 Donkey Kong Rescued.spc:srcn62",
+   "32 Player Down (Lockjaw's Saga).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s091_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn28",
+   "10 Forest Interlude.spc:srcn21",
+   "14 Hot-Head Bop.spc:srcn30",
+   "17 Stickerbrush Symphony.spc:srcn44",
+   "18 Bad Bird Rag.spc:srcn44",
+   "23 Klubba's Reveille.spc:srcn44",
+   "25 In a Snow-Bound Land .spc:srcn23",
+   "29 Donkey Kong Rescued.spc:srcn63"
+  ]
+ },
+ {
+  "file": "s092_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn29",
+   "10 Forest Interlude.spc:srcn22",
+   "14 Hot-Head Bop.spc:srcn31",
+   "17 Stickerbrush Symphony.spc:srcn45",
+   "18 Bad Bird Rag.spc:srcn45",
+   "23 Klubba's Reveille.spc:srcn45",
+   "25 In a Snow-Bound Land .spc:srcn24",
+   "29 Donkey Kong Rescued.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s093_33hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 33.33,
+  "est_natural_midi": 24.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn30",
+   "10 Forest Interlude.spc:srcn23",
+   "14 Hot-Head Bop.spc:srcn32",
+   "17 Stickerbrush Symphony.spc:srcn46",
+   "18 Bad Bird Rag.spc:srcn46",
+   "19 Disco Train.spc:srcn60",
+   "23 Klubba's Reveille.spc:srcn46",
+   "29 Donkey Kong Rescued.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s094_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn31",
+   "10 Forest Interlude.spc:srcn24",
+   "14 Hot-Head Bop.spc:srcn33",
+   "17 Stickerbrush Symphony.spc:srcn47",
+   "18 Bad Bird Rag.spc:srcn47",
+   "19 Disco Train.spc:srcn61",
+   "23 Klubba's Reveille.spc:srcn47",
+   "24 Haunted Chase.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s095_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn32",
+   "10 Forest Interlude.spc:srcn25",
+   "14 Hot-Head Bop.spc:srcn34",
+   "17 Stickerbrush Symphony.spc:srcn48",
+   "18 Bad Bird Rag.spc:srcn48",
+   "19 Disco Train.spc:srcn62",
+   "23 Klubba's Reveille.spc:srcn48",
+   "25 In a Snow-Bound Land .spc:srcn26"
+  ]
+ },
+ {
+  "file": "s096_67hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 66.67,
+  "est_natural_midi": 36.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn34",
+   "10 Forest Interlude.spc:srcn26",
+   "14 Hot-Head Bop.spc:srcn35",
+   "17 Stickerbrush Symphony.spc:srcn49",
+   "18 Bad Bird Rag.spc:srcn49",
+   "19 Disco Train.spc:srcn63",
+   "23 Klubba's Reveille.spc:srcn49",
+   "25 In a Snow-Bound Land .spc:srcn28"
+  ]
+ },
+ {
+  "file": "s097_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn36",
+   "10 Forest Interlude.spc:srcn31",
+   "11 Funky the Main Monkey.spc:srcn46",
+   "17 Stickerbrush Symphony.spc:srcn54",
+   "18 Bad Bird Rag.spc:srcn54",
+   "19 Disco Train.spc:srcn66",
+   "29 Donkey Kong Rescued.spc:srcn73",
+   "32 Player Down (Lockjaw's Saga).spc:srcn36"
+  ]
+ },
+ {
+  "file": "s098_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn27",
+   "14 Hot-Head Bop.spc:srcn36",
+   "17 Stickerbrush Symphony.spc:srcn50",
+   "18 Bad Bird Rag.spc:srcn50",
+   "19 Disco Train.spc:srcn64",
+   "23 Klubba's Reveille.spc:srcn50",
+   "25 In a Snow-Bound Land .spc:srcn30",
+   "29 Donkey Kong Rescued.spc:srcn69"
+  ]
+ },
+ {
+  "file": "s099_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn28",
+   "11 Funky the Main Monkey.spc:srcn41",
+   "14 Hot-Head Bop.spc:srcn37",
+   "17 Stickerbrush Symphony.spc:srcn51",
+   "18 Bad Bird Rag.spc:srcn51",
+   "19 Disco Train.spc:srcn65",
+   "23 Klubba's Reveille.spc:srcn51",
+   "25 In a Snow-Bound Land .spc:srcn31"
+  ]
+ },
+ {
+  "file": "s100_44hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 44.44,
+  "est_natural_midi": 29.31,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn29",
+   "11 Funky the Main Monkey.spc:srcn43",
+   "14 Hot-Head Bop.spc:srcn38",
+   "17 Stickerbrush Symphony.spc:srcn52",
+   "18 Bad Bird Rag.spc:srcn52",
+   "23 Klubba's Reveille.spc:srcn52",
+   "29 Donkey Kong Rescued.spc:srcn71",
+   "36 Player Down (Forest Interlude).spc:srcn29"
+  ]
+ },
+ {
+  "file": "s101_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn30",
+   "11 Funky the Main Monkey.spc:srcn45",
+   "14 Hot-Head Bop.spc:srcn39",
+   "17 Stickerbrush Symphony.spc:srcn53",
+   "18 Bad Bird Rag.spc:srcn53",
+   "23 Klubba's Reveille.spc:srcn53",
+   "29 Donkey Kong Rescued.spc:srcn72",
+   "36 Player Down (Forest Interlude).spc:srcn30"
+  ]
+ },
+ {
+  "file": "s102_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn234",
+   "21 Steel Drum Rhumba.spc:srcn234",
+   "24 Haunted Chase.spc:srcn234",
+   "25 In a Snow-Bound Land .spc:srcn234",
+   "43 Player Down (Haunted Chase).spc:srcn234",
+   "46m Diddy Clear (Haunted Chase).spc:srcn234",
+   "47m Dixie Clear (Haunted Chase).spc:srcn234",
+   "99 Stage Clear (Haunted Chase).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s103_667hz.brr",
+  "blocks": 26,
+  "samples": 416,
+  "bytes": 236,
+  "looped": true,
+  "loop_offset_bytes": 207,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn33",
+   "08 Bayou Boogie.spc:srcn33",
+   "35a Player Down (Bayou Boogie 1).spc:srcn33",
+   "35b Player Down (Bayou Boogie 2).spc:srcn33",
+   "46e Diddy Clear (Bayou Boogie).spc:srcn33",
+   "47e Dixie Clear (Bayou Boogie).spc:srcn33",
+   "99 Stage Clear (Bayou Boogie).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s104_oneshot.brr",
+  "blocks": 14,
+  "samples": 224,
+  "bytes": 128,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.123,
+  "found_in": [
+   "17 Stickerbrush Symphony.spc:srcn235",
+   "18 Bad Bird Rag.spc:srcn235",
+   "23 Klubba's Reveille.spc:srcn235",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn235",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn235",
+   "47i Dixie Clear (Stickerbrush Symphony).spc:srcn235",
+   "99 Stage Clear (Stickerbrush Symphony).spc:srcn235"
+  ]
+ },
+ {
+  "file": "s105_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "17 Stickerbrush Symphony.spc:srcn219",
+   "18 Bad Bird Rag.spc:srcn219",
+   "23 Klubba's Reveille.spc:srcn219",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn219",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn219",
+   "47i Dixie Clear (Stickerbrush Symphony).spc:srcn219",
+   "99 Stage Clear (Stickerbrush Symphony).spc:srcn219"
+  ]
+ },
+ {
+  "file": "s106_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "05 Jib Jig.spc:srcn234",
+   "29 Donkey Kong Rescued.spc:srcn234",
+   "31 Player Down (Klomp's Romp).spc:srcn234",
+   "33 Player Down (Jib Jig).spc:srcn234",
+   "46c Diddy Clear (Jib Jig).spc:srcn234",
+   "47c Dixie Clear (Jib Jig).spc:srcn234",
+   "99 Stage Clear (Jib Jig).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s107_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 727.27,
+  "est_natural_midi": 77.7,
+  "f0_confidence": 0.491,
+  "found_in": [
+   "05 Jib Jig.spc:srcn242",
+   "29 Donkey Kong Rescued.spc:srcn242",
+   "31 Player Down (Klomp's Romp).spc:srcn242",
+   "33 Player Down (Jib Jig).spc:srcn242",
+   "46c Diddy Clear (Jib Jig).spc:srcn242",
+   "47c Dixie Clear (Jib Jig).spc:srcn242",
+   "99 Stage Clear (Jib Jig).spc:srcn242"
+  ]
+ },
+ {
+  "file": "s108_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.373,
+  "found_in": [
+   "09 School House Harmony.spc:srcn234",
+   "12 Flight of the Zinger .spc:srcn234",
+   "15 Run, Rambi! Run!.spc:srcn234",
+   "37 Player Down (Flight of the Zinger).spc:srcn234",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn234",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn234",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s109_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 864.86,
+  "est_natural_midi": 80.7,
+  "f0_confidence": 0.534,
+  "found_in": [
+   "09 School House Harmony.spc:srcn227",
+   "12 Flight of the Zinger .spc:srcn227",
+   "15 Run, Rambi! Run!.spc:srcn227",
+   "37 Player Down (Flight of the Zinger).spc:srcn227",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn227",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn227",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn227"
+  ]
+ },
+ {
+  "file": "s110_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.234,
+  "found_in": [
+   "43 Player Down (Haunted Chase).spc:srcn51",
+   "46l Diddy Clear (Krook's March).spc:srcn51",
+   "46m Diddy Clear (Haunted Chase).spc:srcn51",
+   "47l Dixie Clear (Krook's March).spc:srcn51",
+   "47m Dixie Clear (Haunted Chase).spc:srcn51",
+   "99 Stage Clear (Haunted Chase).spc:srcn51",
+   "99 Stage Clear (Krook's March).spc:srcn51"
+  ]
+ },
+ {
+  "file": "s111_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn235",
+   "41 Player Down (Mining Melancholy).spc:srcn235",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn235",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn235",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn235",
+   "99 Mining Melancholy.spc:srcn235",
+   "99 Stage Clear (Mining Melancholy).spc:srcn235"
+  ]
+ },
+ {
+  "file": "s112_oneshot.brr",
+  "blocks": 734,
+  "samples": 11744,
+  "bytes": 6608,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.078,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn22",
+   "31 Player Down (Klomp's Romp).spc:srcn22",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn22",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn22",
+   "99 Ending Ambience.spc:srcn20",
+   "99 Stage Clear (Klomp's Romp).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s113_32hz.brr",
+  "blocks": 628,
+  "samples": 10048,
+  "bytes": 5654,
+  "looped": true,
+  "loop_offset_bytes": 5094,
+  "loop_samples": 992,
+  "est_f0_hz": 32.26,
+  "est_natural_midi": 23.76,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn23",
+   "14 Hot-Head Bop.spc:srcn23",
+   "38 Player Down (Hot Head Bop).spc:srcn23",
+   "46h Diddy Clear (Hot Head Bop).spc:srcn23",
+   "47h Dixie Clear (Hot Head Bop).spc:srcn23",
+   "99 Stage Clear (Hot Head Bop).spc:srcn23"
+  ]
+ },
+ {
+  "file": "s114_39hz.brr",
+  "blocks": 251,
+  "samples": 4016,
+  "bytes": 2261,
+  "looped": true,
+  "loop_offset_bytes": 1800,
+  "loop_samples": 816,
+  "est_f0_hz": 39.22,
+  "est_natural_midi": 27.15,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn25",
+   "25 In a Snow-Bound Land .spc:srcn34",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn34",
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn34",
+   "47n Dixie Clear (In a Snow-Bound Land).spc:srcn34",
+   "99 Stage Clear (In a Snow-Bound Land).spc:srcn34"
+  ]
+ },
+ {
+  "file": "s115_loop.brr",
+  "blocks": 186,
+  "samples": 2976,
+  "bytes": 1676,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 2976,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.261,
+  "found_in": [
+   "28 Crocodile Cacophony.spc:srcn32",
+   "49a Player Down (Crocodile Cacophony).spc:srcn32",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn32",
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn32",
+   "99 Ending Ambience.spc:srcn22",
+   "99 Ending Ambience.spc:srcn32"
+  ]
+ },
+ {
+  "file": "s116_oneshot.brr",
+  "blocks": 157,
+  "samples": 2512,
+  "bytes": 1415,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 561.4,
+  "est_natural_midi": 73.22,
+  "f0_confidence": 0.707,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn30",
+   "15 Run, Rambi! Run!.spc:srcn30",
+   "37 Player Down (Flight of the Zinger).spc:srcn30",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn30",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn30",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn30"
+  ]
+ },
+ {
+  "file": "s117_2000hz.brr",
+  "blocks": 110,
+  "samples": 1760,
+  "bytes": 992,
+  "looped": true,
+  "loop_offset_bytes": 981,
+  "loop_samples": 16,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn20",
+   "28 Crocodile Cacophony.spc:srcn20",
+   "29 Donkey Kong Rescued.spc:srcn20",
+   "49a Player Down (Crocodile Cacophony).spc:srcn20",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn20",
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn20"
+  ]
+ },
+ {
+  "file": "s118_oneshot.brr",
+  "blocks": 75,
+  "samples": 1200,
+  "bytes": 677,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.888,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn28",
+   "15 Run, Rambi! Run!.spc:srcn28",
+   "37 Player Down (Flight of the Zinger).spc:srcn28",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn28",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn28",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s119_oneshot.brr",
+  "blocks": 68,
+  "samples": 1088,
+  "bytes": 614,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.152,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn32",
+   "19 Disco Train.spc:srcn59",
+   "40 Player Down (Disco Train).spc:srcn59",
+   "46j Diddy Clear (Disco Train).spc:srcn59",
+   "47j Dixie Clear (Disco Train).spc:srcn59",
+   "99 Stage Clear (Disco Train).spc:srcn59"
+  ]
+ },
+ {
+  "file": "s120_46hz.brr",
+  "blocks": 58,
+  "samples": 928,
+  "bytes": 524,
+  "looped": true,
+  "loop_offset_bytes": 135,
+  "loop_samples": 688,
+  "est_f0_hz": 46.44,
+  "est_natural_midi": 30.07,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn28",
+   "19 Disco Train.spc:srcn56",
+   "40 Player Down (Disco Train).spc:srcn56",
+   "46j Diddy Clear (Disco Train).spc:srcn56",
+   "47j Dixie Clear (Disco Train).spc:srcn56",
+   "99 Stage Clear (Disco Train).spc:srcn56"
+  ]
+ },
+ {
+  "file": "s121_oneshot.brr",
+  "blocks": 45,
+  "samples": 720,
+  "bytes": 407,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.757,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn26",
+   "15 Run, Rambi! Run!.spc:srcn26",
+   "37 Player Down (Flight of the Zinger).spc:srcn26",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn26",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn26",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s122_oneshot.brr",
+  "blocks": 43,
+  "samples": 688,
+  "bytes": 389,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 653.06,
+  "est_natural_midi": 75.84,
+  "f0_confidence": 0.87,
+  "found_in": [
+   "12 Flight of the Zinger .spc:srcn27",
+   "15 Run, Rambi! Run!.spc:srcn27",
+   "37 Player Down (Flight of the Zinger).spc:srcn27",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn27",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn27",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s123_oneshot.brr",
+  "blocks": 11,
+  "samples": 176,
+  "bytes": 101,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.643,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn228",
+   "10 Forest Interlude.spc:srcn228",
+   "36 Player Down (Forest Interlude).spc:srcn228",
+   "46f Diddy Clear (Forest Interlude).spc:srcn228",
+   "47f Dixie Clear (Forest Interlude).spc:srcn228",
+   "99 Stage Clear (Forest Interlude).spc:srcn228"
+  ]
+ },
+ {
+  "file": "s124_20hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 112,
+  "est_f0_hz": 20.41,
+  "est_natural_midi": 15.84,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "08 Bayou Boogie.spc:srcn25",
+   "35a Player Down (Bayou Boogie 1).spc:srcn25",
+   "35b Player Down (Bayou Boogie 2).spc:srcn25",
+   "46e Diddy Clear (Bayou Boogie).spc:srcn25",
+   "47e Dixie Clear (Bayou Boogie).spc:srcn25",
+   "99 Stage Clear (Bayou Boogie).spc:srcn25"
+  ]
+ },
+ {
+  "file": "s125_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.097,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn255",
+   "41 Player Down (Mining Melancholy).spc:srcn255",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn255",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn255",
+   "99 Mining Melancholy.spc:srcn255",
+   "99 Stage Clear (Mining Melancholy).spc:srcn255"
+  ]
+ },
+ {
+  "file": "s126_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "17 Stickerbrush Symphony.spc:srcn28",
+   "18 Bad Bird Rag.spc:srcn28",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn28",
+   "46i Diddy Clear (Stickerbrush Symphony).spc:srcn28",
+   "47i Dixie Clear (Stickerbrush Symphony).spc:srcn28",
+   "99 Stage Clear (Stickerbrush Symphony).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s127_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn21",
+   "29 Donkey Kong Rescued.spc:srcn30",
+   "40 Player Down (Disco Train).spc:srcn21",
+   "46j Diddy Clear (Disco Train).spc:srcn21",
+   "47j Dixie Clear (Disco Train).spc:srcn21",
+   "99 Stage Clear (Disco Train).spc:srcn21"
+  ]
+ },
+ {
+  "file": "s128_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn22",
+   "29 Donkey Kong Rescued.spc:srcn31",
+   "40 Player Down (Disco Train).spc:srcn22",
+   "46j Diddy Clear (Disco Train).spc:srcn22",
+   "47j Dixie Clear (Disco Train).spc:srcn22",
+   "99 Stage Clear (Disco Train).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s129_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn23",
+   "29 Donkey Kong Rescued.spc:srcn32",
+   "40 Player Down (Disco Train).spc:srcn23",
+   "46j Diddy Clear (Disco Train).spc:srcn23",
+   "47j Dixie Clear (Disco Train).spc:srcn23",
+   "99 Stage Clear (Disco Train).spc:srcn23"
+  ]
+ },
+ {
+  "file": "s130_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn24",
+   "29 Donkey Kong Rescued.spc:srcn33",
+   "40 Player Down (Disco Train).spc:srcn24",
+   "46j Diddy Clear (Disco Train).spc:srcn24",
+   "47j Dixie Clear (Disco Train).spc:srcn24",
+   "99 Stage Clear (Disco Train).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s131_80hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 80.0,
+  "est_natural_midi": 39.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn25",
+   "29 Donkey Kong Rescued.spc:srcn34",
+   "40 Player Down (Disco Train).spc:srcn25",
+   "46j Diddy Clear (Disco Train).spc:srcn25",
+   "47j Dixie Clear (Disco Train).spc:srcn25",
+   "99 Stage Clear (Disco Train).spc:srcn25"
+  ]
+ },
+ {
+  "file": "s132_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn26",
+   "29 Donkey Kong Rescued.spc:srcn35",
+   "40 Player Down (Disco Train).spc:srcn26",
+   "46j Diddy Clear (Disco Train).spc:srcn26",
+   "47j Dixie Clear (Disco Train).spc:srcn26",
+   "99 Stage Clear (Disco Train).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s133_40hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 40.0,
+  "est_natural_midi": 27.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn27",
+   "29 Donkey Kong Rescued.spc:srcn36",
+   "40 Player Down (Disco Train).spc:srcn27",
+   "46j Diddy Clear (Disco Train).spc:srcn27",
+   "47j Dixie Clear (Disco Train).spc:srcn27",
+   "99 Stage Clear (Disco Train).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s134_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn28",
+   "29 Donkey Kong Rescued.spc:srcn37",
+   "40 Player Down (Disco Train).spc:srcn28",
+   "46j Diddy Clear (Disco Train).spc:srcn28",
+   "47j Dixie Clear (Disco Train).spc:srcn28",
+   "99 Stage Clear (Disco Train).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s135_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn29",
+   "29 Donkey Kong Rescued.spc:srcn38",
+   "40 Player Down (Disco Train).spc:srcn29",
+   "46j Diddy Clear (Disco Train).spc:srcn29",
+   "47j Dixie Clear (Disco Train).spc:srcn29",
+   "99 Stage Clear (Disco Train).spc:srcn29"
+  ]
+ },
+ {
+  "file": "s136_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn30",
+   "29 Donkey Kong Rescued.spc:srcn39",
+   "40 Player Down (Disco Train).spc:srcn30",
+   "46j Diddy Clear (Disco Train).spc:srcn30",
+   "47j Dixie Clear (Disco Train).spc:srcn30",
+   "99 Stage Clear (Disco Train).spc:srcn30"
+  ]
+ },
+ {
+  "file": "s137_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn31",
+   "29 Donkey Kong Rescued.spc:srcn40",
+   "40 Player Down (Disco Train).spc:srcn31",
+   "46j Diddy Clear (Disco Train).spc:srcn31",
+   "47j Dixie Clear (Disco Train).spc:srcn31",
+   "99 Stage Clear (Disco Train).spc:srcn31"
+  ]
+ },
+ {
+  "file": "s138_29hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 28.57,
+  "est_natural_midi": 21.66,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn32",
+   "29 Donkey Kong Rescued.spc:srcn41",
+   "40 Player Down (Disco Train).spc:srcn32",
+   "46j Diddy Clear (Disco Train).spc:srcn32",
+   "47j Dixie Clear (Disco Train).spc:srcn32",
+   "99 Stage Clear (Disco Train).spc:srcn32"
+  ]
+ },
+ {
+  "file": "s139_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn33",
+   "29 Donkey Kong Rescued.spc:srcn42",
+   "40 Player Down (Disco Train).spc:srcn33",
+   "46j Diddy Clear (Disco Train).spc:srcn33",
+   "47j Dixie Clear (Disco Train).spc:srcn33",
+   "99 Stage Clear (Disco Train).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s140_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn34",
+   "29 Donkey Kong Rescued.spc:srcn43",
+   "40 Player Down (Disco Train).spc:srcn34",
+   "46j Diddy Clear (Disco Train).spc:srcn34",
+   "47j Dixie Clear (Disco Train).spc:srcn34",
+   "99 Stage Clear (Disco Train).spc:srcn34"
+  ]
+ },
+ {
+  "file": "s141_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn35",
+   "29 Donkey Kong Rescued.spc:srcn44",
+   "40 Player Down (Disco Train).spc:srcn35",
+   "46j Diddy Clear (Disco Train).spc:srcn35",
+   "47j Dixie Clear (Disco Train).spc:srcn35",
+   "99 Stage Clear (Disco Train).spc:srcn35"
+  ]
+ },
+ {
+  "file": "s142_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn36",
+   "29 Donkey Kong Rescued.spc:srcn45",
+   "40 Player Down (Disco Train).spc:srcn36",
+   "46j Diddy Clear (Disco Train).spc:srcn36",
+   "47j Dixie Clear (Disco Train).spc:srcn36",
+   "99 Stage Clear (Disco Train).spc:srcn36"
+  ]
+ },
+ {
+  "file": "s143_67hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 66.67,
+  "est_natural_midi": 36.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn37",
+   "29 Donkey Kong Rescued.spc:srcn46",
+   "40 Player Down (Disco Train).spc:srcn37",
+   "46j Diddy Clear (Disco Train).spc:srcn37",
+   "47j Dixie Clear (Disco Train).spc:srcn37",
+   "99 Stage Clear (Disco Train).spc:srcn37"
+  ]
+ },
+ {
+  "file": "s144_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn38",
+   "29 Donkey Kong Rescued.spc:srcn47",
+   "40 Player Down (Disco Train).spc:srcn38",
+   "46j Diddy Clear (Disco Train).spc:srcn38",
+   "47j Dixie Clear (Disco Train).spc:srcn38",
+   "99 Stage Clear (Disco Train).spc:srcn38"
+  ]
+ },
+ {
+  "file": "s145_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn39",
+   "29 Donkey Kong Rescued.spc:srcn48",
+   "40 Player Down (Disco Train).spc:srcn39",
+   "46j Diddy Clear (Disco Train).spc:srcn39",
+   "47j Dixie Clear (Disco Train).spc:srcn39",
+   "99 Stage Clear (Disco Train).spc:srcn39"
+  ]
+ },
+ {
+  "file": "s146_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn40",
+   "29 Donkey Kong Rescued.spc:srcn49",
+   "40 Player Down (Disco Train).spc:srcn40",
+   "46j Diddy Clear (Disco Train).spc:srcn40",
+   "47j Dixie Clear (Disco Train).spc:srcn40",
+   "99 Stage Clear (Disco Train).spc:srcn40"
+  ]
+ },
+ {
+  "file": "s147_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn41",
+   "29 Donkey Kong Rescued.spc:srcn50",
+   "40 Player Down (Disco Train).spc:srcn41",
+   "46j Diddy Clear (Disco Train).spc:srcn41",
+   "47j Dixie Clear (Disco Train).spc:srcn41",
+   "99 Stage Clear (Disco Train).spc:srcn41"
+  ]
+ },
+ {
+  "file": "s148_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn42",
+   "29 Donkey Kong Rescued.spc:srcn51",
+   "40 Player Down (Disco Train).spc:srcn42",
+   "46j Diddy Clear (Disco Train).spc:srcn42",
+   "47j Dixie Clear (Disco Train).spc:srcn42",
+   "99 Stage Clear (Disco Train).spc:srcn42"
+  ]
+ },
+ {
+  "file": "s149_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn43",
+   "29 Donkey Kong Rescued.spc:srcn52",
+   "40 Player Down (Disco Train).spc:srcn43",
+   "46j Diddy Clear (Disco Train).spc:srcn43",
+   "47j Dixie Clear (Disco Train).spc:srcn43",
+   "99 Stage Clear (Disco Train).spc:srcn43"
+  ]
+ },
+ {
+  "file": "s150_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn44",
+   "29 Donkey Kong Rescued.spc:srcn53",
+   "40 Player Down (Disco Train).spc:srcn44",
+   "46j Diddy Clear (Disco Train).spc:srcn44",
+   "47j Dixie Clear (Disco Train).spc:srcn44",
+   "99 Stage Clear (Disco Train).spc:srcn44"
+  ]
+ },
+ {
+  "file": "s151_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn45",
+   "29 Donkey Kong Rescued.spc:srcn54",
+   "40 Player Down (Disco Train).spc:srcn45",
+   "46j Diddy Clear (Disco Train).spc:srcn45",
+   "47j Dixie Clear (Disco Train).spc:srcn45",
+   "99 Stage Clear (Disco Train).spc:srcn45"
+  ]
+ },
+ {
+  "file": "s152_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn46",
+   "29 Donkey Kong Rescued.spc:srcn55",
+   "40 Player Down (Disco Train).spc:srcn46",
+   "46j Diddy Clear (Disco Train).spc:srcn46",
+   "47j Dixie Clear (Disco Train).spc:srcn46",
+   "99 Stage Clear (Disco Train).spc:srcn46"
+  ]
+ },
+ {
+  "file": "s153_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn47",
+   "29 Donkey Kong Rescued.spc:srcn56",
+   "40 Player Down (Disco Train).spc:srcn47",
+   "46j Diddy Clear (Disco Train).spc:srcn47",
+   "47j Dixie Clear (Disco Train).spc:srcn47",
+   "99 Stage Clear (Disco Train).spc:srcn47"
+  ]
+ },
+ {
+  "file": "s154_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn48",
+   "29 Donkey Kong Rescued.spc:srcn57",
+   "40 Player Down (Disco Train).spc:srcn48",
+   "46j Diddy Clear (Disco Train).spc:srcn48",
+   "47j Dixie Clear (Disco Train).spc:srcn48",
+   "99 Stage Clear (Disco Train).spc:srcn48"
+  ]
+ },
+ {
+  "file": "s155_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn49",
+   "29 Donkey Kong Rescued.spc:srcn58",
+   "40 Player Down (Disco Train).spc:srcn49",
+   "46j Diddy Clear (Disco Train).spc:srcn49",
+   "47j Dixie Clear (Disco Train).spc:srcn49",
+   "99 Stage Clear (Disco Train).spc:srcn49"
+  ]
+ },
+ {
+  "file": "s156_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn50",
+   "29 Donkey Kong Rescued.spc:srcn59",
+   "40 Player Down (Disco Train).spc:srcn50",
+   "46j Diddy Clear (Disco Train).spc:srcn50",
+   "47j Dixie Clear (Disco Train).spc:srcn50",
+   "99 Stage Clear (Disco Train).spc:srcn50"
+  ]
+ },
+ {
+  "file": "s157_27hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 26.67,
+  "est_natural_midi": 20.47,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn51",
+   "29 Donkey Kong Rescued.spc:srcn60",
+   "40 Player Down (Disco Train).spc:srcn51",
+   "46j Diddy Clear (Disco Train).spc:srcn51",
+   "47j Dixie Clear (Disco Train).spc:srcn51",
+   "99 Stage Clear (Disco Train).spc:srcn51"
+  ]
+ },
+ {
+  "file": "s158_400hz.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 80,
+  "est_f0_hz": 400.0,
+  "est_natural_midi": 67.35,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn52",
+   "29 Donkey Kong Rescued.spc:srcn61",
+   "40 Player Down (Disco Train).spc:srcn52",
+   "46j Diddy Clear (Disco Train).spc:srcn52",
+   "47j Dixie Clear (Disco Train).spc:srcn52",
+   "99 Stage Clear (Disco Train).spc:srcn52"
+  ]
+ },
+ {
+  "file": "s159_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.186,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn227",
+   "27 Primal Rave.spc:srcn227",
+   "45 Player Down (Primal Rave).spc:srcn227",
+   "46o Diddy Clear (Primal Rave).spc:srcn227",
+   "47o Dixie Clear (Primal Rave).spc:srcn227",
+   "99 Stage Clear (Primal Rave).spc:srcn227"
+  ]
+ },
+ {
+  "file": "s160_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.001,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn227",
+   "41 Player Down (Mining Melancholy).spc:srcn227",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn227",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn227",
+   "99 Mining Melancholy.spc:srcn227",
+   "99 Stage Clear (Mining Melancholy).spc:srcn227"
+  ]
+ },
+ {
+  "file": "s161_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "15 Run, Rambi! Run!.spc:srcn74",
+   "18 Bad Bird Rag.spc:srcn74",
+   "35b Player Down (Bayou Boogie 2).spc:srcn74",
+   "36 Player Down (Forest Interlude).spc:srcn74",
+   "37 Player Down (Flight of the Zinger).spc:srcn74",
+   "39 Player Down (Stickerbrush Symphony).spc:srcn74"
+  ]
+ },
+ {
+  "file": "s162_loop.brr",
+  "blocks": 632,
+  "samples": 10112,
+  "bytes": 5690,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 10112,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.081,
+  "found_in": [
+   "05 Jib Jig.spc:srcn27",
+   "33 Player Down (Jib Jig).spc:srcn27",
+   "46c Diddy Clear (Jib Jig).spc:srcn27",
+   "47c Dixie Clear (Jib Jig).spc:srcn27",
+   "99 Stage Clear (Jib Jig).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s163_254hz.brr",
+  "blocks": 567,
+  "samples": 9072,
+  "bytes": 5105,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 9072,
+  "est_f0_hz": 253.97,
+  "est_natural_midi": 59.49,
+  "f0_confidence": 0.308,
+  "found_in": [
+   "04 Lockjaw's Saga.spc:srcn49",
+   "32 Player Down (Lockjaw's Saga).spc:srcn49",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn49",
+   "47b Dixie Clear (Lockjaw's Saga).spc:srcn49",
+   "99 Stage Clear (Lockjaw's Saga).spc:srcn49"
+  ]
+ },
+ {
+  "file": "s164_451hz.brr",
+  "blocks": 504,
+  "samples": 8064,
+  "bytes": 4538,
+  "looped": true,
+  "loop_offset_bytes": 1359,
+  "loop_samples": 5648,
+  "est_f0_hz": 450.7,
+  "est_natural_midi": 69.42,
+  "f0_confidence": 0.954,
+  "found_in": [
+   "22 Krook's March.spc:srcn25",
+   "42 Player Down (Krook's March).spc:srcn25",
+   "46l Diddy Clear (Krook's March).spc:srcn25",
+   "47l Dixie Clear (Krook's March).spc:srcn25",
+   "99 Stage Clear (Krook's March).spc:srcn25"
+  ]
+ },
+ {
+  "file": "s165_oneshot.brr",
+  "blocks": 488,
+  "samples": 7808,
+  "bytes": 4394,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 426.67,
+  "est_natural_midi": 68.47,
+  "f0_confidence": 0.658,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn21",
+   "31 Player Down (Klomp's Romp).spc:srcn21",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn21",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn21",
+   "99 Stage Clear (Klomp's Romp).spc:srcn21"
+  ]
+ },
+ {
+  "file": "s166_loop.brr",
+  "blocks": 390,
+  "samples": 6240,
+  "bytes": 3512,
+  "looped": true,
+  "loop_offset_bytes": 2322,
+  "loop_samples": 2112,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.182,
+  "found_in": [
+   "24 Haunted Chase.spc:srcn27",
+   "43 Player Down (Haunted Chase).spc:srcn27",
+   "46m Diddy Clear (Haunted Chase).spc:srcn27",
+   "47m Dixie Clear (Haunted Chase).spc:srcn27",
+   "99 Stage Clear (Haunted Chase).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s167_oneshot.brr",
+  "blocks": 341,
+  "samples": 5456,
+  "bytes": 3071,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 73.73,
+  "est_natural_midi": 38.07,
+  "f0_confidence": 0.312,
+  "found_in": [
+   "24 Haunted Chase.spc:srcn26",
+   "43 Player Down (Haunted Chase).spc:srcn26",
+   "46m Diddy Clear (Haunted Chase).spc:srcn26",
+   "47m Dixie Clear (Haunted Chase).spc:srcn26",
+   "99 Stage Clear (Haunted Chase).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s168_loop.brr",
+  "blocks": 317,
+  "samples": 5072,
+  "bytes": 2855,
+  "looped": true,
+  "loop_offset_bytes": 1620,
+  "loop_samples": 2192,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.299,
+  "found_in": [
+   "19 Disco Train.spc:srcn53",
+   "40 Player Down (Disco Train).spc:srcn53",
+   "46j Diddy Clear (Disco Train).spc:srcn53",
+   "47j Dixie Clear (Disco Train).spc:srcn53",
+   "99 Stage Clear (Disco Train).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s169_oneshot.brr",
+  "blocks": 289,
+  "samples": 4624,
+  "bytes": 2603,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1684.21,
+  "est_natural_midi": 92.24,
+  "f0_confidence": 0.615,
+  "found_in": [
+   "41 Player Down (Mining Melancholy).spc:srcn28",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn28",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn28",
+   "99 Mining Melancholy.spc:srcn28",
+   "99 Stage Clear (Mining Melancholy).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s170_oneshot.brr",
+  "blocks": 258,
+  "samples": 4128,
+  "bytes": 2324,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1600.0,
+  "est_natural_midi": 91.35,
+  "f0_confidence": 0.357,
+  "found_in": [
+   "41 Player Down (Mining Melancholy).spc:srcn24",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn24",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn24",
+   "99 Mining Melancholy.spc:srcn24",
+   "99 Stage Clear (Mining Melancholy).spc:srcn24"
+  ]
+ },
+ {
+  "file": "s171_oneshot.brr",
+  "blocks": 254,
+  "samples": 4064,
+  "bytes": 2288,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 50.16,
+  "est_natural_midi": 31.41,
+  "f0_confidence": 0.371,
+  "found_in": [
+   "27 Primal Rave.spc:srcn26",
+   "45 Player Down (Primal Rave).spc:srcn26",
+   "46o Diddy Clear (Primal Rave).spc:srcn26",
+   "47o Dixie Clear (Primal Rave).spc:srcn26",
+   "99 Stage Clear (Primal Rave).spc:srcn26"
+  ]
+ },
+ {
+  "file": "s172_oneshot.brr",
+  "blocks": 245,
+  "samples": 3920,
+  "bytes": 2207,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.226,
+  "found_in": [
+   "14 Hot-Head Bop.spc:srcn42",
+   "38 Player Down (Hot Head Bop).spc:srcn42",
+   "46h Diddy Clear (Hot Head Bop).spc:srcn42",
+   "47h Dixie Clear (Hot Head Bop).spc:srcn42",
+   "99 Stage Clear (Hot Head Bop).spc:srcn42"
+  ]
+ },
+ {
+  "file": "s173_23hz.brr",
+  "blocks": 240,
+  "samples": 3840,
+  "bytes": 2162,
+  "looped": true,
+  "loop_offset_bytes": 1899,
+  "loop_samples": 464,
+  "est_f0_hz": 22.97,
+  "est_natural_midi": 17.88,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "25 In a Snow-Bound Land .spc:srcn20",
+   "44 Player Down (In a Snow-Bound Land).spc:srcn20",
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn20",
+   "47n Dixie Clear (In a Snow-Bound Land).spc:srcn20",
+   "99 Stage Clear (In a Snow-Bound Land).spc:srcn20"
+  ]
+ },
+ {
+  "file": "s174_471hz.brr",
+  "blocks": 216,
+  "samples": 3456,
+  "bytes": 1946,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 3456,
+  "est_f0_hz": 470.59,
+  "est_natural_midi": 70.16,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "41 Player Down (Mining Melancholy).spc:srcn22",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn22",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn22",
+   "99 Mining Melancholy.spc:srcn22",
+   "99 Stage Clear (Mining Melancholy).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s175_oneshot.brr",
+  "blocks": 180,
+  "samples": 2880,
+  "bytes": 1622,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.95,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn25",
+   "20 Boss Bossanova.spc:srcn25",
+   "99 Diddy Clear (Boss Bossanova).spc:srcn25",
+   "99 Dixie Clear (Boss Bossanova).spc:srcn25",
+   "99 Player Down (Boss Bossanova).spc:srcn25"
+  ]
+ },
+ {
+  "file": "s176_500hz.brr",
+  "blocks": 175,
+  "samples": 2800,
+  "bytes": 1577,
+  "looped": true,
+  "loop_offset_bytes": 1539,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "16a Token Tango.spc:srcn22",
+   "16b Lose.spc:srcn22",
+   "16c Win.spc:srcn22",
+   "21 Steel Drum Rhumba.spc:srcn25",
+   "99 Bonus Intro.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s177_53hz.brr",
+  "blocks": 152,
+  "samples": 2432,
+  "bytes": 1370,
+  "looped": true,
+  "loop_offset_bytes": 1026,
+  "loop_samples": 608,
+  "est_f0_hz": 52.63,
+  "est_natural_midi": 32.24,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "03 Klomp's Romp.spc:srcn20",
+   "31 Player Down (Klomp's Romp).spc:srcn20",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn20",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn20",
+   "99 Stage Clear (Klomp's Romp).spc:srcn20"
+  ]
+ },
+ {
+  "file": "s178_47hz.brr",
+  "blocks": 141,
+  "samples": 2256,
+  "bytes": 1271,
+  "looped": true,
+  "loop_offset_bytes": 882,
+  "loop_samples": 688,
+  "est_f0_hz": 46.51,
+  "est_natural_midi": 30.1,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "27 Primal Rave.spc:srcn22",
+   "45 Player Down (Primal Rave).spc:srcn22",
+   "46o Diddy Clear (Primal Rave).spc:srcn22",
+   "47o Dixie Clear (Primal Rave).spc:srcn22",
+   "99 Stage Clear (Primal Rave).spc:srcn22"
+  ]
+ },
+ {
+  "file": "s179_oneshot.brr",
+  "blocks": 75,
+  "samples": 1200,
+  "bytes": 677,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 385.54,
+  "est_natural_midi": 66.71,
+  "f0_confidence": 0.387,
+  "found_in": [
+   "27 Primal Rave.spc:srcn20",
+   "45 Player Down (Primal Rave).spc:srcn20",
+   "46o Diddy Clear (Primal Rave).spc:srcn20",
+   "47o Dixie Clear (Primal Rave).spc:srcn20",
+   "99 Stage Clear (Primal Rave).spc:srcn20"
+  ]
+ },
+ {
+  "file": "s180_oneshot.brr",
+  "blocks": 67,
+  "samples": 1072,
+  "bytes": 605,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.271,
+  "found_in": [
+   "41 Player Down (Mining Melancholy).spc:srcn29",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn29",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn29",
+   "99 Mining Melancholy.spc:srcn29",
+   "99 Stage Clear (Mining Melancholy).spc:srcn29"
+  ]
+ },
+ {
+  "file": "s181_32hz.brr",
+  "blocks": 63,
+  "samples": 1008,
+  "bytes": 569,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1008,
+  "est_f0_hz": 31.75,
+  "est_natural_midi": 23.49,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn36",
+   "36 Player Down (Forest Interlude).spc:srcn36",
+   "46f Diddy Clear (Forest Interlude).spc:srcn36",
+   "47f Dixie Clear (Forest Interlude).spc:srcn36",
+   "99 Stage Clear (Forest Interlude).spc:srcn36"
+  ]
+ },
+ {
+  "file": "s182_667hz.brr",
+  "blocks": 58,
+  "samples": 928,
+  "bytes": 524,
+  "looped": true,
+  "loop_offset_bytes": 495,
+  "loop_samples": 48,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "22 Krook's March.spc:srcn27",
+   "42 Player Down (Krook's March).spc:srcn27",
+   "46l Diddy Clear (Krook's March).spc:srcn27",
+   "47l Dixie Clear (Krook's March).spc:srcn27",
+   "99 Stage Clear (Krook's March).spc:srcn27"
+  ]
+ },
+ {
+  "file": "s183_500hz.brr",
+  "blocks": 52,
+  "samples": 832,
+  "bytes": 470,
+  "looped": true,
+  "loop_offset_bytes": 432,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn33",
+   "36 Player Down (Forest Interlude).spc:srcn33",
+   "46f Diddy Clear (Forest Interlude).spc:srcn33",
+   "47f Dixie Clear (Forest Interlude).spc:srcn33",
+   "99 Stage Clear (Forest Interlude).spc:srcn33"
+  ]
+ },
+ {
+  "file": "s184_oneshot.brr",
+  "blocks": 45,
+  "samples": 720,
+  "bytes": 407,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1777.78,
+  "est_natural_midi": 93.17,
+  "f0_confidence": 0.427,
+  "found_in": [
+   "27 Primal Rave.spc:srcn21",
+   "45 Player Down (Primal Rave).spc:srcn21",
+   "46o Diddy Clear (Primal Rave).spc:srcn21",
+   "47o Dixie Clear (Primal Rave).spc:srcn21",
+   "99 Stage Clear (Primal Rave).spc:srcn21"
+  ]
+ },
+ {
+  "file": "s185_oneshot.brr",
+  "blocks": 43,
+  "samples": 688,
+  "bytes": 389,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 627.45,
+  "est_natural_midi": 75.14,
+  "f0_confidence": 0.534,
+  "found_in": [
+   "10 Forest Interlude.spc:srcn32",
+   "36 Player Down (Forest Interlude).spc:srcn32",
+   "46f Diddy Clear (Forest Interlude).spc:srcn32",
+   "47f Dixie Clear (Forest Interlude).spc:srcn32",
+   "99 Stage Clear (Forest Interlude).spc:srcn32"
+  ]
+ },
+ {
+  "file": "s186_oneshot.brr",
+  "blocks": 36,
+  "samples": 576,
+  "bytes": 326,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 216.22,
+  "est_natural_midi": 56.7,
+  "f0_confidence": 0.425,
+  "found_in": [
+   "27 Primal Rave.spc:srcn28",
+   "45 Player Down (Primal Rave).spc:srcn28",
+   "46o Diddy Clear (Primal Rave).spc:srcn28",
+   "47o Dixie Clear (Primal Rave).spc:srcn28",
+   "99 Stage Clear (Primal Rave).spc:srcn28"
+  ]
+ },
+ {
+  "file": "s187_286hz.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 112,
+  "est_f0_hz": 285.71,
+  "est_natural_midi": 61.52,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn54",
+   "40 Player Down (Disco Train).spc:srcn54",
+   "46j Diddy Clear (Disco Train).spc:srcn54",
+   "47j Dixie Clear (Disco Train).spc:srcn54",
+   "99 Stage Clear (Disco Train).spc:srcn54"
+  ]
+ },
+ {
+  "file": "s188_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn255",
+   "40 Player Down (Disco Train).spc:srcn255",
+   "46j Diddy Clear (Disco Train).spc:srcn255",
+   "47j Dixie Clear (Disco Train).spc:srcn255",
+   "99 Stage Clear (Disco Train).spc:srcn255"
+  ]
+ },
+ {
+  "file": "s189_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.035,
+  "found_in": [
+   "28 Crocodile Cacophony.spc:srcn242",
+   "49a Player Down (Crocodile Cacophony).spc:srcn242",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn242",
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn242",
+   "99 Ending Ambience.spc:srcn242"
+  ]
+ },
+ {
+  "file": "s190_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "14 Hot-Head Bop.spc:srcn234",
+   "38 Player Down (Hot Head Bop).spc:srcn234",
+   "46h Diddy Clear (Hot Head Bop).spc:srcn234",
+   "47h Dixie Clear (Hot Head Bop).spc:srcn234",
+   "99 Stage Clear (Hot Head Bop).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s191_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "28 Crocodile Cacophony.spc:srcn235",
+   "49a Player Down (Crocodile Cacophony).spc:srcn235",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn235",
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn235",
+   "99 Ending Ambience.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s192_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.275,
+  "found_in": [
+   "21 Steel Drum Rhumba.spc:srcn66",
+   "46m Diddy Clear (Haunted Chase).spc:srcn66",
+   "47m Dixie Clear (Haunted Chase).spc:srcn66",
+   "99 Stage Clear (Haunted Chase).spc:srcn66"
+  ]
+ },
+ {
+  "file": "s193_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.135,
+  "found_in": [
+   "20 Boss Bossanova.spc:srcn234",
+   "99 Diddy Clear (Boss Bossanova).spc:srcn234",
+   "99 Dixie Clear (Boss Bossanova).spc:srcn234",
+   "99 Player Down (Boss Bossanova).spc:srcn234"
+  ]
+ },
+ {
+  "file": "s194_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.013,
+  "found_in": [
+   "43 Player Down (Haunted Chase).spc:srcn53",
+   "46m Diddy Clear (Haunted Chase).spc:srcn53",
+   "47m Dixie Clear (Haunted Chase).spc:srcn53",
+   "99 Stage Clear (Haunted Chase).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s195_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "37 Player Down (Flight of the Zinger).spc:srcn53",
+   "46g Diddy Clear (Flight of the Zinger).spc:srcn53",
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn53",
+   "99 Stage Clear (Flight of the Zinger).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s196_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.124,
+  "found_in": [
+   "31 Player Down (Klomp's Romp).spc:srcn72",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn72",
+   "47a Dixie Clear (Klomp's Romp).spc:srcn65",
+   "99 Stage Clear (Klomp's Romp).spc:srcn65"
+  ]
+ },
+ {
+  "file": "s197_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Diddy Clear (Boss Bossanova).spc:srcn44",
+   "99 Diddy Clear (Boss Bossanova).spc:srcn52",
+   "99 Dixie Clear (Boss Bossanova).spc:srcn52",
+   "99 Player Down (Boss Bossanova).spc:srcn59"
+  ]
+ },
+ {
+  "file": "s198_oneshot.brr",
+  "blocks": 107,
+  "samples": 1712,
+  "bytes": 965,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.216,
+  "found_in": [
+   "07 Snakey Chantey.spc:srcn198",
+   "48a Stronghold Showdown.spc:srcn198",
+   "50 Game Over.spc:srcn198"
+  ]
+ },
+ {
+  "file": "s199_oneshot.brr",
+  "blocks": 51,
+  "samples": 816,
+  "bytes": 461,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 941.18,
+  "est_natural_midi": 82.16,
+  "f0_confidence": 0.93,
+  "found_in": [
+   "16a Token Tango.spc:srcn0",
+   "28 Crocodile Cacophony.spc:srcn0",
+   "29 Donkey Kong Rescued.spc:srcn0"
+  ]
+ },
+ {
+  "file": "s200_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46a Diddy Clear (Klomp's Romp).spc:srcn242",
+   "47k Dixie Clear (Mining Melancholy).spc:srcn242",
+   "99 Mining Melancholy.spc:srcn242"
+  ]
+ },
+ {
+  "file": "s201_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.117,
+  "found_in": [
+   "07 Snakey Chantey.spc:srcn235",
+   "48a Stronghold Showdown.spc:srcn235",
+   "50 Game Over.spc:srcn235"
+  ]
+ },
+ {
+  "file": "s202_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46l Diddy Clear (Krook's March).spc:srcn52",
+   "47l Dixie Clear (Krook's March).spc:srcn52",
+   "99 Stage Clear (Krook's March).spc:srcn52"
+  ]
+ },
+ {
+  "file": "s203_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "41 Player Down (Mining Melancholy).spc:srcn65",
+   "46k Diddy Clear (Mining Melancholy).spc:srcn65",
+   "99 Mining Melancholy.spc:srcn72"
+  ]
+ },
+ {
+  "file": "s204_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.025,
+  "found_in": [
+   "05 Jib Jig.spc:srcn58",
+   "26 Lost World Anthem.spc:srcn58",
+   "27 Primal Rave.spc:srcn58"
+  ]
+ },
+ {
+  "file": "s205_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.017,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn38",
+   "46l Diddy Clear (Krook's March).spc:srcn47",
+   "99 Diddy Clear (Boss Bossanova).spc:srcn47"
+  ]
+ },
+ {
+  "file": "s206_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn62",
+   "21 Steel Drum Rhumba.spc:srcn62",
+   "26 Lost World Anthem.spc:srcn62"
+  ]
+ },
+ {
+  "file": "s207_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "27 Primal Rave.spc:srcn62",
+   "46o Diddy Clear (Primal Rave).spc:srcn62",
+   "47o Dixie Clear (Primal Rave).spc:srcn62"
+  ]
+ },
+ {
+  "file": "s208_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46e Diddy Clear (Bayou Boogie).spc:srcn53",
+   "47e Dixie Clear (Bayou Boogie).spc:srcn53",
+   "99 Stage Clear (Bayou Boogie).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s209_oneshot.brr",
+  "blocks": 120,
+  "samples": 1920,
+  "bytes": 1082,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.26,
+  "found_in": [
+   "23 Klubba's Reveille.spc:srcn250",
+   "99 Stage Clear (Disco Train).spc:srcn250"
+  ]
+ },
+ {
+  "file": "s210_42hz.brr",
+  "blocks": 48,
+  "samples": 768,
+  "bytes": 434,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 768,
+  "est_f0_hz": 41.67,
+  "est_natural_midi": 28.19,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "48a Stronghold Showdown.spc:srcn48",
+   "50 Game Over.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s211_oneshot.brr",
+  "blocks": 17,
+  "samples": 272,
+  "bytes": 155,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 561.4,
+  "est_natural_midi": 73.22,
+  "f0_confidence": 0.726,
+  "found_in": [
+   "34 Player Down (Snakey Chantey).spc:srcn58",
+   "46d Diddy Clear (Snakey Chantey).spc:srcn58"
+  ]
+ },
+ {
+  "file": "s212_oneshot.brr",
+  "blocks": 14,
+  "samples": 224,
+  "bytes": 128,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.093,
+  "found_in": [
+   "32 Player Down (Lockjaw's Saga).spc:srcn69",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s213_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 0.421,
+  "found_in": [
+   "47n Dixie Clear (In a Snow-Bound Land).spc:srcn66",
+   "99 Stage Clear (In a Snow-Bound Land).spc:srcn66"
+  ]
+ },
+ {
+  "file": "s214_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.092,
+  "found_in": [
+   "49a Player Down (Crocodile Cacophony).spc:srcn211",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn211"
+  ]
+ },
+ {
+  "file": "s215_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.292,
+  "found_in": [
+   "23 Klubba's Reveille.spc:srcn213",
+   "99 Stage Clear (Disco Train).spc:srcn213"
+  ]
+ },
+ {
+  "file": "s216_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.108,
+  "found_in": [
+   "32 Player Down (Lockjaw's Saga).spc:srcn59",
+   "46b Diddy Clear (Lockjaw's Saga).spc:srcn59"
+  ]
+ },
+ {
+  "file": "s217_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "44 Player Down (In a Snow-Bound Land).spc:srcn55",
+   "47n Dixie Clear (In a Snow-Bound Land).spc:srcn55"
+  ]
+ },
+ {
+  "file": "s218_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.255,
+  "found_in": [
+   "47e Dixie Clear (Bayou Boogie).spc:srcn55",
+   "99 Stage Clear (Bayou Boogie).spc:srcn55"
+  ]
+ },
+ {
+  "file": "s219_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.085,
+  "found_in": [
+   "46o Diddy Clear (Primal Rave).spc:srcn69",
+   "47o Dixie Clear (Primal Rave).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s220_500hz.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 64,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn48",
+   "21 Steel Drum Rhumba.spc:srcn48"
+  ]
+ },
+ {
+  "file": "s221_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn203",
+   "21 Steel Drum Rhumba.spc:srcn203"
+  ]
+ },
+ {
+  "file": "s222_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.005,
+  "found_in": [
+   "15 Run, Rambi! Run!.spc:srcn70",
+   "37 Player Down (Flight of the Zinger).spc:srcn70"
+  ]
+ },
+ {
+  "file": "s223_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "31 Player Down (Klomp's Romp).spc:srcn69",
+   "46a Diddy Clear (Klomp's Romp).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s224_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46j Diddy Clear (Disco Train).spc:srcn224",
+   "47j Dixie Clear (Disco Train).spc:srcn224"
+  ]
+ },
+ {
+  "file": "s225_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "47a Dixie Clear (Klomp's Romp).spc:srcn53",
+   "99 Stage Clear (Klomp's Romp).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s226_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "47o Dixie Clear (Primal Rave).spc:srcn67",
+   "99 Stage Clear (Primal Rave).spc:srcn67"
+  ]
+ },
+ {
+  "file": "s227_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1032.26,
+  "est_natural_midi": 83.76,
+  "f0_confidence": 0.53,
+  "found_in": [
+   "49a Player Down (Crocodile Cacophony).spc:srcn200",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn200"
+  ]
+ },
+ {
+  "file": "s228_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "49a Player Down (Crocodile Cacophony).spc:srcn241",
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn241"
+  ]
+ },
+ {
+  "file": "s229_21hz.brr",
+  "blocks": 766,
+  "samples": 12256,
+  "bytes": 6896,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 12256,
+  "est_f0_hz": 20.81,
+  "est_natural_midi": 16.17,
+  "f0_confidence": 0.317,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn22"
+  ]
+ },
+ {
+  "file": "s230_oneshot.brr",
+  "blocks": 248,
+  "samples": 3968,
+  "bytes": 2234,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 110.73,
+  "est_natural_midi": 45.11,
+  "f0_confidence": 1.019,
+  "found_in": [
+   "01 K. Rool Returns.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s231_oneshot.brr",
+  "blocks": 228,
+  "samples": 3648,
+  "bytes": 2054,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 72.89,
+  "est_natural_midi": 37.88,
+  "f0_confidence": 0.322,
+  "found_in": [
+   "21 Steel Drum Rhumba.spc:srcn69"
+  ]
+ },
+ {
+  "file": "s232_oneshot.brr",
+  "blocks": 212,
+  "samples": 3392,
+  "bytes": 1910,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 969.7,
+  "est_natural_midi": 82.68,
+  "f0_confidence": 0.447,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn31"
+  ]
+ },
+ {
+  "file": "s233_oneshot.brr",
+  "blocks": 210,
+  "samples": 3360,
+  "bytes": 1892,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.251,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn24"
+  ]
+ },
+ {
+  "file": "s234_oneshot.brr",
+  "blocks": 201,
+  "samples": 3216,
+  "bytes": 1811,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.158,
+  "found_in": [
+   "19 Disco Train.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s235_oneshot.brr",
+  "blocks": 199,
+  "samples": 3184,
+  "bytes": 1793,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 864.86,
+  "est_natural_midi": 80.7,
+  "f0_confidence": 0.48,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn23"
+  ]
+ },
+ {
+  "file": "s236_oneshot.brr",
+  "blocks": 185,
+  "samples": 2960,
+  "bytes": 1667,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1391.3,
+  "est_natural_midi": 88.93,
+  "f0_confidence": 0.824,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn25"
+  ]
+ },
+ {
+  "file": "s237_oneshot.brr",
+  "blocks": 158,
+  "samples": 2528,
+  "bytes": 1424,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 161.62,
+  "est_natural_midi": 51.66,
+  "f0_confidence": 0.85,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s238_oneshot.brr",
+  "blocks": 150,
+  "samples": 2400,
+  "bytes": 1352,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.699,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s239_oneshot.brr",
+  "blocks": 107,
+  "samples": 1712,
+  "bytes": 965,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 627.45,
+  "est_natural_midi": 75.14,
+  "f0_confidence": 0.488,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn26"
+  ]
+ },
+ {
+  "file": "s240_oneshot.brr",
+  "blocks": 92,
+  "samples": 1472,
+  "bytes": 830,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 316.83,
+  "est_natural_midi": 63.31,
+  "f0_confidence": 0.872,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn236"
+  ]
+ },
+ {
+  "file": "s241_1000hz.brr",
+  "blocks": 86,
+  "samples": 1376,
+  "bytes": 776,
+  "looped": true,
+  "loop_offset_bytes": 756,
+  "loop_samples": 32,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "13 Cranky's Conga.spc:srcn25"
+  ]
+ },
+ {
+  "file": "s242_67hz.brr",
+  "blocks": 80,
+  "samples": 1280,
+  "bytes": 722,
+  "looped": true,
+  "loop_offset_bytes": 450,
+  "loop_samples": 480,
+  "est_f0_hz": 66.67,
+  "est_natural_midi": 36.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn21"
+  ]
+ },
+ {
+  "file": "s243_71hz.brr",
+  "blocks": 73,
+  "samples": 1168,
+  "bytes": 659,
+  "looped": true,
+  "loop_offset_bytes": 405,
+  "loop_samples": 448,
+  "est_f0_hz": 71.43,
+  "est_natural_midi": 37.53,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "21 Steel Drum Rhumba.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s244_1280hz.brr",
+  "blocks": 72,
+  "samples": 1152,
+  "bytes": 650,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 1152,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.976,
+  "found_in": [
+   "50 Game Over.spc:srcn70"
+  ]
+ },
+ {
+  "file": "s245_oneshot.brr",
+  "blocks": 35,
+  "samples": 560,
+  "bytes": 317,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1280.0,
+  "est_natural_midi": 87.49,
+  "f0_confidence": 0.992,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn29"
+  ]
+ },
+ {
+  "file": "s246_oneshot.brr",
+  "blocks": 34,
+  "samples": 544,
+  "bytes": 308,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1066.67,
+  "est_natural_midi": 84.33,
+  "f0_confidence": 0.428,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s247_oneshot.brr",
+  "blocks": 34,
+  "samples": 544,
+  "bytes": 308,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1391.3,
+  "est_natural_midi": 88.93,
+  "f0_confidence": 0.417,
+  "found_in": [
+   "40 Player Down (Disco Train).spc:srcn205"
+  ]
+ },
+ {
+  "file": "s248_62hz.brr",
+  "blocks": 32,
+  "samples": 512,
+  "bytes": 290,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 512,
+  "est_f0_hz": 62.5,
+  "est_natural_midi": 35.21,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "09 School House Harmony.spc:srcn50"
+  ]
+ },
+ {
+  "file": "s249_oneshot.brr",
+  "blocks": 29,
+  "samples": 464,
+  "bytes": 263,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.499,
+  "found_in": [
+   "49a Player Down (Crocodile Cacophony).spc:srcn218"
+  ]
+ },
+ {
+  "file": "s250_oneshot.brr",
+  "blocks": 28,
+  "samples": 448,
+  "bytes": 254,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.937,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn28"
+  ]
+ },
+ {
+  "file": "s251_oneshot.brr",
+  "blocks": 27,
+  "samples": 432,
+  "bytes": 245,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1600.0,
+  "est_natural_midi": 91.35,
+  "f0_confidence": 0.576,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn243"
+  ]
+ },
+ {
+  "file": "s252_oneshot.brr",
+  "blocks": 25,
+  "samples": 400,
+  "bytes": 227,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1230.77,
+  "est_natural_midi": 86.81,
+  "f0_confidence": 0.862,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s253_33hz.brr",
+  "blocks": 20,
+  "samples": 320,
+  "bytes": 182,
+  "looped": true,
+  "loop_offset_bytes": 0,
+  "loop_samples": 320,
+  "est_f0_hz": 33.33,
+  "est_natural_midi": 24.33,
+  "f0_confidence": 1.0,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn20"
+  ]
+ },
+ {
+  "file": "s254_oneshot.brr",
+  "blocks": 20,
+  "samples": 320,
+  "bytes": 182,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 500.0,
+  "est_natural_midi": 71.21,
+  "f0_confidence": 0.473,
+  "found_in": [
+   "36 Player Down (Forest Interlude).spc:srcn73"
+  ]
+ },
+ {
+  "file": "s255_oneshot.brr",
+  "blocks": 15,
+  "samples": 240,
+  "bytes": 137,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.25,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s256_oneshot.brr",
+  "blocks": 13,
+  "samples": 208,
+  "bytes": 119,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.22,
+  "found_in": [
+   "19 Disco Train.spc:srcn237"
+  ]
+ },
+ {
+  "file": "s257_oneshot.brr",
+  "blocks": 12,
+  "samples": 192,
+  "bytes": 110,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.115,
+  "found_in": [
+   "05 Jib Jig.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s258_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.253,
+  "found_in": [
+   "11 Funky the Main Monkey.spc:srcn242"
+  ]
+ },
+ {
+  "file": "s259_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.056,
+  "found_in": [
+   "42 Player Down (Krook's March).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s260_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.109,
+  "found_in": [
+   "46a Diddy Clear (Klomp's Romp).spc:srcn53"
+  ]
+ },
+ {
+  "file": "s261_oneshot.brr",
+  "blocks": 10,
+  "samples": 160,
+  "bytes": 92,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 666.67,
+  "est_natural_midi": 76.19,
+  "f0_confidence": 0.332,
+  "found_in": [
+   "46c Diddy Clear (Jib Jig).spc:srcn54"
+  ]
+ },
+ {
+  "file": "s262_oneshot.brr",
+  "blocks": 9,
+  "samples": 144,
+  "bytes": 83,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.114,
+  "found_in": [
+   "50 Game Over.spc:srcn27"
+  ]
+ },
+ {
+  "file": "s263_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 941.18,
+  "est_natural_midi": 82.16,
+  "f0_confidence": 0.506,
+  "found_in": [
+   "28 Crocodile Cacophony.spc:srcn44"
+  ]
+ },
+ {
+  "file": "s264_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "33 Player Down (Jib Jig).spc:srcn63"
+  ]
+ },
+ {
+  "file": "s265_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46f Diddy Clear (Forest Interlude).spc:srcn72"
+  ]
+ },
+ {
+  "file": "s266_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.377,
+  "found_in": [
+   "49b Diddy Clear (Crocodile Cacophony).spc:srcn218"
+  ]
+ },
+ {
+  "file": "s267_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1142.86,
+  "est_natural_midi": 85.52,
+  "f0_confidence": 0.377,
+  "found_in": [
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn218"
+  ]
+ },
+ {
+  "file": "s268_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1066.67,
+  "est_natural_midi": 84.33,
+  "f0_confidence": 0.315,
+  "found_in": [
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn238"
+  ]
+ },
+ {
+  "file": "s269_oneshot.brr",
+  "blocks": 8,
+  "samples": 128,
+  "bytes": 74,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.166,
+  "found_in": [
+   "99 Mining Melancholy.spc:srcn74"
+  ]
+ },
+ {
+  "file": "s270_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.245,
+  "found_in": [
+   "09 School House Harmony.spc:srcn45"
+  ]
+ },
+ {
+  "file": "s271_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.101,
+  "found_in": [
+   "25 In a Snow-Bound Land .spc:srcn66"
+  ]
+ },
+ {
+  "file": "s272_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "48a Stronghold Showdown.spc:srcn39"
+  ]
+ },
+ {
+  "file": "s273_oneshot.brr",
+  "blocks": 7,
+  "samples": 112,
+  "bytes": 65,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 2000.0,
+  "est_natural_midi": 95.21,
+  "f0_confidence": 0.469,
+  "found_in": [
+   "99 Stage Clear (Primal Rave).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s274_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.255,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn40"
+  ]
+ },
+ {
+  "file": "s275_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "19 Disco Train.spc:srcn250"
+  ]
+ },
+ {
+  "file": "s276_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.3,
+  "found_in": [
+   "46o Diddy Clear (Primal Rave).spc:srcn65"
+  ]
+ },
+ {
+  "file": "s277_oneshot.brr",
+  "blocks": 6,
+  "samples": 96,
+  "bytes": 56,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Mining Melancholy.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s278_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1000.0,
+  "est_natural_midi": 83.21,
+  "f0_confidence": 0.76,
+  "found_in": [
+   "21 Steel Drum Rhumba.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s279_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "23 Klubba's Reveille.spc:srcn38"
+  ]
+ },
+ {
+  "file": "s280_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s281_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "31 Player Down (Klomp's Romp).spc:srcn58"
+  ]
+ },
+ {
+  "file": "s282_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "45 Player Down (Primal Rave).spc:srcn63"
+  ]
+ },
+ {
+  "file": "s283_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46l Diddy Clear (Krook's March).spc:srcn65"
+  ]
+ },
+ {
+  "file": "s284_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Ending Ambience.spc:srcn30"
+  ]
+ },
+ {
+  "file": "s285_oneshot.brr",
+  "blocks": 5,
+  "samples": 80,
+  "bytes": 47,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Player Down (Boss Bossanova).spc:srcn60"
+  ]
+ },
+ {
+  "file": "s286_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.152,
+  "found_in": [
+   "05 Jib Jig.spc:srcn65"
+  ]
+ },
+ {
+  "file": "s287_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "06 Swanky's Swing.spc:srcn54"
+  ]
+ },
+ {
+  "file": "s288_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": 1103.45,
+  "est_natural_midi": 84.92,
+  "f0_confidence": 0.569,
+  "found_in": [
+   "16a Token Tango.spc:srcn64"
+  ]
+ },
+ {
+  "file": "s289_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "23 Klubba's Reveille.spc:srcn33"
+  ]
+ },
+ {
+  "file": "s290_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn221"
+  ]
+ },
+ {
+  "file": "s291_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.115,
+  "found_in": [
+   "26 Lost World Anthem.spc:srcn248"
+  ]
+ },
+ {
+  "file": "s292_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "30 Opening.spc:srcn203"
+  ]
+ },
+ {
+  "file": "s293_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "44 Player Down (In a Snow-Bound Land).spc:srcn72"
+  ]
+ },
+ {
+  "file": "s294_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.004,
+  "found_in": [
+   "45 Player Down (Primal Rave).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s295_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "46n Diddy Clear (In a Snow-Bound Land).spc:srcn65"
+  ]
+ },
+ {
+  "file": "s296_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "47g Dixie Clear (Flight of the Zinger).spc:srcn55"
+  ]
+ },
+ {
+  "file": "s297_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.272,
+  "found_in": [
+   "47n Dixie Clear (In a Snow-Bound Land).spc:srcn63"
+  ]
+ },
+ {
+  "file": "s298_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn229"
+  ]
+ },
+ {
+  "file": "s299_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.006,
+  "found_in": [
+   "49c Dixie Clear (Crocodile Cacophony).spc:srcn251"
+  ]
+ },
+ {
+  "file": "s300_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Ending Ambience.spc:srcn69"
+  ]
+ },
+ {
+  "file": "s301_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.0,
+  "found_in": [
+   "99 Player Down (Boss Bossanova).spc:srcn69"
+  ]
+ },
+ {
+  "file": "s302_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.128,
+  "found_in": [
+   "99 Stage Clear (Flight of the Zinger).spc:srcn55"
+  ]
+ },
+ {
+  "file": "s303_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.066,
+  "found_in": [
+   "99 Stage Clear (In a Snow-Bound Land).spc:srcn58"
+  ]
+ },
+ {
+  "file": "s304_oneshot.brr",
+  "blocks": 4,
+  "samples": 64,
+  "bytes": 38,
+  "looped": false,
+  "loop_offset_bytes": 0,
+  "loop_samples": 0,
+  "est_f0_hz": null,
+  "est_natural_midi": null,
+  "f0_confidence": 0.221,
+  "found_in": [
+   "99 Stage Clear (Snakey Chantey).spc:srcn253"
+  ]
+ }
+]

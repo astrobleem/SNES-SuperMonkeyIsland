@@ -41,6 +41,12 @@ tadcompiler := ./tools/tad/tad-compiler.exe
 tadproject := audio/smi.terrificaudio
 tadaudiobin := $(builddir)/audio/tad-audio-data.bin
 
+# TAD sample-pool groups (multi-group music data; smi.terrificaudio only
+# donates the loader/driver blobs via the 64tass-export rule)
+groupsmanifest := $(builddir)/audio/groups/manifest.json
+tadgroupsinc := $(builddir)/audio/tad-groups.inc
+audiosongfiles := $(shell find audio/songs audio/samples -type f \( -name '*.mml' -o -name '*.terrificaudio' -o -name '*.wav' -o -name '*.brr' \))
+
 RD := $(RM) -r
 MD := mkdir -p
 
@@ -82,7 +88,7 @@ romdatapacker := python3 ./tools/rom_pack_data.py
 
 objroomtable := $(builddir)/obj_room_table.inc
 scummsoundmap := $(builddir)/audio/scumm_sound_map.inc
-datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(romdatabin) $(objroomtable) $(scummsoundmap)
+datafiles := $(converted_graphics) $(converted_sprite_animations) $(converted_bg_animations) $(tadaudiobin) $(groupsmanifest) $(tadgroupsinc) $(romdatabin) $(objroomtable) $(scummsoundmap)
 builddirs := $(sort $(dir $(objects) $(datafiles)) $(linkdir))
 
 #link 65816 objects, then append ROM data
@@ -112,9 +118,18 @@ $(objects): $(builddir)/%.$(asmobj): %.$(asmsource) %.$(asmheader) $(configfiles
 $(builddir)/obj_room_table.inc: $(wildcard data/scumm_extracted/rooms/room_*/metadata.json) | $(builddirs)
 	python3 ./tools/gen_obj_room_table.py
 
-#generate SCUMM sound ID -> TAD dispatch map (reads smi.terrificaudio sfx list)
-$(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) $(tadproject) tools/scumm/gen_audio_map.py | $(builddirs)
+#generate SCUMM sound ID -> TAD dispatch map (SFX from smi.terrificaudio,
+#song ordinals + SCUMM-id coverage from the groups manifest)
+$(scummsoundmap): $(wildcard data/scumm_extracted/sounds/soun_*.bin) $(tadproject) $(groupsmanifest) tools/scumm/gen_audio_map.py | $(builddirs)
 	python3 ./tools/scumm/gen_audio_map.py
+
+#pack converted songs into TAD sample-pool groups (merged projects + manifest)
+$(groupsmanifest): tools/audio/groups_config.json tools/audio/gen_groups.py $(audiosongfiles) $(tadproject) | $(builddirs)
+	python3 ./tools/audio/gen_groups.py
+
+#compile group bins + WLA-DX group tables (also emits tad-groups-data.inc)
+$(tadgroupsinc): $(groupsmanifest) $(tadaudiobin) tools/audio/pack_groups.py
+	python3 ./tools/audio/pack_groups.py
 
 #apply SCUMM script patches (text replacements, position overrides) before packing
 patchedscriptsstamp := $(builddir)/scumm_patched_scripts/.stamp
@@ -123,8 +138,9 @@ $(patchedscriptsstamp): tools/patch_scripts.py tools/scumm_patches.json $(wildca
 	@touch $@
 
 #pack room + script data into ROM data blob (produces both .bin and .inc)
-$(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) $(patchedscriptsstamp) | $(builddirs)
-	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc) --scripts-override-dir $(builddir)/scumm_patched_scripts
+#TAD audio groups blob goes first (appended block 0 = stable EXB=4 window)
+$(romdatabin): data/snes_converted/rooms/manifest.json $(wildcard data/snes_converted/rooms/room_*) $(wildcard data/scumm_extracted/scripts/scrp_*.bin) $(wildcard data/scumm_extracted/rooms/room_*/scripts/*.bin) $(patchedscriptsstamp) $(tadgroupsinc) | $(builddirs)
+	$(romdatapacker) --rooms-dir data/snes_converted/rooms --output-bin $(romdatabin) --output-inc $(romdatainc) --scripts-override-dir $(builddir)/scumm_patched_scripts --audio-blob $(builddir)/audio/groups/groups_blob.bin
 
 # rom_data.inc is produced as a side-effect of rom_data.bin
 $(romdatainc): $(romdatabin)
@@ -148,6 +164,14 @@ $(converted_bg_animations): $(builddir)/%.$(spriteanimation): % | $(builddirs)
 	$(animation_converter) $($(filter gfx_%, $(subst .,$(space), $@))_flags) -infolder $< -outfile $@
 
 
+
+#generate MSU-1 PCM tracks from Munt MT-32 reference renders (manual:
+#needs build/mt32_*/ refs which require WSL + MT-32 ROMs; the ROM boots
+#fine without the PCMs — MSU-1 mode just plays silence)
+msu-tracks: $(groupsmanifest)
+	python3 ./tools/audio/gen_msu_tracks.py
+
+.PHONY: msu-tracks
 
 clean:
 	$(RD) $(builddir)

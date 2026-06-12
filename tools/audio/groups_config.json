@@ -1,0 +1,24 @@
+{
+  "_about": "Input for tools/audio/gen_groups.py. Each song: canonical TAD project + the room-local soun bin it was converted from (used to derive global SCUMM sound IDs by content identity against data/scumm_extracted/sounds/).",
+  "group_fit_budget": 55000,
+  "_budget": "samples + sfx BRR + largest member song <= 55000 (= 65536 - $200 loader org - 116 loader - 3250 driver - 4096 echo - ~2KB common-data overhead, rounded down). tad-compiler check in pack_groups.py is the hard ARAM gate.",
+  "songs": {
+    "r002_monkey1":    {"project": "audio/songs/r002_monkey1/r002_monkey1.terrificaudio",       "room": "room_002*", "local": "soun_001.bin"},
+    "r010_lucasarts":  {"project": "audio/songs/r010_lucasarts/r010_lucasarts.terrificaudio",   "room": "room_010*", "local": "soun_005.bin"},
+    "r019_shdeck":     {"project": "audio/songs/r019_shdeck/r019_shdeck.terrificaudio",         "room": "room_019*", "local": "soun_003.bin"},
+    "r028_scummbar":   {"project": "audio/songs/r028_scummbar/r028_hybrid.terrificaudio",       "room": "room_028*", "local": "soun_001.bin"},
+    "r034_highstreet": {"project": "audio/songs/r034_highstreet/r034_highstreet.terrificaudio", "room": "room_034*", "local": "soun_002.bin"},
+    "r038_lookout":    {"project": "audio/songs/r038_lookout/r038_lookout.terrificaudio",       "room": "room_038*", "local": "soun_001.bin"},
+    "r041_kitchen":    {"project": "audio/songs/r041_kitchen/r041_kitchen.terrificaudio",       "room": "room_041*", "local": "soun_004.bin"},
+    "r051_circus":     {"project": "audio/songs/r051_circus/r051_circus.terrificaudio",         "room": "room_051*", "local": "soun_003.bin"},
+    "r058_damnforest": {"project": "audio/songs/r058_damnforest/r058_damnforest.terrificaudio", "room": "room_058*", "local": "soun_004.bin"},
+    "r059_stans":      {"project": "audio/songs/r059_stans/r059_stans.terrificaudio",           "room": "room_059*", "local": "soun_000.bin"},
+    "r070_hellcliff":  {"project": "audio/songs/r070_hellcliff/r070_hellcliff.terrificaudio",   "room": "room_070*", "local": "soun_002.bin"},
+    "r077_ghdeck":     {"project": "audio/songs/r077_ghdeck/r077_ghdeck.terrificaudio",         "room": "room_077*", "local": "soun_002.bin"},
+    "r078_church":     {"project": "audio/songs/r078_church/r078_church.terrificaudio",         "room": "room_078*", "local": "soun_001.bin"},
+    "r083_dock4":      {"project": "audio/songs/r083_dock4/r083_dock4.terrificaudio",           "room": "room_083*", "local": "soun_004.bin"},
+    "r083_dock5":      {"project": "audio/songs/r083_dock5/r083_dock5.terrificaudio",           "room": "room_083*", "local": "soun_005.bin"},
+    "r085_melee":      {"project": "audio/songs/r085_melee/r085_melee.terrificaudio",           "room": "room_085*", "local": "soun_001.bin"},
+    "r096_part1":      {"project": "audio/songs/r096_part1/r096_part1.terrificaudio",           "room": "room_096*", "local": "soun_001.bin"}
+  }
+}

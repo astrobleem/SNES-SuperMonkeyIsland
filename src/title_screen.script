@@ -181,7 +181,7 @@ _title_screen.checkStart:
 _title_screen.launchGame:
   ; Write selected music mode to SCUMM VM state
   lda.b this._tmp+2
-  sta.w SCUMM.musicMode
+  sta.l SCUMM.musicMode             ; long: don't rely on DB being $7E
   jmp _title_screen.startTransition
 _title_screen.menuDone:
   rts

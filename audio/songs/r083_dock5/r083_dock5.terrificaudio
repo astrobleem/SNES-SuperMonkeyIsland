@@ -43,7 +43,7 @@
   },
   {
    "name": "ph_bass",
-   "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+   "source": "../../samples/phantasia/Phantasia_Soft_Bass.brr",
    "freq": 111.111,
    "loop": "none",
    "evaluator": "default",

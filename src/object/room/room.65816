@@ -161,13 +161,17 @@ room.loadIndex:
 +
 
   ;calculate linear offset: ROM_DATA_ROOM_INDEX + room_id * 8
+  ;(index no longer sits in the first 64KB — the TAD audio groups blob
+  ; precedes it — so carry the lo16 add into the high byte)
   asl a
   asl a
   asl a
   clc
-  adc.w #ROM_DATA_ROOM_INDEX
-  ;A = low 16 bits of offset, X = high 8 bits (0 — index fits in first 64KB)
-  ldx #0
+  adc.w #ROM_DATA_ROOM_INDEX & $FFFF
+  ldx #ROM_DATA_ROOM_INDEX >> 16
+  bcc +
+  inx
++
   jsr room.setRomDataPtr
 
   ;read 8 bytes from ROM into index entry struct

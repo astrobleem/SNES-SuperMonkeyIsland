@@ -50,9 +50,9 @@ LIB = {
     'mt32_bottle':     dict(source='../../samples/instruments/mt32_bottle.wav',
                             freq=660.0, loop='loop_with_filter', loop_setting=4800,
                             envelope='adsr 15 2 7 10'),
-    'ph_bass':         dict(source='../../samples/phantasia/Phantasia_Soft Bass.brr',
+    'ph_bass':         dict(source='../../samples/phantasia/Phantasia_Soft_Bass.brr',
                             freq=111.111, loop='none', envelope='adsr 15 7 7 12'),
-    'ph_horn':         dict(source='../../samples/phantasia/Phantasia_French Horn.brr',
+    'ph_horn':         dict(source='../../samples/phantasia/Phantasia_French_Horn.brr',
                             freq=500.0, loop='none', envelope='adsr 15 7 7 0'),
 }
 DRUM_LIB = ['mt32_drum_kick', 'mt32_drum_rim', 'mt32_drum_bongo',

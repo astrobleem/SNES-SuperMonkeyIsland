@@ -31,7 +31,7 @@
   },
   {
    "name": "ph_bass",
-   "source": "../../samples/phantasia/Phantasia_Soft Bass.brr",
+   "source": "../../samples/phantasia/Phantasia_Soft_Bass.brr",
    "freq": 111.111,
    "loop": "none",
    "evaluator": "default",
@@ -59,7 +59,7 @@
    "loop": "loop_with_filter",
    "evaluator": "default",
    "ignore_gaussian_overflow": false,
-   "first_octave": 3,
+   "first_octave": 4,
    "last_octave": 4,
    "envelope": "adsr 15 1 7 0",
    "loop_setting": 6720

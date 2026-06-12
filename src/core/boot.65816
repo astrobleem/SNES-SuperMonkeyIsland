@@ -11,13 +11,10 @@
 ;
 ; Ramsection lives in bank 0 slot 2 (auto-zeroed by the early ClearWRAM sweep).
 .define N_DEV_SFX 1
-; Song IDs per tad-compiler's Song enum (build/audio/tad-enums.inc):
-;   0 = BLANK (internal blank song, silent)
-;   1 = silence.mml (also silent)
-;   2 = soun_010 (scummbar-ish / credits)
-;   3 = soun_scummbar (scumm bar theme)
-; R cycles 0..N_DEV_SONGS-1. Bump this whenever a new song is added.
-.define N_DEV_SONGS 4
+; R cycles every converted song by global ordinal (TAD_GSONG_* in
+; build/audio/tad-groups.inc) via Tad_LoadGlobalSong, which also
+; exercises sample-pool group switches.
+.include "build/audio/tad-groups.inc"
 
 .ramsection "dev_sfx_test" bank 0 slot 2
   dev_sfx_idx     db    ; next SFX index to queue (0..N_DEV_SFX-1)
@@ -66,6 +63,11 @@ core.boot.init:
 	rep #$31
 	lda.w #STACK
 	tcs
+
+	; SCUMM.musicMode is read before the SCUMM VM or title screen ever
+	; write it (attract credits start music) -- zero it once here so the
+	; music backend defaults to SPC700/TAD instead of WRAM power-on trash.
+	stz.w SCUMM.musicMode
 
 	jsr core.wram.init
 	jsr core.vram.init
@@ -170,20 +172,20 @@ _dth_not_sel:
 	    rep #$20
 _dth_not_start:
 
-	; --- R-shoulder edge: cycle to next loaded song (wraps at N_DEV_SONGS). ---
-	; Tad_LoadSong expects A = song_id (0 = silence).
+	; --- R-shoulder edge: cycle to next song (wraps at TAD_N_GLOBAL_SONGS). ---
+	; Tad_LoadGlobalSong expects A = global song ordinal.
 	lda.w dev_new_edges
 	and.w #$0010                       ; SNES R-shoulder bit
 	beq _dth_not_r
 	    sep #$20
 	    lda.w dev_song_idx
 	    inc a
-	    cmp.b #N_DEV_SONGS
+	    cmp.b #TAD_N_GLOBAL_SONGS
 	    bcc _dth_song_store
 	        lda.b #0
 _dth_song_store:
 	    sta.w dev_song_idx
-	    jsl Tad_LoadSong
+	    jsl Tad_LoadGlobalSong
 	    rep #$20
 _dth_not_r:
 	rts

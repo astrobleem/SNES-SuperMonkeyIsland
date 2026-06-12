@@ -15,11 +15,14 @@
 ; ===================================
 ;
 ; Called by Tad_Process via JSL when audio data needs to be loaded.
-; Works with non-bank-aligned data by adding the binary base address
-; to the relative offsets in the data table.
+; Group-aware: indexes the resident group's far-address table (set by
+; Tad_SetAudioGroup / Tad_Init) inside TadGroupTables. Table entries are
+; linker-resolved far addresses; item size = next entry lo16 − this entry
+; lo16 (each group bin is one superfree section, so the modular 16-bit
+; subtraction is safe).
 ;
 ; IN:  A = 0 → common audio data (MUST return carry set)
-; IN:  A >= 1 → song ID
+; IN:  A >= 1 → song ID (group-local)
 ; OUT: carry set = valid input, A:X = far address, Y = data size
 ; OUT: carry clear = invalid song ID
 ;
@@ -29,7 +32,7 @@
 .base BSL
 .section "TAD LoadAudioData" free
 Tad_LoadAudioData:
-    cmp.b #TAD_N_DATA_ITEMS
+    cmp.w TadPriv_grpItems
     bcc _lad_valid
       clc
       rtl
@@ -38,30 +41,28 @@ _lad_valid:
     rep #$30
     and.w #$00FF
 
-    ; Compute table index: A * 3 (each entry is 3 bytes)
+    ; Table index = group table offset + id * 3 (3-byte entries)
     pha
     asl a
     clc
-    adc 1,s         ; A = index * 3
+    adc 1,s         ; A = id * 3
+    clc
+    adc.w TadPriv_grpTableOff
     tax
 
     ; Size = next_entry_lo16 - current_entry_lo16
-    lda.l Tad_DataTable+3,x
+    lda.l TadGroupTables+3,x
     sec
-    sbc.l Tad_DataTable,x
+    sbc.l TadGroupTables,x
     tay             ; Y = size
 
-    ; Absolute address = binary_base + table_offset
-    lda.l Tad_DataTable,x      ; offset lo16
-    clc
-    adc.w #Tad_AudioData & $ffff  ; + binary base lo16
-    sta 1,s                     ; save computed lo16
+    lda.l TadGroupTables,x     ; far address lo16
+    sta 1,s
 
     sep #$20        ; A8
-    lda.l Tad_DataTable+2,x   ; offset bank byte
-    adc.b #:Tad_AudioData     ; + binary base bank (carry from 16-bit add)
+    lda.l TadGroupTables+2,x   ; far address bank
 
-    plx             ; X = computed lo16
+    plx             ; X = lo16
     sec             ; return true
     rtl
 
@@ -159,8 +160,15 @@ Tad_Init:
     lda.b #$ff
     sta.w TadPriv_nextCmd_id
     sta.w Tad_sfxQueue_sfx
+    sta.w Tad_globalSong         ; no global song loaded
 
     stz.w TadPriv_nextSong
+
+    ; Start resident in group 0 (title theme group) — the group record
+    ; must be valid before the first Tad_Process, which immediately
+    ; invokes Tad_LoadAudioData for common data.
+    lda.b #0
+    jsr _Tad_SetGroupRec
 
     ; Wait for loader ready and send CODE data type
   _init_dtype_loop:
@@ -343,12 +351,18 @@ Tad_QueuePannedSoundEffect:
 ; Tad_LoadSong — Start loading a song
 ; -------------------------------------------------------
 ;
-; IN: A = 0 (silence) or >= 1 (song ID)
+; IN: A = 0 (silence) or >= 1 (group-local song ID)
+;
+; Raw loads invalidate the global-ordinal tracking so a later
+; Tad_LoadGlobalSong always reloads (Tad_LoadGlobalSong re-stores the
+; ordinal after calling here).
 ;
 ; JSL/RTL. A8, I unknown, DB accesses lowram.
 
 Tad_LoadSong:
     sta.w TadPriv_nextSong
+    lda.b #$ff
+    sta.w Tad_globalSong
 
     lda.b #TadFlags_RELOAD_COMMON_AUDIO_DATA
     trb.w Tad_flags
@@ -403,6 +417,71 @@ Tad_LoadSongIfChanged:
 
 Tad_GetSong:
     lda.w TadPriv_nextSong
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_SetAudioGroup — Switch resident sample-pool group
+; -------------------------------------------------------
+;
+; IN: A = group index
+;
+; If the group differs from the resident one, stores its record and
+; requests a common-audio-data reload: the next Tad_LoadSong streams the
+; new group's samples (item 0) before the song.
+;
+; JSL/RTL. A8, I16, DB accesses lowram. Clobbers A, X.
+
+Tad_SetAudioGroup:
+    cmp.w Tad_loadedGroup
+    beq +
+        jsr _Tad_SetGroupRec
+        lda.b #TadFlags_RELOAD_COMMON_AUDIO_DATA
+        tsb.w Tad_flags
++
+    rtl
+
+
+; -------------------------------------------------------
+; Tad_LoadGlobalSong — Load a song by global ordinal
+; -------------------------------------------------------
+;
+; IN: A = global song ordinal (TAD_GSONG_*, see tad-groups.inc)
+; OUT: carry set if a load was started
+;
+; Cross-group replacement for Tad_LoadSongIfChanged (whose group-local
+; id compare collides across groups): no-op when the ordinal is already
+; loaded/loading, otherwise looks up TadSongMap, switches the sample-pool
+; group when needed, and loads the group-local song.
+;
+; JSL/RTL. A8, I16, DB accesses lowram. Clobbers A, X.
+
+Tad_LoadGlobalSong:
+    cmp.w Tad_globalSong
+    bne +
+        clc
+        rtl
++
+    cmp.b #TAD_N_GLOBAL_SONGS
+    bcc +
+        clc             ; invalid ordinal
+        rtl
++
+    pha                 ; [ordinal]
+    rep #$30
+    and.w #$00FF
+    asl a
+    tax
+    sep #$20
+    lda.l TadSongMap+1,x    ; group-local song id
+    pha                     ; [local id] (X clobbered by group switch)
+    lda.l TadSongMap,x      ; group index
+    jsl Tad_SetAudioGroup
+    pla
+    jsl Tad_LoadSong        ; sets Tad_globalSong = $FF
+    pla
+    sta.w Tad_globalSong    ; re-store the ordinal
+    sec
     rtl
 
 
@@ -499,6 +578,29 @@ _Tad_SetDataToTransfer:
     stx.w TadPriv_xfer_addr
     sta.w TadPriv_xfer_bank
     sty.w TadPriv_xfer_size
+    rts
+
+
+; --- Load a group record for Tad_LoadAudioData ---
+; IN: A = group index (NOT validated; callers pass 0 or TadSongMap bytes)
+; Sets Tad_loadedGroup + the table offset / item count consumed by the
+; Tad_LoadAudioData callback.
+; A8, I16. Clobbers A, X.
+_Tad_SetGroupRec:
+    sta.w Tad_loadedGroup
+    rep #$30
+    and.w #$00FF
+    pha
+    asl a
+    clc
+    adc 1,s         ; A = group * 3 (3-byte TadGroupRecs entries)
+    tax
+    lda.l TadGroupRecs,x
+    sta.w TadPriv_grpTableOff
+    sep #$20
+    lda.l TadGroupRecs+2,x
+    sta.w TadPriv_grpItems
+    plx             ; restore stack (discard)
     rts
 
 

@@ -48,7 +48,7 @@
    "loop": "loop_with_filter",
    "evaluator": "default",
    "ignore_gaussian_overflow": false,
-   "first_octave": 2,
+   "first_octave": 3,
    "last_octave": 4,
    "envelope": "adsr 15 1 7 0",
    "loop_setting": 3200

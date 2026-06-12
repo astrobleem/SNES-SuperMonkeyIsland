@@ -7804,8 +7804,23 @@ op_startSound:
   jsl Tad_QueueSoundEffect          ; A = SFX index (0..$7F)
   bra _ss.primeSfx
 _ss.song:
-  and #$7F                          ; strip song flag -> TAD song index
-  jsl Tad_LoadSongIfChanged
+  ; Route through the backend the MUSIC toggle selects (same rule as
+  ; op_startMusic) — scripts start songs via startSound too.
+  lda.l SCUMM.musicMode             ; long: DB is not $7E in opcode context
+  bne _ss.songMsu1
+  lda.l ScummSoundMap,x             ; reload dispatch byte (mode test ate A)
+  and #$7F                          ; strip song flag -> global song ordinal
+  jsl Tad_LoadGlobalSong
+  jsr _scummvm.msu1StopTrack        ; mode may have just switched: kill stream
+  sep #$20
+  bra _ss.primeSong
+_ss.songMsu1:
+  rep #$20
+  txa                               ; A = 16-bit scumm sound id = MSU track
+  jsr _scummvm.msu1PlayTrack
+  sep #$20
+  jsr _scummvm.tadBlankSong         ; silence any lingering TAD song
+_ss.primeSong:
   ; prime as song
   pla                               ; id
   ldx #SCUMM_VIRT_TTL_SONG
@@ -7842,7 +7857,7 @@ op_startMusic:
   jsr _scummvm.getVarOrDirectByte
   phy
   sta.l SCUMM.scratch               ; stash scumm id for priming
-  lda.w SCUMM.musicMode
+  lda.l SCUMM.musicMode             ; long: DB is not $7E in opcode context
   bne _startMusic.msu1
   ; TAD path — translate scumm id to TAD song index.
   sep #$20
@@ -7853,8 +7868,10 @@ op_startMusic:
   beq _sm.prime                     ; no audio — still prime so pacing works
   bit #$80
   beq _sm.sfx                       ; SFX-flagged via startMusic — still play it
-  and #$7F
-  jsl Tad_LoadSongIfChanged
+  and #$7F                          ; strip song flag -> global song ordinal
+  jsl Tad_LoadGlobalSong
+  jsr _scummvm.msu1StopTrack        ; mode may have just switched: kill stream
+  sep #$20
   bra _sm.prime
 _sm.sfx:
   jsl Tad_QueueSoundEffect
@@ -7873,6 +7890,7 @@ _startMusic.msu1:
   lda.l SCUMM.scratch               ; A = 16-bit song ID
   jsr _scummvm.msu1PlayTrack
   sep #$20
+  jsr _scummvm.tadBlankSong         ; silence any lingering TAD song
   lda.l SCUMM.scratch               ; A = id low byte
   ldx #SCUMM_VIRT_TTL_SONG
   ldy #1
@@ -7892,7 +7910,7 @@ op_stopMusic:
   sep #$20
   jsr _scummvm.virtSound_clearAllSongs
   rep #$31
-  lda.w SCUMM.musicMode
+  lda.l SCUMM.musicMode             ; long: DB is not $7E in opcode context
   bne _stopMusic.msu1
   ; TAD path
   sep #$20
@@ -7901,6 +7919,7 @@ op_stopMusic:
   ldy #0
   jsl Tad_QueueCommand
   rep #$31
+  jsr _scummvm.msu1StopTrack        ; mode may have just switched: kill stream
   ply
   clc
   rts
@@ -7908,6 +7927,9 @@ _stopMusic.msu1:
   .ACCU 16
   .INDEX 16
   jsr _scummvm.msu1StopTrack
+  sep #$20
+  jsr _scummvm.tadBlankSong         ; a TAD song may linger from SPC700 mode
+  rep #$31
   ply
   clc
   rts
@@ -8024,6 +8046,19 @@ _scummvm.msu1StopTrack:
   lda.b #0
   sta.l MSU_CONTROL
   rep #$20
+  rts
+
+; Silence the TAD music backend if a global song is resident (A8/I16,
+; A8 out). Used when MSU-1 owns the music: a mode toggle can leave a TAD
+; song looping under the stream. Loading the blank song also clears a
+; lingering PAUSE so SFX keep playing in MSU-1 mode.
+_scummvm.tadBlankSong:
+  lda.w Tad_globalSong
+  cmp.b #$FF
+  beq +
+  lda.b #0
+  jsl Tad_LoadSong
++
   rts
 
 ; Check if MSU-1 audio is playing (carry set = playing)

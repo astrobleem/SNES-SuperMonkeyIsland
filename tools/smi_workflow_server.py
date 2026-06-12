@@ -958,27 +958,6 @@ def _lookup_sym_address(sym_path: Path, symbol_name: str) -> int | None:
     return None
 
 
-def _lookup_wram_offset(sym_path: Path, symbol_name: str) -> int | None:
-    """Look up a WRAM symbol's offset from $7E:0000.
-
-    Strict: only resolves symbols whose address is in the $7E/$7F WRAM
-    banks ($7E0000..$7FFFFF). Anything else (ROM, direct page in bank 0,
-    SA-1 IRAM, etc.) returns None — the caller almost certainly does not
-    want a "stripped" offset for a non-WRAM symbol. Callers that need
-    arbitrary CPU addresses should use _lookup_sym_address instead.
-    """
-    for line in sym_path.read_text().split("\n"):
-        parsed = _parse_sym_line(line)
-        if not parsed:
-            continue
-        _bank, addr, name, _full = parsed
-        if name == symbol_name:
-            if 0x7E0000 <= addr <= 0x7FFFFF:
-                return addr - 0x7E0000
-            return None
-    return None
-
-
 def _assert_ascii_lua(text: str, label: str) -> None:
     """Guard for Lua templates: refuse non-ASCII before write_text.
 
@@ -1165,7 +1144,11 @@ _BUTTON_MAP = {
 
 
 def _parse_buttons(button_str: str) -> int:
-    """Parse a button string like 'right+a' into a 16-bit bitmask."""
+    """Parse a button string like 'right+a' into a 16-bit bitmask.
+
+    Still used for $4218-shaped reads/tests; injection now goes through
+    _buttons_to_lua_table -> emu.setInput.
+    """
     mask = 0
     for name in button_str.lower().split("+"):
         name = name.strip()
@@ -1174,10 +1157,27 @@ def _parse_buttons(button_str: str) -> int:
     return mask
 
 
+def _buttons_to_lua_table(button_str: str) -> str:
+    """Render 'right+a' as a Lua table literal '{["right"]=true,["a"]=true}'
+    for emu.setInput. Returns '' when no valid button names are present.
+
+    Mesen's SNES controller field names are LOWERCASE (a, b, x, y, l, r,
+    up, down, left, right, start, select) — matched against _BUTTON_MAP's
+    keys, which are already lowercase.
+    """
+    names = []
+    for name in button_str.lower().split("+"):
+        name = name.strip()
+        if name in _BUTTON_MAP and name not in names:
+            names.append(name)
+    if not names:
+        return ""
+    return "{" + ",".join(f'["{n}"]=true' for n in names) + "}"
+
+
 # Lua template for run_with_input.
-# Placeholders: {hook_addr}, {press_wram}, {trigger_wram}, {old_wram},
-#               {schedule_entries}, {lua_init}, {user_lua}, {screenshot_logic},
-#               {stop_frame}
+# Placeholders: {schedule_entries}, {lua_init}, {user_lua},
+#               {screenshot_logic}, {stop_frame}
 _RUN_WITH_INPUT_LUA = r"""
 -- Helpers available to user lua_code AND lua_init.
 -- Use emu.memType.snesMemory so callers pass the full $7Exxxx CPU address
@@ -1224,41 +1224,30 @@ local function fmt24(v) return string.format("$%06X", v & 0xFFFFFF) end
 
 local frameCount = 0
 
--- Input schedule: list of {startFrame, endFrame, buttonMask}
+-- Input schedule: list of {startFrame, endFrame, buttonsTable}
 local _schedule = {
 {schedule_entries}
 }
 
-local _lastButtons = 0
-
-local function _wr16(addr, val)
-  -- Internal-only. The press_wram / trigger_wram placeholders are
-  -- pre-stripped to 0..$1FFFF offsets by Python's _lookup_wram_offset,
-  -- so memType.snesWorkRam is correct here. Do NOT switch to snesMemory
-  -- without converting addr to a $7Exxxx CPU form.
-  emu.write(addr, val & 0xFF, emu.memType.snesWorkRam)
-  emu.write(addr + 1, (val >> 8) & 0xFF, emu.memType.snesWorkRam)
-end
-
--- Hook the RTS of _checkInputDevice to override press/trigger after HW read
-emu.addMemoryCallback(function()
+-- Inject scheduled buttons through the REAL SNES auto-joypad read path.
+-- emu.setInput in the inputPolled event sets the controller device bits
+-- right after the device is sampled from host input but BEFORE the SNES
+-- latches $4218/$4219, so the press flows $4218 -> _checkInputDevice ->
+-- inputDevice.press/trigger exactly like hardware. No WRAM pokes, immune
+-- to the _checkMouse clobbering that defeated the old RTS-hook approach.
+-- Mesen SNES controller field names are lowercase (a,b,x,y,l,r,up,down,
+-- left,right,start,select).
+emu.addEventCallback(function()
   local frame = emu.getState()["ppu.frameCount"]
-  local buttons = 0
+  local btns = nil
   for _, entry in ipairs(_schedule) do
     if frame >= entry[1] and frame <= entry[2] then
-      buttons = buttons | entry[3]
+      if not btns then btns = {} end
+      for k, v in pairs(entry[3]) do btns[k] = v end
     end
   end
-
-  if buttons ~= 0 then
-    _wr16({press_wram}, buttons)
-    -- trigger = newly pressed (not held from last frame)
-    local trig = buttons & (~_lastButtons & 0xFFFF)
-    _wr16({trigger_wram}, trig)
-    _wr16({old_wram}, buttons)
-  end
-  _lastButtons = buttons
-end, emu.callbackType.exec, {hook_addr})
+  if btns then emu.setInput(btns, 0) end
+end, emu.eventType.inputPolled)
 
 -- One-shot init: runs ONCE, before the frame loop starts. Use this for
 -- emu.addMemoryCallback / emu.addEventCallback registrations that must
@@ -1354,8 +1343,10 @@ def run_with_input(
 ) -> str:
     """Run the ROM with scheduled input injection and optional screenshot.
 
-    Hooks _checkInputDevice RTS to inject button presses at specific frame
-    ranges. Auto-resolves hook and WRAM addresses from the sym file.
+    Injects button presses via emu.setInput in the inputPolled event, so
+    the press flows through the REAL SNES auto-joypad read ($4218) into
+    _checkInputDevice -> inputDevice.press/trigger — exactly like hardware.
+    No WRAM pokes, immune to _checkMouse clobbering the press state.
 
     Args:
         input_schedule: List of {"frames": [start, end], "buttons": "right+a"}.
@@ -1398,35 +1389,20 @@ def run_with_input(
         emu.getState() returns a FLAT dict with dotted keys ("cpu.a") — not
         nested tables. cpu()/ppu() wrap that surprise.
     """
-    sym_path = SYM_FILE
-    if not sym_path.exists():
-        return "ERROR: sym file not found. Run build_rom() first."
-
-    # Resolve addresses from sym file
-    check_input_addr = _lookup_sym_address(sym_path, "_checkInputDevice")
-    if check_input_addr is None:
-        return "ERROR: _checkInputDevice not found in sym file."
-    hook_addr = check_input_addr + 0x1E  # RTS at end of function
-
-    # Look up WRAM offsets (from $7E:0000) — NOT _lookup_sym_address which
-    # adds a $C0 ROM prefix that corrupts WRAM addresses.
-    press_off = _lookup_wram_offset(sym_path, "inputDevice.press")
-    trigger_off = _lookup_wram_offset(sym_path, "inputDevice.trigger")
-    old_off = _lookup_wram_offset(sym_path, "inputDevice.old")
-    if None in (press_off, trigger_off, old_off):
-        return "ERROR: inputDevice.press/trigger/old not found in sym file."
-
-    # Parse schedule into Lua table entries
+    # Parse schedule into Lua table entries: {start, end, {a=true,...}}.
+    # Buttons are injected via emu.setInput in the inputPolled event, so
+    # no sym lookups are needed here — the press flows through the real
+    # auto-joypad read path into inputDevice.press/trigger.
     schedule_lines = []
     last_frame = 0
     for entry in input_schedule:
         frames = entry.get("frames", [0, 0])
         buttons = entry.get("buttons", "")
-        mask = _parse_buttons(buttons)
-        if mask == 0:
+        btn_tbl = _buttons_to_lua_table(buttons)
+        if not btn_tbl:
             continue
         start_f, end_f = int(frames[0]), int(frames[1])
-        schedule_lines.append(f"  {{{start_f}, {end_f}, 0x{mask:04X}}},")
+        schedule_lines.append(f"  {{{start_f}, {end_f}, {btn_tbl}}},")
         last_frame = max(last_frame, end_f)
 
     # Normalize capture_frames into a sorted unique list; reject huge sets
@@ -1459,10 +1435,6 @@ def run_with_input(
 
     # Assemble final Lua
     lua = _RUN_WITH_INPUT_LUA
-    lua = lua.replace("{hook_addr}", f"0x{hook_addr:06X}")
-    lua = lua.replace("{press_wram}", f"0x{press_off:04X}")
-    lua = lua.replace("{trigger_wram}", f"0x{trigger_off:04X}")
-    lua = lua.replace("{old_wram}", f"0x{old_off:04X}")
     lua = lua.replace("{schedule_entries}", "\n".join(schedule_lines))
     lua = lua.replace("{lua_init}", lua_init)
     lua = lua.replace("{user_lua}", lua_code)
@@ -1599,33 +1571,23 @@ def _build_input_injection_preamble(
     input_schedule: list[dict],
     sym_path: Path,
 ) -> tuple[str, str | None]:
-    """Build the Lua preamble that hooks _checkInputDevice's RTS and
-    overrides press/trigger/old WRAM at the scheduled frame ranges.
+    """Build the Lua preamble that injects scheduled button presses via
+    emu.setInput in the inputPolled event (the real auto-joypad path).
 
     Returns (preamble_lua, None) on success, ("", error_msg) on failure.
     The returned preamble defines `rd8`/`rd16`/`rd16s` helpers and registers
-    the input-injection memory callback. Callers append their own hooks.
+    the input-injection event callback. Callers append their own hooks.
+    sym_path is unused now (kept for signature compatibility with callers).
     """
-    check_input_addr = _lookup_sym_address(sym_path, "_checkInputDevice")
-    if check_input_addr is None:
-        return "", "ERROR: _checkInputDevice not found in sym file."
-    hook_addr = check_input_addr + 0x1E
-
-    press_off = _lookup_wram_offset(sym_path, "inputDevice.press")
-    trigger_off = _lookup_wram_offset(sym_path, "inputDevice.trigger")
-    old_off = _lookup_wram_offset(sym_path, "inputDevice.old")
-    if None in (press_off, trigger_off, old_off):
-        return "", "ERROR: inputDevice.press/trigger/old not found in sym file."
-
     schedule_lines: list[str] = []
     for entry in input_schedule:
         frames = entry.get("frames", [0, 0])
         buttons = entry.get("buttons", "")
-        mask = _parse_buttons(buttons)
-        if mask == 0:
+        btn_tbl = _buttons_to_lua_table(buttons)
+        if not btn_tbl:
             continue
         start_f, end_f = int(frames[0]), int(frames[1])
-        schedule_lines.append(f"  {{{start_f}, {end_f}, 0x{mask:04X}}},")
+        schedule_lines.append(f"  {{{start_f}, {end_f}, {btn_tbl}}},")
 
     preamble = (
         "local function rd8(a)  return emu.read(a, emu.memType.snesMemory, false) end\n"
@@ -1641,24 +1603,17 @@ def _build_input_injection_preamble(
         "local _schedule = {\n"
         + "\n".join(schedule_lines) + "\n"
         "}\n"
-        "local _lastButtons = 0\n"
-        "local function _wr16(addr, val)\n"
-        "  emu.write(addr,     val        & 0xFF, emu.memType.snesWorkRam)\n"
-        "  emu.write(addr + 1, (val >> 8) & 0xFF, emu.memType.snesWorkRam)\n"
-        "end\n"
-        f"emu.addMemoryCallback(function()\n"
-        f"  local frame = emu.getState()[\"ppu.frameCount\"]\n"
-        f"  local buttons = 0\n"
-        f"  for _, e in ipairs(_schedule) do\n"
-        f"    if frame >= e[1] and frame <= e[2] then buttons = buttons | e[3] end\n"
-        f"  end\n"
-        f"  if buttons ~= 0 then\n"
-        f"    _wr16(0x{press_off:04X}, buttons)\n"
-        f"    _wr16(0x{trigger_off:04X}, buttons & (~_lastButtons & 0xFFFF))\n"
-        f"    _wr16(0x{old_off:04X}, buttons)\n"
-        f"  end\n"
-        f"  _lastButtons = buttons\n"
-        f"end, emu.callbackType.exec, 0x{hook_addr:06X})\n"
+        "emu.addEventCallback(function()\n"
+        "  local frame = emu.getState()[\"ppu.frameCount\"]\n"
+        "  local btns = nil\n"
+        "  for _, e in ipairs(_schedule) do\n"
+        "    if frame >= e[1] and frame <= e[2] then\n"
+        "      if not btns then btns = {} end\n"
+        "      for k, v in pairs(e[3]) do btns[k] = v end\n"
+        "    end\n"
+        "  end\n"
+        "  if btns then emu.setInput(btns, 0) end\n"
+        "end, emu.eventType.inputPolled)\n"
     )
     return preamble, None
 
@@ -1738,8 +1693,8 @@ def step_until_pc(
         timeout: Max wall-clock seconds for the Mesen subprocess.
         input_schedule: Optional list of {"frames": [start, end],
                     "buttons": "right+a"} entries. Used identically to
-                    run_with_input — hooks _checkInputDevice's RTS to
-                    inject button presses across the cold-boot run, so
+                    run_with_input — injects button presses via emu.setInput
+                    in the inputPolled event (the real auto-joypad path), so
                     PCs gated behind intro-skip / dialog advance / verb
                     selection are reachable. None or [] = cold boot only.
 

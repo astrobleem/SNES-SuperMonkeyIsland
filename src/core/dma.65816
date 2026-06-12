@@ -268,7 +268,21 @@ doneProcessingQueue:
 
 dmaQueueVramTransfer:
   ldx.w GLOBAL.dmaQueueChannel.index
-  
+
+  ; --- Defensive: reject a VRAM transfer that would wrap the 64KB VRAM. ---
+  ; targetAdress + transferLength are both in bytes; a sum >= $10000 means the
+  ; write runs past the top of VRAM and wraps to $0000, scribbling over the BG
+  ; tile cache. A malformed scaled-actor CHR DMA (garbage length, e.g. $8000 to
+  ; word $6480) did exactly this and produced the room-38 garble. Skipping it
+  ; (like the corrupt-transferType guard above) drops one actor-CHR upload
+  ; instead of wiping the whole background.
+  lda.w GLOBAL.dmaQueue.1.targetAdress,y
+  clc
+  adc.w GLOBAL.dmaQueue.1.transferLength,y
+  bcc +                       ; sum <= $FFFF -> safely inside VRAM
+  beq +                       ; sum == exactly $10000 -> fills to VRAM top, no wrap
+    rts                       ; sum > $10000 -> would wrap VRAM, skip this transfer
++
   lda.w GLOBAL.dmaQueue.1.sourceAdress,y
   sta.l DMASRC0L,x
   lda.w (GLOBAL.dmaQueue.1.sourceAdress & $ffff) + 1 ,y

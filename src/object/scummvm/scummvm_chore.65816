@@ -160,26 +160,30 @@ scummvm.chore.animateActor_impl:
   asl a
   tax
 
-  ; --- ScummVM v5 dispatch: cmd = frame >> 2; dir = frame & 3.
-  ; ScummVM Actor::animateActor (engines/scumm/actor.cpp ~720) switches on
-  ; cmd. We handle the cases that matter for MI1's intro:
-  ;   cmd 2 (anim 8-11)  = start walking — caller is startWalkAnim seeding,
-  ;                         no facing change here (walk update handles it).
-  ;   cmd 3 (anim 12-15) = stop walking / stand in direction `dir` → this
-  ;                         is where "stand south" (anim 14) legitimately
-  ;                         sets facing=180. MI1 intro uses 12 (stand west)
-  ;                         to keep Guybrush facing the old man during the
-  ;                         lookout dialog.
-  ;   cmd 4 (anim 16-19) = talk-start (MVP: snap direction like cmd 3).
-  ; Any other cmd (init=anim 1, arbitrary seeds from loadActorCostumes,
-  ; etc.) falls through to decodeDefault, which seeds the requested anim
-  ; without touching facing. The earlier formula (0x3F - (frame>>2) + 2)
-  ; was a transcription error — it mapped frame 248..251 to cmd 3, causing
-  ; a spurious "setDir south" every time any caller passed a ~250 value.
+  ; --- ScummVM v5 dispatch: chore = 0x3F - (frame>>2) + 2; dir = frame & 3.
+  ; ScummVM Actor::animateActor (engines/scumm/actor.cpp:2817, v3..6 branch)
+  ; computes chore = 0x41 - (anim>>2), then switches on chore:
+  ;   chore 2 = stop walking      (frame $FC..$FF; op_animateActor no-ops these)
+  ;   chore 3 = setDirection(dir) (frame $F8..$FB) -- snap facing, NO chore seed
+  ;   chore 4 = turnToDirection   (frame $F4..$F7) -- MVP: snap facing like 3
+  ;   anything else (init=1, walk=2, stand=3, talk, etc.) -> startAnimActor(anim)
+  ;       i.e. decodeDefault on the RAW frame.
+  ; The MI1 lookout (room 38) drives the old man with animateActor($F8) every
+  ; frame -- a setDirection(west) command, NOT a frame number. The previous
+  ; naive `cmd = frame >> 2` decoded $F8 as chore 62 -> decodeDefault ->
+  ; anim_id = oldDir + 248*4 = 994, which indexes far past the costume's
+  ; dispatch table and seeds the head limb with garbage (curpos $C000 ->
+  ; head pic $3F -> out of range -> headless). Restore ScummVM's mapping so
+  ; $F8 lands on chore 3 and leaves the stand head chore untouched.
   lda.w SCUMM.scratch2                   ; frame
   and #$00FF
   lsr a
-  lsr a                                   ; cmd = frame >> 2
+  lsr a                                   ; frame >> 2
+  sta.w SCUMM.choreScr_animId            ; temp
+  lda #$41
+  sec
+  sbc.w SCUMM.choreScr_animId            ; chore = 0x41 - (frame>>2)
+  and #$00FF
 
   cmp #2
   beq _caa.cmdStop
@@ -809,24 +813,23 @@ _tck.inRange:
   lda [tmp+24], y
   bra _tck.storeWait
 _tck.noWaitByte:
-  ; No explicit wait byte on this pic cmd — default to the actor's
+  ; No explicit wait byte on this pic cmd -> reload from the actor's
   ; animSpeed. ScummVM handles this outside increaseAnim via
-  ; Actor::animateCostume's _animProgress/_animSpeed gate; we collapse
-  ; it into choreWait here so every tick call is uniform. Without this
-  ; wait=0 → advance every frame → 60Hz anim cycle.
+  ; Actor::animateCostume's _animProgress/_animSpeed gate
+  ; (advance when ++_animProgress >= _animSpeed): an animSpeed of N
+  ; advances every N+1 ticks; animSpeed 0 advances every tick.
   ;
-  ; animSpeed defaults to 0 for any actor that hasn't received a
-  ; setActorAnimSpeed call. ScummVM treats that as "advance every
-  ; frame" which runs the campfire at ~15Hz per-pic cycling on
-  ; 60Hz hardware — too fast on SNES. Fall back to the old
-  ; COSTUME_WALK_ANIM_SPEED timer (4 frames/advance) so cycles
-  ; match the prior static walk-cycle speed.
+  ; chore.tick already runs at the SCUMM logic rate (~15 Hz, every 4th
+  ; hardware frame -- measured), NOT 60 Hz, so wait = animSpeed + 1 maps
+  ; directly onto ScummVM's gate. The campfire (cost 48) and walk cycles
+  ; carry no per-pic wait bytes and leave animSpeed = 0, so they advance
+  ; every tick = 15 Hz, exactly like ScummVM. The previous fallback of 4
+  ; quartered that rate and froze the campfire into a near-static flame.
   phx                                      ; save byteIdx (needed after store)
   ldx.w SCUMM.choreScr_actorIdx
   lda.w SCUMM.actorAnimSpeed, x
-  bne +
-  lda #4                                   ; = COSTUME_WALK_ANIM_SPEED
-+ plx
+  inc a                                    ; wait = animSpeed + 1
+  plx
 _tck.storeWait:
   sta.w SCUMM.choreWait, x                 ; X is still byteIdx
   rep #$20

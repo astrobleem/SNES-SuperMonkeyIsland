@@ -13948,6 +13948,23 @@ _ri.headRender:
   and #$00FF
   sta.w SCUMM.actorOamCount           ; temp: numHeadPics
 
+  ; --- Bounds-check head pic against numHeadPics ---
+  ; A head pic index >= numHeadPics (e.g. a chore selecting a head frame
+  ; this costume lacks -- room 38's costume 33 requests head $3F with far
+  ; fewer pics) would index past the ChrLen table and stage a CHR DMA with
+  ; a garbage length/source ($8000 / $2E:7F7F) -> scattered VRAM tiles.
+  ; Treat an out-of-range head pic as "no head this frame" (SCUMM limb
+  ; semantics: an absent limb frame draws nothing).
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorHeadPicCur
+  cmp.w SCUMM.actorOamCount           ; >= numHeadPics?
+  rep #$20
+  .ACCU 16
+  bcc +
+  jmp _ri.noHead
++
+
   ; --- Check if head pic changed -> stage head CHR DMA ---
   ldx.w SCUMM.scratch3                ; render slot
   sep #$20

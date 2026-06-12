@@ -1038,7 +1038,7 @@ Actual blockers to controllable gameplay right now, in priority order:
 1. ~~**Part One title card never advances**~~ — RESOLVED (commit `a3e9921`).
 2. ~~**Part One text not centered**~~ — RESOLVED (commit `a3e9921`).
 3. **Title-screen mountain cloud flicker** — partially mitigated (`69a8563` suppress sparkle during cutscenes; `872ba9c` gate on cameraX=344). Not fully resolved.
-4. ~~**Campfire not animating + stray OAM upper-left** during old man intro (room 38)~~ — RESOLVED. Chore engine stopped-bit mechanism ($79/$7A) + highflag (extra&$80 → curpos bit 15) + cs=$FFFF limb-disable ported from ScummVM. setActorCostume dual-seeds init+stand with preserve flag; loadActorCostumes re-seeds on room entry; renderer gates limb drawing on choreStopped. Chore dispatch formula corrected to ScummVM v5 `cmd = frame >> 2` and `op_faceActor` now computes east/west from target.x lookup (commit 337b596). Campfire cycles 00→01→02→03, Guybrush faces west toward old man, old man turns east during dialog.
+4. ~~**Campfire not animating + stray OAM upper-left** during old man intro (room 38)~~ — RESOLVED. Chore engine stopped-bit mechanism ($79/$7A) + highflag (extra&$80 → curpos bit 15) + cs=$FFFF limb-disable ported from ScummVM. setActorCostume dual-seeds init+stand with preserve flag; loadActorCostumes re-seeds on room entry; renderer gates limb drawing on choreStopped. Chore dispatch formula corrected to ScummVM v5 `cmd = frame >> 2` [**SUPERSEDED 2026-06-12** — this value was wrong and re-broke the old man's head / froze the fire; the correct v5 formula is `chore = 0x41 - (frame >> 2)`. See Current Frontier (2026-06-12).] and `op_faceActor` now computes east/west from target.x lookup (commit 337b596). Campfire cycles 00→01→02→03, Guybrush faces west toward old man, old man turns east during dialog.
 5. ~~**Dialog choice selection**~~ — RESOLVED. Root cause was a `verbOps` name-parse
    desync on CD-talkie voice escapes (`FF 0A xx xx` with `$00` args), which stopped
    the choice verbs from ever being created. Fixed escape-aware name parsing; grew
@@ -1047,6 +1047,66 @@ Actual blockers to controllable gameplay right now, in priority order:
    chain is verified (see §5.5).
 
 Item 3 remains. Item 5 (the gating bug for SCUMM Bar gameplay) is resolved.
+
+---
+
+#### Current Frontier (2026-06-12)
+
+**Branch `worktree-dialog-choice-selection`. All work below is committed, history is
+linear, tree is clean.**
+
+**Landed + proven this session:**
+
+1. **SA-1 OAM offload — intro 30 → 60fps** (commit `1e77634`). `renderActors`' per-entry
+   body-OAM loop was ~50% of the intro frame while the SA-1 sat idle (full-scale actors,
+   scale `$FF`, never hit the composite path). Added a CMD=3 mailbox path: marshal the
+   costume template + screen pos to I-RAM, kick the SA-1, copy the built 4-byte entries
+   back from BW-RAM (`$409000`) into `GLOBAL.oamBuffer`. Dedicated done flag (`$300D`),
+   never touches the composite STATUS; a busy SA-1 (mid-composite) falls back to the CPU
+   path. Proven: renderActors entry-to-entry 587k → 357.5k master-cyc = one PPU frame.
+   See [[project-room38-frame-rate]].
+2. **Old man's head + animated fire restored** (commit `38704d9`). Three chore-engine
+   bugs: (a) the chore-from-frame formula was wrong — corrected to `chore = 0x41 -
+   (frame>>2)` (ScummVM v5), so `animateActor($F8)` decodes right and the head limb
+   stops selecting an out-of-range pic; (b) chore tick used hardcoded `wait=4`, now
+   `actorAnimSpeed+1`, so the fire animates at its authored ~15Hz; (c) bounds-check the
+   head pic against `numHeadPics` (out-of-range → "no head this frame") + a defensive DMA
+   wrap guard, so a stray head pic can't scribble VRAM. Proven via screenshots.
+3. **Room→song mapping rebuilt from a decoder, not guesses** (commit `999b489`). New
+   `tools/scumm/decode_sound.py` walks the `SOU ` container like ScummVM and
+   tune-fingerprints the MIDI. `gen_audio_map.py` now binds room→song from the filename
+   base + each room's ENCD `startSound` immediate. Intro music restored (was silent):
+   runtime-proven `TadPriv_state` reaches PLAYING (`$82`) with song ordinal 1.
+
+**Bugs to solve next session (priority order — user's list):**
+
+1. **WRONG SONG at the intro lookout (old man + fire).** User reports BY EAR it plays
+   the "hellscape"/`r070_hellcliff` track, not the correct intro/lookout theme. This
+   **contradicts this session's decoder conclusion** (that sound 98 == `r070_hellcliff`
+   byte-for-byte == the real Mêlée/lookout theme). **The user's ear is the oracle — the
+   mapping is still wrong.** Key insight: the intro (room 10) is a multi-scene CUTSCENE
+   (LucasArts logo → mountain → lookout/old-man) — a single room-entry song cannot give
+   each scene its own cue; the right music is whatever the intro SCRIPT's `startSound`
+   timeline fires at each scene cut. Next session:
+   - Trace/decode the intro script's FULL `startSound` sequence over time (not just the
+     ENCD entry) — what id fires when the lookout scene begins, and what should it be.
+   - Disambiguate the fault: (a) MAPPING error (script→wrong ordinal), (b) CONVERSION
+     error (right MIDI, but the TAD arrangement of that ordinal sounds like "hellscape"),
+     or (c) MODEL error (room-song autoplay is too coarse for a cutscene → need a per-cue
+     song timeline driven by the script). Reference: `E:\gh\scummvm` intro + the talkie.
+   - See [[project-room38-sound98-mislabel]] — its "ordinal 10 is correct" verdict is now
+     contradicted by the user and must be re-opened.
+2. **LucasArts logo on screen too short — ~2s in ROM vs ~4s in reference**
+   (`E:\gh\scummvm\monkeyislandintrotalkie.mp4`: logo holds 4s before the mountain; our
+   ROM shows it ~2s). **Leading hypothesis: a side effect of the 60fps SA-1 fix.** If
+   intro cutscene timing (SCUMM `wait`/`delay`) is counted in LOGIC FRAMES and the intro
+   logic rate doubled 30 → 60fps, every timed wait HALVES in wall-clock → logo 4s→2s, and
+   likely the whole intro pace is now 2× too fast. Next session: confirm whether SCUMM
+   script delays are tied to render fps; if so, decouple cutscene/script timing from the
+   render rate (fixed-rate logic clock / jiffy timer) so 60fps doesn't speed up scripted
+   timing.
+3. **(carried) Title-screen mountain cloud flicker** — Item 3 above, still partially
+   mitigated, not fully resolved.
 
 #### Beach → Scumm Bar Critical Path (historical)
 

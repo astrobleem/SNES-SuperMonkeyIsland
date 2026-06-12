@@ -119,6 +119,25 @@ def build_map(sound_dir: Path, tad_path: Path | None,
     room_song: list[int] = [NO_AUDIO] * 256
     max_id = -1
 
+    # Pre-scan every room's ENCD entry-script for startSound(immediate) opcodes
+    # (SCUMM v5 0x1C <id>) -- the authority for which room actually plays which
+    # song. Used below to OVERRIDE the filename base binding where a room
+    # explicitly starts a song (fixes storage!=play rooms like 38<-sound 98).
+    rooms_dir = ROOT / "data" / "scumm_extracted" / "rooms"
+    encd_claims: dict[int, list[int]] = {}   # room -> startSound immediate ids, in order
+    if rooms_dir.is_dir():
+        for d in sorted(rooms_dir.iterdir()):
+            m = re.match(r"room_(\d+)", d.name)
+            if not m:
+                continue
+            encd = d / "scripts" / "encd.bin"
+            if not encd.is_file():
+                continue
+            script = encd.read_bytes()
+            ids = [script[i + 1] for i in range(len(script) - 1) if script[i] == 0x1C]
+            if ids:
+                encd_claims[int(m.group(1))] = ids
+
     for path in files:
         # stem looks like soun_NNN_roomMMM
         stem = path.stem
@@ -143,6 +162,11 @@ def build_map(sound_dir: Path, tad_path: Path | None,
             if ordinal > MAX_SONG_IDX:
                 raise SystemExit(f"song ordinal {ordinal} exceeds {MAX_SONG_IDX}")
             table[sid] = SONG_FLAG | ordinal
+            # BASE binding: bind a room to a song FILED under it (lowest ID wins).
+            # Heuristic fallback for rooms whose music is triggered by non-ENCD
+            # scripts (e.g. the intro/room 10 logo+theme) and so have no ENCD
+            # startSound. Correct for storage==play rooms; the ENCD pass below
+            # overrides storage!=play rooms (e.g. room 38).
             if room is not None and 0 <= room < 256 and room_song[room] == NO_AUDIO:
                 room_song[room] = sid
             entries.append((sid, kind, ordinal))
@@ -158,6 +182,18 @@ def build_map(sound_dir: Path, tad_path: Path | None,
             entries.append((sid, kind, tad_idx))
         else:
             entries.append((sid, kind, None))
+
+    # --- ENCD startSound OVERRIDE (authoritative where present) ---
+    # ENCD startSound OVERRIDE (authoritative): bind each room to the first ENCD
+    # startSound that resolves to a converted song, overriding the filename base.
+    # See tools/scumm/decode_sound.py --encd-scan for the cross-check.
+    for room, ids in encd_claims.items():
+        if not (0 <= room < 256):
+            continue
+        for sid in ids:
+            if 0 <= sid < 256 and table[sid] != NO_AUDIO and (table[sid] & SONG_FLAG):
+                room_song[room] = sid             # first converted-song startSound wins
+                break
 
     if max_id < 0:
         raise SystemExit("no valid sound files found")

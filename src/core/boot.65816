@@ -113,7 +113,15 @@ _dev_paused_skip:
 
 	;process Terrific Audio Driver (once per frame, after game logic)
 	sep #$20
+	rep #$10                          ; TAD requires A8/I16
 	jsl Tad_Process
+	; Drain any in-progress common/song load to completion this frame so a
+	; new song starts AT the scene cut, not dribbled in over hundreds of
+	; frames. A room's logic can crawl to ~10fps (heavy actor pathfinding),
+	; and at 256 bytes per main-loop iteration that left a ~14s silent gap
+	; on the opening room — the intro music looked like it never started.
+	; FinishLoadingData is a cheap no-op when nothing is loading.
+	jsl Tad_FinishLoadingData
 	rep #$20
 
 	bra core.boot.mainLoop

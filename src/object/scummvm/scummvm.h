@@ -23,6 +23,19 @@
 .define SA1_MBOX_WIDTH    $3007   ; legacy: tiles wide (word) -- overlaps BODYCHR bank + BODYOAM lo
 .define SA1_MBOX_HEIGHT   $3009   ; legacy: tiles tall (word) -- overlaps BODYOAM hi/bank
 .define SA1_MBOX_OAM      $300B   ; legacy: same as HEADOAM
+; CMD=3 (full-scale body-OAM build) param layout. Reuses mailbox bytes:
+;   $3001 flipMask, $3002 tileBase, $3003 cutsceneActive,
+;   $3005-07 oamSrcPtr (= BODYOAM), $3008-09 screenX, $300A-0B screenY,
+;   $300C outCount (SA-1 writes back).
+.define SA1_MBOX_OAM_FLIP     $3001
+.define SA1_MBOX_OAM_TILEBASE $3002
+.define SA1_MBOX_OAM_CUTSCENE $3003
+.define SA1_MBOX_OAM_SRC      $3005   ; = BODYOAM (24-bit ROM template ptr)
+.define SA1_MBOX_OAM_SCREENX  $3008   ; word
+.define SA1_MBOX_OAM_SCREENY  $300A   ; word
+.define SA1_MBOX_OAM_OUTCOUNT $300C   ; byte (SA-1 -> S-CPU)
+.define SA1_MBOX_OAM_DONE     $300D   ; CMD=3 done flag -- SEPARATE from $300F so it
+                                      ; never collides with the composite (CMD=2) harvest
 
 ; TAD audio driver commands (from tad_interface.h)
 .define TadCommand_PAUSE                 0

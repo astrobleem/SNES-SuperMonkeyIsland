@@ -13317,6 +13317,26 @@ _ri.usePerEntry:
   rep #$20
   .ACCU 16
 
+  ; --- SA-1 OAM offload: full-scale actors only ---
+  ; The composite path handles SA-1-scaled actors; this per-entry CPU loop
+  ; stays for the rare non-composite scaled case. Full-scale actors
+  ; (actorCurScale == $FF) are the common/intro case and the renderActors
+  ; bottleneck -- hand their body-OAM build to the otherwise-idle SA-1 (CMD=3).
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.actorCurScale
+  cmp #$FF
+  bne _ri.oamCpuPath
+  lda.l SA1_MBOX_CMD                    ; SA-1 busy (e.g. mid-composite)?
+  bne _ri.oamCpuPath                    ;   yes -> CPU path, don't disturb its pipeline
+  rep #$20
+  .ACCU 16
+  jsr _ri.offloadBodyOam               ; marshal + kick CMD=3 + copy back
+  jmp _ri.headRender
+_ri.oamCpuPath:
+  rep #$20
+  .ACCU 16
+
   ; --- OAM render loop ---
   ldx.w GLOBAL.currentOamSlot
   cpx #$0200
@@ -14384,6 +14404,95 @@ _ri.noCursor:
   .ACCU 16
 
   rtl
+
+; ---------------------------------------------------------------------------
+; _ri.offloadBodyOam -- build a full-scale actor's body OAM on the SA-1 (CMD=3),
+; then copy the 4-byte entries from BW-RAM into GLOBAL.oamBuffer. Replaces the
+; per-entry CPU loop for actorCurScale == $FF. Inputs: _oamSrcPtr,
+; actorFlipMask, scratch2 (tileBase), actorScreenX/Y, cutsceneNest,
+; currentOamSlot. Entered 16-bit; preserves P via php/plp. DB = $7E.
+; ---------------------------------------------------------------------------
+_ri.offloadBodyOam:
+  php
+  sep #$20
+  .ACCU 8
+
+  ; Caller guaranteed SA-1 is idle (CMD == 0). Do NOT wait on / disturb any
+  ; in-flight composite -- a busy SA-1 falls back to the CPU path at the gate.
+  lda #0
+  sta.l SA1_MBOX_OAM_DONE          ; clear OUR done flag (NOT the composite STATUS)
+
+  lda.w SCUMM.actorFlipMask
+  sta.l SA1_MBOX_OAM_FLIP
+  lda.w SCUMM.scratch2             ; tileBase (low byte)
+  sta.l SA1_MBOX_OAM_TILEBASE
+  lda.w SCUMM.cutsceneNest
+  beq +
+  lda #1
++
+  sta.l SA1_MBOX_OAM_CUTSCENE
+
+  lda.b _oamSrcPtr
+  sta.l SA1_MBOX_OAM_SRC
+  lda.b _oamSrcPtr+1
+  sta.l SA1_MBOX_OAM_SRC+1
+  lda.b _oamSrcPtr+2
+  sta.l SA1_MBOX_OAM_SRC+2
+
+  rep #$20
+  .ACCU 16
+  lda.w SCUMM.actorScreenX
+  sta.l SA1_MBOX_OAM_SCREENX
+  lda.w SCUMM.actorScreenY
+  sta.l SA1_MBOX_OAM_SCREENY
+  sep #$20
+  .ACCU 8
+
+  lda #3
+  sta.l SA1_MBOX_CMD               ; kick CMD=3
+
+_ri.offloadWaitDone:
+  lda.l SA1_MBOX_OAM_DONE          ; busy-wait for OUR done flag
+  beq _ri.offloadWaitDone
+
+  ; copyLen = outCount * 4
+  lda.l SA1_MBOX_OAM_OUTCOUNT
+  rep #$20
+  .ACCU 16
+  and #$00FF
+  asl a
+  asl a
+  sta.w SCUMM.scratch
+
+  ; available = $200 - currentOamSlot; clamp copyLen
+  lda #$0200
+  sec
+  sbc.w GLOBAL.currentOamSlot
+  bcc _ri.offloadDone              ; currentOamSlot >= $200 -> no room
+  cmp.w SCUMM.scratch
+  bcs +
+  sta.w SCUMM.scratch              ; copyLen = available
++
+  ; copy SCUMM.scratch bytes: BW-RAM[x] -> oamBuffer[currentOamSlot..]
+  ldy.w GLOBAL.currentOamSlot
+  ldx #0
+  sep #$20
+  .ACCU 8
+_ri.offloadCopy:
+  cpx.w SCUMM.scratch
+  bcs _ri.offloadCopyDone
+  lda.l BWRAM_SA1_OAM_OUT,x
+  sta.w GLOBAL.oamBuffer,y
+  inx
+  iny
+  bra _ri.offloadCopy
+_ri.offloadCopyDone:
+  rep #$20
+  .ACCU 16
+  sty.w GLOBAL.currentOamSlot
+_ri.offloadDone:
+  plp
+  rts
 
 .ends
 

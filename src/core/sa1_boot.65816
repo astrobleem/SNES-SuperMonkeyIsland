@@ -22,6 +22,17 @@
 .define SA1_MAILBOX_SRC       $3002   ; same as BODYCHR
 .define SA1_MAILBOX_TILES     $3005   ; same as BODYOAM lo/hi (word)
 
+; CMD=3 (full-scale body-OAM build) param layout (reuses mailbox bytes)
+.define SA1_MAILBOX_OAM_FLIP     $3001
+.define SA1_MAILBOX_OAM_TILEBASE $3002
+.define SA1_MAILBOX_OAM_CUTSCENE $3003
+.define SA1_MAILBOX_OAM_SRC      $3005   ; = BODYOAM (24-bit ROM template ptr)
+.define SA1_MAILBOX_OAM_SCREENX  $3008   ; word
+.define SA1_MAILBOX_OAM_SCREENY  $300A   ; word
+.define SA1_MAILBOX_OAM_OUTCOUNT $300C   ; byte (SA-1 -> S-CPU)
+.define SA1_MAILBOX_OAM_DONE     $300D   ; CMD=3 done flag (separate from STATUS $300F)
+.define SA1_OAM_OUT_ADDR         $409000 ; BW-RAM output buffer (512B)
+
 .define SA1_SCRATCH           $3010   ; I-RAM scratch area (DP base, no mailbox overlap)
 .define SA1_STACK_TOP         $30FF   ; I-RAM stack (grows down)
 .define SA1_TILE_BUFFER       $3100   ; 1792 bytes tile output (CC Type 2 DDA target)
@@ -226,6 +237,8 @@ sa1.idleLoop:
   beq sa1.cmdPassthrough  ; command 1 = passthrough tiles
   cmp #2
   beq sa1.cmdComposite    ; command 2 = composite-scale
+  cmp #3
+  beq sa1.cmdOamBuild     ; command 3 = full-scale body-OAM build
   ; unknown command: clear and loop
   lda #0
   sta.l SA1_MAILBOX_CMD
@@ -237,12 +250,27 @@ sa1.cmdPassthrough:
 sa1.cmdComposite:
   jml _sa1.doComposite
 
+sa1.cmdOamBuild:
+  jml _sa1.doOamBuild
+
 sa1.cmdDone:
   sep #$20
   .ACCU 8
   lda #1                  ; status = done
   sta.l SA1_MAILBOX_STATUS
   lda #0                  ; clear command
+  sta.l SA1_MAILBOX_CMD
+  jml sa1.idleLoop
+
+; CMD=3 completion: set the DEDICATED OAM-done flag ($300D), NOT the shared
+; composite STATUS ($300F) -- otherwise CMD=3 would falsely satisfy the
+; composite (CMD=2) harvest and corrupt CHR DMA.
+sa1.cmdOamDone:
+  sep #$20
+  .ACCU 8
+  lda #1
+  sta.l SA1_MAILBOX_OAM_DONE
+  lda #0
   sta.l SA1_MAILBOX_CMD
   jml sa1.idleLoop
 
@@ -1963,6 +1991,202 @@ _sa1.comp.blitRowSkip:
   rts
 +
   jml _sa1.comp.blitRow
+
+; ===========================================================================
+; CMD=3: Build full-scale body OAM (actorCurScale == $FF). Offload of the
+; 65816 per-entry loop (scummvm.65816 _ri.entryLoop). Reads the costume OAM
+; template from ROM, applies per-actor screenX/Y + west-flip + tileBase +
+; priority/palette flags, clips off-screen, writes 4-byte OAM entries to
+; BW-RAM $409000 for the S-CPU to copy into GLOBAL.oamBuffer. NO scaling.
+;
+; In  (mailbox): $3001 flipMask, $3002 tileBase, $3003 cutsceneActive,
+;                $3005-07 oamSrcPtr, $3008-09 screenX, $300A-0B screenY.
+; Out: BW-RAM $409000 (4B/entry: X,Y,tile,flags); $300C outCount; STATUS=1.
+; DP base $3010; index stays 16-bit, A toggled per step. Every path advances
+; the source index Y by exactly 4 and writes exactly 4 output bytes.
+; ===========================================================================
+_sa1.doOamBuild:
+  sep #$20
+  .ACCU 8
+  rep #$10
+  .INDEX 16
+
+  ; oamSrcPtr -> DP $28-$2A (24-bit template pointer)
+  lda.l SA1_MAILBOX_OAM_SRC
+  sta $28
+  lda.l SA1_MAILBOX_OAM_SRC+1
+  sta $29
+  lda.l SA1_MAILBOX_OAM_SRC+2
+  sta $2A
+
+  ; entryCount = template[0]; report it back and use as loop counter
+  ldy #0
+  lda [$28],y
+  sta.l SA1_MAILBOX_OAM_OUTCOUNT
+  sta $1E
+  bne _sa1.oamHaveEntries
+  jml sa1.cmdOamDone
+_sa1.oamHaveEntries:
+
+  ; cache per-actor params
+  lda.l SA1_MAILBOX_OAM_FLIP
+  sta $20
+  lda.l SA1_MAILBOX_OAM_TILEBASE
+  sta $21
+  lda.l SA1_MAILBOX_OAM_CUTSCENE
+  sta $22
+  rep #$20
+  .ACCU 16
+  lda.l SA1_MAILBOX_OAM_SCREENX
+  sta $23
+  lda.l SA1_MAILBOX_OAM_SCREENY
+  sta $25
+  sep #$20
+  .ACCU 8
+
+  ldy #6                  ; source index -> first entry
+  ldx #0                  ; output byte index into BW-RAM
+
+_sa1.oamLoop:
+  ; --- budget pre-check: peek tile at entry +2 (Y unchanged) ---
+  rep #$20
+  .ACCU 16
+  iny
+  iny
+  lda [$28],y             ; tile (+2)
+  dey
+  dey
+  and #$00FF
+  cmp #$0030
+  bcc _sa1.oamTileOk
+  ; tile >= $30: hidden entry, advance Y by 4
+  iny
+  iny
+  iny
+  iny
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda #$F0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda #0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  jmp _sa1.oamNext
+
+_sa1.oamTileOk:
+  .ACCU 16
+  ; dx (entry +0), sign-extend
+  lda [$28],y
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  iny                     ; -> dy
+  ; west flip? flipMask & $40 -> dx = -(dx + 8)
+  pha
+  sep #$20
+  .ACCU 8
+  lda $20
+  and #$40
+  rep #$20
+  .ACCU 16
+  beq _sa1.oamNoFlip
+  pla
+  clc
+  adc #8
+  eor #$FFFF
+  inc a
+  bra _sa1.oamDxAdd
+_sa1.oamNoFlip:
+  pla
+_sa1.oamDxAdd:
+  clc
+  adc $23                 ; + screenX
+  sta $2E                 ; screenX result
+  ; dy (entry +1), sign-extend
+  lda [$28],y
+  and #$00FF
+  cmp #$0080
+  bcc +
+  ora #$FF00
++
+  iny                     ; -> tile
+  clc
+  adc $25                 ; + screenY
+  sta $30                 ; screenY result
+
+  ; --- bounds checks (16-bit) ---
+  lda $2E
+  bmi _sa1.oamHide
+  cmp #$0100
+  bcs _sa1.oamHide
+  lda $30
+  bmi _sa1.oamHide
+  cmp #144
+  bcc _sa1.oamYok
+  lda $22                 ; cutsceneActive (byte in low)
+  and #$00FF
+  bne _sa1.oamHide
+  lda $30
+_sa1.oamYok:
+  cmp #$00E0
+  bcs _sa1.oamHide
+
+  ; --- visible entry ---
+  sep #$20
+  .ACCU 8
+  lda $2E                 ; X low
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda $30                 ; Y low
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda [$28],y             ; tile
+  clc
+  adc $21                 ; + tileBase
+  sta.l SA1_OAM_OUT_ADDR,x
+  iny                     ; -> flags
+  inx
+  lda [$28],y             ; flags
+  ora $20                 ; | flipMask
+  sta.l SA1_OAM_OUT_ADDR,x
+  iny                     ; -> next entry
+  inx
+  jmp _sa1.oamNext
+
+_sa1.oamHide:
+  ; Y is at tile; advance past tile+flags (2)
+  sep #$20
+  .ACCU 8
+  lda #0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda #$F0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  lda #0
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  sta.l SA1_OAM_OUT_ADDR,x
+  inx
+  iny                     ; skip tile
+  iny                     ; skip flags
+
+_sa1.oamNext:
+  .ACCU 8
+  dec $1E
+  beq _sa1.oamFinish
+  jmp _sa1.oamLoop
+
+_sa1.oamFinish:
+  jml sa1.cmdOamDone
 
 
 .ends

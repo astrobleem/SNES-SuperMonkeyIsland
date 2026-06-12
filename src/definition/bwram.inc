@@ -31,6 +31,11 @@
 .define BWRAM_PALETTE_SCRATCH	$408900		;1.75KB: darkenPalette temps
 
 .define BWRAM_SAVE_STAGING		$409000		;12KB: serialize VM state before save
+;SA-1 body-OAM offload output (CMD=3). Overlays the head of SAVE_STAGING, which is
+;only touched during an explicit save (rendering is paused then) -- so no per-frame
+;conflict. 512 bytes = 128 OAM entries x 4. Written by SA-1, copied to oamBuffer by S-CPU.
+.define BWRAM_SA1_OAM_OUT		$409000		;512B
+.define BWRAM_SA1_OAM_OUT_SIZE	512
 .define BWRAM_VERB_NAMES		$40C000		;2.5KB: verb names, 40 slots x 64B fixed
 .define BWRAM_VERB_NAME_MAX		64			;chars per verb name slot
 .define BWRAM_VERB_SAVE			$40CA00		;640B: saveRestoreVerbs struct mirror (40x16)

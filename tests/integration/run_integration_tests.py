@@ -17,14 +17,29 @@ Run:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT      = Path(__file__).resolve().parents[2]
 ROM_PATH  = ROOT / "distribution" / "SuperMonkeyIsland.sfc"
-MESEN_EXE = ROOT / "mesen" / "Mesen.exe"
+MESEN_EXE = Path(os.environ.get("SMI_MESEN", ROOT / "mesen" / "Mesen.exe"))
+SYM_PATH  = ROOT / "build" / "SuperMonkeyIsland.sym"
 DIST      = ROOT / "distribution"
+
+
+def sym_addr(name: str) -> int:
+    """Resolve a WRAM label to its current address from the sym file.
+
+    WRAM addresses shift whenever a ramsection changes size, so cases must
+    NOT hardcode them — look them up here instead.
+    """
+    for line in SYM_PATH.read_text(encoding="utf-8", errors="replace").splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1] == name and ":" in parts[0]:
+            return int(parts[0].split(":")[1], 16)
+    raise SystemExit(f"[runner] symbol not found in {SYM_PATH}: {name}")
 
 
 def run_mesen_lua(script_text: str, timeout_sec: int = 90) -> str:
@@ -59,9 +74,8 @@ def case_scumm_bar() -> tuple[bool, str]:
     `mcp__smi-workflow__take_screenshot` (the lua → ARGB → PNG path) —
     Mesen's own Lua API has no `emu.saveScreenshot`.
     """
-    lua = r'''
-local NEW_ROOM = 0x7EF8E7
-local CUR_ROOM = 0x7EF8E5
+    lua = (f"local NEW_ROOM = 0x{sym_addr('SCUMM.newRoom'):06X}\n"
+           f"local CUR_ROOM = 0x{sym_addr('SCUMM.currentRoom'):06X}\n") + r'''
 local fc = 0
 local state = "boot"
 local poked = 0

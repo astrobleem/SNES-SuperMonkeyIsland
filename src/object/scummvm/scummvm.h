@@ -556,10 +556,18 @@ SCUMM.actorsDirty     dw      ; nonzero = re-run loadActorCostumes before next r
 ;---------------------------------------------------------------------------
 ; Verb Table
 ;---------------------------------------------------------------------------
-.define SCUMM_MAX_VERBS       20
-.define SCUMM_VERB_NAMES_SIZE 256
+; 40 slots: MI1 boot fills ~20 (sentence + Walk to + 9 verbs + Float/Bloat/
+; etc. specials) and the dialog UI (script 17) needs 11 more (choice verbs
+; 120-128 + scroll arrows 109/110). The old 20-slot table silently dropped
+; the dialog verbs.
+.define SCUMM_MAX_VERBS       40
 .define SCUMM_VERB_FLAG_ON    $01
 .define SCUMM_VERB_FLAG_DIRTY $80
+; MI1 dialog-choice verb id range (created by global script 17)
+.define SCUMM_DIALOG_VERB_LO  120
+.define SCUMM_DIALOG_VERB_HI  128
+.define SCUMM_DIALOG_ARROW_UP   109
+.define SCUMM_DIALOG_ARROW_DOWN 110
 
 .struct scummVerb
   id          db      ; SCUMM verb ID (0 = unused slot)
@@ -570,25 +578,23 @@ SCUMM.actorsDirty     dw      ; nonzero = re-run loadActorCostumes before next r
   dimColor    db      ; dimmed color palette index
   flags       db      ; bit 0=on, bit 7=dirty
   key         db      ; shortcut key mapping
-  namePtr     dw      ; offset into verbNames buffer
-  nameLen     db      ; string length
+  namePtr     dw      ; offset into BWRAM_VERB_NAMES (slot index * 64)
+  nameLen     db      ; string length (printable chars, escapes stripped)
   pad         ds 5    ; align to 16 bytes
 .endst
 
+; Verb names live in SA-1 BW-RAM (BWRAM_VERB_NAMES, fixed 64B per slot) —
+; bank $7E is nearly full and dialog choices rewrite long names every round,
+; which overflowed the old 256B append-only buffer.
 .ramsection "scumm verb table" bank 0 slot 1
-SCUMM.verbs          INSTANCEOF scummVerb SCUMM_MAX_VERBS  ; 320 bytes
-SCUMM.verbNames      ds SCUMM_VERB_NAMES_SIZE              ; packed name strings
-SCUMM.verbNamesPtr   dw      ; next free offset in name buffer
+SCUMM.verbs          INSTANCEOF scummVerb SCUMM_MAX_VERBS  ; 640 bytes
 SCUMM.verbDirty          dw      ; nonzero = redraw BG2
 SCUMM.verbDmaPending     dw      ; nonzero = DMA tilemap to VRAM next frame
+SCUMM.dialogChoiceMode   dw      ; nonzero = dialog choice verbs (120-128) are ON
 SCUMM.verbTilemapNmiPending db   ; nonzero = NMI should DMA verb tilemap to VRAM $4800
 SCUMM.verbTilemap        ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 .ends
-
-; Verb save buffer for saveRestoreVerbs opcode ($AB sub-op $01/$02)
-.ramsection "scumm verb save" bank 0 slot 1
-SCUMM.verbSaveSlots  ds _sizeof_scummVerb * SCUMM_MAX_VERBS  ; 16 * 20 = 320 bytes
-.ends
+; saveRestoreVerbs mirror lives in BW-RAM (BWRAM_VERB_SAVE)
 
 ;---------------------------------------------------------------------------
 ; Dialog text state

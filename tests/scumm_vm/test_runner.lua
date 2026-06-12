@@ -966,6 +966,8 @@ end
 local SCUMM_boxMatrixPtr  = 0x7EFDE7
 local SCUMM_walkPathLen   = 0x7EF094
 local SCUMM_actorIgnoreBoxes = 0x7EF0C4
+local SCUMM_actorWalkSpeedX  = 0x7EF0E4
+local SCUMM_actorWalkSpeedY  = 0x7EF0F4
 
 -- Stage a 3x3 BOXM matrix at $7F:5060 (well past the BOXD entries).
 -- Each entry is the next-hop box (or $FF for no route). Updates
@@ -1144,8 +1146,8 @@ function test_walkActor_multiLeg_traverses_boxes()
   H.wr8 (H.actor_addr(5, 13), 255)     -- scalex (full size)
   H.wr8 (SCUMM_actorIgnoreBoxes + 5, 0)
   H.wr8 (SCUMM_actorWalkBox + 5, 1)
-  H.wr8 (0x7EF0E4 + 5, 4)              -- actorWalkSpeedX = 4
-  H.wr8 (0x7EF0F4 + 5, 4)              -- actorWalkSpeedY = 4
+  H.wr8 (SCUMM_actorWalkSpeedX + 5, 4)
+  H.wr8 (SCUMM_actorWalkSpeedY + 5, 4)
 
   -- Freeze MI1's slots manually so they don't trample actor 5 during
   -- the long wait_frames after the bytecode test slot completes.
@@ -2577,7 +2579,7 @@ end
 -- findObject(60,60) = 700.
 local SCUMM_roomObjCount       = 0x7EB3A4
 local SCUMM_roomObjTable       = 0x7EB3AA   -- 16 bytes per entry
-local SCUMM_objectStateBase    = 0x7EDE2A   -- byte per obj
+local SCUMM_objectState    = 0x7EDE2A   -- byte per obj
 local SCUMM_objectUntouchable  = 0x7EFAD4   -- bit per obj (1024/8 = 128B)
 local GLOBAL_room_cameraX      = 0x7EF9A4
 function test_bug3_findObject_state_zero_clickable()
@@ -2591,7 +2593,7 @@ function test_bug3_findObject_state_zero_clickable()
   H.wr16(SCUMM_roomObjTable + 6,  40)
   H.wr16(SCUMM_roomObjTable + 8,  40)
   -- Bug-3 conditions: state == 0 (default), untouchable bit clear.
-  H.wr8(SCUMM_objectStateBase + 700, 0)
+  H.wr8(SCUMM_objectState + 700, 0)
   H.wr8(SCUMM_objectUntouchable + (700 >> 3), 0)
   -- Find at (60,60) — inside (40..79, 40..79).
   H.wr16(H.SYM.SCUMM_globalVars + 434*2, 0xFFFF)
@@ -2611,7 +2613,7 @@ function test_bug3_findObject_untouchable_filtered()
   H.wr16(SCUMM_roomObjTable + 4,  40)
   H.wr16(SCUMM_roomObjTable + 6,  40)
   H.wr16(SCUMM_roomObjTable + 8,  40)
-  H.wr8(SCUMM_objectStateBase + 701, 0)
+  H.wr8(SCUMM_objectState + 701, 0)
   -- Set untouchable bit for obj 701: byte = 701 >> 3 = 87, bit = 701 & 7 = 5
   H.wr8(SCUMM_objectUntouchable + 87, 0x20)   -- 1 << 5
   H.wr16(H.SYM.SCUMM_globalVars + 435*2, 0xFFFF)
@@ -2735,6 +2737,105 @@ function test_phaseA_getDist_obj_arg_returns_FF()
   H.run_bytecode({0x34, 0x9C, 0x01, 0x05, 0x00, 0xE7, 0x03, 0xA0})
   H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 412*2), 0xFF,
               "getDist with obj arg → 0xFF (KNOWN-DIVERGENCE: only actors supported)")
+end
+
+-- ============================================================================
+-- verbOps name parsing (dialog-choice fix). CD-talkie dialog lines start
+-- with four voice-escape groups (FF 0A xx xx) whose arg bytes routinely
+-- contain $00. doName must strip escapes (keeping the stream in sync) and
+-- store only printable text into the BW-RAM per-slot name region.
+-- ============================================================================
+
+local SCUMM_verbs = 0x7E990C            -- scummVerb[40], 16B stride
+local BWRAM_VERB_NAMES_ADDR = 0x40C000  -- fixed .define, never shifts
+
+local function find_verb_slot(id)
+  for i = 0, 39 do
+    if H.rd8(SCUMM_verbs + i * 16) == id then return i end
+  end
+  return nil
+end
+
+function test_verbOps_talkie_name_no_desync()
+  -- verbOps(150): New, At(2,153), Name(<voice prefix> "Hi."), On, Key('1')
+  -- then move VAR(436),1 — proves the bytecode stream stayed in sync.
+  H.wr16(H.SYM.SCUMM_globalVars + 436*2, 0)
+  H.run_bytecode({
+    0x7A, 150,
+    0x09,                                   -- New
+    0x05, 0x02, 0x00, 0x99, 0x00,           -- At(2, 153)
+    0x02,                                   -- Name:
+      0xFF, 0x0A, 0x15, 0x5D,               --   voice escape group 1
+      0xFF, 0x0A, 0x56, 0x02,               --   group 2
+      0xFF, 0x0A, 0x0A, 0x00,               --   group 3 (arg byte = $00!)
+      0xFF, 0x0A, 0x00, 0x00,               --   group 4 (args = $00 $00!)
+      0x48, 0x69, 0x2E,                     --   "Hi."
+      0x00,
+    0x06,                                   -- On
+    0x12, 0x31,                             -- Key '1'
+    0xFF,
+    0x1A, 0xB4, 0x01, 0x01, 0x00,           -- move VAR(436), 1
+    0xA0})
+  H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 436*2), 1,
+              "stream in sync after talkie-prefixed verb name")
+  local slot = find_verb_slot(150)
+  if not H.assert_eq(slot and 1 or 0, 1, "verb 150 got a slot") then return end
+  local base = SCUMM_verbs + slot * 16
+  H.assert_eq(H.rd8(base + 1), 2,   "verb 150 x = 2")
+  H.assert_eq(H.rd8(base + 2), 153, "verb 150 y = 153")
+  H.assert_eq(H.rd8(base + 6) & 1, 1, "verb 150 flags ON")
+  H.assert_eq(H.rd8(base + 10), 3,  "verb 150 nameLen = 3 (escapes stripped)")
+  local np = H.rd16(base + 8)
+  H.assert_eq(np, slot * 64, "namePtr = slot index * 64")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 0), 0x48, "name[0] = 'H'")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 1), 0x69, "name[1] = 'i'")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 2), 0x2E, "name[2] = '.'")
+end
+
+function test_verbOps_new_resets_slot()
+  -- SO_VERB_NEW on the existing verb 150 must reset flags + nameLen.
+  H.wr16(H.SYM.SCUMM_globalVars + 437*2, 0)
+  H.run_bytecode({
+    0x7A, 150, 0x09, 0xFF,                  -- verbOps(150): New
+    0x1A, 0xB5, 0x01, 0x01, 0x00,           -- move VAR(437), 1
+    0xA0})
+  H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 437*2), 1, "stream in sync")
+  local slot = find_verb_slot(150)
+  if not H.assert_eq(slot and 1 or 0, 1, "verb 150 still slotted") then return end
+  local base = SCUMM_verbs + slot * 16
+  H.assert_eq(H.rd8(base + 6), 0,  "New resets flags (verb OFF)")
+  H.assert_eq(H.rd8(base + 10), 0, "New resets nameLen")
+end
+
+function test_verbOps_name_argless_escapes()
+  -- Codes 1,2,3,8 carry no args; code 4 carries two (here $00 $00, which
+  -- must not terminate). Expected stored name: "ABXY".
+  H.wr16(H.SYM.SCUMM_globalVars + 438*2, 0)
+  H.run_bytecode({
+    0x7A, 150,
+    0x02,                                   -- Name:
+      0x41,                                 --   'A'
+      0xFE, 0x02,                           --   escape code 2 (no args)
+      0x42,                                 --   'B'
+      0xFF, 0x04, 0x00, 0x00,               --   escape code 4 (2 zero args)
+      0x58, 0x59,                           --   "XY"
+      0x00,
+    0x06,                                   -- On
+    0xFF,
+    0x1A, 0xB6, 0x01, 0x01, 0x00,           -- move VAR(438), 1
+    0xA0})
+  H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 438*2), 1, "stream in sync")
+  local slot = find_verb_slot(150)
+  if not H.assert_eq(slot and 1 or 0, 1, "verb 150 slotted") then return end
+  local base = SCUMM_verbs + slot * 16
+  H.assert_eq(H.rd8(base + 10), 4, "nameLen = 4 (ABXY)")
+  local np = H.rd16(base + 8)
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 0), 0x41, "name[0]='A'")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 1), 0x42, "name[1]='B'")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 2), 0x58, "name[2]='X'")
+  H.assert_eq(H.rd8(BWRAM_VERB_NAMES_ADDR + np + 3), 0x59, "name[3]='Y'")
+  -- Cleanup: delete verb 150 so the table state doesn't leak into later tests.
+  H.run_bytecode({0x7A, 150, 0x08, 0xFF, 0xA0})
 end
 
 -- ============================================================================
@@ -2905,6 +3006,12 @@ local TESTS = {
     fn = test_phaseA_animateActor_var_ref_frame },
   { name = "op_findObject ($35): no-hit point → 0",
     fn = test_phaseA_findObject_no_hit },
+  { name = "verbOps name: talkie voice prefix must not desync the stream",
+    fn = test_verbOps_talkie_name_no_desync },
+  { name = "verbOps New: resets slot to OFF with no name (ScummVM SO_VERB_NEW)",
+    fn = test_verbOps_new_resets_slot },
+  { name = "verbOps name: arg-less escapes (1,2,3,8) and zero-arg escapes",
+    fn = test_verbOps_name_argless_escapes },
   { name = "Bug 3: findObject state==0 must be clickable (no spurious filter)",
     fn = test_bug3_findObject_state_zero_clickable },
   { name = "Bug 3: findObject untouchable bit must filter (kObjectClassUntouchable)",

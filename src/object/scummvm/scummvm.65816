@@ -168,19 +168,10 @@ _init.zeroVerbs:
   cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
   bcc _init.zeroVerbs
 
-  ;zero verb names buffer (256 bytes)
-  ldx #0
-_init.zeroVerbNames:
-  .ACCU 16
-  .INDEX 16
-  sta.w SCUMM.verbNames,x
-  inx
-  inx
-  cpx #SCUMM_VERB_NAMES_SIZE
-  bcc _init.zeroVerbNames
-
-  stz.w SCUMM.verbNamesPtr
+  ; (verb names live in BW-RAM, zeroed by bwram.bootInit; nameLen=0 in the
+  ; struct gates all readers, so no per-init clear is needed)
   stz.w SCUMM.verbDirty
+  stz.w SCUMM.dialogChoiceMode
 
   ;zero verb tilemap (2048 bytes)
   ldx #0
@@ -705,6 +696,8 @@ _play.noDialog:
   bmi _play.noSentence               ; userPut negative: soft-off stack
   lda.w SCUMM.cutsceneNest
   bne _play.noSentence               ; cutscene active: suppress hint
+  lda.w SCUMM.dialogChoiceMode
+  bne _play.noSentence               ; dialog choices own row 0
   jsl scummvm.renderSentenceLine
 _play.noSentence:
   .ACCU 16
@@ -744,7 +737,6 @@ _play.timerDone:
   rep #$31
   lda.w SCUMM.currentRoom
   and #$00FF
-  sta.l $7EFD20                      ; DEBUG: currentRoom at guard
   beq _play.done                     ; room 0 = no room loaded, stay dark
   sep #$20
   lda.w ScreenBrightness
@@ -14965,6 +14957,10 @@ _voi.doNew:
   lda.w SCUMM.resultVar
   sep #$20
   sta.w SCUMM.verbs.1.id,x
+  ; ScummVM SO_VERB_NEW resets the slot: starts OFF with no name
+  lda #0
+  sta.w SCUMM.verbs.1.flags,x
+  sta.w SCUMM.verbs.1.nameLen,x
   rep #$20
   jmp _voi.subLoop
 
@@ -15016,43 +15012,93 @@ _voi.doDelete:
   sta.w SCUMM.verbDirty
   jmp _voi.subLoop
 
+; SCUMM string semantics (ScummVM resStrLen): $00 terminates; $FF/$FE
+; prefix an escape code; codes 1,2,3,8 carry no args, all OTHERS carry two
+; arg bytes which may themselves be $00. CD-talkie dialog lines start with
+; four voice-escape groups (FF 0A xx xx) whose args routinely contain $00 —
+; treating those as terminators desynced the bytecode stream mid-verbOps
+; and broke every dialog-choice setup. Escapes and control glyphs (<$20,
+; the arrow-verb charset codes) are stripped; only printable text is kept.
 _voi.doName:
   .ACCU 16
   .INDEX 16
   ldx.w SCUMM.scratch2
   cpx #$FFFF
   bne _voi.doName.store
-  ; skip null string
--
+  ; no slot: consume the string (same escape rules), store nothing
+_voi.nameSkip:
   jsr _voi.fetchByte
-  cmp #0
-  bne -
+  cmp #0                             ; (fetchByte's iny clobbers Z)
+  beq _voi.nameSkipDone
+  cmp #$00FE
+  bcc _voi.nameSkip
+  jsr _voi.fetchByte                 ; escape code
+  cmp #$0001
+  beq _voi.nameSkip
+  cmp #$0002
+  beq _voi.nameSkip
+  cmp #$0003
+  beq _voi.nameSkip
+  cmp #$0008
+  beq _voi.nameSkip
+  jsr _voi.fetchByte                 ; 2 arg bytes
+  jsr _voi.fetchByte
+  bra _voi.nameSkip
+_voi.nameSkipDone:
   jmp _voi.subLoop
 _voi.doName.store:
   .ACCU 16
   .INDEX 16
-  lda.w SCUMM.verbNamesPtr
+  ; fixed per-slot name region: namePtr = slot index * 64 = struct offset * 4
+  txa
+  asl a
+  asl a
   sta.w SCUMM.verbs.1.namePtr,x
-  ldx.w SCUMM.verbNamesPtr
+  sta.w SCUMM.scratch3               ; BW-RAM base offset for this slot
   lda #0
   sta.w SCUMM.scratch                ; char count
 _voi.nameChar:
   .ACCU 16
   .INDEX 16
   jsr _voi.fetchByte
-  cmp #0
-  beq _voi.nameDone
+  cmp #0                             ; (fetchByte's iny clobbers Z)
+  beq _voi.nameDone                  ; $00 terminator
+  cmp #$00FE
+  bcs _voi.nameEscape                ; $FE/$FF escape prefix
+  cmp #$0020
+  bcc _voi.nameChar                  ; control glyph -- drop
+  ldx.w SCUMM.scratch
+  cpx #BWRAM_VERB_NAME_MAX
+  bcs _voi.nameChar                  ; slot region full -- drop excess
+  pha
+  txa
+  clc
+  adc.w SCUMM.scratch3
+  tax
+  pla
   sep #$20
-  sta.w SCUMM.verbNames,x
+  sta.l BWRAM_VERB_NAMES,x
   rep #$20
-  inx
   inc.w SCUMM.scratch
+  bra _voi.nameChar
+_voi.nameEscape:
+  .ACCU 16
+  .INDEX 16
+  jsr _voi.fetchByte                 ; escape code
+  cmp #$0001
+  beq _voi.nameChar
+  cmp #$0002
+  beq _voi.nameChar
+  cmp #$0003
+  beq _voi.nameChar
+  cmp #$0008
+  beq _voi.nameChar
+  jsr _voi.fetchByte                 ; 2 arg bytes (may be $00)
+  jsr _voi.fetchByte
   bra _voi.nameChar
 _voi.nameDone:
   .ACCU 16
   .INDEX 16
-  txa
-  sta.w SCUMM.verbNamesPtr
   ldx.w SCUMM.scratch2
   lda.w SCUMM.scratch
   sep #$20
@@ -15270,6 +15316,38 @@ scummvm.renderVerbBar:
   plb
   rep #$31
 
+  ; Detect dialog-choice mode: any ON verb with id 120-128. Gates the
+  ; sentence line and inventory rows, which collide with choice rows.
+  ldx #0
+  stz.w SCUMM.dialogChoiceMode
+_rvb.dlgScan:
+  .ACCU 16
+  .INDEX 16
+  sep #$20
+  lda.w SCUMM.verbs.1.id,x
+  cmp #SCUMM_DIALOG_VERB_LO
+  bcc +
+  cmp #SCUMM_DIALOG_VERB_HI+1
+  bcs +
+  lda.w SCUMM.verbs.1.flags,x
+  and #SCUMM_VERB_FLAG_ON
+  beq +
+  rep #$20
+  lda #1
+  sta.w SCUMM.dialogChoiceMode
+  bra _rvb.dlgScanDone
++
+  rep #$20
+  txa
+  clc
+  adc #_sizeof_scummVerb
+  tax
+  cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
+  bcc _rvb.dlgScan
+_rvb.dlgScanDone:
+  .ACCU 16
+  .INDEX 16
+
   ; Clear verb tilemap buffer (2048 bytes = 1024 words)
   ldx #0
   lda #0
@@ -15338,6 +15416,12 @@ _rvb.tileXSet:
   ; Y is stored as SCUMM pixel coord; convert to tile row in verb area
   ; verb area starts at SCUMM y=144, BG2 tilemap row 0 = screen y=144
   ; tile_y = (y - 144) / 8
+  ; Verbs above the verb area (y < 144) would underflow into a wild
+  ; tilemap offset -- skip them.
+  cmp #144
+  bcs +
+  jmp _rvb.nextVerb
++
   sec
   sbc #144
   lsr a
@@ -15359,8 +15443,21 @@ _rvb.tileXSet:
   lda.w SCUMM.verbs.1.nameLen,x
   and #$00FF
   sta.w SCUMM.scratch2                  ; char count
+  ; Clamp char count to the tiles remaining in this 32-tile row so long
+  ; dialog-choice lines can't spill into the next row's choice text.
+  lda.w SCUMM.scratch
+  and #$003F
+  lsr a
+  sta.w SCUMM.scratch3                  ; tile col within row
+  lda #32
+  sec
+  sbc.w SCUMM.scratch3                  ; tiles remaining in row
+  cmp.w SCUMM.scratch2
+  bcs +
+  sta.w SCUMM.scratch2
++
   lda.w SCUMM.verbs.1.namePtr,x
-  tay                                   ; Y = offset into verbNames
+  tay                                   ; Y = offset into BWRAM_VERB_NAMES
 
   ; Write tile indices for each character
   ; tile index = char - $20 (ASCII space = tile 0)
@@ -15380,8 +15477,9 @@ _rvb.paletteSet:
 _rvb.charLoop:
   .ACCU 16
   .INDEX 16
+  tyx                                   ; X = name offset (X is scratch here)
   sep #$20
-  lda.w SCUMM.verbNames,y
+  lda.l BWRAM_VERB_NAMES,x
   rep #$20
   and #$00FF
   sec
@@ -15416,6 +15514,11 @@ _rvb.nextVerb:
 +
 
   ;--- Render inventory items on row 5 (Y=184, tile row 5) ---
+  ; During dialog the choice rows own the whole verb area -- no inventory.
+  lda.w SCUMM.dialogChoiceMode
+  beq +
+  jmp _rvb.noInventory
++
   lda.w SCUMM.inventoryCount
   bne +
   jmp _rvb.noInventory
@@ -15887,21 +15990,10 @@ _uc.posOk:
   .ACCU 16
   .INDEX 16
 
-  ; --- runInputScript(clickArea=2, verb, code=0) for scene click ---
-  ldx #0
-  lda #2
-  sta.w SCUMM.argBuffer,x               ; arg[0] = clickArea 2 (scene click)
-  lda.w SCUMM.sentenceVerb
-  bne _uc.hasVerb2
-  lda #$0B                              ; default "Walk to"
-_uc.hasVerb2:
-  ldx #2
-  sta.w SCUMM.argBuffer,x               ; arg[1] = verb ID
-  ldx #4
-  stz.w SCUMM.argBuffer,x               ; arg[2] = button code 0
-  lda #6
-  sta.w SCUMM.argCount
-  jsl scummvm.runInputScript_impl
+  ; (No runInputScript for scene clicks: the native click-to-walk +
+  ; pendingVerb/doSentence pipeline below already dispatches them. Running
+  ; MI1's verb script (14) with clickArea=2 on top would double-dispatch
+  ; every room click. Only dialog-verb clicks go through the input script.)
 
   ;--- Resolve click target (object walk-to or cursor room pos) ---
   jsl scummvm.resolveClickTarget      ;A = targetX, scratch = targetY
@@ -16088,30 +16180,49 @@ _uc.vhXhit:
   jmp _uc.verbHitNext
 _uc.vhXnotEq:
 
-  ; Hit! Store verb ID as sentenceVerb
+  ; Hit! Dialog-range verbs (choices 120-128, scroll arrows 109/110) are
+  ; script-handled: run VAR_VERB_SCRIPT (script 14) which stores the verb
+  ; id into VAR(194) for the polling conversation script. They must NOT
+  ; become the sentence verb.
   sep #$20
   lda.w SCUMM.verbs.1.id,x
   rep #$20
   and #$00FF
+  cmp #SCUMM_DIALOG_VERB_LO
+  bcc +
+  cmp #SCUMM_DIALOG_VERB_HI+1
+  bcc _uc.dialogVerbClick
++
+  cmp #SCUMM_DIALOG_ARROW_UP
+  beq _uc.dialogVerbClick
+  cmp #SCUMM_DIALOG_ARROW_DOWN
+  beq _uc.dialogVerbClick
+
+  ; Normal verb: becomes the sentence verb (native sentence pipeline)
   sta.w SCUMM.sentenceVerb
   stz.w SCUMM.sentenceObjectA
   stz.w SCUMM.sentenceObjectB
   lda #1
   sta.w SCUMM.sentenceDirty
+  jmp _uc.noClick
 
-  ; --- runInputScript(clickArea=1, verb, code=0) ---
+_uc.dialogVerbClick:
+  .ACCU 16
+  .INDEX 16
+  ; runInputScript(clickArea=1, verb, code=1) -- code 1 = left click
   ldx #0
+  pha
   lda #1
   sta.w SCUMM.argBuffer,x               ; arg[0] = clickArea 1 (verb click)
-  lda.w SCUMM.sentenceVerb
+  pla
   ldx #2
   sta.w SCUMM.argBuffer,x               ; arg[1] = verb ID
   ldx #4
-  stz.w SCUMM.argBuffer,x               ; arg[2] = button code 0
+  lda #1
+  sta.w SCUMM.argBuffer,x               ; arg[2] = button code 1 (left)
   lda #6
   sta.w SCUMM.argCount
   jsl scummvm.runInputScript_impl
-
   jmp _uc.noClick
 
 _uc.verbHitNext:
@@ -16127,6 +16238,8 @@ _uc.verbHitNext:
   jmp _uc.verbHitLoop
 +
   ;--- No verb hit: check for inventory item click ---
+  lda.w SCUMM.dialogChoiceMode
+  bne _uc.noClick                      ; dialog mode: no inventory clicks
   lda.w SCUMM.cursorObject
   beq _uc.noClick                      ; no object under cursor
   lda.w SCUMM.sentenceVerb
@@ -17392,7 +17505,7 @@ _rsl.foundVerb:
   sta.w SCUMM.scratch2               ; char count
 
   ; Write verb name to row 0, starting at column 1
-  ply                                 ; Y = namePtr (offset into verbNames)
+  ply                                 ; Y = namePtr (offset into BWRAM_VERB_NAMES)
   ldx #2                              ; start at column 1 (byte offset 2)
 
 _rsl.writeLoop:
@@ -17402,7 +17515,10 @@ _rsl.writeLoop:
   beq _rsl.appendObj
   dec.w SCUMM.scratch2
   sep #$20
-  lda.w SCUMM.verbNames,y
+  phx                                 ; X = tilemap offset, borrow for name read
+  tyx
+  lda.l BWRAM_VERB_NAMES,x
+  plx
   rep #$20
   and #$00FF
   sec
@@ -19128,14 +19244,14 @@ _srv.saveCheck:
   bcs _srv.saveNext
 +
   .ACCU 16
-  ; Copy 16 bytes: verbs[x] -> verbSaveSlots[x]
+  ; Copy 16 bytes: verbs[x] -> BW-RAM save mirror
   phx
   ldy #0
 _srv.saveCopy:
   .ACCU 16
   .INDEX 16
   lda.w SCUMM.verbs.1,x
-  sta.w SCUMM.verbSaveSlots,x
+  sta.l BWRAM_VERB_SAVE,x
   inx
   inx
   iny
@@ -19162,7 +19278,7 @@ _srv.restoreLoop:
   cpx #_sizeof_scummVerb * SCUMM_MAX_VERBS
   bcs _srv.restoreDone
   sep #$20
-  lda.w SCUMM.verbSaveSlots,x           ; check saved slot id
+  lda.l BWRAM_VERB_SAVE,x               ; check saved slot id
   rep #$20
   and #$00FF
   beq _srv.restoreNext                  ; empty saved slot, skip
@@ -19173,13 +19289,13 @@ _srv.restoreLoop:
   bcs _srv.restoreNext
 +
   .ACCU 16
-  ; Copy 16 bytes: verbSaveSlots[x] -> verbs[x]
+  ; Copy 16 bytes: BW-RAM save mirror -> verbs[x]
   phx
   ldy #0
 _srv.restoreCopy:
   .ACCU 16
   .INDEX 16
-  lda.w SCUMM.verbSaveSlots,x
+  lda.l BWRAM_VERB_SAVE,x
   sta.w SCUMM.verbs.1,x
   inx
   inx
@@ -19878,8 +19994,11 @@ scummvm.runInputScript_impl:
   .ACCU 16
   .INDEX 16
 
-  ; Read VAR_VERB_SCRIPT (globalVar[7])
-  ldx #7*2
+  ; Read VAR_VERB_SCRIPT — var 32 in SCUMM v5 (var 7 is VAR_ME).
+  ; MI1's intro sets VAR(32)=14: script 14 handles verb clicks, and for
+  ; dialog-choice verbs stores the picked verb id into VAR(194), which
+  ; conversation scripts poll in their breakHere wait loop.
+  ldx #32*2
   lda.w SCUMM.globalVars,x
   beq _ris.done                       ; no verb script configured
 

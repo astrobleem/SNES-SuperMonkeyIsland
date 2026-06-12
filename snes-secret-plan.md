@@ -511,7 +511,34 @@ MI1's dialog choices (e.g., talking to pirates at the SCUMM Bar) work through th
 - VerbHdmaTable updated: T_BG3_ENABLE on all scanline entries (room + verb area)
 - Sentence line on BG3 row 17: shows currently selected verb ("Walk to", "Open", etc.)
 - `op_print`/`op_printEgo` wired: saves actor ID, dialogX/Y from _print.pos sub-op
-- **Still needed:** dialog choice selection (cursor highlights choices, d-pad+A to select)
+
+**Dialog choice selection (implemented):**
+MI1 renders dialog choices as on-screen verbs (ids 120–128) created by global
+script 17; the conversation script (e.g. room 28's LSCR 220) polls `VAR(194)`
+and branches on the picked verb id. Clicking a choice runs `VAR_VERB_SCRIPT`
+(`VAR(32)` = script 14), which echoes the line and sets `VAR(194)` = clicked verb.
+- **Root-cause fix — `verbOps` name desync:** CD-talkie dialog lines begin with
+  four voice-escape groups (`FF 0A xx xx`) whose argument bytes routinely contain
+  `$00`. The old `op_verbOps` name handler stopped at the first `$00`, desyncing
+  the bytecode stream mid-`verbOps` so the choice verbs were never created. The
+  handler now follows ScummVM `resStrLen` escape rules (`$FF`/`$FE` + code; codes
+  1/2/3/8 carry no args, others two) and strips escapes/control glyphs, storing
+  only printable text. Choices now render legibly (verified: "I want to be a
+  pirate." / "I mean to kill you all!" / "I want to be a fireman." in room 28).
+- **Verb table grown 20 → 40 slots:** boot fills ~26 (sentence + 10 verbs +
+  Float/Bloat/… specials); the dialog UI needs 11 more (choices 120–128 + scroll
+  arrows 109/110). At 20 the dialog verbs were silently dropped.
+- **Per-slot verb names in BW-RAM** (`BWRAM_VERB_NAMES`, fixed 64B/slot): bank
+  $7E was nearly full and dialog choices rewrite long names every round, which
+  overflowed the old 256B append-only `verbNames` buffer.
+- **`runInputScript` reads `VAR(32)`** (was `VAR(7)`, the wrong index). Dialog-range
+  verb clicks (120–128, arrows 109/110) route to the input script with button
+  code 1; normal verbs keep the native sentence pipeline.
+- **Renderer dialog mode:** detects any ON verb 120–128, clamps choice text to its
+  32-tile row, and suppresses the sentence line + inventory (which collide with
+  the choice rows). Verified: conversation polling advances when `VAR(194)` is set
+  (slot leaves the poll loop, pirate responds); `script 14` confirmed to set
+  `VAR(194)` = clicked verb via descumm5 of `scrp_014`.
 
 ### 5.6 Audio — Hybrid Architecture (SPC700 + MSU-1)
 
@@ -1012,9 +1039,14 @@ Actual blockers to controllable gameplay right now, in priority order:
 2. ~~**Part One text not centered**~~ — RESOLVED (commit `a3e9921`).
 3. **Title-screen mountain cloud flicker** — partially mitigated (`69a8563` suppress sparkle during cutscenes; `872ba9c` gate on cameraX=344). Not fully resolved.
 4. ~~**Campfire not animating + stray OAM upper-left** during old man intro (room 38)~~ — RESOLVED. Chore engine stopped-bit mechanism ($79/$7A) + highflag (extra&$80 → curpos bit 15) + cs=$FFFF limb-disable ported from ScummVM. setActorCostume dual-seeds init+stand with preserve flag; loadActorCostumes re-seeds on room entry; renderer gates limb drawing on choreStopped. Chore dispatch formula corrected to ScummVM v5 `cmd = frame >> 2` and `op_faceActor` now computes east/west from target.x lookup (commit 337b596). Campfire cycles 00→01→02→03, Guybrush faces west toward old man, old man turns east during dialog.
-5. **Dialog choice selection** — choices render but no d-pad+A cursor-highlight-and-select. Blocks pirate conversations.
+5. ~~**Dialog choice selection**~~ — RESOLVED. Root cause was a `verbOps` name-parse
+   desync on CD-talkie voice escapes (`FF 0A xx xx` with `$00` args), which stopped
+   the choice verbs from ever being created. Fixed escape-aware name parsing; grew
+   verb table 20→40; moved verb names to BW-RAM; `runInputScript` reads `VAR(32)`;
+   renderer dialog mode. Choices render legibly and the click→`VAR(194)`→branch
+   chain is verified (see §5.5).
 
-Items 3 and 5 remain. Item 5 is the gating bug for SCUMM Bar gameplay.
+Item 3 remains. Item 5 (the gating bug for SCUMM Bar gameplay) is resolved.
 
 #### Beach → Scumm Bar Critical Path (historical)
 
@@ -1023,7 +1055,7 @@ Items 3 and 5 remain. Item 5 is the gating bug for SCUMM Bar gameplay.
 | 1 | ROM expansion (1MB → 4MB) | **DONE** (2026-03-29) | Costumes didn't fit in 1MB ROM |
 | 2 | Bulk costume conversion (123 costumes) | **DONE** (2026-03-29) | All NPC costumes rendered |
 | 3 | Room navigation (door/exit interactions) | **DONE** | `findObject` + `doSentence` + `startObject` wired Phase 2; walk-to exits work in intro |
-| 4 | Dialog choice selection (d-pad + A) | NOT STARTED | Choices display but selection cursor not implemented |
+| 4 | Dialog choice selection (d-pad + A) | **DONE** | `verbOps` talkie-name desync fixed (root cause); 40-slot verb table; BW-RAM names; `runInputScript`→`VAR(32)`; renderer dialog mode |
 | 5 | beginOverride/endOverride | **DONE** (session 4, 2026-04-05) | Cutscene stack + VAR_OVERRIDE + fetchLoop read wired; stillbroken.txt items 13A/B/C |
 | 6 | freezeScripts | **DONE** | `op_freezeScripts` at scummvm.65816:5351 — walks slots, increments/decrements freezeCount |
 | 7 | cursorCommand sub-opcodes | **DONE** | `op_cursorCommand` at scummvm.65816:5651 — dispatches sub-ops 1–14 (cursor on/off, userput on/off, image, hotspot, charset color) |
@@ -1103,8 +1135,13 @@ Items 3 and 5 remain. Item 5 is the gating bug for SCUMM Bar gameplay.
 - [x] cursorCommand sub-opcodes — `op_cursorCommand` at scummvm.65816:5651 dispatches sub-ops 1–14 (cursor on/off, userput on/off, image, hotspot, charset color)
 
 **Dialog:**
-- [ ] Dialog choice selection — cursor highlights choices, d-pad+A to select
-- [ ] Return selected choice index to VM
+- [x] Dialog choice selection — choices created as verbs 120–128, clickable in the
+  verb area; click runs `VAR_VERB_SCRIPT` (script 14) which sets `VAR(194)` = picked
+  verb. Root-cause `verbOps` talkie-name desync fixed; verb table 20→40; BW-RAM
+  names; `runInputScript`→`VAR(32)`; renderer dialog mode (row clamp + sentence/
+  inventory suppression). VM tests +3 (talkie-name parsing). 182 unit tests pass.
+- [ ] D-pad cursor highlight of choices (mouse/joypad cursor click works; a
+  dedicated up/down highlight affordance is a polish follow-up)
 
 **Game Logic:**
 - [x] All 105 base opcodes implemented (Phase 1)

@@ -31,7 +31,10 @@
 .define BWRAM_PALETTE_SCRATCH	$408900		;1.75KB: darkenPalette temps
 
 .define BWRAM_SAVE_STAGING		$409000		;12KB: serialize VM state before save
-.define BWRAM_FUTURE_BUFFERS	$40C000		;16KB: cutscene data, strings, etc.
+.define BWRAM_VERB_NAMES		$40C000		;2.5KB: verb names, 40 slots x 64B fixed
+.define BWRAM_VERB_NAME_MAX		64			;chars per verb name slot
+.define BWRAM_VERB_SAVE			$40CA00		;640B: saveRestoreVerbs struct mirror (40x16)
+.define BWRAM_FUTURE_BUFFERS	$40CC80		;~13KB: cutscene data, strings, etc.
 
 ;=== BANK $41 — Future expansion (64KB) ===
 .define BWRAM_EXPANSION_BASE	$410000

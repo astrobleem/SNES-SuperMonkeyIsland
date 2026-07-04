@@ -1154,12 +1154,19 @@ deviations, deliberate: no iMUSE marker sync (soundKludge stub) so no
 credits-page/music sync and no marker-shortened title; lookout fire-crackle
 ambience SBLs (real sids 4/5 etc.) not yet registered as TAD SFX.
 
-**Bug 2 (intro ~2× too fast) — still open, unchanged from the 2026-06-12
-notes above.** New intel from this session: the credits pacing in MIDI mode is
-ALSO tied to iMUSE music markers (script 32 + soundKludge queue + vars
-250–258), which we stub — so even at a correct logic rate the credits will
-free-run. Fix the frame-rate coupling first; consider marker emulation only if
-the pacing still feels wrong afterwards.
+**Bug 2 (intro ~2× too fast) — still open, but REDIAGNOSED.** The logo hold in
+script 152 is only `delay(60)` (= 1 s) of scripted wait; the reference's ~4 s
+comes from the music-sync wait right after it (breakHere + soundKludge iMUSE
+queue in MIDI mode, `VAR_MUSIC_TIMER` (var 14) comparisons on the SE branch).
+We stub soundKludge and never update VAR_MUSIC_TIMER, so every one of script
+152's 9 sync points exits instantly and the credits free-run — the 60 fps SA-1
+fix only halved the small scripted delays on top (the scheduler decrements
+`slots.delay` once per play tick; jiffy = 1/60 s, so 60 fps is actually the
+CORRECT rate for the unit). Fix path: implement a minimal music timer (update
+var 14 from the TAD side) + just enough soundKludge/iMUSE-queue semantics
+(marker → VAR_SOUNDRESULT) to pace the credits, then verify the logo hold and
+credits pages against the talkie timeline (title 14–88 s; montage tooling in
+build/talkie/).
 
 #### Beach → Scumm Bar Critical Path (historical)
 

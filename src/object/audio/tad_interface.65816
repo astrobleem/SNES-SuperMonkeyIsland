@@ -486,6 +486,29 @@ Tad_LoadGlobalSong:
 
 
 ; -------------------------------------------------------
+; Tad_StopGlobalSong — stop a song by global ordinal
+; -------------------------------------------------------
+;
+; IN: A = global song ordinal (TAD_GSONG_*)
+;
+; No-op unless that ordinal is the loaded/loading song; then loads the
+; blank song (0 = silence, SFX keep playing, clears a lingering PAUSE).
+; Counterpart to Tad_LoadGlobalSong for scripts that stop a specific
+; sound (SCUMM stopSound on song-flagged ids).
+;
+; JSL/RTL. A8, I16, DB accesses lowram. Clobbers A.
+
+Tad_StopGlobalSong:
+    cmp.w Tad_globalSong
+    beq +
+        rtl
++
+    lda.b #0
+    jsl Tad_LoadSong        ; sets Tad_globalSong = $FF
+    rtl
+
+
+; -------------------------------------------------------
 ; Flag manipulation functions
 ; -------------------------------------------------------
 

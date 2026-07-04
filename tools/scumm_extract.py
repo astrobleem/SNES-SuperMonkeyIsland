@@ -213,18 +213,44 @@ def extract_global_scripts(data_file, index_data, output_dir: Path) -> int:
     return count
 
 
-def extract_global_sounds(data_file, output_dir: Path) -> int:
-    """Extract all sounds (SOUN) to a dedicated directory."""
+def extract_global_sounds(data_file, index_data, output_dir: Path) -> int:
+    """Extract all sounds (SOUN) to a dedicated directory.
+
+    Uses the DSOU directory to assign correct SCUMM sound numbers:
+    DSOU[i] = (room, offset-within-LFLF) means sound id i lives there.
+    The id in the filename is what scripts pass to startSound/stopSound —
+    a disk-order counter does NOT match it (rooms hold multiple sounds and
+    ids are not allocated in room order), and every downstream audio map
+    keyed on these filenames inherits the mismatch.
+    """
+    from scumm.chunks import read_chunk
+
     sounds_dir = output_dir / 'sounds'
     count = 0
 
-    for room_id, room in sorted(data_file.rooms.items()):
-        souns = room.get_trailing('SOUN')
-        for soun in souns:
-            sounds_dir.mkdir(parents=True, exist_ok=True)
-            path = sounds_dir / f'soun_{count:03d}_room{room_id:03d}.bin'
-            path.write_bytes(soun.data)
-            count += 1
+    dsou = index_data.directories.get('DSOU')
+    if dsou is None:
+        log.warning("No DSOU directory — cannot extract global sounds")
+        return 0
+
+    for sid in range(dsou.count):
+        room_id = dsou.room_nums[sid]
+        offset = dsou.offsets[sid]
+        if room_id == 0:
+            continue
+        if room_id not in data_file.rooms:
+            log.warning("Sound %d: room %d not in data file", sid, room_id)
+            continue
+        lflf = data_file.rooms[room_id].lflf
+        chunk = read_chunk(lflf.data, offset)
+        if chunk is None or chunk.tag != 'SOUN':
+            log.warning("Sound %d: expected SOUN at room %d offset 0x%X, got %s",
+                        sid, room_id, offset, chunk.tag if chunk else 'nothing')
+            continue
+        sounds_dir.mkdir(parents=True, exist_ok=True)
+        path = sounds_dir / f'soun_{sid:03d}_room{room_id:03d}.bin'
+        path.write_bytes(chunk.data)
+        count += 1
 
     if count > 0:
         log.info("Saved %d sounds to %s", count, sounds_dir)
@@ -349,7 +375,7 @@ def main():
 
     # Extract global resources
     global_scripts = extract_global_scripts(data_file, index_data, output_dir)
-    global_sounds = extract_global_sounds(data_file, output_dir)
+    global_sounds = extract_global_sounds(data_file, index_data, output_dir)
     global_costumes = extract_global_costumes(data_file, output_dir)
     global_charsets = extract_global_charsets(data_file, output_dir)
 

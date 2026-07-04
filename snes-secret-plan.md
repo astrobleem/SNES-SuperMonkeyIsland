@@ -1108,6 +1108,59 @@ linear, tree is clean.**
 3. **(carried) Title-screen mountain cloud flicker** — Item 3 above, still partially
    mitigated, not fully resolved.
 
+---
+
+#### Current Frontier (2026-07-04)
+
+**Bug 1 (wrong song at the intro lookout) — RESOLVED. Fault class: (a) MAPPING,
+but one level deeper than anyone had looked: the EXTRACTION's id assignment.**
+
+`tools/scumm_extract.py::extract_global_sounds` numbered sound files by
+disk-walk order; runtime sound ids come from the index **DSOU directory**
+(id → room + LFLF offset), exactly like scripts already used DSCR. Every
+`soun_NNN` filename id was shifted, and gen_groups / gen_audio_map /
+gen_msu_tracks / register_sfx inherited the shift. Both June "decoder proofs"
+validated a self-consistent but globally wrong map — the user's ear was right.
+
+What the corrected data revealed (see audio/songs/STATUS.md "How UT music
+actually works"): the Ultimate Talkie drives ALL music from scripts through a
+var-251 cue system (title = 167, bar = 158, … real music sids are 151–168);
+boot script 176 probes stub sound 99 via isSoundRunning to detect the optional
+SE-audio install (bitvar498); and the real sound 98 that room 38's ENCD fires
+is a 248-byte AdLib-only micro-cue — **the old-man scene is canonically
+SILENT**. "r070_hellcliff" (really sid 162) is the grand pan-down/lookout
+theme used by scripts 120/121.
+
+Landed (single session, all proven):
+- Extractor fixed to DSOU naming + sounds re-extracted (138 files, real ids).
+- ScummSoundMap regenerated on real ids; new `$FE` = silent-stub code, never
+  primed (priming stubs made the SE-audio probe succeed → silent SE mode).
+- RoomSongMap room-entry autoplay REMOVED (engine + generator) — the scripts
+  start/stop every theme themselves once the ids are right.
+- op_stopSound stops songs via new `Tad_StopGlobalSong`; op_isSoundRunning
+  now compares the sid's ordinal against `Tad_globalSong` (driver state alone
+  says PLAYING even for the blank song).
+- SFX 99→172 rename (files + smi.terrificaudio + registered_sfx.txt);
+  MSU pcm tracks renamed to real sids.
+- Title medley (r010_lucasarts, sid 167) made NON-LOOPING — the reference
+  plays it once; loop markers hand-stripped from the committed MML (do NOT
+  regenerate it, the audio is Chad-approved).
+
+Proof: recorded DSP audio (build/talkie/record_intro.py → intro_capture.wav):
+title music 0–99s, then −80 dB silence through credits end (~137s) and the
+whole old-man scene. Trace: startSound(var251=167)→LoadGlobalSong ord 1 at
+f227; room-38 ENCD startSound(98) loads nothing. VM tests 182/182. Known
+deviations, deliberate: no iMUSE marker sync (soundKludge stub) so no
+credits-page/music sync and no marker-shortened title; lookout fire-crackle
+ambience SBLs (real sids 4/5 etc.) not yet registered as TAD SFX.
+
+**Bug 2 (intro ~2× too fast) — still open, unchanged from the 2026-06-12
+notes above.** New intel from this session: the credits pacing in MIDI mode is
+ALSO tied to iMUSE music markers (script 32 + soundKludge queue + vars
+250–258), which we stub — so even at a correct logic rate the credits will
+free-run. Fix the frame-rate coupling first; consider marker emulation only if
+the pacing still feels wrong afterwards.
+
 #### Beach → Scumm Bar Critical Path (historical)
 
 | # | Blocker | Status | Notes |

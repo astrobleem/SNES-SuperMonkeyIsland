@@ -1242,9 +1242,9 @@ _prc.noMapper2:
   sta.w SCUMM.globalVars,x
   ; VAR_NEW_ROOM (var 59) already set above before exit scripts
 
-  ; Start this room's mapped song (the MI1 scripts never do -- iMUSE/
-  ; soundKludge is a deliberate no-op on SNES). No-op for rooms with no song.
-  jsl scummvm.startRoomSong
+  ; Room music needs no engine-side hook: the Ultimate Talkie scripts start
+  ; and stop every theme themselves via startSound/stopSound cues (var 251),
+  ; which op_startSound/op_stopSound route through ScummSoundMap.
 
   ; Set camera to follow ego actor (ScummVM: startScene sets camera._follows)
   ldx #1*2                           ; VAR_EGO = globalVar[1]
@@ -7767,12 +7767,36 @@ op_stopSound:
   lda #SCUMM_FLAG_BIT7
   jsr _scummvm.getVarOrDirectByte     ; A = scumm sound id
   phy
+  tax                                 ; X = sound id (high byte clear)
+  phx                                 ; keep id across the SFX stop
   sep #$20
   jsr _scummvm.virtSound_clearId      ; A = id in low byte
   lda.b #TadCommand_STOP_SOUND_EFFECTS
   ldx #0
   ldy #0
   jsl Tad_QueueCommand
+  plx                                 ; X = sound id
+  ; Scripts stop songs with stopSound too (room exits, scene cuts -- e.g.
+  ; the intro stops the title medley when the credits end), so a
+  ; song-flagged id must also silence the music backend.
+  lda.l SCUMM.musicMode               ; long: DB is not $7E in opcode context
+  bne _sps.msu1
+  lda.l ScummSoundMap,x
+  cmp.b #$FE
+  bcs _sps.done                       ; $FE stub / $FF unmapped -- nothing more to stop
+  bit.b #$80
+  beq _sps.done                       ; SFX entry -- already stopped above
+  and.b #$7F                          ; strip song flag -> global song ordinal
+  jsl Tad_StopGlobalSong              ; no-op unless this ordinal is loaded
+  bra _sps.done
+_sps.msu1:
+  lda.l ScummSoundMap,x
+  cmp.b #$FE
+  bcs _sps.done                       ; $FE stub / $FF unmapped
+  bit.b #$80
+  beq _sps.done
+  jsr _scummvm.msu1StopTrack          ; MSU has no per-track state: any song stop kills the stream
+_sps.done:
   rep #$31
   ply
   clc
@@ -7780,9 +7804,14 @@ op_stopSound:
 
 ; startSound ($1C, $9C) -- p8[7] sound ID → queue SFX
 ; SCUMM sound IDs are translated via ScummSoundMap into TAD indices:
-;   $FF = no audio, bit 7 set = song (route to LoadSong), else SFX index.
+;   $FF = no audio, $FE = silent stub, bit 7 set = song (route to
+;   LoadSong), else SFX index.
 ; Also primes a virtual-sound slot so isSoundRunning returns nonzero for
 ; the expected duration, regardless of whether a real backend plays audio.
+; Stubs ($FE) are NOT primed: the Ultimate Talkie's audio-detect script
+; (176) starts stub 99 and reads isSoundRunning to probe for its optional
+; SE-audio install -- a fake "running" answer flips every music cue in the
+; game to the (silent) SE branch. Stubs are silent in the reference too.
 op_startSound:
   .ACCU 16
   .INDEX 16
@@ -7795,6 +7824,8 @@ op_startSound:
   lda.l ScummSoundMap,x             ; A = dispatch byte
   cmp #$FF
   beq _ss.primeUnmapped             ; unmapped — treat like song for pacing
+  cmp #$FE
+  beq _ss.stub                      ; silent stub — no backend, no priming
   bit #$80
   bne _ss.song                      ; song-flagged entry, route through LoadSong
   jsl Tad_QueueSoundEffect          ; A = SFX index (0..$7F)
@@ -7836,6 +7867,9 @@ _ss.primeUnmapped:
   ldx #SCUMM_VIRT_TTL_SONG
   ldy #1
   jsr _scummvm.virtSound_prime
+  bra _ss.done
+_ss.stub:
+  pla                               ; discard id — stubs stay "not running"
 _ss.done:
   rep #$31
   ply
@@ -7950,14 +7984,20 @@ op_isSoundRunning:
   bcs _isr.playing
   ; --- real backend check ---
   lda.l ScummSoundMap,x              ; A = dispatch byte
-  cmp #$FF
-  beq _isr.notPlaying                ; no audio for this ID
+  cmp #$FE
+  bcs _isr.notPlaying                ; $FE stub / $FF unmapped: never "running"
+                                     ; (stub 99 is the UT SE-audio probe)
   bit #$80
   bne _isr.checkSong
   jsl Tad_IsSfxPlaying               ; SFX path
   bcs _isr.playing
   bra _isr.notPlaying
 _isr.checkSong:
+  ; Only THIS song counts: the driver state alone reads PLAYING even for
+  ; the blank song, which would answer yes for every song id.
+  and #$7F                           ; strip song flag -> global ordinal
+  cmp.w Tad_globalSong               ; low WRAM: .w works with DB=$00
+  bne _isr.notPlaying
   jsl Tad_IsSongPlaying              ; song path
   bcs _isr.playing
 _isr.notPlaying:
@@ -8056,51 +8096,6 @@ _scummvm.tadBlankSong:
   jsl Tad_LoadSong
 +
   rts
-
-; _scummvm.startRoomSong -- start the current room's mapped song on room entry.
-;
-; RoomSongMap[currentRoom] holds that room's music sound ID (song-flagged in
-; ScummSoundMap), or $FF for rooms with no converted music -- in which case
-; the current song keeps playing (transit rooms 0/22 during boot don't cut
-; the music). The original MI1 scripts drive music through iMUSE, which this
-; port intentionally stubs (op_soundKludge), so nothing script-side ever
-; started a room's theme; this is the engine-side replacement.
-;
-; Mirrors op_startSound's song path: route through the backend the MUSIC
-; toggle selects. Tad_LoadGlobalSong no-ops when the ordinal is already
-; resident, so re-entering a room (or a same-song neighbour) never restarts.
-;
-; Far (jsl/rtl): processRoomChange is bank 0, these helpers are bank 4.
-; Exported (no leading underscore) so the cross-section jsl resolves.
-; Entry from processRoomChange: A16/I16, DB=$7E. Clobbers A, X.
-scummvm.startRoomSong:
-  rep #$30
-  lda.l SCUMM.currentRoom
-  and #$00FF
-  tax
-  sep #$20                            ; A8 (AND above cleared C's high byte)
-  lda.l RoomSongMap,x                 ; A = room's music sound ID, $FF = none
-  cmp #$FF
-  beq _srs.done
-  tax                                 ; X = sound ID (ScummSoundMap idx / MSU track)
-  lda.l SCUMM.musicMode              ; long: DB is $7E during room change
-  bne _srs.msu
-  ; --- SPC700 / TAD ---
-  lda.l ScummSoundMap,x
-  and #$7F                            ; strip song flag -> global song ordinal
-  jsl Tad_LoadGlobalSong             ; no-op if this ordinal is already resident
-  jsr _scummvm.msu1StopTrack
-  bra _srs.done
-_srs.msu:
-  ; --- MSU-1 ---
-  rep #$20
-  txa                                 ; A = sound ID = MSU track number
-  jsr _scummvm.msu1PlayTrack
-  sep #$20
-  jsr _scummvm.tadBlankSong
-_srs.done:
-  rep #$31
-  rtl
 
 ; Check if MSU-1 audio is playing (carry set = playing)
 _scummvm.msu1IsPlaying:

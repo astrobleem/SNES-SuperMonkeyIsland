@@ -5,9 +5,16 @@ Walks data/scumm_extracted/sounds/*.bin, classifies each SOUN resource
 a 138-byte lookup table.
 
 Byte encoding (SCUMM sound ID -> TAD dispatch):
-    $FF         : no audio (stub, ADL-only, or MIDI not yet converted)
+    $FF         : no audio, but real elsewhere (ADL-only, or MIDI/SBL not
+                  yet converted) — engine primes a virtual sound so pacing
+                  waits keyed on isSoundRunning still get a duration
+    $FE         : silent stub (24/32/256-byte SOUN placeholder). Never
+                  primed: the Ultimate Talkie probes these (e.g. script 176
+                  startSound(99) + isSoundRunning) to detect its optional
+                  SE-audio install; reporting them as running flips the
+                  game into SE-cue mode and silences all MIDI music
     $00..$7F    : SFX index (use Tad_QueueSoundEffect)
-    $80..$FE    : global song ordinal + $80 (use Tad_LoadGlobalSong)
+    $80..$FD    : global song ordinal + $80 (use Tad_LoadGlobalSong)
 
 Song ordinals come from the groups manifest (tools/audio/gen_groups.py):
 each converted song lists every SCUMM sound ID whose content matches it,
@@ -17,8 +24,9 @@ converted song are explicitly $FF (silent).
 Output:
     build/audio/scumm_sound_map.inc — WLA-DX section with ScummSoundMap label
 
-The table is keyed by SCUMM sound ID, which matches the extraction order
-in `data/scumm_extracted/sounds/soun_NNN_roomMMM.bin` (NNN = sound ID).
+The table is keyed by SCUMM sound ID. `soun_NNN_roomMMM.bin` filenames carry
+the DSOU-directory id (NNN) — the id scripts pass to startSound/stopSound —
+as extracted by tools/scumm_extract.py.
 """
 
 from __future__ import annotations
@@ -46,7 +54,8 @@ KIND_UNKNOWN = "?"
 
 SONG_FLAG = 0x80
 NO_AUDIO = 0xFF
-MAX_SONG_IDX = 0x7F
+STUB = 0xFE
+MAX_SONG_IDX = 0x7D  # $80|$7E would collide with STUB, $80|$7F with NO_AUDIO
 MAX_SFX_IDX = 0x7F
 
 
@@ -100,7 +109,7 @@ def read_groups_song_map(manifest_path: Path) -> dict[int, int]:
 
 
 def build_map(sound_dir: Path, tad_path: Path | None,
-              groups_manifest: Path) -> tuple[list[int], list[int], list[tuple[int, str, int | None]]]:
+              groups_manifest: Path) -> tuple[list[int], list[tuple[int, str, int | None]]]:
     files = sorted(sound_dir.glob("soun_*.bin"))
     if not files:
         raise SystemExit(f"no sound files under {sound_dir}")
@@ -110,46 +119,17 @@ def build_map(sound_dir: Path, tad_path: Path | None,
 
     entries: list[tuple[int, str, int | None]] = []  # (scumm_id, kind, tad_idx)
     table: list[int] = [NO_AUDIO] * 256  # oversize then trim at end
-    # RoomSongMap: room number -> the SCUMM sound ID of that room's music
-    # (a song-flagged ID), or $FF for rooms with no converted music. The
-    # engine plays this song on room entry so each room gets its theme
-    # without relying on the (stubbed) script-side iMUSE triggers. Files are
-    # processed in sorted order, so the lowest sound ID wins if a room has
-    # more than one song resource.
-    room_song: list[int] = [NO_AUDIO] * 256
     max_id = -1
 
-    # Pre-scan every room's ENCD entry-script for startSound(immediate) opcodes
-    # (SCUMM v5 0x1C <id>) -- the authority for which room actually plays which
-    # song. Used below to OVERRIDE the filename base binding where a room
-    # explicitly starts a song (fixes storage!=play rooms like 38<-sound 98).
-    rooms_dir = ROOT / "data" / "scumm_extracted" / "rooms"
-    encd_claims: dict[int, list[int]] = {}   # room -> startSound immediate ids, in order
-    if rooms_dir.is_dir():
-        for d in sorted(rooms_dir.iterdir()):
-            m = re.match(r"room_(\d+)", d.name)
-            if not m:
-                continue
-            encd = d / "scripts" / "encd.bin"
-            if not encd.is_file():
-                continue
-            script = encd.read_bytes()
-            ids = [script[i + 1] for i in range(len(script) - 1) if script[i] == 0x1C]
-            if ids:
-                encd_claims[int(m.group(1))] = ids
-
     for path in files:
-        # stem looks like soun_NNN_roomMMM
+        # stem looks like soun_NNN_roomMMM (NNN = DSOU sound id, the id
+        # scripts pass to startSound/stopSound)
         stem = path.stem
         try:
             sid = int(stem.split("_")[1])
         except (IndexError, ValueError):
             print(f"skip {path.name}: can't parse sound id", file=sys.stderr)
             continue
-        room = None
-        m_room = re.search(r"room(\d+)", stem)
-        if m_room:
-            room = int(m_room.group(1))
         max_id = max(max_id, sid)
         data = path.read_bytes()
         kind = classify(data)
@@ -162,13 +142,6 @@ def build_map(sound_dir: Path, tad_path: Path | None,
             if ordinal > MAX_SONG_IDX:
                 raise SystemExit(f"song ordinal {ordinal} exceeds {MAX_SONG_IDX}")
             table[sid] = SONG_FLAG | ordinal
-            # BASE binding: bind a room to a song FILED under it (lowest ID wins).
-            # Heuristic fallback for rooms whose music is triggered by non-ENCD
-            # scripts (e.g. the intro/room 10 logo+theme) and so have no ENCD
-            # startSound. Correct for storage==play rooms; the ENCD pass below
-            # overrides storage!=play rooms (e.g. room 38).
-            if room is not None and 0 <= room < 256 and room_song[room] == NO_AUDIO:
-                room_song[room] = sid
             entries.append((sid, kind, ordinal))
         elif kind == KIND_SBL:
             tad_idx = sfx_overrides.get(sid)
@@ -180,30 +153,21 @@ def build_map(sound_dir: Path, tad_path: Path | None,
                 raise SystemExit(f"SFX index {tad_idx} for scumm id {sid} exceeds max {MAX_SFX_IDX}")
             table[sid] = tad_idx
             entries.append((sid, kind, tad_idx))
+        elif kind == KIND_STUB:
+            table[sid] = STUB
+            entries.append((sid, kind, None))
         else:
             entries.append((sid, kind, None))
-
-    # --- ENCD startSound OVERRIDE (authoritative where present) ---
-    # ENCD startSound OVERRIDE (authoritative): bind each room to the first ENCD
-    # startSound that resolves to a converted song, overriding the filename base.
-    # See tools/scumm/decode_sound.py --encd-scan for the cross-check.
-    for room, ids in encd_claims.items():
-        if not (0 <= room < 256):
-            continue
-        for sid in ids:
-            if 0 <= sid < 256 and table[sid] != NO_AUDIO and (table[sid] & SONG_FLAG):
-                room_song[room] = sid             # first converted-song startSound wins
-                break
 
     if max_id < 0:
         raise SystemExit("no valid sound files found")
     # Pad the table to 256 entries so op_startSound et al can index any
     # 8-bit SCUMM ID without a bounds check. Entries beyond the last known
     # ID stay $FF (silent/no-audio) — matches the unused-ID semantics.
-    return table[:256], room_song[:256], entries
+    return table[:256], entries
 
 
-def emit_inc(out: Path, table: list[int], room_song: list[int],
+def emit_inc(out: Path, table: list[int],
              entries: list[tuple[int, str, int | None]]) -> None:
     n = len(table)
     songs = sum(1 for _, k, t in entries if k == KIND_MIDI and t is not None)
@@ -220,11 +184,11 @@ def emit_inc(out: Path, table: list[int], room_song: list[int],
     lines.append(f";; Songs: {songs}  unconverted MIDI: {midi_silent}  SFX: {sfx}  ADL-only: {adls}  SPK: {spks}  stubs: {stubs}")
     lines.append(";;")
     lines.append(";; Byte encoding:")
-    lines.append(";;   $FF         : no audio (stub, AdLib-only, PC Speaker, or unconverted MIDI)")
+    lines.append(";;   $FF         : no audio here, real elsewhere (AdLib-only / unconverted) -- prime for pacing")
+    lines.append(";;   $FE         : silent stub (SOUN placeholder) -- do NOTHING, never prime")
     lines.append(";;   $00..$7F    : SFX index (Tad_QueueSoundEffect)")
-    lines.append(";;   $80..$FE    : global song ordinal | $80 (Tad_LoadGlobalSong)")
+    lines.append(";;   $80..$FD    : global song ordinal | $80 (Tad_LoadGlobalSong)")
     lines.append("")
-    room_songs = sum(1 for v in room_song if v != NO_AUDIO)
     lines.append('.section "ScummSoundMap" superfree')
     lines.append("ScummSoundMap:")
 
@@ -234,30 +198,11 @@ def emit_inc(out: Path, table: list[int], room_song: list[int],
         hex_vals = ", ".join(f"${b:02X}" for b in row)
         lines.append(f"  .db {hex_vals}  ; {row_start:3d}..{row_start + len(row) - 1:3d}")
 
-    lines.append("")
-    lines.append(f"  ;; RoomSongMap: room number -> that room's music sound ID")
-    lines.append(f"  ;; ({len(room_song)} entries, {room_songs} rooms with music). The engine plays")
-    lines.append(f"  ;; RoomSongMap[currentRoom] on room entry; $FF = leave the current song")
-    lines.append(f"  ;; playing (room has no converted music of its own). Kept in the SAME")
-    lines.append(f"  ;; section as ScummSoundMap so it shares that runtime-readable bank --")
-    lines.append(f"  ;; a standalone superfree section can drift into banks $20-$3F which are")
-    lines.append(f"  ;; not readable via lda.l at runtime (SA-1 window).")
-    lines.append("RoomSongMap:")
-    for row_start in range(0, len(room_song), 16):
-        row = room_song[row_start : row_start + 16]
-        hex_vals = ", ".join(f"${b:02X}" for b in row)
-        lines.append(f"  .db {hex_vals}  ; {row_start:3d}..{row_start + len(row) - 1:3d}")
-
     lines.append(".ends")
     lines.append("")
 
     # Manifest comment block at end for humans.
     lines.append(";; === Manifest ===")
-    room_lines = [f";; room {r:3d} -> sound {s:3d}" for r, s in enumerate(room_song) if s != NO_AUDIO]
-    if room_lines:
-        lines.append(";; --- RoomSongMap ---")
-        lines.extend(room_lines)
-        lines.append(";; --- ScummSoundMap ---")
     for sid, kind, tad in entries:
         if kind == KIND_MIDI and tad is not None:
             lines.append(f";; {sid:3d}  song {tad:3d}")
@@ -294,9 +239,9 @@ def main() -> int:
         raise SystemExit(f"groups manifest not found: {args.groups_manifest} "
                          "(run tools/audio/gen_groups.py first)")
 
-    table, room_song, entries = build_map(args.sound_dir, args.tad_project,
-                                           args.groups_manifest)
-    emit_inc(args.output, table, room_song, entries)
+    table, entries = build_map(args.sound_dir, args.tad_project,
+                               args.groups_manifest)
+    emit_inc(args.output, table, entries)
 
     songs = sum(1 for _, k, t in entries if k == KIND_MIDI and t is not None)
     midi_silent = sum(1 for _, k, t in entries if k == KIND_MIDI and t is None)

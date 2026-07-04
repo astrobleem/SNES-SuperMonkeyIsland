@@ -1,4 +1,4 @@
-=== soun_099 ===
-    set_instrument_and_adsr sfx_soun_099 15 0 7 0
+=== soun_172 ===
+    set_instrument_and_adsr sfx_soun_172 15 0 7 0
     set_volume 127
     play_note c4 48

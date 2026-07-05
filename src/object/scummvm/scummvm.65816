@@ -90,6 +90,11 @@ _init.zeroBits:
   stz.w SCUMM.cacheWritePtr
   stz.w SCUMM.cutsceneNest
   stz.w SCUMM.inExpression
+  ; Nested-startScript depth + iMUSE beat-clock state (2-byte stores overlap
+  ; harmlessly into the following reserve; all three fields land zero).
+  stz.w SCUMM.scriptNestDepth
+  stz.w SCUMM.songBeatBase
+  stz.w SCUMM.songBeatId
   ; Zero cutscene arrays (5 levels: Ptr 10B, Script 5B, Data 10B)
   ldx #0
 - stz.w SCUMM.cutScenePtr,x
@@ -5045,6 +5050,72 @@ op_move:
   clc
   rts
 
+;-------------------------------------------------------------------
+; _scummvm.runScriptNested -- ScummVM runScriptNested: run a freshly created
+; child slot immediately, to its first breakHere / stopObjectCode, before the
+; parent script continues. Gives startScript its correct SCUMM v5 ordering (the
+; child's side effects land before the parent's next opcode). Modeled on
+; _scummvm.runEncdInline, plus a depth guard + opcodeLimit save; lives in the
+; dispatch bank so op_startScript can reach it with jsr.
+;   Entry: X = child slot byte offset (into SCUMM.slots). 16-bit A/X/Y.
+;          The parent's live SCUMM PC must already be saved by the caller
+;          (op_startScript keeps it on the stack); this re-enters executeSlot
+;          which loads/uses its own Y.
+;   Depth-guarded (SCUMM_MAX_NEST): at the cap the child is left for the
+;   scheduler to run next pass (degrades to the old deferred behavior).
+;   Stack-neutral. Caller re-derives tmp + restores its own Y afterward.
+;-------------------------------------------------------------------
+_scummvm.runScriptNested:
+  rep #$31
+  ; Depth guard (scriptNestDepth is a byte)
+  sep #$20
+  .ACCU 8
+  lda.w SCUMM.scriptNestDepth
+  cmp #SCUMM_MAX_NEST
+  bcc _rsn.ok
+  rep #$20
+  .ACCU 16
+  rts                              ; too deep -- leave child for the scheduler
+_rsn.ok:
+  inc a
+  sta.w SCUMM.scriptNestDepth
+  rep #$20
+  .ACCU 16
+  ; Save parent scheduler + fetch state
+  lda.w SCUMM.currentSlot
+  pha
+  lda.w SCUMM.currentSlotPtr
+  pha
+  lda.w SCUMM.opcodeLimit
+  pha
+  ; Set current context = child (X = child slot byte offset)
+  stx.w SCUMM.currentSlotPtr
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  lsr a                            ; /64 = slot index
+  sta.w SCUMM.currentSlot
+  ; Run the child to its first yield / completion
+  jsl scummvm.executeSlot
+  ; Restore parent state
+  rep #$31
+  pla
+  sta.w SCUMM.opcodeLimit
+  pla
+  sta.w SCUMM.currentSlotPtr
+  pla
+  sta.w SCUMM.currentSlot
+  sep #$20
+  .ACCU 8
+  dec.w SCUMM.scriptNestDepth
+  rep #$20
+  .ACCU 16
+  rts
+
+
 ; startScript ($0A, $2A, $4A, $6A, $8A, $AA, $CA, $EA)
 op_startScript:
   .ACCU 16
@@ -5056,7 +5127,8 @@ op_startScript:
   pla                             ; A = script number
   phy                             ; save SCUMM PC
   jsl scummvm.startScriptSlot_long
-  bcc _startScript.noArgs         ; slot creation failed
+  bcc _startScript.noChild        ; slot creation failed -- nothing to run
+  phx                             ; save child slot byte offset (arg copy advances X)
   ; X = new slot byte offset; copy args to slot's localVars
   ldy #0
 _startScript.copyArgs:
@@ -5072,11 +5144,19 @@ _startScript.copyArgs:
   iny
   bra _startScript.copyArgs
 _startScript.argsDone:
-_startScript.noArgs:
+  .ACCU 16
+  .INDEX 16
+  plx                             ; X = child slot byte offset
+  ; Nested execution (ScummVM runScriptNested): run the child now, so its side
+  ; effects land before this script's next opcode. Fixes the intro's script-32
+  ; var-init race that zeroed the title-music cue (var251) AFTER 152 set it.
+  jsr _scummvm.runScriptNested
+_startScript.noChild:
   .ACCU 16
   .INDEX 16
   ply                             ; restore SCUMM PC
-  ; Refresh tmp -- cacheGC during startScriptSlot may have moved our script
+  ; Refresh tmp -- cacheGC during startScriptSlot / the nested child may have
+  ; moved our script.
   ldx.w SCUMM.currentSlotPtr
   lda.w SCUMM.slots.cachePtr,x
   clc
@@ -7761,6 +7841,28 @@ _vst.next:
   bne _vst.loop
   rtl
 
+; _scummvm.stampBeatSong -- id-guarded iMUSE beat-clock origin.
+;   Entry: 8-bit A = scumm sound id of the song being (re)started; 16-bit X.
+;   If the id differs from the song currently driving the beat clock, record it
+;   and reset the beat origin (songBeatBase = VAR_MUSIC_TIMER / var14 now), so
+;   getBeatIndex counts from this song's start. Re-starting the SAME song (a
+;   credit sub-script re-affirming the theme) keeps the running clock.
+;   Preserves X; trashes A. abs-long WRAM (DBR-independent, like virtSound_*).
+_scummvm.stampBeatSong:
+  .ACCU 8
+  .INDEX 16
+  cmp.l SCUMM.songBeatId
+  beq _sbs.done
+  sta.l SCUMM.songBeatId
+  rep #$20
+  .ACCU 16
+  lda.l SCUMM.globalVars + 14*2      ; VAR_MUSIC_TIMER
+  sta.l SCUMM.songBeatBase
+  sep #$20
+  .ACCU 8
+_sbs.done:
+  rts
+
 ; stopSound ($3C, $BC) -- p8[7] sound ID → stop all SFX
 op_stopSound:
   .ACCU 16
@@ -7832,6 +7934,10 @@ op_startSound:
   jsl Tad_QueueSoundEffect          ; A = SFX index (0..$7F)
   bra _ss.primeSfx
 _ss.song:
+  ; Re-base the iMUSE beat clock to this song's start (id-guarded) so the intro
+  ; credits' soundKludge getBeatIndex waits pace against it. X still = sound id.
+  txa
+  jsr _scummvm.stampBeatSong
   ; Route through the backend the MUSIC toggle selects (same rule as
   ; op_startMusic) — scripts start songs via startSound too.
   lda.l SCUMM.musicMode             ; long: DB is not $7E in opcode context
@@ -7849,9 +7955,11 @@ _ss.songMsu1:
   sep #$20
   jsr _scummvm.tadBlankSong         ; silence any lingering TAD song
 _ss.primeSong:
-  ; prime as song
+  ; prime as song — mapped Tad/MSU-1 theme. Long TTL: Tad_IsSongPlaying can't be
+  ; trusted to keep isSoundRunning true for the whole theme (see the intro credit
+  ; beat-sync note on SCUMM_VIRT_TTL_MAPSONG).
   pla                               ; id
-  ldx #SCUMM_VIRT_TTL_SONG
+  ldx #SCUMM_VIRT_TTL_MAPSONG
   ldy #1
   jsr _scummvm.virtSound_prime
   bra _ss.done
@@ -8016,23 +8124,92 @@ _isr.playing:
   clc
   rts
 
-; soundKludge ($4C, $CC) — INTENTIONAL-NOOP for MI1 talkie on SNES.
-; ScummVM forwards the $FF-terminated word-arg list to IMuseDigital::doCommand.
-; Our audio path uses MSU-1 + TAD which don't consume iMUSE commands, so
-; consuming the args without dispatch is the correct behavior.
+; soundKludge ($4C, $CC) — iMUSE marker/beat query bridge for the MI1 intro.
+; ScummVM forwards the $FF-terminated word-arg list to the music engine. The
+; only form we honor is the credits' beat-sync query:
+;   soundKludge(256, sid, 7) -> VAR_SOUNDRESULT (var56) = getBeatIndex(sid)
+;   soundKludge(256, sid, 8) -> var56 = tick within the current beat (0..479)
+; (256 = getParam command; arg1 = sid; arg2 = param). script 152 then waits
+; `while var56 < N`. The companion soundKludge(-1) drains the queue in the
+; reference; here the query writes var56 directly, so the drain is a no-op.
+; Every other soundKludge form just consumes its args (no iMUSE backend).
+; The beat clock: VAR_MUSIC_TIMER (var14) ticks per VM play tick; songBeatBase
+; is var14 at the song's start; d = var14 - songBeatBase VM ticks; at 30 BPM /
+; 30 Hz, 1 beat = SCUMM_BEAT_VMTICKS(60) ticks, PPQN 480 => 8 MIDI ticks/tick.
+; Y holds the SCUMM PC (advanced by fetchByte/fetchWord as args are consumed);
+; only X is used as scratch here.
 op_soundKludge:
   .ACCU 16
   .INDEX 16
-  ldx #16                          ; max 16 args (ScummVM limit)
--
+  stz.w SCUMM.scratch                ; arg0
+  stz.w SCUMM.scratch2               ; arg2
+  ldx #0                             ; arg index
+_sk.readLoop:
+  jsr _scummvm.fetchByte             ; aux byte / $FF terminator
+  cmp #$00FF
+  beq _sk.dispatch
+  jsr _scummvm.fetchWord            ; arg value
+  cpx #0
+  bne +
+  sta.w SCUMM.scratch               ; capture arg0
++
+  cpx #2
+  bne ++
+  sta.w SCUMM.scratch2              ; capture arg2
+++
+  inx
+  cpx #16                            ; ScummVM's 16-arg limit
+  bcc _sk.readLoop
+_sk.drainTail:                       ; >16 args: consume the rest, don't store
   jsr _scummvm.fetchByte
   cmp #$00FF
-  beq +
-  dex
-  beq +                            ; safety: stop after 16 args
-  jsr _scummvm.fetchWord
-  bra -
+  bne _sk.drainTail
+_sk.dispatch:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch
+  cmp #$0100                         ; 256 = getParam?
+  bne _sk.done
+  lda.w SCUMM.scratch2
+  cmp #7
+  beq _sk.query
+  cmp #8
+  bne _sk.done
+_sk.query:
+  ; d = var14 - songBeatBase (clamp at 0)
+  lda.l SCUMM.globalVars + 14*2
+  sec
+  sbc.l SCUMM.songBeatBase
+  bcs +
+    lda #0
 +
+  sta.w SCUMM.scratch3              ; d = dividend / running remainder
+  ldx #0                            ; beat = quotient
+_sk.div:
+  lda.w SCUMM.scratch3
+  cmp #SCUMM_BEAT_VMTICKS
+  bcc _sk.divDone
+  sbc #SCUMM_BEAT_VMTICKS           ; carry set by cmp
+  sta.w SCUMM.scratch3
+  inx
+  bra _sk.div
+_sk.divDone:
+  ; scratch3 = tick-fraction (0..59), X = beat index
+  lda.w SCUMM.scratch2
+  cmp #8
+  beq _sk.wantTick
+  txa                               ; param 7: var56 = beat
+  sta.l SCUMM.globalVars + 56*2
+  bra _sk.done
+_sk.wantTick:
+  lda.w SCUMM.scratch3              ; param 8: var56 = fraction * 8 (0..472)
+  asl a
+  asl a
+  asl a
+  sta.l SCUMM.globalVars + 56*2
+_sk.done:
+  .ACCU 16
+  .INDEX 16
   clc
   rts
 

@@ -57,6 +57,19 @@
 .define SCUMM_MAX_BITVARS   2048    ;bit variables
 .define SCUMM_MAX_LOCALS    25      ;local variables per slot (16-bit each)
 
+; op_startScript nested-execution (ScummVM runScriptNested): the child runs
+; immediately to its first yield/end, before the parent continues. Depth cap
+; guards runaway recursion (ScummVM uses 15; 6 covers the intro's 152->32/17
+; chain with plenty of SNES-stack headroom). At the cap the child stays
+; deferred (scheduler runs it next pass) — degrades to the pre-nesting behavior.
+.define SCUMM_MAX_NEST      6
+
+; iMUSE beat-clock: VAR_MUSIC_TIMER (var14) ticks once per VM play tick (~30 Hz
+; in room 10). The intro theme r010 (sid 167) is a flat 30 BPM MIDI, so one
+; quarter-note beat = 2 s = 60 VM ticks; PPQN 480 / 60 = 8 MIDI ticks per VM
+; tick. op_soundKludge derives getBeatIndex/getTick from these.
+.define SCUMM_BEAT_VMTICKS  60
+
 ; Variable encoding masks
 .define SCUMM_VAR_GLOBAL_MASK   $0000   ;top 2 bits = 00
 .define SCUMM_VAR_LOCAL_MASK    $4000   ;top 2 bits = 01
@@ -227,7 +240,12 @@ SCUMM.voiceCaptured       dw      ;count of FF 0A groups captured this string (>
 SCUMM.voiceSrchLo         dw      ;search lower bound
 SCUMM.voiceSrchHi         dw      ;search upper bound (exclusive)
 SCUMM.voiceSrchMid        dw      ;current midpoint
-SCUMM._cgramHdmaReserve   ds 33   ;UNUSED remainder of the old cgramHdmaTable reserve
+; Nested-startScript + iMUSE beat-clock state (carved from the cgramHdma
+; reserve — total stays 45 bytes so downstream ramsection addresses hold).
+SCUMM.scriptNestDepth     db      ;op_startScript recursion depth (0 = top level)
+SCUMM.songBeatBase        dw      ;VAR_MUSIC_TIMER snapshot when the beat song started
+SCUMM.songBeatId          db      ;sid currently driving the beat clock (0 = none)
+SCUMM._cgramHdmaReserve   ds 29   ;UNUSED remainder of the old cgramHdmaTable reserve
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)
@@ -256,8 +274,18 @@ SCUMM.egoPositioned       db      ;ScummVM _egoPositioned: nonzero = ENCD/script
 ; (~5s) is a reasonable cutscene-pacing default while still covering
 ; genuinely-slow unmapped music cues. Real songs backed by Tad / MSU-1
 ; don't use this — they're polled via Tad_IsSongPlaying in op_isSoundRunning.
-.define SCUMM_VIRT_TTL_SONG     300    ;  ~5s — songs / unmapped pacing default
+.define SCUMM_VIRT_TTL_SONG     300    ;  ~5s — UNMAPPED songs / unmapped pacing default
 .define SCUMM_VIRT_TTL_SFX      180    ;  ~3s — mapped SFX (known-short)
+; MAPPED songs (real Tad/MSU-1 themes) need a longer virt window: the intro
+; credits (script 152) gate each page on isSoundRunning(title theme 167) before
+; a soundKludge getBeatIndex wait, and Tad_IsSongPlaying does NOT reliably
+; report the SPC700 song as playing after its first seconds — so the short 300
+; default drops isSoundRunning to false and every credit page past ~5s skips its
+; beat sync. 1800 (~60s at 30Hz) covers the whole beat window (last beat ~50s)
+; and still expires well before the credits' final var14<=5700 hold (~135s), so
+; that hold stays a skip (no hang). Unmapped sounds (the Part One title-chord at
+; 104, which waits for isSoundRunning→0) keep the short SCUMM_VIRT_TTL_SONG.
+.define SCUMM_VIRT_TTL_MAPSONG  1800   ; ~60s — mapped Tad/MSU-1 songs (beat-sync window)
 .ramsection "scumm virt sound" bank 0 slot 1
 SCUMM.virtSoundId    ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = empty
 SCUMM.virtSoundKind  ds SCUMM_VIRT_SOUND_SLOTS        ; 1B × 4: 0 = SFX, 1 = song

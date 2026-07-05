@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SNES Super Monkey Island — a native SCUMM v5 interpreter for The Secret of Monkey Island on the Super Nintendo, targeting real NTSC SNES hardware with MSU-1 on SD2SNES/FXPAK Pro. Written in 65816 assembly with a custom OOP framework. Engine forked from SuperDragonsLairArcade.
 
+**Current state + what's left**: read `HANDOFF.md` (repo root) before starting work — session handoff with open bugs, loose ends, and the release-ready roadmap. Detailed history: `snes-secret-plan.md` "Current Frontier" sections.
+
 ## Agent
 
 **Aramis** (`.claude/agents/mesen-debugger.md`) — Mesen 2 debugging: Lua tests, WRAM inspection, frame analysis. Use the Agent tool with `subagent_type: "mesen-debugger"` for complex runtime diagnostics. You can write simple Lua snippets directly via `run_lua_snippet`, but delegate thorough debugging sessions to Aramis.

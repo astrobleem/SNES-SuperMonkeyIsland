@@ -1303,6 +1303,41 @@ workaround should be re-examined now.
   ops + a chore reseed per tick) is gone; renderActors/pathfinding perf item
   remains (see Room 38 perf memory).
 
+
+#### Current Frontier (2026-07-05) — intro pacing LANDED; see HANDOFF.md
+
+**Bug 2 (intro pacing) — RESOLVED (`0b32238`).** Both halves of the decoded
+mechanism landed together, exactly as designed above: (1) `op_startScript`
+now runs the child immediately via `_scummvm.runScriptNested` (depth cap 6;
+at the cap the child stays deferred), so script 32's var inits land before
+152 sets var251=167; (2) `op_soundKludge` implements the `(256, sid, 7|8)`
+getBeatIndex/getTick queries against a var14-based beat clock
+(`songBeatBase`/`songBeatId`, stamped id-guarded in `op_startSound`;
+60 VM ticks/beat @ 30 BPM; tick = fraction×8 for PPQN 480). Mapped songs
+prime `SCUMM_VIRT_TTL_MAPSONG` (1800 ticks) so `isSoundRunning(167)` holds
+through the beat window. No frame→beat MIDI table was needed — the flat
+30 BPM tempo reduces to a constant ticks-per-beat.
+
+Proven (13000-frame trace, distribution/out_intro.txt + test_intro_pacing.lua):
+logo holds ~4.7 s (was ~2 s; reference ~4 s); beat gates release at
+3/5/6/11/12/17… with beat 17 at 32.9 s vs reference ~34 s; credit pages dwell
+~6 s; script 152 lives 142 s (reference ~137 s); intro proceeds to room 38.
+VM tests 182/182; bank 0 87.3%; boot PASS.
+
+Known deviation: var14 ticks per play tick, which follows the render rate —
+the intro's first ~6 s run at 60 fps so beats 1–3 fire ~2× fast (~1.5 s early),
+self-correcting at 30 fps. Exact fix if wanted: tick VAR_MUSIC_TIMER at a
+fixed 30 Hz. Also: BRK baseline is stale (38 vs 35; the 3 new are data-table
+false positives in ScummSoundMap/TadGroupRecs/TadSongMap).
+
+**Handoff:** full open-bug inventory, loose ends, and the release-ready
+roadmap now live in `HANDOFF.md` (repo root) — written for the next agent.
+The 2026-07-04 "new bugs surfaced" list above remains the detailed reference;
+HANDOFF.md item 1 (FF 07 insert-string escape → textless title cards) was
+re-verified still open on 2026-07-05.
+
+---
+
 #### Beach → Scumm Bar Critical Path (historical)
 
 | # | Blocker | Status | Notes |

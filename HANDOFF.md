@@ -1,73 +1,164 @@
-# Session 23 Handoff (2026-04-21)
+# HANDOFF — SNES Super Monkey Island (2026-07-05)
 
-## What happened
-Investigated drawObject renderer — discovered sparkle is costume-driven (not drawObject), clouds are costume-driven (not palette cycling). Fixed multiple rendering bugs. Added OAM priority rotation for sprite overflow management.
+Written by the outgoing agent for whoever picks this up next. Read CLAUDE.md
+and AGENTS.md first; this file is the *state + roadmap*, those are the *rules
++ tooling*. The persistent memory index (auto-loaded each session) points back
+here.
 
-## Key discoveries
-1. **Sparkle = costume #111 (Cost005)** — actors placed by lscr_203/204, animated by chore engine. NOT drawObject. Objects 110-114 are transparent click targets.
-2. **Clouds = costume #59 (Cost004)** — 2 actors placed by lscr_202, scrolled left. 66-94 OAM entries per frame, exceeding 128 hardware limit → flicker.
-3. **Campfire junk = oversized head** — cost_060 had 143x143 "head" pic (limb 1) being rendered by default head cycle fallback even though the campfire never activates limb 1. 6688 bytes of CHR DMA stomped BG tile VRAM.
-4. **TODO.md palette mapping was wrong** — no setPalColor or CYCL calls exist for room 10 clouds. The entire diagnosis was incorrect.
+## Who you're working for
 
-## Changes made (not yet committed)
+Chad. Terse delegation; judges by artifacts, not narration. Never end with a
+menu of options. Never ask permission for routine ops (build/test/commit).
+**Never claim a rendering or audio bug is fixed without proof** — screenshot or
+recorded audio, captured via the Mesen MCP tools. His ear is the oracle for
+music: two conversions are approved (r010, r028), the rest await HIS verdict —
+do not self-approve audio. When a "verified" data map contradicts what he
+hears, the map is wrong (this happened; see the DSOU lesson below).
 
-### OAM priority rotation (`nmi.65816`, `oam.h`, `oam.65816`)
-- Added `GLOBAL.oamRotation` counter
-- After DMA, sets $2103 bit 7 (priority rotation) with rotating base index
-- Advances by 4 sprites/frame, wraps at 128
-- Distributes scanline overflow dropout evenly
+## Where the game stands
 
-### Z-clip → OAM priority (`scummvm.65816:_ri.buildOam`)
-- Actors with `actorZClip == 1` (set by `alwaysZClip(#1)`) render at OAM priority 0 (behind all BG)
-- Normal actors stay at priority 2
-- Fixes clouds appearing in front of "The Secret of Monkey Island" title
+Boot → MSU-1 splash → title screen → full intro cutscene (music, CD speech,
+credits paced to the talkie) → lookout old-man dialogue → Part One card
+(room 96) → **player control at the dock (room 33)**. Dialog choices work.
+SCUMM Bar rooms load. VM regression suite: 182/182. Bank 0: 87.3%.
 
-### Head suppression for headless costumes (`scummvm.65816:_ri.headGot`)
-- When chore engine drives body (chorePic slot 0 != $FF):
-  - If limb 1 was never decoded (choreCurpos == $FFFF): suppress head (e.g. campfire)
-  - If limb 1 was decoded but chorePic still $FF (e.g. Guybrush walk with 0x79 cmd): keep default head cycle
-  - If limb 1 has explicit chorePic: use it
-- Fixes 143x143 head DMA corrupting BG VRAM, dirty rectangles, upper-left junk
+Recent landings (all proven, see commit messages for evidence):
+- `0b32238` nested startScript + iMUSE beat clock — intro paced to the talkie
+- `f787d8d` CD-talkie speech backend — voice via MSU-1, music stays on SPC700
+- `ff414a2` objUntouchable Y-clobber fix — THE mega root cause (see below)
+- `0c3bf88` sound-id map rebuilt on DSOU ids — fixed every music-mapping bug
 
-### East/west direction fix (`scummvm_chore.65816:_caa.cmdSetDir`)
-- `oldDirToNewDir` had east/west swapped (dir 0 → east, dir 1 → west)
-- Fixed to match ScummVM: dir 0 → west (270), dir 1 → east (90)
+## Immediate loose ends (small, do these first)
 
-### Walk facing re-seed (`scummvm.65816:_ua.setFacing`)
-- When facing changes during walking, re-calls `animateActor_impl` with walkFrame=2
-- Previously, walk animation was seeded once at start and never updated for direction changes
-- Fixes Guybrush always facing south during walking
+1. **BRK-scan baseline is stale**: `validate_rom` reports 38 vs baseline 35.
+   The 3 new are data-table false positives (`ScummSoundMap+257`,
+   `TadGroupRecs+0`, `TadSongMap+2` — banks $09/$1F, non-executable). Bump the
+   baseline in `tools/smi_workflow_server.py` so real regressions stay visible.
+2. **VAR_MUSIC_TIMER is render-rate coupled.** var14 ticks once per VM play
+   tick, and the play tick follows the frame rate. The intro's first ~6 s run
+   at 60 fps, so beats 1–3 of the beat clock fire 2× fast (~1.5 s early),
+   self-correcting when the frame rate drops to 30. Correct fix if Chad wants
+   exact pacing: tick var14 at a fixed 30 Hz (every other frame at 60 fps),
+   then re-verify with `distribution/test_intro_pacing.lua` — but FIRST
+   re-resolve its hardcoded WRAM addresses from the current .sym (any
+   ramsection change shifts them; this is the #1 test footgun).
+3. **Re-examine the "Bug 85" workaround in `op_putActorInRoom`**
+   (scummvm.65816). Its comment claims background scripts re-issue
+   putActorInRoom every tick — that was actually the lscr_200 wedge caused by
+   the Y-clobber, now fixed. The black-band workaround may be removable dead
+   weight. Verify room 38 renders identically after removal (screenshot).
+4. **Y-discipline audit**: sweep every helper called from `op_*` handlers for
+   Y preservation — Y holds the SCUMM PC during opcode dispatch. The
+   objUntouchable class of bug (helper trashes Y → PC rewinds → script
+   corruption) is the most damaging failure mode this codebase has had.
+5. **Re-profile room 38**: the ~10 fps / pathfinding-45% measurement was taken
+   WITH the lscr_200 wedge burning cycles. Numbers are stale; re-measure
+   before optimizing anything.
+6. **Title-screen mountain cloud flicker** — carried item, partially mitigated
+   (sparkle suppressed during cutscenes, gated on cameraX=344). Not resolved.
+7. **Lookout ambience**: the fire-crackle SBLs (real sids ~4/5) are not yet
+   registered as TAD SFX — the old-man scene is canonically silent music-wise,
+   but the reference has ambience.
+8. **soundKludge is minimal by design**: only `(256, sid, 7|8)` =
+   getBeatIndex/getTick is implemented (that's all script 152 needs). Other
+   iMUSE forms (markers/triggers → VAR_SOUNDRESULT) are consumed as no-ops.
+   Implement additional forms ONLY when a specific script needs them — check
+   `docs/v5_behavior_matrix.md` and ScummVM source (`E:\gh\scummvm`) per form.
 
-### TODO.md updated
-- Sparkle resolved — costume-driven, not drawObject
-- Cloud flicker documented as OAM overflow with mitigation
-- Removed incorrect palette mapping diagnosis
+## Known open bugs (diagnosed 2026-07-04, mostly unverified since)
 
-## What works now
-- Campfire animates without dirty rectangles or upper-left junk
-- Cloud sprites render behind title text (z-clip priority)
-- Cloud/sprite dropout distributes evenly (OAM rotation)
-- Guybrush should turn to face walk direction
-- Sparkle confirmed working on LucasFilm logo (frame 400)
-- Intro progresses through room 33 to room 38 (lookout gameplay)
+Full detail in snes-secret-plan.md "Current Frontier (2026-07-04, second
+session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
 
-## Additional fixes after initial handoff
-- **Z-clip flag clobber** — `pla` after `cmp` in z-clip priority code clobbered flags. Actors in render slot 0 (palette bits=0, like Guybrush) got priority 0 = invisible behind BG. Fixed by storing palette bits to WRAM instead of stack.
-- **OAM race condition** — `core.oam.play` cleared OAM buffer AND set `oamUploadFlag=1` before renderActors wrote sprites. NMI could upload empty buffer → all sprites vanish for 1 frame (campfire blank frame). Fixed by removing premature flag set; renderActors sets it after populating buffer.
-- **actorOps.init clears zClip** — prevents stale zClip values from prior room making actors invisible.
+1. **FF 07 (insert-string-slot escape) is unimplemented** — the charset
+   renderer skips it (scummvm.65816 `_ears.renderFF`: "all other sub-codes
+   skip 2 arg bytes"), so the "Deep in the Caribbean" / "The Island of Mêlée"
+   title cards show NO TEXT. Verified still true 2026-07-05. The fix: resolve
+   the string-slot reference inline during render (stringOps put codes are
+   already implemented for writing slots).
+2. **Dock (room 33) entry**: camera parked at x=880 with Guybrush at x=9
+   (the scenic bar→ego pan likely doesn't run — possibly another
+   soundKludge/marker sync, now easier with the beat clock landed), and the
+   BG column streamer leaves the right half of the screen BLACK after a
+   camera JUMP (streaming only fills VRAM on pans). Exits work; the SCUMM
+   bar door (obj 428) still needs a direct click test after the camera fix.
+3. **Dialog text renders garbled/overlapping** in the old-man dialogue
+   (letters collide; readable but wrong).
+4. **Walk-behind masking not applying in room 38** — ZP01 exists in the
+   extraction but Guybrush draws fully in front of the fire wall; check
+   whether ZP01 reaches BG2 outside the verb area + sprite-vs-BG2 priority.
+5. **Verb UI stays visible during cutscenes** (lscr_203 issues userput off;
+   verb bar keeps rendering).
+6. **Stale duplicate Guybrush sprite** during the room-38 walk-in.
+7. **"THE" of "THE SECRET OF" hidden by cloud actors at the title** — correct
+   intro pacing (just landed) may have fixed this on its own; RE-CHECK with a
+   screenshot before doing any work.
+8. **Room 38 play tick was ~15 Hz** (walk feels slow) — measured WITH the
+   now-fixed lscr_200 wedge; re-measure first.
 
-## What's left
-1. **Cloud vertical cutoff** (task #78) — OAM overflow. Cloud costume needs 66-94 entries × 2 actors = 132-188, exceeding 128 limit. Needs 16x16 sprite conversion or MaxTile SA-1 buffer.
-2. **Walk facing re-seed** (task #73) — attempted but reverted (clobbers scratch registers). Guybrush doesn't change directional walk animation on turns.
-3. **Room 33 stall** (task #64) — may be resolved. Needs focused test.
-4. **drawObject multi-state** — doors/props with multiple OBIM states. Not needed for intro scenes.
-5. **Legacy cleanup** — tasks #74/#75 (delete static walk/head cycle tables, remove actorAnimFrame/Timer WRAM). Low priority.
+## Music pipeline status
 
-## Files touched
-- `src/core/nmi.65816` — OAM priority rotation after DMA
-- `src/core/oam.h` — GLOBAL.oamRotation variable
-- `src/core/oam.65816` — init oamRotation to 0
-- `src/object/scummvm/scummvm.65816` — z-clip priority, head suppression logic, walk facing re-seed
-- `src/object/scummvm/scummvm_chore.65816` — east/west direction fix
-- `tools/gen_costume_rom.py` — reverted oversized head filter (all data preserved)
-- `TODO.md` — updated with correct diagnoses
+- 9 TAD song groups wired in-game + MSU-1/TAD toggle, both verified.
+- **15 songs converted, awaiting Chad's ear** — resume doc:
+  `audio/songs/STATUS.md`. r010 (title medley, non-looping, hand-stripped
+  loop markers — do NOT regenerate) and r028 are approved.
+- `64ths.txt` (repo root) is Chad's written spec for the next converter
+  improvement: quantizer grid 16th → 32nd default with 64th option and a
+  grid-tolerance snap parameter, explicitly NO triplet/swing heuristics.
+  Implement in the MIDI→MML tooling; calibrate exactly as the file describes.
+- `audio/songs/r028_scummbar/r028_phantasia.*` is a WIP alternate arrangement.
+
+## Release-ready roadmap (the big arcs, in order)
+
+1. **Prove progression past the dock.** Nothing beyond room 33 has been
+   exercised. Drive the game chapter by chapter with `run_with_input`
+   (frame-scheduled button injection): the three trials, the SCUMM Bar,
+   the ship purchase, Monkey Island, the ending. Every new room/script will
+   surface opcode and resource gaps — fix them one at a time, add a VM
+   regression test per fix (`tests/scumm_vm/test_runner.lua`).
+2. **Save/load completeness** — the current save layout omits: bit variables,
+   full per-slot script state (offsets/delay/freezeCount/cutsceneOverride/
+   localVars), the cutscene stack, objectClass bitmasks, verb state, actor
+   palette overrides, in-progress walk paths, camera state, room scroll
+   limits, scale slots. (snes-secret-plan.md §5.7 + Known Gaps item 11.)
+3. **Entry/exit script dual layer** — ScummVM runs VAR_ENTRY_SCRIPT (var 28)
+   → ENCD → VAR_ENTRY_SCRIPT2 (var 29) on entry, and vars 30/31 around EXCD.
+   We only run ENCD/EXCD; later chapters set those vars (item 15).
+4. **decodeParseString sub-opcode completeness** (item 12) — text layout
+   correctness across the whole game.
+5. **320→256 coordinate audit** (item 17) — findObject/actorFromPos/drawBox/
+   print positions/roomScroll each need the transform applied exactly once.
+6. **Performance** — after re-profiling room 38: pathfinding is the known
+   hotspot; the SA-1 offload pattern from renderActors (CMD=3 mailbox) is the
+   template for moving more work off the 65816.
+7. **Audio completeness** — remaining song approvals, SFX registration sweep
+   (registered_sfx.txt), verify CD speech in later chapters (voice_table.bin
+   already covers all 4393 talkie lines).
+8. **Real-hardware validation** — SD2SNES/FXPAK Pro on NTSC hardware: MSU-1
+   handshake, FastROM timing, SA-1 paths. Emulator-proven ≠ release-ready.
+9. **Turnkey user pipeline** (legal model: we ship engine + tools, user
+   supplies their own MI1 copy). The pieces exist — scumm_extract.py,
+   converters, rom_pack_data.py, build_speech_msu.py, gen_msu_tracks — but
+   need a one-command wrapper: GOG/Steam install dir in → .sfc + .msu +
+   .pcm set out, plus a README for non-developers. Commercial game data must
+   never enter the repo (see .gitignore).
+
+## Hard-won operational knowledge
+
+- `validate_rom` after EVERY build — bank 0 overflow is silent.
+- Any WRAM ramsection resize shifts bank-$7E addresses; Lua tests must resolve
+  addresses from `build/SuperMonkeyIsland.sym`, never hardcode.
+- Worktree gotcha: `distribution/SuperMonkeyIsland.sfc` in a worktree is a
+  HARDLINK to main's — a worktree build clobbers the main checkout's ROM while
+  the .sym files diverge. Rebuild before trusting either.
+- `distribution/SuperMonkeyIsland.msu` must exist or the ROM won't boot.
+- Two MCP servers: `smi-workflow` (one-shot build/validate/test/screenshot) and
+  `mesen-inproc` (long-lived memory/exec hooks, audio capture). AGENTS.md is
+  the harness reference. The read-hook fetch-trace technique (hook the script
+  cache, fetch addresses = PC trajectory) is how the Y-clobber was found —
+  reach for it whenever a script "mysteriously" misbehaves.
+- To verify which MSU voice/track played, WRITE-hook MSU_TRACK ($2004/5)
+  during free-run — do not read scratch WRAM after the fact.
+- The DSOU lesson: when extraction-layer id assignment is wrong, every
+  downstream "proof" validates a self-consistent lie. Audit the id-assignment
+  layer first when data contradicts observed behavior.

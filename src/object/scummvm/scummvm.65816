@@ -683,6 +683,13 @@ _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
+  ; Restore the room's CGRAM[29]: the NMI forced pal7 c1 white while the line
+  ; was up (dialog text color); flag the shadow dirty so VBlank re-flushes the
+  ; room palette over it. The shadow was never touched, so it holds the truth.
+  sep #$20
+  lda #1
+  sta.w SCUMM.cgramDirty
+  rep #$20
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
   stz.w SCUMM.globalVars,x
@@ -17131,30 +17138,10 @@ _rpd.noDialog:
   .ACCU 16
   .INDEX 16
 
-  ;--- Dialog palette DMA (every frame while dialog active) ---
-  rep #$20
-  lda.w SCUMM.dialogActive
-  beq _rpd.noDialogPal
-  ; Build dynamic palette from dialogColor (or default white)
-  lda.w SCUMM.dialogActive
-  beq _rpd.palWhite
-  lda.w SCUMM.dialogColor
-  and #$000F
-  bne _rpd.palLookup
-_rpd.palWhite:
-  .ACCU 16
-  .INDEX 16
-  lda #15                            ; default = white
-_rpd.palLookup:
-  .ACCU 16
-  .INDEX 16
-  asl a
-  tax
-  lda.l _scummTalkColorLUT,x
-  sta.w SCUMM.dialogPalColor         ; color 1 = talk color
-  stz.w SCUMM.dialogPalTrans         ; color 0 = transparent
-  ; Palette written to SCUMM.dialogPalColor above; NMI writes CGRAM directly.
-_rpd.noDialogPal:
+  ; Dialog text color is set directly in NMI: while SCUMM.dialogActive it forces
+  ; CGRAM[29] (BG3 pal7 c1, the monochrome font's body) to white — see
+  ; core/nmi.65816. The old computation here stashed a talk color into
+  ; SCUMM.dialogPalColor that nothing ever consumed (dead); removed.
   .ACCU 16
   .INDEX 16
 
@@ -17303,6 +17290,8 @@ _ears.scanFF:
   beq _ears.scanLoop
   cmp #8
   beq _ears.scanDone                   ; newline -- stop counting (first line only)
+  cmp #7
+  beq _ears.scanInsertString           ; $07 = insert string-slot: count its chars
   ; $0A = talkie voice escape. The monster.sou VCTL offset is split across the
   ; first two FF 0A groups: bits 0-15 = group1 args (LE word), bits 16-31 =
   ; group2 args. Capture the first two groups' arg-words; skip the rest.
@@ -17332,6 +17321,20 @@ _ears.scanPrintable:
   beq _ears.scanLoop                   ; skip without counting (renderer skips it too)
   inc.w SCUMM.dialogCharCount
   bra _ears.scanLoop
+_ears.scanInsertString:
+  .ACCU 16
+  .INDEX 16
+  ; FF 07 (pre-scan): add the slot's printable-char count so centering + the
+  ; message timer match what the render pass will actually draw. Y at 2 arg
+  ; bytes (low = slot id).
+  lda [tmp],y                           ; slot id (low byte)
+  jsr _ears.countSlotPrintable          ; A = printable count (preserves X, Y)
+  clc
+  adc.w SCUMM.dialogCharCount
+  sta.w SCUMM.dialogCharCount
+  iny
+  iny                                   ; advance past the 2 arg bytes
+  jmp _ears.scanLoop
 _ears.scanDone:
   .ACCU 16
   .INDEX 16
@@ -17515,19 +17518,67 @@ _ears.renderFF:
   lda [tmp],y
   and #$00FF
   iny                                  ; skip sub-code
-  ; sub-codes 1, 8: newline; 2, 3: no-op
+  ; sub-codes 1, 8: newline; 2, 3: no-op; 7: insert string-slot contents
   cmp #1
   beq _ears.renderNewline
   cmp #2
   beq _ears.renderLoop
   cmp #3
   beq _ears.renderLoop
+  cmp #7
+  beq _ears.renderInsertString
   cmp #8
   beq _ears.renderNewline
   ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
   iny
   iny
   bra _ears.renderLoop
+
+; FF 07 (render pass): splice the referenced string slot's bytes into the
+; tilemap inline (ScummVM convertStringMessage; MI1 v5 uses the arg as a direct
+; slot id, not a var). Y points at the 2 arg bytes (low = slot id). The tilemap
+; cursor is parked in scratch3 across the slot walk (X is needed to read slot
+; bytes); slot read pointer in scratch2; budget in scratch (all dead between
+; render chars). Degrades safely: stops on null, on an $FF escape inside the
+; slot, or after SCUMM_STRING_MAX_LEN bytes.
+_ears.renderInsertString:
+  .ACCU 16
+  .INDEX 16
+  stx.w SCUMM.scratch3                  ; park tilemap cursor
+  lda [tmp],y                           ; slot id (low byte of the 16-bit arg)
+  and #$000F
+  xba                                   ; *256
+  lsr a                                 ; /2 = *128
+  clc
+  adc #SCUMM.stringTable & $FFFF        ; slot base (16-bit; DBR = $7E)
+  sta.w SCUMM.scratch2                  ; slot read pointer
+  iny
+  iny                                   ; advance past the 2 arg bytes
+  lda #SCUMM_STRING_MAX_LEN
+  sta.w SCUMM.scratch                   ; budget (runaway guard)
+_ears.risLoop:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch
+  beq _ears.risDone                     ; budget exhausted
+  dec a
+  sta.w SCUMM.scratch
+  ldx.w SCUMM.scratch2                  ; X = slot read pointer
+  lda.w $0000,x                         ; slot byte (DBR = $7E)
+  and #$00FF
+  beq _ears.risDone                     ; null terminator
+  cmp #$00FF
+  beq _ears.risDone                     ; nested escape -- stop (degrade)
+  inc.w SCUMM.scratch2                  ; advance slot pointer
+  ldx.w SCUMM.scratch3                  ; X = tilemap cursor
+  jsr _ears.emitChar                    ; emit char (updates X)
+  stx.w SCUMM.scratch3                  ; save cursor
+  bra _ears.risLoop
+_ears.risDone:
+  .ACCU 16
+  .INDEX 16
+  ldx.w SCUMM.scratch3                  ; restore tilemap cursor into X
+  jmp _ears.renderLoop
 
 _ears.renderNewline:
   .ACCU 16
@@ -17583,6 +17634,8 @@ _ears.nlScanFF:
   beq _ears.nlScanLoop
   cmp #3
   beq _ears.nlScanLoop
+  cmp #7
+  beq _ears.nlScanInsertString           ; $07 = insert string-slot: count its chars
   cmp #8
   beq _ears.nlScanDone
   iny
@@ -17594,6 +17647,19 @@ _ears.nlScanChar:
   cmp #$005E                             ; '^' -- invisible (matches scanPrintable)
   beq _ears.nlScanLoop
   inc.w SCUMM.scratch2
+  bra _ears.nlScanLoop
+_ears.nlScanInsertString:
+  .ACCU 16
+  .INDEX 16
+  ; FF 07 (per-line scan): add the slot's printable-char count to this line's
+  ; count so the line centers correctly. Y at 2 arg bytes (low = slot id).
+  lda [tmp],y                            ; slot id (low byte)
+  jsr _ears.countSlotPrintable           ; A = printable count (preserves X, Y)
+  clc
+  adc.w SCUMM.scratch2
+  sta.w SCUMM.scratch2
+  iny
+  iny                                    ; advance past the 2 arg bytes
   bra _ears.nlScanLoop
 _ears.nlScanDone:
   .ACCU 16
@@ -17641,32 +17707,53 @@ _ears.nlStartOk:
   tax                                    ; X = new tilemap position
   jmp _ears.renderLoop                   ; bra out of range -- use jmp
 
-_ears.renderLoopTrap:
-  .ACCU 16
-  .INDEX 16
-  jmp _ears.renderLoop                 ; trampoline (renderChar branches too far back)
 _ears.renderChar:
   .ACCU 16
   .INDEX 16
-  cmp #$005E                           ; '^' -- invisible (matches scan behaviour)
-  beq _ears.renderLoopTrap             ; skip: no tile write, no cursor advance
-  ; tile index = char - $20 (ASCII space = tile 0 in font)
+  jsr _ears.emitChar                   ; A = char; write tile + advance cursor X
+  jmp _ears.renderLoop                 ; (renderLoop out of bra range)
+
+; _ears.emitChar -- emit one dialog char to the tilemap at cursor X, advancing
+; X by one entry (+1 more on right-margin wrap). '^' (invisible formatting) and
+; out-of-bounds cursors are skipped: no write, no advance. Touches only A + X
+; (preserves Y and SCUMM.scratch*), so the main render loop and the FF 07 slot
+; detour share it.
+_ears.emitChar:
+  .ACCU 16
+  .INDEX 16
+  ; Fold CP437 accented letters (0x80-0xA5) to base ASCII. The 96-glyph font
+  ; (fixed8x8, chars 0x20-0x7F) has no accented tiles, so é/ê would index
+  ; out-of-range garbage ("Mêlée" -> "M?l?e"). Fold to the base letter so the
+  ; word stays readable ("Melee"). Counts are unaffected (still one tile each),
+  ; so the scan/centering passes need no change.
+  cmp #$0080
+  bcc _emit.noAccent                   ; < 0x80: plain ASCII
+  cmp #$00A6
+  bcs _emit.noAccent                   ; >= 0xA6: outside fold table, leave as-is
+  phx
+  tax
+  lda.l _ears.accentFold - $80,x       ; base ASCII (byte table)
+  and #$00FF
+  plx
+_emit.noAccent:
+  cmp #$005E                           ; '^' -- invisible formatting char
+  beq _emit.done
   sec
-  sbc #$20
-  ; tilemap word: priority 1 + palette 7 + tile index
-  ora #$3C00
+  sbc #$20                             ; tile index = char - $20 (space = tile 0)
+  ora #$3C00                           ; priority 1 + palette 7
   cpx #DIALOG_TILEMAP_SIZE
-  bcs _ears.renderLoopTrap             ; bounds check: skip if past tilemap end
+  bcs _emit.done                       ; bounds: skip if past tilemap end
   sta.w SCUMM.dialogTilemap,x
   inx
   inx
   ; Right margin wrap: if column wrapped to 0, indent by 1 tile
   txa
   and #$003F                           ; mod 64 = byte offset within row
-  bne _ears.renderLoopTrap             ; not at start of row -- continue
+  bne _emit.done                       ; not at start of row -- continue
   inx                                  ; skip column 0
   inx
-  bra _ears.renderLoopTrap
+_emit.done:
+  rts
 
 _ears.renderEnd:
   .ACCU 16
@@ -17795,6 +17882,64 @@ _cvt.clearLoop:
   plx
   plp
   rtl
+
+; _ears.countSlotPrintable -- count printable chars in a string slot, for
+; centering/timer parity with emitChar. IN: A = slot id (low byte). OUT: A =
+; count. Preserves X and Y. Counts bytes that render (>= $09 and != '^'); stops
+; on null, on an $FF escape, or after SCUMM_STRING_MAX_LEN bytes. Uses
+; SCUMM.scratch3 as budget (dead in both scan passes); leaves scratch/scratch2.
+; Placed at section end so the big body doesn't split scanFF->scanDone's 8-bit
+; branch range; reached via jsr (absolute).
+_ears.countSlotPrintable:
+  .ACCU 16
+  .INDEX 16
+  phx
+  phy
+  and #$000F
+  xba                                   ; *256
+  lsr a                                 ; /2 = *128
+  clc
+  adc #SCUMM.stringTable & $FFFF        ; slot base (DBR = $7E)
+  tax                                   ; X = slot read pointer
+  ldy #0                                ; Y = printable count
+  lda #SCUMM_STRING_MAX_LEN
+  sta.w SCUMM.scratch3                  ; budget
+_csp.loop:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.scratch3
+  beq _csp.done                         ; budget exhausted
+  dec a
+  sta.w SCUMM.scratch3
+  lda.w $0000,x                         ; slot byte
+  and #$00FF
+  beq _csp.done                         ; null terminator
+  cmp #$00FF
+  beq _csp.done                         ; escape -- stop
+  inx                                   ; advance slot pointer
+  cmp #$0009
+  bcc _csp.loop                         ; < $09: non-printable, don't count
+  cmp #$005E
+  beq _csp.loop                         ; '^': invisible, don't count
+  iny                                   ; printable -- count it
+  bra _csp.loop
+_csp.done:
+  .ACCU 16
+  .INDEX 16
+  tya                                   ; A = count
+  ply
+  plx
+  rts
+
+; CP437 accented letters 0x80-0xA5 -> base ASCII, indexed by (char - 0x80).
+; Used by _ears.emitChar so é/ê/etc. render as their base letter instead of
+; out-of-range font tiles. Non-letter symbols (0x9B-0x9F) fold to space.
+_ears.accentFold:
+  .db $43,$75,$65,$61,$61,$61,$61,$63   ; 80-87  Ç ü é â ä à å ç -> C u e a a a a c
+  .db $65,$65,$65,$69,$69,$69,$41,$41   ; 88-8F  ê ë è ï î ì Ä Å -> e e e i i i A A
+  .db $45,$61,$41,$6F,$6F,$6F,$75,$75   ; 90-97  É æ Æ ô ö ò û ù -> E a A o o o u u
+  .db $79,$4F,$55,$20,$20,$20,$20,$20   ; 98-9F  ÿ Ö Ü ¢ £ ¥ ₧ ƒ -> y O U _ _ _ _ _
+  .db $61,$69,$6F,$75,$6E,$4E           ; A0-A5  á í ó ú ñ Ñ -> a i o u n N
 
 .ends
 

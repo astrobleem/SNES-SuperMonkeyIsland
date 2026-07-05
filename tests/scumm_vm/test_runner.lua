@@ -26,6 +26,8 @@ H.SYM = {
   SCUMM_pendingEgoY   = 0x7EF9A1,
   SCUMM_egoPositioned = 0x7EF9A3,
   SCUMM_bitVars       = 0x7EF5D7,    -- 256 bytes = 2048 bit-vars, 1 bit each
+  SCUMM_dialogCharCount = 0x7EABDC,  -- pre-scan printable count (word)
+  SCUMM_dialogTilemap = 0x7EABDE,    -- BG3 dialog tilemap buffer (2048 bytes)
   SCUMM_cache_base    = 0x7F6400,
   slot_status = 0, slot_number = 1, slot_where = 2, slot_freezeCount = 3,
   slot_pc = 4, slot_cachePtr = 6, slot_cacheLen = 8, slot_delay = 10,
@@ -1546,6 +1548,31 @@ function test_phaseB_stringOps_copyString()
   H.run_bytecode({0x27, 0x04, 0xA1, 0x01, 0x08, 0x01, 0x00, 0xA0})
   H.assert_eq(H.rd16(H.SYM.SCUMM_globalVars + 417*2), 0x42,
               "string[8][1] = 'B' after copyString")
+end
+
+function test_phaseB_print_ff07_insert_string()
+  -- FF 07 (insert string-slot) escape: a print whose entire message is a lone
+  -- FF 07 reference to a string slot must render that slot's text. This is the
+  -- "Deep in the Caribbean" / "The Island of Mêlée" title-card path. Before the
+  -- fix the renderer treated FF 07 like any 2-arg escape (skip, render nothing)
+  -- so the cards were blank: dialogCharCount stayed 0 and no tiles were written.
+  -- putCode slot 2 = "TEST" (4 printable chars)
+  H.run_bytecode({0x27, 0x01, 0x02, 0x54, 0x45, 0x53, 0x54, 0x00, 0xA0})
+  -- print actor=255, SO_TEXTSTRING = { FF 07 <slot 2 (16-bit LE)> } \0
+  H.run_bytecode({
+    0x14, 0xFF,
+    0x0F, 0xFF, 0x07, 0x02, 0x00, 0x00,
+    0xA0
+  })
+  -- Scan pass: the slot's 4 chars are counted (0 if FF 07 were skipped).
+  H.assert_eq(H.rd16(H.SYM.SCUMM_dialogCharCount), 4,
+              "FF07: dialogCharCount = slot length (4), not 0")
+  -- Render pass: the tilemap (cleared each print) now holds emitted tiles.
+  local nonzero = 0
+  for i = 0, 2046, 2 do
+    if H.rd16(H.SYM.SCUMM_dialogTilemap + i) ~= 0 then nonzero = 1; break end
+  end
+  H.assert_eq(nonzero, 1, "FF07: dialog tilemap has rendered tiles")
 end
 
 -- ============================================================================
@@ -3119,6 +3146,8 @@ local TESTS = {
     fn = test_phaseB_stringOps_setChar_roundtrip },
   { name = "stringOps: copyString preserves bytes",
     fn = test_phaseB_stringOps_copyString },
+  { name = "print: FF 07 insert-string renders slot text",
+    fn = test_phaseB_print_ff07_insert_string },
   -- Phase B.4: expression sub-ops
   { name = "expression: push 10, push 20, ADD = 30",
     fn = test_phaseB_expression_push_add },

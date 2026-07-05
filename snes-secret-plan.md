@@ -1168,6 +1168,84 @@ var 14 from the TAD side) + just enough soundKludge/iMUSE-queue semantics
 credits pages against the talkie timeline (title 14–88 s; montage tooling in
 build/talkie/).
 
+#### Current Frontier (2026-07-04, second session)
+
+**THE BIG ONE — objUntouchable helpers clobbered the SCUMM PC (fixed,
+`ff414a2`).** `objUntouchable_set/clear/test` used Y as the bitmap byte index
+(obj_id >> 3) and returned with it trashed; `op_setClass` and `op_ifClassOfIs`
+call them with Y = the interpreter PC. Every `setClass(obj, [32])` /
+class-32 check rewound the PC to obj>>3 and re-executed whatever bytes
+followed. Found via a read-hook fetch-trace on the script cache: room 38's
+lscr_200 wedged forever in a putActorInRoom→putActor→animateActor→setClass
+loop at `setClass(489,[32])` (489>>3 = 0x3D landed on a stray $FF that
+"terminated" the vararg), so `startScript(203)` — the ENTIRE old-man cutscene
+(walk-in, dialogue, Part One handoff) — never ran. The boot script alone has
+seven such setClass calls; collateral confirmed fixed by the fix: title-card
+copyright + "Created and Designed by Ron Gilbert" now render, cloud actors no
+longer flicker/vanish, and the game now progresses lookout dialogue → Part One
+card (room 96) → player control at the dock (room 33). The old "Bug 85"
+comment in op_putActorInRoom ("background scripts re-issue putActorInRoom
+every SCUMM tick") was this wedge being normalized — that black-band
+workaround should be re-examined now.
+
+**Bug 2 pacing mechanism fully decoded this session (still to implement):**
+1. `op_startScript`/`op_startObject` only queue the new slot; ScummVM runs the
+   child IMMEDIATELY via `runScriptNested` (script.cpp:344). Script 152 does
+   `startScript(32)` (which zeroes vars 250–258) *then* sets var251=167 — in
+   ScummVM 32 completes before the set (it has no breakHere); in our engine it
+   runs a tick later and ZEROES var251. Every credits pacing gate is
+   `isSoundRunning(var251)` → reads sound 0 → false → skip all waits.
+2. The waits themselves: `soundKludge(256, sound, 7)` = iMUSE
+   doCommand param=1 cmd=0 → `player->getParam(7) = getBeatIndex()`, result →
+   var56 (VAR_SOUNDRESULT) when `soundKludge(-1)` (processSound) drains the
+   queue. The credits wait `while var56 < N` for beat N of sid 167 —
+   beat-index pacing, NOT wall-clock. Fix design: nested startScript/
+   startObject execution (save/restore currentSlot around a recursive
+   fetch-loop call, ScummVM nesting cap 15), plus a soundKludge queue whose
+   drain answers the beat-index query from a per-song frame→beat table
+   generated from the source MIDI tempo map (only sid 167 needed for the
+   intro). NOTE: fixing (1) without (2) makes the intro HANG at the first
+   marker wait (var56 never advances) — land them together.
+   VAR_MUSIC_TIMER (var 14) already ticks 1/play-tick (scummvm.65816 ~724) —
+   the June "never updated" claim was stale; only the SE branch uses it.
+
+**New bugs surfaced by the fix (diagnosed, not yet fixed):**
+- **Dialog text renders garbled/overlapping** during the old-man dialogue
+  (readable but letters collide; see run3 dialogue_proof.png).
+- **Verb UI stays visible during cutscenes** — lscr_203 issues
+  `cursorCommand 04` (userput off) but the verb bar keeps rendering.
+- **Stale duplicate Guybrush sprite** during the walk-in (f8700: partial
+  second copy at the arch top while he walks below).
+- **Walk-behind masking not applying in room 38** — BG1 tilemap contains the
+  full title card / room art correctly; ZP01 exists (arch pillar + fire wall
+  masked in the extraction), but Guybrush draws fully in front of the wall at
+  the fire. (BG2 render at the title was empty — check whether ZP01 ever
+  reaches BG2 outside the verb area, and sprite-vs-BG2 priority.)
+- **Dock (room 33) entry: camera parked at x=880 with Guybrush at x=9**
+  (player off-screen — likely the scenic bar→ego pan that should open Part
+  One doesn't run; possibly another soundKludge/marker sync), and the BG
+  column streamer leaves the right half of the screen BLACK at that camera
+  position (streaming never filled VRAM for a camera that JUMPED instead of
+  panning). Exits DO work: clicking the archway walks Guybrush and changes
+  rooms (33 → 35 low street verified); the SCUMM bar door (obj 428, room x
+  696–736, walk-to 715,130) still needs a direct click test once the camera
+  bug is fixed.
+- **"THE" of "THE SECRET OF" hidden at the title** — the BG1 title-card
+  object draws completely and correctly (verified via tilemap render); the CLOUD ACTOR
+  sprites (actors 7/8, costume 59) drift across and cover it. Reference
+  clouds are past the text when the title appears — correct pacing may fix
+  the overlap on its own; otherwise needs cloud sprite priority/paths.
+- **Voice audio is an unimplemented feature, not a bug** — the UT talkie
+  strings carry FF 0A voice escapes (offsets into the CD speech file); the
+  engine skips them by design and no speech playback backend exists. Note
+  also: string escape FF 07 (insert string slot) is SKIPPED by the charset
+  renderer — the "Deep in the Caribbean" / "Island of Mêlée" cards print via
+  FF 07 and therefore show NO text at all.
+- **Room 38 play tick ~15 Hz** (var14 slope 0.25/frame) during the lookout —
+  the walk-slowness the user feels; re-measure now that the wedge (12 heavy
+  ops + a chore reseed per tick) is gone; renderActors/pathfinding perf item
+  remains (see Room 38 perf memory).
+
 #### Beach → Scumm Bar Critical Path (historical)
 
 | # | Blocker | Status | Notes |

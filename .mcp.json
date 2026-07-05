@@ -7,6 +7,10 @@
     "smi-workflow": {
       "command": "python",
       "args": ["tools/smi_workflow_server.py"]
+    },
+    "nexen": {
+      "command": "python",
+      "args": ["tools/nexen_mcp_bridge.py"]
     }
   }
 }

@@ -683,6 +683,13 @@ _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
+  ; Restore the room's CGRAM[29]: the NMI forced pal7 c1 white while the line
+  ; was up (dialog text color); flag the shadow dirty so VBlank re-flushes the
+  ; room palette over it. The shadow was never touched, so it holds the truth.
+  sep #$20
+  lda #1
+  sta.w SCUMM.cgramDirty
+  rep #$20
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
   stz.w SCUMM.globalVars,x
@@ -17131,30 +17138,10 @@ _rpd.noDialog:
   .ACCU 16
   .INDEX 16
 
-  ;--- Dialog palette DMA (every frame while dialog active) ---
-  rep #$20
-  lda.w SCUMM.dialogActive
-  beq _rpd.noDialogPal
-  ; Build dynamic palette from dialogColor (or default white)
-  lda.w SCUMM.dialogActive
-  beq _rpd.palWhite
-  lda.w SCUMM.dialogColor
-  and #$000F
-  bne _rpd.palLookup
-_rpd.palWhite:
-  .ACCU 16
-  .INDEX 16
-  lda #15                            ; default = white
-_rpd.palLookup:
-  .ACCU 16
-  .INDEX 16
-  asl a
-  tax
-  lda.l _scummTalkColorLUT,x
-  sta.w SCUMM.dialogPalColor         ; color 1 = talk color
-  stz.w SCUMM.dialogPalTrans         ; color 0 = transparent
-  ; Palette written to SCUMM.dialogPalColor above; NMI writes CGRAM directly.
-_rpd.noDialogPal:
+  ; Dialog text color is set directly in NMI: while SCUMM.dialogActive it forces
+  ; CGRAM[29] (BG3 pal7 c1, the monochrome font's body) to white — see
+  ; core/nmi.65816. The old computation here stashed a talk color into
+  ; SCUMM.dialogPalColor that nothing ever consumed (dead); removed.
   .ACCU 16
   .INDEX 16
 
@@ -17734,6 +17721,21 @@ _ears.renderChar:
 _ears.emitChar:
   .ACCU 16
   .INDEX 16
+  ; Fold CP437 accented letters (0x80-0xA5) to base ASCII. The 96-glyph font
+  ; (fixed8x8, chars 0x20-0x7F) has no accented tiles, so é/ê would index
+  ; out-of-range garbage ("Mêlée" -> "M?l?e"). Fold to the base letter so the
+  ; word stays readable ("Melee"). Counts are unaffected (still one tile each),
+  ; so the scan/centering passes need no change.
+  cmp #$0080
+  bcc _emit.noAccent                   ; < 0x80: plain ASCII
+  cmp #$00A6
+  bcs _emit.noAccent                   ; >= 0xA6: outside fold table, leave as-is
+  phx
+  tax
+  lda.l _ears.accentFold - $80,x       ; base ASCII (byte table)
+  and #$00FF
+  plx
+_emit.noAccent:
   cmp #$005E                           ; '^' -- invisible formatting char
   beq _emit.done
   sec
@@ -17928,6 +17930,16 @@ _csp.done:
   ply
   plx
   rts
+
+; CP437 accented letters 0x80-0xA5 -> base ASCII, indexed by (char - 0x80).
+; Used by _ears.emitChar so é/ê/etc. render as their base letter instead of
+; out-of-range font tiles. Non-letter symbols (0x9B-0x9F) fold to space.
+_ears.accentFold:
+  .db $43,$75,$65,$61,$61,$61,$61,$63   ; 80-87  Ç ü é â ä à å ç -> C u e a a a a c
+  .db $65,$65,$65,$69,$69,$69,$41,$41   ; 88-8F  ê ë è ï î ì Ä Å -> e e e i i i A A
+  .db $45,$61,$41,$6F,$6F,$6F,$75,$75   ; 90-97  É æ Æ ô ö ò û ù -> E a A o o o u u
+  .db $79,$4F,$55,$20,$20,$20,$20,$20   ; 98-9F  ÿ Ö Ü ¢ £ ¥ ₧ ƒ -> y O U _ _ _ _ _
+  .db $61,$69,$6F,$75,$6E,$4E           ; A0-A5  á í ó ú ñ Ñ -> a i o u n N
 
 .ends
 

@@ -1,0 +1,110 @@
+{
+  "_about": "A/B variant of r028_scummbar swapping the MT-32/Munt sample set for Bak Sangwoo's Tales of Phantasia BRRs. All mix/arrangement knobs identical to r028_scummbar.plan.json -- only the instrument set differs, so the A/B isolates timbre.",
+  "dialect": "terrific",
+  "title": "Scumm Bar (Phantasia)",
+  "composer": "M. Land / P. McConnell / C. Bajakian",
+  "arranger": "SMI pipeline",
+  "tempo": 30,
+  "timer": 167,
+  "zenlen": 192,
+  "note_scale": 2,
+  "grid": "32nd",
+  "grid_tolerance": 1,
+  "min_note_mml_ticks": 2,
+  "release_through_rests": true,
+  "release_rates": {
+    "lead": "E21",
+    "doubler": "E20",
+    "bass": "E23",
+    "pad": "E21",
+    "arp": "E20",
+    "ornament": "E20"
+  },
+  "drum_timing": "tick",
+  "loop": true,
+  "echo_length": 32,
+  "echo_feedback": -86,
+  "echo_volume": 36,
+  "echo_fir": "64 63 0 0 0 0 0 0",
+  "instruments": {
+    "lead": "ph_flute",
+    "doubler": "ph_horn",
+    "bass": "ph_bass",
+    "pad": "ph_organ",
+    "arp": "ph_organ",
+    "ornament": "ph_horn",
+    "drums": {
+      "drum_kick": "ph_kick",
+      "drum_conga_med": "ph_conga_short",
+      "drum_conga_hi": "ph_conga_long",
+      "drum_cabasa": "ph_maracas",
+      "drum_claves": "ph_maracas"
+    }
+  },
+  "drum_note_overrides": {
+    "62": "drum_conga_med",
+    "63": "drum_conga_hi",
+    "37": "drum_cabasa"
+  },
+  "assignments": [
+    {
+      "spc": 1,
+      "midi_ch": 1,
+      "reduction": "top",
+      "role": "lead",
+      "vol_scale": 1.16
+    },
+    {
+      "spc": 2,
+      "midi_ch": 3,
+      "reduction": "top",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 3,
+      "midi_ch": 3,
+      "reduction": "bottom",
+      "role": "pad",
+      "fold_below": 48,
+      "vol_scale": 0.57
+    },
+    {
+      "spc": 4,
+      "midi_ch": 4,
+      "reduction": "top",
+      "role": "doubler",
+      "vol_scale": 0.9
+    },
+    {
+      "spc": 5,
+      "midi_ch": 4,
+      "reduction": "bottom",
+      "role": "ornament",
+      "vol_scale": 0.9
+    },
+    {
+      "spc": 6,
+      "midi_ch": 2,
+      "reduction": "top",
+      "role": "bass",
+      "vol_scale": 1.18,
+      "echo": false
+    },
+    {
+      "spc": 7,
+      "midi_ch": 9,
+      "reduction": "drum_string",
+      "role": "drums",
+      "vol_scale": 1.15
+    }
+  ],
+  "drum_overflow_spc": 8,
+  "vibrato": {
+    "lead": "30,2,12"
+  },
+  "drum_vol": {
+    "drum_cabasa": 0.6
+  }
+}

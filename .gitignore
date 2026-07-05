@@ -20,3 +20,13 @@ tools/tad/
 
 # WLA-DX temp files left behind by interrupted assembler runs
 .wla*
+
+# Reference material / edited game-asset derivatives — DO NOT commit
+data/costume_transparency_edit/
+data/extra_pcms/
+data/Monkey Island SCUMM Bar/
+audio/samples.zip
+schwag/
+
+# bass assembler (vendored binary; download separately)
+tools/bass/

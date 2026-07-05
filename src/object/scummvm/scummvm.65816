@@ -11722,12 +11722,15 @@ scummvm.bit8Lut:
 .base BSL
 .section "scummvm objUntouchable helpers" free
 
-; A = obj_id (16-bit). Sets the untouchable bit. Trashes A, X, Y.
+; A = obj_id (16-bit). Sets the untouchable bit. Trashes A, X. Preserves Y.
 ; X = bit number (0..7) for `lda.l bit8Lut, X` (long indexed needs X).
-; Y = byte index for `lda.w bitmap, Y` (absolute via DBR).
+; Y is used internally as the byte index — callers include op handlers
+; where Y is the SCUMM PC, so it MUST be preserved (setClass(obj,[32])
+; rewound the interpreter to obj>>3 and wedged room 38's lscr_200).
 scummvm.objUntouchable_set:
   .ACCU 16
   .INDEX 16
+  phy
   cmp #SCUMM_MAX_OBJECTS
   bcs _ou.set_ret
   pha                              ; save obj_id
@@ -11747,12 +11750,14 @@ scummvm.objUntouchable_set:
   rep #$20
 .ACCU 16
 _ou.set_ret:
+  ply
   rtl
 
-; A = obj_id (16-bit). Clears the untouchable bit. Trashes A, X, Y.
+; A = obj_id (16-bit). Clears the untouchable bit. Trashes A, X. Preserves Y.
 scummvm.objUntouchable_clear:
   .ACCU 16
   .INDEX 16
+  phy
   cmp #SCUMM_MAX_OBJECTS
   bcs _ou.clear_ret
   pha
@@ -11773,13 +11778,15 @@ scummvm.objUntouchable_clear:
   rep #$20
 .ACCU 16
 _ou.clear_ret:
+  ply
   rtl
 
 ; A = obj_id (16-bit). Returns A=0 (Z) if clear, A!=0 (NZ) if set.
-; Trashes X, Y. A is bit value (or 0).
+; Trashes X. Preserves Y. A is bit value (or 0).
 scummvm.objUntouchable_test:
   .ACCU 16
   .INDEX 16
+  phy
   cmp #SCUMM_MAX_OBJECTS
   bcs _ou.test_oob
   pha
@@ -11797,8 +11804,11 @@ scummvm.objUntouchable_test:
   and.w SCUMM.objectUntouchable, y
   rep #$20
 .ACCU 16
+  ply
+  cmp #0                           ; re-establish Z from A (ply clobbered it)
   rtl
 _ou.test_oob:
+  ply
   lda #0
   rtl
 

@@ -681,6 +681,7 @@ _play.clearDialog:
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
   stz.w SCUMM.globalVars,x
+  jsl scummvm.stopVoice               ; talkie: cut speech when the line clears
   jsl scummvm.clearDialogTilemap
 _play.noDialog:
   .ACCU 16
@@ -17069,6 +17070,13 @@ scummvm.extractAndRenderString:
   plb
   rep #$31
 
+  ; --- Talkie voice: reset per-line capture, stop the previous line's voice
+  ; so lines never overlap (each new spoken line interrupts the last). ---
+  stz.w SCUMM.voiceOffsetLo
+  stz.w SCUMM.voiceOffsetHi
+  stz.w SCUMM.voiceCaptured
+  jsl scummvm.stopVoice
+
   ; --- Clear dialog tilemap buffer (fill with $0000) ---
   phx
   ldx #0
@@ -17118,7 +17126,25 @@ _ears.scanFF:
   beq _ears.scanLoop
   cmp #8
   beq _ears.scanDone                   ; newline -- stop counting (first line only)
-  ; all other sub-codes (incl. $0A talkie): skip 2 arg bytes
+  ; $0A = talkie voice escape. The monster.sou VCTL offset is split across the
+  ; first two FF 0A groups: bits 0-15 = group1 args (LE word), bits 16-31 =
+  ; group2 args. Capture the first two groups' arg-words; skip the rest.
+  cmp #$0A
+  bne _ears.scanSkip2
+  lda.w SCUMM.voiceCaptured
+  cmp #2
+  bcs _ears.scanSkip2                  ; already have both words
+  lda [tmp],y                          ; A = arg1 | arg2<<8 (LE word)
+  ldx.w SCUMM.voiceCaptured
+  bne _ears.scanVoiceHi
+  sta.w SCUMM.voiceOffsetLo
+  bra _ears.scanVoiceInc
+_ears.scanVoiceHi:
+  sta.w SCUMM.voiceOffsetHi
+_ears.scanVoiceInc:
+  inc.w SCUMM.voiceCaptured
+_ears.scanSkip2:
+  ; all remaining sub-codes carry 2 arg bytes
   iny
   iny
   bra _ears.scanLoop
@@ -17503,6 +17529,17 @@ _ears.renderEnd:
   sta.w SCUMM.dialogTimer
   lda #1
   sta.w SCUMM.dialogDmaPending
+
+  ; --- Talkie voice: if this line carried a FF 0A offset, play the speech.
+  ; Voice rides the MSU-1 audio channel, which is free only when the music
+  ; backend is TAD (musicMode 0); in MSU-1 music mode the channel is busy. ---
+  lda.w SCUMM.voiceCaptured
+  cmp #2
+  bcc _ears.noVoice                    ; fewer than 2 groups → no valid offset
+  lda.w SCUMM.musicMode
+  bne _ears.noVoice                    ; MSU-1 music owns the audio channel
+  jsl scummvm.playVoiceForOffset
+_ears.noVoice:
 
   plb
   plx
@@ -20300,6 +20337,144 @@ scummvm.loadDialogFont:
 .section "ObjRoomTable" superfree
 .base BSL
 .include "build/obj_room_table.inc"
+.ends
+
+;===================================================================
+; Talkie voice (MSU-1 speech) — offset table + playback.
+;
+; VoiceOffsetTable: u32 LE count, then count ascending u32 LE offsets
+; (the monster.sou VCTL offsets, one per voice line). Built by
+; tools/audio/build_speech_msu.py alongside SuperMonkeyIsland-<track>.pcm.
+; The line's rank in this table is its MSU track number minus VOICE_TRACK_BASE.
+;===================================================================
+.define VOICE_TRACK_BASE 1000
+
+.section "VoiceOffsetTable" superfree
+.base BSL
+VoiceOffsetTable:
+.incbin "data/voice_table.bin"
+.ends
+
+.section "ScummVMVoice" superfree
+.base BSL
+
+; scummvm.stopVoice — mute + stop the MSU-1 audio channel (voice).
+; Only meaningful in TAD music mode; harmless otherwise. A8/16 agnostic on
+; entry; preserves nothing of interest. rtl.
+scummvm.stopVoice:
+  php
+  sep #$20
+  .ACCU 8
+  lda #MSU_VOLUME_MUTE
+  sta.l MSU_VOLUME
+  lda #0
+  sta.l MSU_CONTROL
+  plp
+  rtl
+
+; scummvm.playVoiceForOffset — binary-search VoiceOffsetTable for the 32-bit
+; offset in (SCUMM.voiceOffsetHi:SCUMM.voiceOffsetLo); on a hit, play MSU-1
+; track (VOICE_TRACK_BASE + index) once, at full volume. No-op on a miss
+; (unknown line → silence, never a wrong clip). rtl.
+; Precondition: DBR = $7E (the only caller, extractAndRenderString, sets it),
+; so SCUMM.* use .w; the ROM table is read with long (.l) addressing.
+scummvm.playVoiceForOffset:
+  php
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  phx
+
+  ; lo = 0, hi = count (exclusive). Dedicated voiceSrch* WRAM, NOT the shared
+  ; SCUMM.scratch* — this runs in main-loop context and any reentrant use of
+  ; the general scratch would corrupt lo/hi/mid mid-search.
+  stz.w SCUMM.voiceSrchLo
+  lda.l VoiceOffsetTable                 ; count low word (< 4393, hi word 0)
+  sta.w SCUMM.voiceSrchHi
+
+_pv.loop:
+  .ACCU 16
+  .INDEX 16
+  lda.w SCUMM.voiceSrchLo                ; lo
+  cmp.w SCUMM.voiceSrchHi                ; hi
+  bcs _pv.notFound                       ; lo >= hi → not found
+  ; mid = (lo + hi) >> 1
+  clc
+  adc.w SCUMM.voiceSrchHi
+  lsr a                                  ; lo+hi < 2^16 here, so lsr = /2
+  sta.w SCUMM.voiceSrchMid               ; mid
+  ; entry byte offset = 4 (skip count) + mid*4
+  asl a
+  asl a                                  ; mid*4
+  clc
+  adc #4                                 ; + count header
+  tax                                    ; X = byte offset into table
+  ; compare (entryHi:entryLo) vs (keyHi:keyLo), high word first
+  lda.l VoiceOffsetTable+2,x             ; entry high word
+  cmp.w SCUMM.voiceOffsetHi
+  bne _pv.hiDiff
+  lda.l VoiceOffsetTable,x               ; entry low word
+  cmp.w SCUMM.voiceOffsetLo
+  beq _pv.found
+  ; low words differ, high equal: carry from cmp gives <(bcc) or >(bcs)
+  bcc _pv.less
+  bra _pv.greater
+_pv.hiDiff:
+  bcc _pv.less                           ; entryHi < keyHi
+  bra _pv.greater                        ; entryHi > keyHi
+_pv.less:
+  ; entry < key → lo = mid + 1
+  lda.w SCUMM.voiceSrchMid
+  inc a
+  sta.w SCUMM.voiceSrchLo
+  bra _pv.loop
+_pv.greater:
+  ; entry > key → hi = mid
+  lda.w SCUMM.voiceSrchMid
+  sta.w SCUMM.voiceSrchHi
+  bra _pv.loop
+
+_pv.found:
+  ; track = VOICE_TRACK_BASE + mid, written as one 16-bit store to the
+  ; MSU_TRACK word register ($2004 lo / $2005 hi).
+  lda.w SCUMM.voiceSrchMid
+  clc
+  adc #VOICE_TRACK_BASE
+  sta.l MSU_TRACK                        ; 16-bit A → $2004/$2005
+  sep #$20
+  .ACCU 8
+  ; wait for the audio channel to be ready
+- lda.l MSU_STATUS
+  and #MSU_STATUS_AUDIO_BUSY
+  bne -
+  ; play once (no REPEAT)
+  lda #MSU_CONTROL_PLAY
+  sta.l MSU_CONTROL
+  ; missing PCM → AUDIO_ERROR: leave muted/stopped (graceful silence)
+  lda.l MSU_STATUS
+  and #MSU_STATUS_AUDIO_ERROR
+  beq +
+    lda #MSU_VOLUME_MUTE
+    sta.l MSU_VOLUME
+    lda #0
+    sta.l MSU_CONTROL
+    bra _pv.done
++
+  lda #MSU_VOLUME_FULL
+  sta.l MSU_VOLUME
+  bra _pv.done
+
+_pv.notFound:
+  .ACCU 16
+  .INDEX 16
+_pv.done:
+  rep #$30
+  .ACCU 16
+  .INDEX 16
+  plx
+  plp
+  rtl
+
 .ends
 
 ;===================================================================

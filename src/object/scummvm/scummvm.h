@@ -213,7 +213,21 @@ SCUMM._lacSnapLastHead    ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot la
 SCUMM._lacSnapLastPic     ds SCUMM_MAX_RENDER_SLOTS ;pre-clear snapshot: slot lastPic
 SCUMM.vramSlotActor       ds SCUMM_MAX_RENDER_SLOTS ;actor whose palette+CHR the slot DMA actually loaded
 SCUMM.vramSlotCostume     ds SCUMM_MAX_RENDER_SLOTS ;costume whose palette+CHR the slot DMA actually loaded
-SCUMM._cgramHdmaReserve   ds 45   ;UNUSED remainder of the old cgramHdmaTable reserve
+; Talkie voice capture (carved from the cgramHdma reserve — total stays 45
+; bytes so downstream ramsection addresses hold). The FF 0A string escape
+; carries the monster.sou VCTL offset split across the first two escape
+; groups; extractAndRenderString captures it here, renderEnd plays it.
+SCUMM.voiceOffsetLo       dw      ;bits 0-15 of the monster.sou offset
+SCUMM.voiceOffsetHi       dw      ;bits 16-31
+SCUMM.voiceCaptured       dw      ;count of FF 0A groups captured this string (>=2 = have offset)
+; playVoiceForOffset binary-search state. MUST be dedicated (not the shared
+; SCUMM.scratch*): the search runs in main-loop context and an NMI firing
+; mid-search clobbers scratch/scratch2/scratch3, corrupting lo/hi/mid and
+; making the search miss intermittently.
+SCUMM.voiceSrchLo         dw      ;search lower bound
+SCUMM.voiceSrchHi         dw      ;search upper bound (exclusive)
+SCUMM.voiceSrchMid        dw      ;current midpoint
+SCUMM._cgramHdmaReserve   ds 33   ;UNUSED remainder of the old cgramHdmaTable reserve
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)

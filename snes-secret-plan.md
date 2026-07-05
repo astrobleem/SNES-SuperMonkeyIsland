@@ -1168,6 +1168,63 @@ var 14 from the TAD side) + just enough soundKludge/iMUSE-queue semantics
 credits pages against the talkie timeline (title 14–88 s; montage tooling in
 build/talkie/).
 
+#### Talkie voice backend (2026-07-05) — MSU-1 speech
+
+**Added the CD-talkie speech backend.** Voice rides the MSU-1 PCM audio
+channel, which is free whenever the music backend is TAD (`musicMode == 0`,
+the default) — music on SPC700, speech on MSU-1, no conflict.
+
+Pipeline (`tools/audio/build_speech_msu.py`, monster.sou is gitignored, the
+1.7 GB of pcm lands in the already-gitignored distribution/):
+- Parse `data/monkeypacks/talkie/monster.sou` (196 MB): "SOU " header then,
+  per line, a VCTL chunk (8-byte header, big-endian size) immediately
+  followed by a Creative Voice (VOC) file. 4393 lines, all 22 222 Hz mono.
+- Each line → `distribution/SuperMonkeyIsland-<track>.pcm` (44.1 kHz s16
+  stereo, MSU1 header, non-looping), `track = 1000 + rank` where rank is the
+  line's position when the VCTL offsets are sorted ascending.
+- Emit `data/voice_table.bin` (committed, 17 KB, `.incbin`'d into the ROM):
+  u32 count then `count` ascending u32 VCTL offsets. The engine binary-searches
+  the FF 0A offset in it; hit index + 1000 = MSU track.
+
+Engine (`scummvm.65816`):
+- The FF 0A string escape carries the VCTL offset split across the first two
+  escape groups: `bits 0-15 = group1 args (LE)`, `bits 16-31 = group2 args`
+  (verified: the lookout "Hi!" line → 0x05BC5154, which is a VCTL chunk).
+  `extractAndRenderString`'s pre-scan captures the first two groups into
+  `SCUMM.voiceOffsetLo/Hi` (WRAM carved from the unused cgramHdma reserve, no
+  ramsection shift).
+- At renderEnd, if an offset was captured and `musicMode == 0`,
+  `scummvm.playVoiceForOffset` binary-searches `VoiceOffsetTable` and plays MSU
+  track `1000 + index` once at full volume (miss → silence, never a wrong
+  clip; AUDIO_ERROR → graceful mute).
+- `scummvm.stopVoice` cuts the channel at each new line and on dialog-clear so
+  lines never overlap.
+
+Proof: recorded DSP audio of the intro (voice_capture.wav): title music
+4–99 s, dead silence 100–140 s (the canonically-silent approach), then voice
+energy 140–182 s across the old-man dialogue. Decisive: a write-hook on
+MSU_TRACK ($2004/$2005) during free-running execution captured the exact
+tracks played — the old-man dialogue lines resolve to consecutive
+3248, 3249, 3250, 3251, 3252, 3253, 3254 (= 1000 + the offsets' ranks in the
+table), i.e. each spoken line plays its own correct clip in order. VM tests
+182/182; bank 0 71.6 %.
+
+Debug note: the binary-search state lives in dedicated `SCUMM.voiceSrch*`
+WRAM, not the shared `SCUMM.scratch*`. Also: to read a search result from a
+Mesen probe, hook the MSU_TRACK WRITE (value = the byte written) during
+free-running — do NOT read `scratch3`/`mid` after `run_frames`/`run_until`
+returns (the general scratch is reused by later opcodes, and run_until pauses
+desync the pairing, both of which made an earlier harness report bogus
+indices while the engine was correct).
+
+Known follow-ups: (1) a 0.01 s (inaudible) line fires once at boot (f196,
+offset 0x002DC473) — a real but empty table entry from some early string;
+harmless. (2) voice currently only plays in TAD music mode; in MSU-1 music
+mode the channel is busy, so speech is skipped (single MSU audio stream —
+would need music-on-SPC while voice-on-MSU, i.e. force musicMode 0 during
+talk, or mix). (3) the pipeline is a manual step (heavy), not wired into the
+default make — same policy as the MSU-1 music pcms.
+
 #### Current Frontier (2026-07-04, second session)
 
 **THE BIG ONE — objUntouchable helpers clobbered the SCUMM PC (fixed,

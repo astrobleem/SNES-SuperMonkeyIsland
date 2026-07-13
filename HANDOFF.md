@@ -105,9 +105,13 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
 5. **Verb UI stays visible during cutscenes** (lscr_203 issues userput off;
    verb bar keeps rendering).
 6. **Stale duplicate Guybrush sprite** during the room-38 walk-in.
-7. **"THE" of "THE SECRET OF" hidden by cloud actors at the title** — correct
-   intro pacing (just landed) may have fixed this on its own; RE-CHECK with a
-   screenshot before doing any work.
+7. ~~"THE" of "THE SECRET OF" hidden by cloud actors at the title~~ FIXED
+   2026-07-12 (`cd5efd5`). Root cause was NOT pacing: the room-10 clouds are
+   ignoreBoxes actors that lscr_202 drifts left via per-tick putActor, but
+   op_putActor snapped every was-visible actor to the nearest walkbox edge,
+   so a cloud parked on top of "THE" once its x left the box range. Gated the
+   adjustActorPos snap on actorIgnoreBoxes (matches ScummVM adjustXYToBeInBox).
+   Proven: x-trace drifts monotonically off the left edge; cloud_drift.png.
 8. **Room 38 play tick was ~15 Hz** (walk feels slow) — measured WITH the
    now-fixed lscr_200 wedge; re-measure first.
 

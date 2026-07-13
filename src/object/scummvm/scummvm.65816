@@ -6701,6 +6701,21 @@ _opa.inRoom:
 _opa.notMoving:
   rep #$20
   .ACCU 16
+  ; ScummVM adjustXYToBeInBox returns the literal coords for ignoreBoxes
+  ; actors (actor.cpp: `if (_ignoreBoxes) { abr.x = dstX; ... return; }`).
+  ; Without this gate the room-10 cloud actors (ignoreBoxes, drifting left
+  ; via putActor each tick) get re-snapped to walkbox edges once their x
+  ; leaves the box range — one cloud visibly parks at the box edge instead
+  ; of floating off screen.
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = actor index
+  tay
+  lda.w SCUMM.actorIgnoreBoxes,y
+  and #$00FF
+  bne _opa.restore                   ; ignoreBoxes → keep literal coords
   ; adjustActorPos snap (only when WAS visible)
   lda.w SCUMM.actors.x,x
   sta.w SCUMM.bwpTargetX

@@ -1269,14 +1269,27 @@ def batch_convert(input_dir, output_dir, room_filter=None,
 
     elapsed = time.time() - t0
 
-    # Write manifest
+    # Write manifest. Merge with the existing one so a --rooms subset run (or
+    # a run where a room fails) doesn't wipe every other room's entry —
+    # rom_pack_data.py packs exactly what the manifest lists, so a truncated
+    # manifest silently breaks the ROM build.
+    manifest_path = output_dir / "manifest.json"
+    merged = {}
+    if manifest_path.exists():
+        try:
+            with open(manifest_path) as f:
+                merged = {r['room_id']: r for r in json.load(f).get('rooms', [])}
+        except (json.JSONDecodeError, KeyError) as e:
+            log.warning("Existing manifest unreadable (%s); rewriting fresh", e)
+    for r in results:
+        merged[r['room_id']] = r
+    all_rooms = [merged[k] for k in sorted(merged)]
     manifest = {
-        'total_rooms': len(rooms),
+        'total_rooms': len(all_rooms),
         'converted': len(results),
         'failed': failures,
-        'rooms': results,
+        'rooms': all_rooms,
     }
-    manifest_path = output_dir / "manifest.json"
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f, indent=2)
 

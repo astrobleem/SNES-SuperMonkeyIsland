@@ -62,23 +62,13 @@ core.nmi.play:
 	sta.l MDMAEN
 _nmi.noCgramFlush:
 
-	;--- Dialog text color: force BG3 pal7 c1 (CGRAM word 29 = CGADD $1D) to a
-	;    readable white while dialog is on screen. The dialog font
-	;    (fixed8x8.gfx_font) is monochrome — its glyph body is color 1 — and the
-	;    room palette leaves CGRAM[29] at the scene color (black during the
-	;    mountain pan) → invisible text. Written here, AFTER the cgramDirty
-	;    shadow flush, so it wins for the frame without touching the shadow's
-	;    room value; _play.clearDialog sets cgramDirty to restore that value when
-	;    the line clears. A is 8-bit here (backdrop lock above left it sep'd).
-	lda.w SCUMM.dialogActive              ;dw, but low byte is $01 active / $00 clear
-	beq +
-	  lda #$1D                            ;CGADD = pal7 c1 (word index 29)
-	  sta.l CGADD
-	  lda #$FF                            ;$7FFF white — low byte
-	  sta.l CGDATA
-	  lda #$7F                            ;high byte
-	  sta.l CGDATA
-+
+	;--- Dialog text color lives in the CGRAM shadow (word 29, BG3 pal7 c1):
+	;    _ears.renderEnd writes scummTalkColorLUT[dialogColor] there and flags
+	;    cgramDirty, and the room converter reserves art row 1 c13-c15 (words
+	;    29-31) so no art pixel shares the slot. The old per-frame white-force
+	;    here recolored every room pixel that shared CGRAM[29] whenever a line
+	;    was up (title logo chewed apart during intro credits, white blocks in
+	;    the mountain pan). ---
 
     lda.w GLOBAL.HDMA.CHANNEL.ENABLE        ;check which hdma channels need to be activated
     sta.l HDMAEN        ;set hdma channels and disable dma channel

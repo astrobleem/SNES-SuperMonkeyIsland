@@ -62,6 +62,13 @@ TRANS_COLOR = (0, 0, 0)  # color 0 in every sub-palette
 
 # Reserved palettes:
 #   - Pal 0: SCUMM UI (cursor, setPalColor idx 0-15 targets). Scripts write here.
+#   - Pal 1 c13-c15 (CGRAM words 29-31): dialog font colors, engine-owned.
+#     The BG3 dialog font renders 2bpp with palette 7 = CGRAM 28-31, which
+#     physically overlaps 4bpp art row 1 c12-c15. The engine writes the SCUMM
+#     talk color into word 29 at render time (scummvm.65816 _ears.renderEnd),
+#     so art must never quantize into words 29-31 (word 28 stays art-usable:
+#     it is 2bpp c0 = transparent, the font never shows it). Enforced by
+#     _carve_dialog_palette below.
 #   - Pal 6: verb highlight font (c1-c3) + universal art colors (c4-c15).
 #   - Pal 7: verb normal font (c1-c3) + universal art colors (c4-c15).
 # The HDMA CGRAM double-buffering scheme was removed 2026-04-18; pal6/pal7
@@ -119,6 +126,76 @@ PAL7_VERB_PLUS_UNIVERSAL = [
     0x0000,  # c14 black (dup c0)
     0x0000,  # c15 black (dup c0)
 ]
+
+
+def _carve_dialog_palette(raw_palettes, unique_indexed, pal_ids,
+                          n_fixed=2, keep=12):
+    """Reserve c13-c15 (CGRAM words 29-31) of one art palette for dialog text.
+
+    Picks the mutable art palette with the fewest assigned tiles (least error
+    impact), re-clusters its used colors down to `keep` usable slots via
+    weighted Ward merges, remaps that palette's tile pixel indices in place,
+    and zeroes the reserved slots. The caller must route the returned
+    quantizer palette id to OUTPUT ROW 1 so the reserved slots land on CGRAM
+    words 29-31 (the BG3 2bpp dialog font's c1-c3).
+
+    Args:
+        raw_palettes: quantizer output palettes (list of 16-color lists),
+            fixed palettes first. Mutated in place.
+        unique_indexed: (M, 8, 8) uint8 palette-relative indices. Mutated.
+        pal_ids: (M,) uint8 quantizer palette assignment per tile.
+
+    Returns the quantizer palette id that was carved.
+    """
+    n_art = len(raw_palettes) - n_fixed
+    counts = [int((pal_ids == q).sum()) for q in range(n_fixed, n_fixed + n_art)]
+    dlg = n_fixed + int(np.argmin(counts))
+
+    mask = (pal_ids == dlg)
+    pal = list(raw_palettes[dlg])
+    if mask.any():
+        usage = np.bincount(unique_indexed[mask].ravel(),
+                            minlength=16).astype(np.float64)
+    else:
+        usage = np.zeros(16)
+
+    def _comp(v):
+        return np.array([v & 0x1F, (v >> 5) & 0x1F, (v >> 10) & 0x1F],
+                        dtype=np.float64)
+
+    # One cluster per used color slot (slot 0 = transparent, untouchable).
+    clusters = [{'idx': [i], 'w': usage[i], 'c': _comp(pal[i])}
+                for i in range(1, 16) if usage[i] > 0]
+
+    # Ward merges until the palette fits in `keep` usable colors.
+    while len(clusters) > keep:
+        best = None
+        for a in range(len(clusters)):
+            for b in range(a + 1, len(clusters)):
+                ca, cb = clusters[a], clusters[b]
+                cost = (ca['w'] * cb['w'] / (ca['w'] + cb['w'])
+                        * float(((ca['c'] - cb['c']) ** 2).sum()))
+                if best is None or cost < best[0]:
+                    best = (cost, a, b)
+        _, a, b = best
+        ca, cb = clusters[a], clusters[b]
+        w = ca['w'] + cb['w']
+        ca['c'] = (ca['c'] * ca['w'] + cb['c'] * cb['w']) / w
+        ca['w'] = w
+        ca['idx'].extend(cb['idx'])
+        del clusters[b]
+
+    lut = np.zeros(16, dtype=np.uint8)
+    new_pal = [pal[0]] + [0x0000] * 15
+    for slot, cl in enumerate(clusters, start=1):
+        comp = np.clip(np.round(cl['c']), 0, 31).astype(np.int32)
+        new_pal[slot] = int(comp[0] | (comp[1] << 5) | (comp[2] << 10))
+        for old in cl['idx']:
+            lut[old] = slot
+    if mask.any():
+        unique_indexed[mask] = lut[unique_indexed[mask]]
+    raw_palettes[dlg] = new_pal
+    return dlg
 
 
 # ---------------------------------------------------------------------------
@@ -955,19 +1032,28 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         unique_raw, num_palettes=ART_SUBPALETTES,
         fixed_palettes=fixed_palettes
     )
+    # Carve the dialog font slots (CGRAM words 29-31) out of one art palette;
+    # that palette MUST land at output row 1 (CGRAM 16-31) so the reserved
+    # slots sit under the BG3 2bpp dialog font's c1-c3.
+    raw_palettes = [list(p) for p in raw_palettes]
+    dlg_qid = _carve_dialog_palette(raw_palettes, unique_indexed,
+                                    raw_unique_pal_ids)
+
     # Remap quantizer pal_ids (0..6) -> output pal_ids (0..7 with pal0 reserved)
     # Quantizer: 0 = fixed_0 (pal6), 1 = fixed_1 (pal7), 2..6 = mutable art.
-    # Output:    0 = UI empty, 1..5 = art, 6 = pal6, 7 = pal7.
-    #   quantizer 0 -> output 6
-    #   quantizer 1 -> output 7
-    #   quantizer 2..6 -> output 1..5
-    remap = np.array([6, 7, 1, 2, 3, 4, 5], dtype=np.uint8)
+    # Output:    0 = UI empty, 1..5 = art (carved palette first), 6/7 = fixed.
+    art_order = [dlg_qid] + [q for q in range(2, 2 + ART_SUBPALETTES)
+                             if q != dlg_qid]
+    remap = np.zeros(2 + ART_SUBPALETTES, dtype=np.uint8)
+    remap[0], remap[1] = 6, 7
+    for out_id, qid in enumerate(art_order, start=1):
+        remap[qid] = out_id
     unique_pal_ids = remap[raw_unique_pal_ids]
     empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
     palettes = (
-        [empty_pal]                 # pal 0 (UI)
-        + list(raw_palettes[2:])    # pal 1-5 (art)
-        + list(raw_palettes[0:2])   # pal 6, pal 7 (verb + universal)
+        [empty_pal]                             # pal 0 (UI)
+        + [raw_palettes[q] for q in art_order]  # pal 1-5 (art; pal 1 carved)
+        + list(raw_palettes[0:2])               # pal 6, pal 7 (verb + universal)
     )
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))

@@ -683,13 +683,9 @@ _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
-  ; Restore the room's CGRAM[29]: the NMI forced pal7 c1 white while the line
-  ; was up (dialog text color); flag the shadow dirty so VBlank re-flushes the
-  ; room palette over it. The shadow was never touched, so it holds the truth.
-  sep #$20
-  lda #1
-  sta.w SCUMM.cgramDirty
-  rep #$20
+  ; CGRAM word 29 is engine-owned (converter reserves art row 1 c13-c15), so
+  ; there is nothing to restore when the line clears; the color just sits
+  ; there until the next line rewrites it.
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
   stz.w SCUMM.globalVars,x
@@ -17138,10 +17134,9 @@ _rpd.noDialog:
   .ACCU 16
   .INDEX 16
 
-  ; Dialog text color is set directly in NMI: while SCUMM.dialogActive it forces
-  ; CGRAM[29] (BG3 pal7 c1, the monochrome font's body) to white — see
-  ; core/nmi.65816. The old computation here stashed a talk color into
-  ; SCUMM.dialogPalColor that nothing ever consumed (dead); removed.
+  ; Dialog text color: _ears.renderEnd writes scummTalkColorLUT[dialogColor]
+  ; into CGRAM shadow word 29 (BG3 pal7 c1, converter-reserved for dialog)
+  ; and flags cgramDirty — no NMI palette forcing needed.
   .ACCU 16
   .INDEX 16
 
@@ -17181,7 +17176,8 @@ _rpd.findSlot:
 
 ; SCUMM color index → BGR555 lookup table (EGA-standard approximation)
 ; BGR555: B[14:10] G[9:5] R[4:0]
-_scummTalkColorLUT:
+; Global label: consumed cross-section by _ears.renderEnd (dialog text color).
+scummTalkColorLUT:
   .dw $0000             ; 0: black
   .dw $5400             ; 1: blue        (R=0,  G=0,  B=21)
   .dw $02A0             ; 2: green       (R=0,  G=21, B=0)
@@ -17774,6 +17770,19 @@ _ears.renderEnd:
     lda #15
     sta.w SCUMM.dialogColor
 +
+  ; --- Dialog text color → CGRAM word 29 (BG3 pal7 c1) ---
+  ; The room converter reserves art row 1 c13-c15 (CGRAM words 29-31) for
+  ; dialog, so this slot is engine-owned. Write the shadow and flag it dirty;
+  ; the NMI flush lands the color in the same VBlank as the tilemap DMA.
+  and #$000F
+  asl a
+  tax
+  lda.l scummTalkColorLUT,x
+  sta.l BWRAM_CGRAM_SHADOW + 29 * 2
+  sep #$20
+  lda #1
+  sta.w SCUMM.cgramDirty
+  rep #$20
   ; --- Set dialog state ---
   lda #1
   sta.w SCUMM.dialogActive

@@ -798,18 +798,21 @@ def _load_room_objects(room_dir, bg_width, bg_height):
     return result
 
 
-def _bake_object_into_bg(bg_rgb, obj_info, combined_zp):
-    """Blit a foreground object's opaque pixels into bg_rgb and OR its z-plane
-    into combined_zp (both at the object's room position). In-place.
+def _bake_object_into_bg(bg_rgb, obj_info, combined_zp=None, baked_mask=None):
+    """Blit a foreground object's opaque pixels into bg_rgb. In-place.
 
-    Mirrors the original's drawObject: the object's art becomes part of the
-    static scene and its z-plane part of the room foreground. combined_zp is
-    (height_px, width_px) uint8; obj z-plane marks foreground pixels.
+    Mirrors the original's drawObject blit into the background bitmap: the
+    object's art becomes part of the static scene. If combined_zp is provided
+    ((height_px, width_px) uint8), the object's z-plane is also OR'd into it;
+    it is left None by convert_room so object z-planes do NOT reach the BG2 mask
+    (that mask is calibrated for the game-area layout — see convert_room). If
+    baked_mask is provided (bool array), every opaque pixel written is recorded
+    there so callers can exclude baked tiles from the room-level mask.
     """
     ox, oy = obj_info['x'], obj_info['y']
     ow, oh = obj_info['width'], obj_info['height']
     obj_rgb = obj_info['rgb']
-    zp = obj_info['zplane']  # (oh, ow) uint8, may be None (guarded by caller)
+    zp = obj_info['zplane']  # (oh, ow) uint8, may be None
     bh, bw = bg_rgb.shape[0], bg_rgb.shape[1]
 
     for ly in range(oh):
@@ -823,7 +826,9 @@ def _bake_object_into_bg(bg_rgb, obj_info, combined_zp):
             r, g, b = int(obj_rgb[ly, lx, 0]), int(obj_rgb[ly, lx, 1]), int(obj_rgb[ly, lx, 2])
             if (r, g, b) not in SCUMM_TRANS_COLORS:
                 bg_rgb[ry, rx] = obj_rgb[ly, lx]
-            if zp[ly, lx]:
+                if baked_mask is not None:
+                    baked_mask[ry, rx] = True
+            if combined_zp is not None and zp is not None and zp[ly, lx]:
                 combined_zp[ry, rx] = 1
 
 
@@ -1052,26 +1057,43 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     # Load object images for this room
     obj_infos = _load_room_objects(room_dir, width_px, height_px)
 
-    # Objects that carry a z-plane are static foreground scenery (walk-behind
-    # art, the title logo, ...). In the original, drawObject blits them into
-    # BOTH the background bitmap and the room z-buffer, so they occlude actors.
-    # We reproduce that by baking them into the background here and merging
-    # their z-plane into the room foreground (→ BG2 priority-1, which masks the
-    # priority-2 actor sprites). They are NOT emitted as dynamic patches.
-    # Objects without a z-plane stay dynamic BG1 patches (interactive/animated).
+    # Foreground-scenery objects (those carrying a z-plane) are baked into the
+    # background bitmap as static art. Baking (vs. leaving them as dynamic
+    # patches) keeps the tile budget down — patches ADD composited tiles, and
+    # rooms like 12/28 overflow the 2048 tile-ID field without baking.
+    #
+    # Two things that must NOT happen to baked art:
+    #  1. Its own z-plane is never merged into the BG2 mask (the object z-plane
+    #     path that mangled the title logo — see below).
+    #  2. Any tile it lands in is EXCLUDED from the room-level BG2 mask. The
+    #     engine's BG2 mask is calibrated for the standard game-area layout
+    #     (yScrollBG2=110, +13-row upload, verb bar below scanline 144). The
+    #     title room (10) is full-screen; its room z-plane (mountain summit)
+    #     overlaps the baked logo, so without this exclusion the logo tiles get
+    #     dragged onto the misaligned BG2 → doubled letters + black bar. Baked
+    #     foreground art is not walk-behind scenery, so dropping it from the
+    #     mask is correct regardless of layout.
     fg_objs = [o for o in obj_infos if o.get('zplane') is not None]
     patch_objs = [o for o in obj_infos if o.get('zplane') is None]
 
     combined_zp = None
     if fg_objs:
-        combined_zp = np.zeros((height_px, width_px), dtype=np.uint8)
+        baked_px = np.zeros((height_px, width_px), dtype=bool)
+        for obj in fg_objs:
+            _bake_object_into_bg(bg_rgb, obj, baked_mask=baked_px)
+        # Load the room z-plane (if any) and clear every tile touched by baked
+        # foreground art, at 8x8 tile granularity.
         zp01_path = room_dir / "zplane_01.png"
         if zp01_path.exists():
             room_zp = Image.open(zp01_path).convert('1')
             if room_zp.size == (width_px, height_px):
-                combined_zp |= (np.array(room_zp, dtype=np.uint8) != 0)
-        for obj in fg_objs:
-            _bake_object_into_bg(bg_rgb, obj, combined_zp)
+                combined_zp = (np.array(room_zp, dtype=np.uint8) != 0).astype(np.uint8)
+                baked_tiles = baked_px.reshape(
+                    height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
+                ).any(axis=(1, 3))
+                baked_tile_px = np.repeat(np.repeat(baked_tiles, TILE_SIZE, axis=0),
+                                          TILE_SIZE, axis=1)
+                combined_zp[baked_tile_px] = 0
 
     # Convert background to SNES color space (BGR555) AFTER baking fg objects.
     snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))

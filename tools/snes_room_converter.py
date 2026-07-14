@@ -382,7 +382,8 @@ def encode_tilemap_column_major(entries, w_tiles, h_tiles):
     return bytes(data)
 
 
-def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
+def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles,
+                         override_arr=None):
     """Build per-tile priority bitmap from ZP01 zplane.
 
     Always returns exactly ceil(w_tiles * h_tiles / 8) bytes so the engine
@@ -392,21 +393,27 @@ def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
     Layout: column-major, packed 8 tiles per byte, bit 0 = first tile in
     column. A tile's bit is 1 if ANY pixel in its 8x8 footprint is set in
     ZP01 (ScummVM's foreground mask — render in front of actors).
+
+    override_arr: optional (height_px, width_px) mask (room z-plane already
+    merged with baked object z-planes) used instead of reading zplane_01.png.
     """
     num_tiles = w_tiles * h_tiles
     out = bytearray((num_tiles + 7) // 8)
 
-    zp01_path = room_dir / "zplane_01.png"
-    if not zp01_path.exists():
-        return bytes(out)
+    if override_arr is not None:
+        zp_arr = (override_arr != 0).astype(np.uint8)
+    else:
+        zp01_path = room_dir / "zplane_01.png"
+        if not zp01_path.exists():
+            return bytes(out)
 
-    zp_img = Image.open(zp01_path).convert('1')
-    if zp_img.size != (width_px, height_px):
-        log.warning("zplane_01.png %s != background %dx%d; ignoring",
-                    zp_img.size, width_px, height_px)
-        return bytes(out)
+        zp_img = Image.open(zp01_path).convert('1')
+        if zp_img.size != (width_px, height_px):
+            log.warning("zplane_01.png %s != background %dx%d; ignoring",
+                        zp_img.size, width_px, height_px)
+            return bytes(out)
 
-    zp_arr = np.array(zp_img, dtype=np.uint8)
+        zp_arr = np.array(zp_img, dtype=np.uint8)
     zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
     any_fg = zp_tiled.any(axis=(1, 3))  # (h_tiles, w_tiles), bool
 
@@ -419,22 +426,30 @@ def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
     return bytes(out)
 
 
-def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles):
-    """Load zplane_01.png and return per-pixel boolean array + per-tile classification.
+def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles,
+                        override_arr=None):
+    """Load the room foreground z-plane and return per-pixel bool + per-tile class.
 
     Returns (zp_tiled, tile_class) or (None, None) if no z-plane.
     zp_tiled: (h_tiles, 8, w_tiles, 8) uint8 array, 1=foreground 0=background.
     tile_class: (h_tiles, w_tiles) array: 0=bg, 1=partial, 2=full_fg.
+
+    override_arr: optional (height_px, width_px) uint8 mask to use instead of
+    reading zplane_01.png. convert_room passes the room z-plane already merged
+    with baked object z-planes here.
     """
-    zp01_path = room_dir / "zplane_01.png"
-    if not zp01_path.exists():
-        return None, None
+    if override_arr is not None:
+        zp_arr = override_arr
+    else:
+        zp01_path = room_dir / "zplane_01.png"
+        if not zp01_path.exists():
+            return None, None
+        zp_img = Image.open(zp01_path).convert('1')
+        if zp_img.size != (width_px, height_px):
+            return None, None
+        zp_arr = np.array(zp_img, dtype=np.uint8)
 
-    zp_img = Image.open(zp01_path).convert('1')
-    if zp_img.size != (width_px, height_px):
-        return None, None
-
-    zp_arr = np.array(zp_img, dtype=np.uint8)
+    zp_arr = (zp_arr != 0).astype(np.uint8)
     zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
     tile_sums = zp_tiled.sum(axis=(1, 3))
     tile_class = np.zeros((h_tiles, w_tiles), dtype=np.uint8)
@@ -445,7 +460,7 @@ def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles):
 
 def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
                                 width_px, height_px, w_tiles, h_tiles,
-                                max_budget=896):
+                                max_budget=896, zplane_override=None):
     """Create masked tile variants for partial z-plane tiles; build BG2 tilemap.
 
     For partial foreground tiles (some pixels fg, some bg):
@@ -463,7 +478,8 @@ def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
       bg2_data: bytes, column-major tilemap words for BG2 layer (or empty if no z-plane)
     """
     zp_tiled, tile_class = _load_zplane_pixels(
-        room_dir, width_px, height_px, w_tiles, h_tiles
+        room_dir, width_px, height_px, w_tiles, h_tiles,
+        override_arr=zplane_override
     )
     num_tile_slots = w_tiles * h_tiles
     if tile_class is None or not tile_class.any():
@@ -749,15 +765,58 @@ def _load_room_objects(room_dir, bg_width, bg_height):
             if x + w > bg_width or y + h > bg_height:
                 continue
 
+        # Object foreground z-plane (obj_<id>[_name]_zp01.png). Present only
+        # for walk-behind / foreground scenery objects; marks which of the
+        # object's pixels render in front of actors. Used to route the object
+        # onto the BG2 foreground layer (see convert_room).
+        zplane = None
+        zp_candidates = list(obj_dir.glob(f'obj_{oid:04d}*_zp01.png'))
+        if zp_candidates:
+            zp_img = Image.open(zp_candidates[0]).convert('1')
+            if zp_img.size == (w, h):
+                zp_arr = np.array(zp_img, dtype=np.uint8)
+                if zp_arr.any():
+                    zplane = zp_arr
+
         result.append({
             'obj_id': oid,
             'x': x, 'y': y,
             'width': w, 'height': h,
             'rgb': np.array(img, dtype=np.uint8),
+            'zplane': zplane,
             'name': name,
         })
 
     return result
+
+
+def _bake_object_into_bg(bg_rgb, obj_info, combined_zp):
+    """Blit a foreground object's opaque pixels into bg_rgb and OR its z-plane
+    into combined_zp (both at the object's room position). In-place.
+
+    Mirrors the original's drawObject: the object's art becomes part of the
+    static scene and its z-plane part of the room foreground. combined_zp is
+    (height_px, width_px) uint8; obj z-plane marks foreground pixels.
+    """
+    ox, oy = obj_info['x'], obj_info['y']
+    ow, oh = obj_info['width'], obj_info['height']
+    obj_rgb = obj_info['rgb']
+    zp = obj_info['zplane']  # (oh, ow) uint8, may be None (guarded by caller)
+    bh, bw = bg_rgb.shape[0], bg_rgb.shape[1]
+
+    for ly in range(oh):
+        ry = oy + ly
+        if ry < 0 or ry >= bh:
+            continue
+        for lx in range(ow):
+            rx = ox + lx
+            if rx < 0 or rx >= bw:
+                continue
+            r, g, b = int(obj_rgb[ly, lx, 0]), int(obj_rgb[ly, lx, 1]), int(obj_rgb[ly, lx, 2])
+            if (r, g, b) not in SCUMM_TRANS_COLORS:
+                bg_rgb[ry, rx] = obj_rgb[ly, lx]
+            if zp[ly, lx]:
+                combined_zp[ry, rx] = 1
 
 
 def _composite_object_tiles(bg_rgb, obj_info, width_tiles, height_tiles):
@@ -980,20 +1039,41 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     height_tiles = height_px // TILE_SIZE
     bg_rgb = np.array(img, dtype=np.uint8)
 
-    # Convert background to SNES color space (BGR555)
-    snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))
-
     t0 = time.time()
 
     # Load object images for this room
     obj_infos = _load_room_objects(room_dir, width_px, height_px)
 
-    # Composite object tiles over background
+    # Objects that carry a z-plane are static foreground scenery (walk-behind
+    # art, the title logo, ...). In the original, drawObject blits them into
+    # BOTH the background bitmap and the room z-buffer, so they occlude actors.
+    # We reproduce that by baking them into the background here and merging
+    # their z-plane into the room foreground (→ BG2 priority-1, which masks the
+    # priority-2 actor sprites). They are NOT emitted as dynamic patches.
+    # Objects without a z-plane stay dynamic BG1 patches (interactive/animated).
+    fg_objs = [o for o in obj_infos if o.get('zplane') is not None]
+    patch_objs = [o for o in obj_infos if o.get('zplane') is None]
+
+    combined_zp = None
+    if fg_objs:
+        combined_zp = np.zeros((height_px, width_px), dtype=np.uint8)
+        zp01_path = room_dir / "zplane_01.png"
+        if zp01_path.exists():
+            room_zp = Image.open(zp01_path).convert('1')
+            if room_zp.size == (width_px, height_px):
+                combined_zp |= (np.array(room_zp, dtype=np.uint8) != 0)
+        for obj in fg_objs:
+            _bake_object_into_bg(bg_rgb, obj, combined_zp)
+
+    # Convert background to SNES color space (BGR555) AFTER baking fg objects.
+    snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))
+
+    # Composite (dynamic) object tiles over background
     # Track: (obj_id, col, row) -> index into extra_tiles array
     obj_comp_map = {}  # (obj_id, col, row) -> index in extra_snes_tiles
     extra_snes_tiles = []
 
-    for obj in obj_infos:
+    for obj in patch_objs:
         comp_tiles = _composite_object_tiles(bg_rgb, obj, width_tiles, height_tiles)
         for col, row, comp_bgr in comp_tiles:
             obj_comp_map[(obj['obj_id'], col, row)] = len(extra_snes_tiles)
@@ -1089,16 +1169,19 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     for (oid, col, row), extra_idx in obj_comp_map.items():
         obj_comp_entries[(oid, col, row)] = obj_entries[extra_idx]
 
-    # Build per-object patch tables
+    # Build per-object patch tables (dynamic objects only; foreground scenery
+    # objects were baked into the background above).
     obj_patches = _build_object_patches(
-        bg_entries, obj_comp_entries, obj_infos,
+        bg_entries, obj_comp_entries, patch_objs,
         width_tiles, height_tiles
     )
 
-    # Z-plane masked tile variants + BG2 tilemap for dual-layer masking
+    # Z-plane masked tile variants + BG2 tilemap for dual-layer masking.
+    # combined_zp merges the room z-plane with baked foreground-object z-planes.
     bg_entries, unique_tiles, bg2_data = build_masked_tiles_and_bg2(
         bg_entries, unique_tiles, room_dir,
-        width_px, height_px, width_tiles, height_tiles
+        width_px, height_px, width_tiles, height_tiles,
+        zplane_override=combined_zp
     )
 
     # Encode binary outputs
@@ -1111,9 +1194,11 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     col_data = build_column_index(map_data, width_tiles, height_tiles)
 
     # ZP01 per-tile priority bitmap (appended to room block). Empty if the
-    # room has no zplane_01.png or the mask is all zeros.
+    # room has no zplane_01.png or the mask is all zeros. Uses combined_zp so
+    # baked foreground-object tiles are flagged foreground too.
     pri_data = encode_priority_mask(room_dir, width_px, height_px,
-                                     width_tiles, height_tiles)
+                                     width_tiles, height_tiles,
+                                     override_arr=combined_zp)
 
     # Walkbox binary
     box_path = room_dir / "walkbox.box"

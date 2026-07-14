@@ -106,12 +106,21 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
    verb bar keeps rendering).
 6. **Stale duplicate Guybrush sprite** during the room-38 walk-in.
 7. ~~"THE" of "THE SECRET OF" hidden by cloud actors at the title~~ FIXED
-   2026-07-12 (`cd5efd5`). Root cause was NOT pacing: the room-10 clouds are
-   ignoreBoxes actors that lscr_202 drifts left via per-tick putActor, but
-   op_putActor snapped every was-visible actor to the nearest walkbox edge,
-   so a cloud parked on top of "THE" once its x left the box range. Gated the
-   adjustActorPos snap on actorIgnoreBoxes (matches ScummVM adjustXYToBeInBox).
-   Proven: x-trace drifts monotonically off the left edge; cloud_drift.png.
+   2026-07-13 (`8bb3fe5`). TWO separate causes, don't conflate them:
+   (a) `cd5efd5` gated op_putActor's walkbox snap on actorIgnoreBoxes so the
+   clouds actually DRIFT (they were parking at the box edge). Necessary but
+   NOT sufficient — a drifting cloud still drew IN FRONT of "THE".
+   (b) `8bb3fe5` is the real layering fix: the clouds must pass BEHIND the
+   logo. The logo is object 109, whose OBIM carries a ZP01 z-plane marking
+   it foreground — and our object extractor DROPPED every object z-plane
+   (decoded SMAP only). So the logo text had no foreground mask and the
+   priority-2 cloud sprites drew over it. Fix: extract object ZP01s; bake
+   z-planed (static, single-state) objects into the room bg + foreground so
+   BG2 priority-1 masks the sprites. Also gives correct walk-behind masking
+   for object z-planes game-wide (was entirely absent). Proven: frame 1654 a
+   cloud sits over "THE" and the text is fully in front (fg_full_1654.png).
+   LESSON: "clouds move" ≠ "clouds behind text" — verify the actual visual,
+   and check every extraction layer for silently-dropped data (cf. DSOU).
 8. **Room 38 play tick was ~15 Hz** (walk feels slow) — measured WITH the
    now-fixed lscr_200 wedge; re-measure first.
 

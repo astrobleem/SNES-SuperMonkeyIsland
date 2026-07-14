@@ -460,7 +460,7 @@ def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles,
 
 def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
                                 width_px, height_px, w_tiles, h_tiles,
-                                max_budget=896, zplane_override=None):
+                                max_budget=2000, zplane_override=None):
     """Create masked tile variants for partial z-plane tiles; build BG2 tilemap.
 
     For partial foreground tiles (some pixels fg, some bg):
@@ -476,6 +476,14 @@ def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
       bg_entries: updated list (partial fg tiles remapped to masked variants)
       unique_tiles: extended list with masked variants appended
       bg2_data: bytes, column-major tilemap words for BG2 layer (or empty if no z-plane)
+
+    max_budget caps the tileset so per-tile masked variants don't overrun the
+    11-bit tilemap tile-ID field (2048). It is NOT the 896-tile VRAM CHR window
+    (ROOM_MAX_TILES) — the column streamer swaps tiles per column, so a room's
+    total unique tiles legitimately exceeds 896 (many rooms are 1000-2000).
+    Set below 896 and partial foreground tiles (e.g. the title logo's letters)
+    silently miss their masked variant and mask actors per-tile → blocky sky
+    squares around glyphs. 2000 leaves headroom under 2048 for every room.
     """
     zp_tiled, tile_class = _load_zplane_pixels(
         room_dir, width_px, height_px, w_tiles, h_tiles,

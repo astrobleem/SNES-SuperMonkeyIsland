@@ -16,6 +16,13 @@
 ; Pal6/pal7 slots are CANONICAL — room art converter reserves them; runtime
 ; writeVerbColors installs c1-c3; room palette files hold c4-c15.
 ;
+; DIALOG TEXT: the BG3 2bpp dialog font renders with 2bpp palette 7 = CGRAM
+; words 28-31, which physically overlap 4bpp art row 1 c12-c15. Words 29-31
+; are ENGINE-OWNED: the room converter (_carve_dialog_palette) keeps art out
+; of them, and scummvm _ears.renderEnd writes scummTalkColorLUT[dialogColor]
+; into word 29 via the cgram shadow. Word 28 (2bpp c0 = transparent) stays
+; art-usable.
+;
 ; Any code that wants a "known color" should reference these CGRAM slot
 ; constants rather than issuing setPalColor. The values are in sync with
 ; PAL6_VERB_PLUS_UNIVERSAL / PAL7_VERB_PLUS_UNIVERSAL in snes_room_converter.py.

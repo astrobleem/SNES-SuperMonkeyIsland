@@ -54,6 +54,11 @@ COLORS_PER_SUBPALETTE_NONTRANS = COLORS_PER_SUBPALETTE - 1  # color 0 = transpar
 BPP = 4
 TILE_SIZE = 8
 PIXELS_PER_TILE = TILE_SIZE * TILE_SIZE
+# The intro logo room. It is a full-screen cutscene (no verb bar); its foreground
+# objects (the "Secret of Monkey Island" logo) drive the per-pixel BG2 mask, and the
+# engine aligns BG2 to BG1 specifically for this room so clouds drift behind the logo.
+# Every other room keeps object z-planes OUT of the (verb-bar-calibrated) BG2 mask.
+TITLE_ROOM_ID = 10
 BYTES_PER_4BPP_TILE = 32  # 8x8 x 4bpp planar
 EXPECTED_PAL_SIZE = NUM_SUBPALETTES * COLORS_PER_SUBPALETTE * 2  # 256 bytes
 HEADER_SIZE = 32
@@ -62,6 +67,13 @@ TRANS_COLOR = (0, 0, 0)  # color 0 in every sub-palette
 
 # Reserved palettes:
 #   - Pal 0: SCUMM UI (cursor, setPalColor idx 0-15 targets). Scripts write here.
+#   - Pal 1 c13-c15 (CGRAM words 29-31): dialog font colors, engine-owned.
+#     The BG3 dialog font renders 2bpp with palette 7 = CGRAM 28-31, which
+#     physically overlaps 4bpp art row 1 c12-c15. The engine writes the SCUMM
+#     talk color into word 29 at render time (scummvm.65816 _ears.renderEnd),
+#     so art must never quantize into words 29-31 (word 28 stays art-usable:
+#     it is 2bpp c0 = transparent, the font never shows it). Enforced by
+#     _carve_dialog_palette below.
 #   - Pal 6: verb highlight font (c1-c3) + universal art colors (c4-c15).
 #   - Pal 7: verb normal font (c1-c3) + universal art colors (c4-c15).
 # The HDMA CGRAM double-buffering scheme was removed 2026-04-18; pal6/pal7
@@ -119,6 +131,76 @@ PAL7_VERB_PLUS_UNIVERSAL = [
     0x0000,  # c14 black (dup c0)
     0x0000,  # c15 black (dup c0)
 ]
+
+
+def _carve_dialog_palette(raw_palettes, unique_indexed, pal_ids,
+                          n_fixed=2, keep=12):
+    """Reserve c13-c15 (CGRAM words 29-31) of one art palette for dialog text.
+
+    Picks the mutable art palette with the fewest assigned tiles (least error
+    impact), re-clusters its used colors down to `keep` usable slots via
+    weighted Ward merges, remaps that palette's tile pixel indices in place,
+    and zeroes the reserved slots. The caller must route the returned
+    quantizer palette id to OUTPUT ROW 1 so the reserved slots land on CGRAM
+    words 29-31 (the BG3 2bpp dialog font's c1-c3).
+
+    Args:
+        raw_palettes: quantizer output palettes (list of 16-color lists),
+            fixed palettes first. Mutated in place.
+        unique_indexed: (M, 8, 8) uint8 palette-relative indices. Mutated.
+        pal_ids: (M,) uint8 quantizer palette assignment per tile.
+
+    Returns the quantizer palette id that was carved.
+    """
+    n_art = len(raw_palettes) - n_fixed
+    counts = [int((pal_ids == q).sum()) for q in range(n_fixed, n_fixed + n_art)]
+    dlg = n_fixed + int(np.argmin(counts))
+
+    mask = (pal_ids == dlg)
+    pal = list(raw_palettes[dlg])
+    if mask.any():
+        usage = np.bincount(unique_indexed[mask].ravel(),
+                            minlength=16).astype(np.float64)
+    else:
+        usage = np.zeros(16)
+
+    def _comp(v):
+        return np.array([v & 0x1F, (v >> 5) & 0x1F, (v >> 10) & 0x1F],
+                        dtype=np.float64)
+
+    # One cluster per used color slot (slot 0 = transparent, untouchable).
+    clusters = [{'idx': [i], 'w': usage[i], 'c': _comp(pal[i])}
+                for i in range(1, 16) if usage[i] > 0]
+
+    # Ward merges until the palette fits in `keep` usable colors.
+    while len(clusters) > keep:
+        best = None
+        for a in range(len(clusters)):
+            for b in range(a + 1, len(clusters)):
+                ca, cb = clusters[a], clusters[b]
+                cost = (ca['w'] * cb['w'] / (ca['w'] + cb['w'])
+                        * float(((ca['c'] - cb['c']) ** 2).sum()))
+                if best is None or cost < best[0]:
+                    best = (cost, a, b)
+        _, a, b = best
+        ca, cb = clusters[a], clusters[b]
+        w = ca['w'] + cb['w']
+        ca['c'] = (ca['c'] * ca['w'] + cb['c'] * cb['w']) / w
+        ca['w'] = w
+        ca['idx'].extend(cb['idx'])
+        del clusters[b]
+
+    lut = np.zeros(16, dtype=np.uint8)
+    new_pal = [pal[0]] + [0x0000] * 15
+    for slot, cl in enumerate(clusters, start=1):
+        comp = np.clip(np.round(cl['c']), 0, 31).astype(np.int32)
+        new_pal[slot] = int(comp[0] | (comp[1] << 5) | (comp[2] << 10))
+        for old in cl['idx']:
+            lut[old] = slot
+    if mask.any():
+        unique_indexed[mask] = lut[unique_indexed[mask]]
+    raw_palettes[dlg] = new_pal
+    return dlg
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +387,8 @@ def encode_tilemap_column_major(entries, w_tiles, h_tiles):
     return bytes(data)
 
 
-def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
+def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles,
+                         override_arr=None):
     """Build per-tile priority bitmap from ZP01 zplane.
 
     Always returns exactly ceil(w_tiles * h_tiles / 8) bytes so the engine
@@ -315,21 +398,27 @@ def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
     Layout: column-major, packed 8 tiles per byte, bit 0 = first tile in
     column. A tile's bit is 1 if ANY pixel in its 8x8 footprint is set in
     ZP01 (ScummVM's foreground mask — render in front of actors).
+
+    override_arr: optional (height_px, width_px) mask (room z-plane already
+    merged with baked object z-planes) used instead of reading zplane_01.png.
     """
     num_tiles = w_tiles * h_tiles
     out = bytearray((num_tiles + 7) // 8)
 
-    zp01_path = room_dir / "zplane_01.png"
-    if not zp01_path.exists():
-        return bytes(out)
+    if override_arr is not None:
+        zp_arr = (override_arr != 0).astype(np.uint8)
+    else:
+        zp01_path = room_dir / "zplane_01.png"
+        if not zp01_path.exists():
+            return bytes(out)
 
-    zp_img = Image.open(zp01_path).convert('1')
-    if zp_img.size != (width_px, height_px):
-        log.warning("zplane_01.png %s != background %dx%d; ignoring",
-                    zp_img.size, width_px, height_px)
-        return bytes(out)
+        zp_img = Image.open(zp01_path).convert('1')
+        if zp_img.size != (width_px, height_px):
+            log.warning("zplane_01.png %s != background %dx%d; ignoring",
+                        zp_img.size, width_px, height_px)
+            return bytes(out)
 
-    zp_arr = np.array(zp_img, dtype=np.uint8)
+        zp_arr = np.array(zp_img, dtype=np.uint8)
     zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
     any_fg = zp_tiled.any(axis=(1, 3))  # (h_tiles, w_tiles), bool
 
@@ -342,22 +431,30 @@ def encode_priority_mask(room_dir, width_px, height_px, w_tiles, h_tiles):
     return bytes(out)
 
 
-def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles):
-    """Load zplane_01.png and return per-pixel boolean array + per-tile classification.
+def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles,
+                        override_arr=None):
+    """Load the room foreground z-plane and return per-pixel bool + per-tile class.
 
     Returns (zp_tiled, tile_class) or (None, None) if no z-plane.
     zp_tiled: (h_tiles, 8, w_tiles, 8) uint8 array, 1=foreground 0=background.
     tile_class: (h_tiles, w_tiles) array: 0=bg, 1=partial, 2=full_fg.
+
+    override_arr: optional (height_px, width_px) uint8 mask to use instead of
+    reading zplane_01.png. convert_room passes the room z-plane already merged
+    with baked object z-planes here.
     """
-    zp01_path = room_dir / "zplane_01.png"
-    if not zp01_path.exists():
-        return None, None
+    if override_arr is not None:
+        zp_arr = override_arr
+    else:
+        zp01_path = room_dir / "zplane_01.png"
+        if not zp01_path.exists():
+            return None, None
+        zp_img = Image.open(zp01_path).convert('1')
+        if zp_img.size != (width_px, height_px):
+            return None, None
+        zp_arr = np.array(zp_img, dtype=np.uint8)
 
-    zp_img = Image.open(zp01_path).convert('1')
-    if zp_img.size != (width_px, height_px):
-        return None, None
-
-    zp_arr = np.array(zp_img, dtype=np.uint8)
+    zp_arr = (zp_arr != 0).astype(np.uint8)
     zp_tiled = zp_arr.reshape(h_tiles, TILE_SIZE, w_tiles, TILE_SIZE)
     tile_sums = zp_tiled.sum(axis=(1, 3))
     tile_class = np.zeros((h_tiles, w_tiles), dtype=np.uint8)
@@ -368,7 +465,7 @@ def _load_zplane_pixels(room_dir, width_px, height_px, w_tiles, h_tiles):
 
 def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
                                 width_px, height_px, w_tiles, h_tiles,
-                                max_budget=896):
+                                max_budget=2000, zplane_override=None):
     """Create masked tile variants for partial z-plane tiles; build BG2 tilemap.
 
     For partial foreground tiles (some pixels fg, some bg):
@@ -384,9 +481,18 @@ def build_masked_tiles_and_bg2(bg_entries, unique_tiles, room_dir,
       bg_entries: updated list (partial fg tiles remapped to masked variants)
       unique_tiles: extended list with masked variants appended
       bg2_data: bytes, column-major tilemap words for BG2 layer (or empty if no z-plane)
+
+    max_budget caps the tileset so per-tile masked variants don't overrun the
+    11-bit tilemap tile-ID field (2048). It is NOT the 896-tile VRAM CHR window
+    (ROOM_MAX_TILES) — the column streamer swaps tiles per column, so a room's
+    total unique tiles legitimately exceeds 896 (many rooms are 1000-2000).
+    Set below 896 and partial foreground tiles (e.g. the title logo's letters)
+    silently miss their masked variant and mask actors per-tile → blocky sky
+    squares around glyphs. 2000 leaves headroom under 2048 for every room.
     """
     zp_tiled, tile_class = _load_zplane_pixels(
-        room_dir, width_px, height_px, w_tiles, h_tiles
+        room_dir, width_px, height_px, w_tiles, h_tiles,
+        override_arr=zplane_override
     )
     num_tile_slots = w_tiles * h_tiles
     if tile_class is None or not tile_class.any():
@@ -672,15 +778,63 @@ def _load_room_objects(room_dir, bg_width, bg_height):
             if x + w > bg_width or y + h > bg_height:
                 continue
 
+        # Object foreground z-plane (obj_<id>[_name]_zp01.png). Present only
+        # for walk-behind / foreground scenery objects; marks which of the
+        # object's pixels render in front of actors. Used to route the object
+        # onto the BG2 foreground layer (see convert_room).
+        zplane = None
+        zp_candidates = list(obj_dir.glob(f'obj_{oid:04d}*_zp01.png'))
+        if zp_candidates:
+            zp_img = Image.open(zp_candidates[0]).convert('1')
+            if zp_img.size == (w, h):
+                zp_arr = np.array(zp_img, dtype=np.uint8)
+                if zp_arr.any():
+                    zplane = zp_arr
+
         result.append({
             'obj_id': oid,
             'x': x, 'y': y,
             'width': w, 'height': h,
             'rgb': np.array(img, dtype=np.uint8),
+            'zplane': zplane,
             'name': name,
         })
 
     return result
+
+
+def _bake_object_into_bg(bg_rgb, obj_info, combined_zp=None, baked_mask=None):
+    """Blit a foreground object's opaque pixels into bg_rgb. In-place.
+
+    Mirrors the original's drawObject blit into the background bitmap: the
+    object's art becomes part of the static scene. If combined_zp is provided
+    ((height_px, width_px) uint8), the object's z-plane is also OR'd into it;
+    it is left None by convert_room so object z-planes do NOT reach the BG2 mask
+    (that mask is calibrated for the game-area layout — see convert_room). If
+    baked_mask is provided (bool array), every opaque pixel written is recorded
+    there so callers can exclude baked tiles from the room-level mask.
+    """
+    ox, oy = obj_info['x'], obj_info['y']
+    ow, oh = obj_info['width'], obj_info['height']
+    obj_rgb = obj_info['rgb']
+    zp = obj_info['zplane']  # (oh, ow) uint8, may be None
+    bh, bw = bg_rgb.shape[0], bg_rgb.shape[1]
+
+    for ly in range(oh):
+        ry = oy + ly
+        if ry < 0 or ry >= bh:
+            continue
+        for lx in range(ow):
+            rx = ox + lx
+            if rx < 0 or rx >= bw:
+                continue
+            r, g, b = int(obj_rgb[ly, lx, 0]), int(obj_rgb[ly, lx, 1]), int(obj_rgb[ly, lx, 2])
+            if (r, g, b) not in SCUMM_TRANS_COLORS:
+                bg_rgb[ry, rx] = obj_rgb[ly, lx]
+                if baked_mask is not None:
+                    baked_mask[ry, rx] = True
+            if combined_zp is not None and zp is not None and zp[ly, lx]:
+                combined_zp[ry, rx] = 1
 
 
 def _composite_object_tiles(bg_rgb, obj_info, width_tiles, height_tiles):
@@ -903,20 +1057,73 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     height_tiles = height_px // TILE_SIZE
     bg_rgb = np.array(img, dtype=np.uint8)
 
-    # Convert background to SNES color space (BGR555)
-    snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))
-
     t0 = time.time()
 
     # Load object images for this room
     obj_infos = _load_room_objects(room_dir, width_px, height_px)
 
-    # Composite object tiles over background
+    # Foreground-scenery objects (those carrying a z-plane) are baked into the
+    # background bitmap as static art. Baking (vs. leaving them as dynamic
+    # patches) keeps the tile budget down — patches ADD composited tiles, and
+    # rooms like 12/28 overflow the 2048 tile-ID field without baking.
+    #
+    # Whether the baked art's z-plane drives the BG2 foreground mask depends on
+    # the room:
+    #  - TITLE room (full-screen, no verb bar): YES. The logo objects ARE the
+    #    per-pixel mask — their z-planes become BG2 sky-fill + masked BG1 letter
+    #    tiles + the BG1 priority bit, and the engine aligns BG2 to BG1 for this
+    #    room (yScrollBG2) so the priority-2 cloud actors drift BEHIND the logo.
+    #  - Every OTHER room: NO. That BG2 mask is calibrated for the standard
+    #    game-area layout (yScrollBG2=110, +13-row upload, verb bar below
+    #    scanline 144); an object z-plane there renders displaced (doubled
+    #    letters + black bar). So baked-object tiles are EXCLUDED from the mask
+    #    (baked foreground art is not walk-behind scenery anyway).
+    fg_objs = [o for o in obj_infos if o.get('zplane') is not None]
+    patch_objs = [o for o in obj_infos if o.get('zplane') is None]
+    is_title = (room_id == TITLE_ROOM_ID)
+
+    combined_zp = None
+    if fg_objs:
+        # For the title, accumulate the objects' z-planes (the logo letters);
+        # for other rooms obj_zp stays None so _bake_object_into_bg only bakes.
+        obj_zp = (np.zeros((height_px, width_px), dtype=np.uint8)
+                  if is_title else None)
+        baked_px = np.zeros((height_px, width_px), dtype=bool)
+        for obj in fg_objs:
+            _bake_object_into_bg(bg_rgb, obj, combined_zp=obj_zp, baked_mask=baked_px)
+
+        # Room-level z-plane (e.g. the mountain summit), if present.
+        room_zp_arr = None
+        zp01_path = room_dir / "zplane_01.png"
+        if zp01_path.exists():
+            room_zp = Image.open(zp01_path).convert('1')
+            if room_zp.size == (width_px, height_px):
+                room_zp_arr = (np.array(room_zp, dtype=np.uint8) != 0).astype(np.uint8)
+
+        if is_title:
+            # Letters + room z-plane both mask; do NOT exclude baked tiles.
+            combined_zp = obj_zp
+            if room_zp_arr is not None:
+                combined_zp = (combined_zp | room_zp_arr).astype(np.uint8)
+        elif room_zp_arr is not None:
+            # Clear every tile touched by baked art, at 8x8 tile granularity.
+            combined_zp = room_zp_arr
+            baked_tiles = baked_px.reshape(
+                height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
+            ).any(axis=(1, 3))
+            baked_tile_px = np.repeat(np.repeat(baked_tiles, TILE_SIZE, axis=0),
+                                      TILE_SIZE, axis=1)
+            combined_zp[baked_tile_px] = 0
+
+    # Convert background to SNES color space (BGR555) AFTER baking fg objects.
+    snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))
+
+    # Composite (dynamic) object tiles over background
     # Track: (obj_id, col, row) -> index into extra_tiles array
     obj_comp_map = {}  # (obj_id, col, row) -> index in extra_snes_tiles
     extra_snes_tiles = []
 
-    for obj in obj_infos:
+    for obj in patch_objs:
         comp_tiles = _composite_object_tiles(bg_rgb, obj, width_tiles, height_tiles)
         for col, row, comp_bgr in comp_tiles:
             obj_comp_map[(obj['obj_id'], col, row)] = len(extra_snes_tiles)
@@ -955,19 +1162,28 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
         unique_raw, num_palettes=ART_SUBPALETTES,
         fixed_palettes=fixed_palettes
     )
+    # Carve the dialog font slots (CGRAM words 29-31) out of one art palette;
+    # that palette MUST land at output row 1 (CGRAM 16-31) so the reserved
+    # slots sit under the BG3 2bpp dialog font's c1-c3.
+    raw_palettes = [list(p) for p in raw_palettes]
+    dlg_qid = _carve_dialog_palette(raw_palettes, unique_indexed,
+                                    raw_unique_pal_ids)
+
     # Remap quantizer pal_ids (0..6) -> output pal_ids (0..7 with pal0 reserved)
     # Quantizer: 0 = fixed_0 (pal6), 1 = fixed_1 (pal7), 2..6 = mutable art.
-    # Output:    0 = UI empty, 1..5 = art, 6 = pal6, 7 = pal7.
-    #   quantizer 0 -> output 6
-    #   quantizer 1 -> output 7
-    #   quantizer 2..6 -> output 1..5
-    remap = np.array([6, 7, 1, 2, 3, 4, 5], dtype=np.uint8)
+    # Output:    0 = UI empty, 1..5 = art (carved palette first), 6/7 = fixed.
+    art_order = [dlg_qid] + [q for q in range(2, 2 + ART_SUBPALETTES)
+                             if q != dlg_qid]
+    remap = np.zeros(2 + ART_SUBPALETTES, dtype=np.uint8)
+    remap[0], remap[1] = 6, 7
+    for out_id, qid in enumerate(art_order, start=1):
+        remap[qid] = out_id
     unique_pal_ids = remap[raw_unique_pal_ids]
     empty_pal = [rgb_to_bgr555(*TRANS_COLOR)] * COLORS_PER_SUBPALETTE
     palettes = (
-        [empty_pal]                 # pal 0 (UI)
-        + list(raw_palettes[2:])    # pal 1-5 (art)
-        + list(raw_palettes[0:2])   # pal 6, pal 7 (verb + universal)
+        [empty_pal]                             # pal 0 (UI)
+        + [raw_palettes[q] for q in art_order]  # pal 1-5 (art; pal 1 carved)
+        + list(raw_palettes[0:2])               # pal 6, pal 7 (verb + universal)
     )
     pals_used = sum(1 for p in palettes if any(c != rgb_to_bgr555(*TRANS_COLOR)
                                                  for c in p[1:]))
@@ -1003,16 +1219,19 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     for (oid, col, row), extra_idx in obj_comp_map.items():
         obj_comp_entries[(oid, col, row)] = obj_entries[extra_idx]
 
-    # Build per-object patch tables
+    # Build per-object patch tables (dynamic objects only; foreground scenery
+    # objects were baked into the background above).
     obj_patches = _build_object_patches(
-        bg_entries, obj_comp_entries, obj_infos,
+        bg_entries, obj_comp_entries, patch_objs,
         width_tiles, height_tiles
     )
 
-    # Z-plane masked tile variants + BG2 tilemap for dual-layer masking
+    # Z-plane masked tile variants + BG2 tilemap for dual-layer masking.
+    # combined_zp merges the room z-plane with baked foreground-object z-planes.
     bg_entries, unique_tiles, bg2_data = build_masked_tiles_and_bg2(
         bg_entries, unique_tiles, room_dir,
-        width_px, height_px, width_tiles, height_tiles
+        width_px, height_px, width_tiles, height_tiles,
+        zplane_override=combined_zp
     )
 
     # Encode binary outputs
@@ -1025,9 +1244,11 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     col_data = build_column_index(map_data, width_tiles, height_tiles)
 
     # ZP01 per-tile priority bitmap (appended to room block). Empty if the
-    # room has no zplane_01.png or the mask is all zeros.
+    # room has no zplane_01.png or the mask is all zeros. Uses combined_zp so
+    # baked foreground-object tiles are flagged foreground too.
     pri_data = encode_priority_mask(room_dir, width_px, height_px,
-                                     width_tiles, height_tiles)
+                                     width_tiles, height_tiles,
+                                     override_arr=combined_zp)
 
     # Walkbox binary
     box_path = room_dir / "walkbox.box"
@@ -1183,14 +1404,27 @@ def batch_convert(input_dir, output_dir, room_filter=None,
 
     elapsed = time.time() - t0
 
-    # Write manifest
+    # Write manifest. Merge with the existing one so a --rooms subset run (or
+    # a run where a room fails) doesn't wipe every other room's entry —
+    # rom_pack_data.py packs exactly what the manifest lists, so a truncated
+    # manifest silently breaks the ROM build.
+    manifest_path = output_dir / "manifest.json"
+    merged = {}
+    if manifest_path.exists():
+        try:
+            with open(manifest_path) as f:
+                merged = {r['room_id']: r for r in json.load(f).get('rooms', [])}
+        except (json.JSONDecodeError, KeyError) as e:
+            log.warning("Existing manifest unreadable (%s); rewriting fresh", e)
+    for r in results:
+        merged[r['room_id']] = r
+    all_rooms = [merged[k] for k in sorted(merged)]
     manifest = {
-        'total_rooms': len(rooms),
+        'total_rooms': len(all_rooms),
         'converted': len(results),
         'failed': failures,
-        'rooms': results,
+        'rooms': all_rooms,
     }
-    manifest_path = output_dir / "manifest.json"
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f, indent=2)
 

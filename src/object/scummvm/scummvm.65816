@@ -683,13 +683,9 @@ _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
-  ; Restore the room's CGRAM[29]: the NMI forced pal7 c1 white while the line
-  ; was up (dialog text color); flag the shadow dirty so VBlank re-flushes the
-  ; room palette over it. The shadow was never touched, so it holds the truth.
-  sep #$20
-  lda #1
-  sta.w SCUMM.cgramDirty
-  rep #$20
+  ; CGRAM word 29 is engine-owned (converter reserves art row 1 c13-c15), so
+  ; there is nothing to restore when the line clears; the color just sits
+  ; there until the next line rewrites it.
   ; Clear VAR_HAVE_MSG (global var 3) when dialog ends
   ldx #3*2
   stz.w SCUMM.globalVars,x
@@ -1382,6 +1378,27 @@ _prc.noBg2Mask:
   sta.w GLOBAL.HDMA.CHANNEL.ENABLE
   rep #$20
 _prc.bg2MaskDone:
+
+  ; BG2 vertical alignment. Gameplay uses the verb-area calibration
+  ; (yScrollBG2=110, set once in bgInit above). The full-screen TITLE room (10)
+  ; instead aligns BG2 to BG1 so the per-pixel logo mask sits exactly over the
+  ; baked logo and the priority-2 cloud actors drift BEHIND the letters. BG2
+  ; row r shows at screen-Y (r + ROOM_BG2_ROW_OFFSET)*8 - yScrollBG2; BG1 logo
+  ; row r at r*8 - yScrollBG1; align => yScrollBG2 = yScrollBG1 + 13*8 (= +104).
+  ; Written per-room here so leaving the title restores 110 for gameplay.
+  rep #$20
+  lda.w SCUMM.newRoom
+  cmp #10
+  bne _prc.bg2YVerb
+    lda.w yScrollBG1
+    clc
+    adc #104                        ;ROOM_BG2_ROW_OFFSET (13) * 8
+    sta.w yScrollBG2
+    bra _prc.bg2YDone
+_prc.bg2YVerb:
+    lda #110
+    sta.w yScrollBG2
+_prc.bg2YDone:
 
   ; Apply any setCameraAt target that was stashed while this room change
   ; was pending — MAX_X is now fresh so the clamp will be correct.
@@ -6705,6 +6722,21 @@ _opa.inRoom:
 _opa.notMoving:
   rep #$20
   .ACCU 16
+  ; ScummVM adjustXYToBeInBox returns the literal coords for ignoreBoxes
+  ; actors (actor.cpp: `if (_ignoreBoxes) { abr.x = dstX; ... return; }`).
+  ; Without this gate the room-10 cloud actors (ignoreBoxes, drifting left
+  ; via putActor each tick) get re-snapped to walkbox edges once their x
+  ; leaves the box range — one cloud visibly parks at the box edge instead
+  ; of floating off screen.
+  txa
+  lsr a
+  lsr a
+  lsr a
+  lsr a                              ; A = actor index
+  tay
+  lda.w SCUMM.actorIgnoreBoxes,y
+  and #$00FF
+  bne _opa.restore                   ; ignoreBoxes → keep literal coords
   ; adjustActorPos snap (only when WAS visible)
   lda.w SCUMM.actors.x,x
   sta.w SCUMM.bwpTargetX
@@ -17138,10 +17170,9 @@ _rpd.noDialog:
   .ACCU 16
   .INDEX 16
 
-  ; Dialog text color is set directly in NMI: while SCUMM.dialogActive it forces
-  ; CGRAM[29] (BG3 pal7 c1, the monochrome font's body) to white — see
-  ; core/nmi.65816. The old computation here stashed a talk color into
-  ; SCUMM.dialogPalColor that nothing ever consumed (dead); removed.
+  ; Dialog text color: _ears.renderEnd writes scummTalkColorLUT[dialogColor]
+  ; into CGRAM shadow word 29 (BG3 pal7 c1, converter-reserved for dialog)
+  ; and flags cgramDirty — no NMI palette forcing needed.
   .ACCU 16
   .INDEX 16
 
@@ -17181,7 +17212,8 @@ _rpd.findSlot:
 
 ; SCUMM color index → BGR555 lookup table (EGA-standard approximation)
 ; BGR555: B[14:10] G[9:5] R[4:0]
-_scummTalkColorLUT:
+; Global label: consumed cross-section by _ears.renderEnd (dialog text color).
+scummTalkColorLUT:
   .dw $0000             ; 0: black
   .dw $5400             ; 1: blue        (R=0,  G=0,  B=21)
   .dw $02A0             ; 2: green       (R=0,  G=21, B=0)
@@ -17774,6 +17806,19 @@ _ears.renderEnd:
     lda #15
     sta.w SCUMM.dialogColor
 +
+  ; --- Dialog text color → CGRAM word 29 (BG3 pal7 c1) ---
+  ; The room converter reserves art row 1 c13-c15 (CGRAM words 29-31) for
+  ; dialog, so this slot is engine-owned. Write the shadow and flag it dirty;
+  ; the NMI flush lands the color in the same VBlank as the tilemap DMA.
+  and #$000F
+  asl a
+  tax
+  lda.l scummTalkColorLUT,x
+  sta.l BWRAM_CGRAM_SHADOW + 29 * 2
+  sep #$20
+  lda #1
+  sta.w SCUMM.cgramDirty
+  rep #$20
   ; --- Set dialog state ---
   lda #1
   sta.w SCUMM.dialogActive

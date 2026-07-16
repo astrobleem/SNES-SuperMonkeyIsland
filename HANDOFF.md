@@ -23,6 +23,19 @@ credits paced to the talkie) → lookout old-man dialogue → Part One card
 SCUMM Bar rooms load. VM regression suite: 182/182. Bank 0: 87.3%.
 
 Recent landings (all proven, see commit messages for evidence):
+- `be7fe15` (2026-07-12) dialog text owns CGRAM 29-31 — killed the title-logo
+  palette hijack. The NMI white-force on CGRAM[29] recolored every room pixel
+  sharing the slot while a dialog line was up: rectangular holes through the
+  MONKEY ISLAND logo on EVERY intro credit card (self-healing between cards —
+  which is why single screenshots kept "validating" a broken title screen and
+  Chad had to re-report it), white blocks in the mountain pan, junk stripe
+  under credit text. Converter now carves art row 1 c13-c15; _ears.renderEnd
+  writes scummTalkColorLUT[dialogColor] into shadow word 29. Credits render
+  per-card SCUMM colors matching the talkie. REQUIRES reconverted
+  data/snes_converted — a stale checkout resurrects the bug.
+- `89dd1c3` converter merges manifest.json instead of rewriting — a --rooms
+  subset run used to wipe every other room's entry and silently break the
+  next ROM pack.
 - `0b32238` nested startScript + iMUSE beat clock — intro paced to the talkie
 - `f787d8d` CD-talkie speech backend — voice via MSU-1, music stays on SPC700
 - `ff414a2` objUntouchable Y-clobber fix — THE mega root cause (see below)
@@ -70,12 +83,14 @@ Recent landings (all proven, see commit messages for evidence):
 Full detail in snes-secret-plan.md "Current Frontier (2026-07-04, second
 session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
 
-1. **FF 07 (insert-string-slot escape) is unimplemented** — the charset
-   renderer skips it (scummvm.65816 `_ears.renderFF`: "all other sub-codes
-   skip 2 arg bytes"), so the "Deep in the Caribbean" / "The Island of Mêlée"
-   title cards show NO TEXT. Verified still true 2026-07-05. The fix: resolve
-   the string-slot reference inline during render (stringOps put codes are
-   already implemented for writing slots).
+1. ~~FF 07 insert-string-slot escape~~ DONE (`6e9884a`) — title cards render
+   text. NOTE: this fixed only the missing card text; the title-screen logo
+   corruption was the separate CGRAM[29] hijack, fixed 2026-07-12 (`be7fe15`).
+   Still open from that family: the Testers credit card renders box glyphs
+   between names and wraps mid-word ("W ayne") — the inserted slot string
+   carries control bytes (< $20) that `_ears.emitChar` renders as garbage
+   tiles instead of treating as newlines. Fix in the FF07 detour's
+   newline/control handling. Evidence: distribution/fix_f6237.png.
 2. **Dock (room 33) entry**: camera parked at x=880 with Guybrush at x=9
    (the scenic bar→ego pan likely doesn't run — possibly another
    soundKludge/marker sync, now easier with the beat clock landed), and the
@@ -90,9 +105,22 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
 5. **Verb UI stays visible during cutscenes** (lscr_203 issues userput off;
    verb bar keeps rendering).
 6. **Stale duplicate Guybrush sprite** during the room-38 walk-in.
-7. **"THE" of "THE SECRET OF" hidden by cloud actors at the title** — correct
-   intro pacing (just landed) may have fixed this on its own; RE-CHECK with a
-   screenshot before doing any work.
+7. ~~"THE" of "THE SECRET OF" hidden by cloud actors at the title~~ FIXED
+   2026-07-13 (`8bb3fe5`). TWO separate causes, don't conflate them:
+   (a) `cd5efd5` gated op_putActor's walkbox snap on actorIgnoreBoxes so the
+   clouds actually DRIFT (they were parking at the box edge). Necessary but
+   NOT sufficient — a drifting cloud still drew IN FRONT of "THE".
+   (b) `8bb3fe5` is the real layering fix: the clouds must pass BEHIND the
+   logo. The logo is object 109, whose OBIM carries a ZP01 z-plane marking
+   it foreground — and our object extractor DROPPED every object z-plane
+   (decoded SMAP only). So the logo text had no foreground mask and the
+   priority-2 cloud sprites drew over it. Fix: extract object ZP01s; bake
+   z-planed (static, single-state) objects into the room bg + foreground so
+   BG2 priority-1 masks the sprites. Also gives correct walk-behind masking
+   for object z-planes game-wide (was entirely absent). Proven: frame 1654 a
+   cloud sits over "THE" and the text is fully in front (fg_full_1654.png).
+   LESSON: "clouds move" ≠ "clouds behind text" — verify the actual visual,
+   and check every extraction layer for silently-dropped data (cf. DSOU).
 8. **Room 38 play tick was ~15 Hz** (walk feels slow) — measured WITH the
    now-fixed lscr_200 wedge; re-measure first.
 
@@ -152,6 +180,15 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
   HARDLINK to main's — a worktree build clobbers the main checkout's ROM while
   the .sym files diverge. Rebuild before trusting either.
 - `distribution/SuperMonkeyIsland.msu` must exist or the ROM won't boot.
+- Long-lived emulator instances (nexen / mesen-inproc) do NOT reload the ROM
+  on reset_emulator — after a rebuild, verify loaded PRG bytes against the
+  file or use smi-workflow's per-call testrunner for current-ROM captures.
+- Room 36 conversion fails ("ubyte format requires 0 <= number <= 255",
+  pre-existing since ~March) — the pack ships March-stale room 36 data,
+  which still has art in CGRAM 29-31 (palette hijack would show THERE only).
+- Time-varying rendering bugs need a filmstrip across the whole sequence;
+  a single screenshot between credit cards is how the title bug kept getting
+  falsely closed.
 - Two MCP servers: `smi-workflow` (one-shot build/validate/test/screenshot) and
   `mesen-inproc` (long-lived memory/exec hooks, audio capture). AGENTS.md is
   the harness reference. The read-hook fetch-trace technique (hook the script

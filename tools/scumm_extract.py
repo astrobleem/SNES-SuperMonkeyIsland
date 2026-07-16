@@ -26,7 +26,7 @@ from scumm.index import parse_index
 from scumm.resource import parse_data_file
 from scumm.palette import parse_clut, save_palette_bin, save_palette_png
 from scumm.room_gfx import extract_background
-from scumm.object_gfx import extract_object_images
+from scumm.object_gfx import extract_object_images, extract_object_zplanes
 from scumm.metadata import extract_metadata, extract_scripts, export_walkbox_binary
 from scumm.costume import extract_costumes
 from scumm.charset import extract_charsets
@@ -139,6 +139,7 @@ def extract_room(room_resource, room_name: str, output_dir: Path,
         if palette:
             info['object_images'] = extract_object_images(
                 room_resource, room_dir, palette)
+            extract_object_zplanes(room_resource, room_dir)
 
     # Costumes
     if 'costumes' in extract_types or 'all' in extract_types:

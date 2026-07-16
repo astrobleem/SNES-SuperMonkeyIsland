@@ -1,4 +1,4 @@
-# HANDOFF — SNES Super Monkey Island (2026-07-05)
+# HANDOFF — SNES Super Monkey Island (2026-07-16)
 
 Written by the outgoing agent for whoever picks this up next. Read CLAUDE.md
 and AGENTS.md first; this file is the *state + roadmap*, those are the *rules
@@ -20,9 +20,31 @@ hears, the map is wrong (this happened; see the DSOU lesson below).
 Boot → MSU-1 splash → title screen → full intro cutscene (music, CD speech,
 credits paced to the talkie) → lookout old-man dialogue → Part One card
 (room 96) → **player control at the dock (room 33)**. Dialog choices work.
-SCUMM Bar rooms load. VM regression suite: 182/182. Bank 0: 87.3%.
+SCUMM Bar rooms load. VM regression suite: 183/183. Bank 0: 87.3%.
+
+**The intro title screen is now fully correct** (merged to master via PR #4,
+merge `62ff4f3`): logo renders clean, clouds drift, and the clouds pass
+BEHIND the "Secret of Monkey Island" logo per-pixel like the talkie. This
+closes a long saga of false "title fixed" reports — the record below is
+corrected accordingly. It is guarded by the repo's first screen-pixel test.
 
 Recent landings (all proven, see commit messages for evidence):
+- `566ee7f` (2026-07-16) intro clouds drift BEHIND the logo, per-pixel. The
+  title is a STATIC cutscene, so the BG2-mask-to-BG1 misalignment is a FIXED
+  offset: `yScrollBG2 = yScrollBG1 + 104` set per-room in `processRoomChange`
+  (room 10 only; gameplay keeps 110), horizontal auto-aligns via hasBg2Mask.
+  Converter routes the TITLE room's object z-planes INTO the per-pixel mask;
+  gameplay rooms keep them OUT. Cloud actors were already OBJ priority 2. NEW
+  TEST `tests/clouds_behind_logo.lua` (+ `run_clouds_test.py`): counts
+  letter-magenta pixels coincident with a priority-2 cloud sprite box (hidden
+  pri-2 sprite ⇒ letter in front ⇒ cloud behind). Discriminates:
+  clouds-in-front=5 → FAIL, this build=146-150 → PASS.
+- `0cdd046` (2026-07-14) stop object z-planes mangling the title logo. The
+  `8bb3fe5` approach fed object z-planes into the BG2 mask, which is
+  calibrated for the verb-bar layout; on the full-screen title it rendered
+  the logo displaced (doubled letters + black bar). This reverted object
+  z-planes out of the mask for ALL rooms; `566ee7f` then re-enabled it for
+  the title only, WITH the alignment fixed.
 - `be7fe15` (2026-07-12) dialog text owns CGRAM 29-31 — killed the title-logo
   palette hijack. The NMI white-force on CGRAM[29] recolored every room pixel
   sharing the slot while a dialog line was up: rectangular holes through the
@@ -43,10 +65,14 @@ Recent landings (all proven, see commit messages for evidence):
 
 ## Immediate loose ends (small, do these first)
 
-1. **BRK-scan baseline is stale**: `validate_rom` reports 38 vs baseline 35.
-   The 3 new are data-table false positives (`ScummSoundMap+257`,
-   `TadGroupRecs+0`, `TadSongMap+2` — banks $09/$1F, non-executable). Bump the
-   baseline in `tools/smi_workflow_server.py` so real regressions stay visible.
+1. **BRK-scan baseline is stale**: `validate_rom` reports ~39 vs baseline 35.
+   The extras are all false positives that drift with code-shift: data tables
+   (`TadGroupRecs+0`, `TadSongMap+2`, `ScummSoundMap+257` — banks $09/$1F,
+   non-executable), the ROM-header `"BIOS"` string near `$00:FFAB`, and `$00`
+   bytes inside 16-bit immediates (e.g. `LDA #$0400` at `level1+6`). Each new
+   commit reshuffles which ones the scanner catches. Bump the baseline in
+   `tools/smi_workflow_server.py` (and consider excluding the $1F/$09 data
+   regions from the scan) so real regressions stay visible.
 2. **VAR_MUSIC_TIMER is render-rate coupled.** var14 ticks once per VM play
    tick, and the play tick follows the frame rate. The intro's first ~6 s run
    at 60 fps, so beats 1–3 of the beat clock fire 2× fast (~1.5 s early),
@@ -99,28 +125,38 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
    bar door (obj 428) still needs a direct click test after the camera fix.
 3. **Dialog text renders garbled/overlapping** in the old-man dialogue
    (letters collide; readable but wrong).
-4. **Walk-behind masking not applying in room 38** — ZP01 exists in the
-   extraction but Guybrush draws fully in front of the fire wall; check
-   whether ZP01 reaches BG2 outside the verb area + sprite-vs-BG2 priority.
+4. **Walk-behind masking not applying in room 38** — the room ZP01 exists but
+   Guybrush draws in front of the fire wall. Note (changed 2026-07-16): OBJECT
+   z-plane masking was pulled out of the mask game-wide by `0cdd046` (it only
+   worked on the title, and even there only after the alignment fix). ROOM-level
+   ZP01 masking (the `SCROLL_PRIORITY_WRAM` per-tile priority path) is still
+   active for gameplay; the room-38 fire wall is room art, so check that its
+   ZP01 sets the BG1 priority bit AND that the actor renders at OBJ priority 2
+   (forceClip/walkbox mask) — same priority-2-behind-BG1.1 mechanism the title
+   now uses. If room 38 needs per-pixel (not whole-tile) walk-behind, it faces
+   the same BG2-alignment question the title solved.
 5. **Verb UI stays visible during cutscenes** (lscr_203 issues userput off;
    verb bar keeps rendering).
 6. **Stale duplicate Guybrush sprite** during the room-38 walk-in.
-7. ~~"THE" of "THE SECRET OF" hidden by cloud actors at the title~~ FIXED
-   2026-07-13 (`8bb3fe5`). TWO separate causes, don't conflate them:
+7. ~~"THE" of "THE SECRET OF" hidden by cloud actors at the title~~ **FIXED
+   FOR REAL 2026-07-16 (`566ee7f`), after two false starts — correcting the
+   record.** THREE things, in order:
    (a) `cd5efd5` gated op_putActor's walkbox snap on actorIgnoreBoxes so the
-   clouds actually DRIFT (they were parking at the box edge). Necessary but
-   NOT sufficient — a drifting cloud still drew IN FRONT of "THE".
-   (b) `8bb3fe5` is the real layering fix: the clouds must pass BEHIND the
-   logo. The logo is object 109, whose OBIM carries a ZP01 z-plane marking
-   it foreground — and our object extractor DROPPED every object z-plane
-   (decoded SMAP only). So the logo text had no foreground mask and the
-   priority-2 cloud sprites drew over it. Fix: extract object ZP01s; bake
-   z-planed (static, single-state) objects into the room bg + foreground so
-   BG2 priority-1 masks the sprites. Also gives correct walk-behind masking
-   for object z-planes game-wide (was entirely absent). Proven: frame 1654 a
-   cloud sits over "THE" and the text is fully in front (fg_full_1654.png).
-   LESSON: "clouds move" ≠ "clouds behind text" — verify the actual visual,
-   and check every extraction layer for silently-dropped data (cf. DSOU).
+   clouds actually DRIFT (they were parking). Necessary, not sufficient.
+   (b) `8bb3fe5` (2026-07-13) was reported "fixed" but was NOT — it routed the
+   logo's object z-plane into the BG2 mask, which is calibrated for the
+   verb-bar gameplay layout. On the full-screen title that mask lands 32px/7px
+   off, so it rendered the logo as DOUBLED letters + a black bar (Chad's
+   image #4). Reverted by `0cdd046`.
+   (c) `566ee7f` is the actual fix: the title never scrolls, so align BG2 to
+   BG1 with a fixed offset (`yScrollBG2 = yScrollBG1 + 104`, room 10 only) and
+   route the logo into the per-pixel mask for the title only. Cloud actors
+   were already OBJ priority 2 (`lscr_202` `alwaysZClip(#1)`). Proven by
+   `tests/clouds_behind_logo.lua` (fail-before/pass-after) + before/after
+   filmstrip. LESSON (again): "clouds move" ≠ "clouds behind text", and a
+   masking scheme calibrated for one screen layout will silently mis-render on
+   a different one — verify the actual pixels, and don't reuse the gameplay
+   BG2 mask on the full-screen title without re-checking alignment.
 8. **Room 38 play tick was ~15 Hz** (walk feels slow) — measured WITH the
    now-fixed lscr_200 wedge; re-measure first.
 
@@ -189,6 +225,18 @@ session)" → "New bugs surfaced by the fix". Summary, roughly by user impact:
 - Time-varying rendering bugs need a filmstrip across the whole sequence;
   a single screenshot between credit cards is how the title bug kept getting
   falsely closed.
+- Layering/priority bugs can be proven OBJECTIVELY, not by eyeballing: read the
+  composited screen buffer (`emu.getScreenBuffer()`) AND OAM
+  (`emu.memType.snesSpriteRam`) in Lua and assert the relationship — e.g.
+  `tests/clouds_behind_logo.lua` counts letter pixels coincident with a
+  priority-2 sprite box. Build the "before" too and confirm the test FAILS on
+  it (that test: in-front=5 fail vs behind=146 pass). This is the repo's first
+  screen-pixel test; run it with `python tests/run_clouds_test.py`.
+- The engine's BG2 foreground mask is calibrated for the standard game-area
+  layout (`yScrollBG2=110`, `ROOM_BG2_ROW_OFFSET=13`, verb bar below scanline
+  144). Any full-screen scene (the title) must re-align BG2 to BG1; alignment
+  condition `yScrollBG2 = yScrollBG1 + ROOM_BG2_ROW_OFFSET*8`. Do NOT reuse the
+  gameplay mask on a differently-scrolled screen without re-deriving this.
 - Two MCP servers: `smi-workflow` (one-shot build/validate/test/screenshot) and
   `mesen-inproc` (long-lived memory/exec hooks, audio capture). AGENTS.md is
   the harness reference. The read-hook fetch-trace technique (hook the script

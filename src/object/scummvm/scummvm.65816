@@ -1379,6 +1379,27 @@ _prc.noBg2Mask:
   rep #$20
 _prc.bg2MaskDone:
 
+  ; BG2 vertical alignment. Gameplay uses the verb-area calibration
+  ; (yScrollBG2=110, set once in bgInit above). The full-screen TITLE room (10)
+  ; instead aligns BG2 to BG1 so the per-pixel logo mask sits exactly over the
+  ; baked logo and the priority-2 cloud actors drift BEHIND the letters. BG2
+  ; row r shows at screen-Y (r + ROOM_BG2_ROW_OFFSET)*8 - yScrollBG2; BG1 logo
+  ; row r at r*8 - yScrollBG1; align => yScrollBG2 = yScrollBG1 + 13*8 (= +104).
+  ; Written per-room here so leaving the title restores 110 for gameplay.
+  rep #$20
+  lda.w SCUMM.newRoom
+  cmp #10
+  bne _prc.bg2YVerb
+    lda.w yScrollBG1
+    clc
+    adc #104                        ;ROOM_BG2_ROW_OFFSET (13) * 8
+    sta.w yScrollBG2
+    bra _prc.bg2YDone
+_prc.bg2YVerb:
+    lda #110
+    sta.w yScrollBG2
+_prc.bg2YDone:
+
   ; Apply any setCameraAt target that was stashed while this room change
   ; was pending — MAX_X is now fresh so the clamp will be correct.
   sep #$20

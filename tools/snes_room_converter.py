@@ -54,6 +54,11 @@ COLORS_PER_SUBPALETTE_NONTRANS = COLORS_PER_SUBPALETTE - 1  # color 0 = transpar
 BPP = 4
 TILE_SIZE = 8
 PIXELS_PER_TILE = TILE_SIZE * TILE_SIZE
+# The intro logo room. It is a full-screen cutscene (no verb bar); its foreground
+# objects (the "Secret of Monkey Island" logo) drive the per-pixel BG2 mask, and the
+# engine aligns BG2 to BG1 specifically for this room so clouds drift behind the logo.
+# Every other room keeps object z-planes OUT of the (verb-bar-calibrated) BG2 mask.
+TITLE_ROOM_ID = 10
 BYTES_PER_4BPP_TILE = 32  # 8x8 x 4bpp planar
 EXPECTED_PAL_SIZE = NUM_SUBPALETTES * COLORS_PER_SUBPALETTE * 2  # 256 bytes
 HEADER_SIZE = 32
@@ -1062,38 +1067,53 @@ def convert_room(room_dir, output_dir, verbose=False, verify=False):
     # patches) keeps the tile budget down — patches ADD composited tiles, and
     # rooms like 12/28 overflow the 2048 tile-ID field without baking.
     #
-    # Two things that must NOT happen to baked art:
-    #  1. Its own z-plane is never merged into the BG2 mask (the object z-plane
-    #     path that mangled the title logo — see below).
-    #  2. Any tile it lands in is EXCLUDED from the room-level BG2 mask. The
-    #     engine's BG2 mask is calibrated for the standard game-area layout
-    #     (yScrollBG2=110, +13-row upload, verb bar below scanline 144). The
-    #     title room (10) is full-screen; its room z-plane (mountain summit)
-    #     overlaps the baked logo, so without this exclusion the logo tiles get
-    #     dragged onto the misaligned BG2 → doubled letters + black bar. Baked
-    #     foreground art is not walk-behind scenery, so dropping it from the
-    #     mask is correct regardless of layout.
+    # Whether the baked art's z-plane drives the BG2 foreground mask depends on
+    # the room:
+    #  - TITLE room (full-screen, no verb bar): YES. The logo objects ARE the
+    #    per-pixel mask — their z-planes become BG2 sky-fill + masked BG1 letter
+    #    tiles + the BG1 priority bit, and the engine aligns BG2 to BG1 for this
+    #    room (yScrollBG2) so the priority-2 cloud actors drift BEHIND the logo.
+    #  - Every OTHER room: NO. That BG2 mask is calibrated for the standard
+    #    game-area layout (yScrollBG2=110, +13-row upload, verb bar below
+    #    scanline 144); an object z-plane there renders displaced (doubled
+    #    letters + black bar). So baked-object tiles are EXCLUDED from the mask
+    #    (baked foreground art is not walk-behind scenery anyway).
     fg_objs = [o for o in obj_infos if o.get('zplane') is not None]
     patch_objs = [o for o in obj_infos if o.get('zplane') is None]
+    is_title = (room_id == TITLE_ROOM_ID)
 
     combined_zp = None
     if fg_objs:
+        # For the title, accumulate the objects' z-planes (the logo letters);
+        # for other rooms obj_zp stays None so _bake_object_into_bg only bakes.
+        obj_zp = (np.zeros((height_px, width_px), dtype=np.uint8)
+                  if is_title else None)
         baked_px = np.zeros((height_px, width_px), dtype=bool)
         for obj in fg_objs:
-            _bake_object_into_bg(bg_rgb, obj, baked_mask=baked_px)
-        # Load the room z-plane (if any) and clear every tile touched by baked
-        # foreground art, at 8x8 tile granularity.
+            _bake_object_into_bg(bg_rgb, obj, combined_zp=obj_zp, baked_mask=baked_px)
+
+        # Room-level z-plane (e.g. the mountain summit), if present.
+        room_zp_arr = None
         zp01_path = room_dir / "zplane_01.png"
         if zp01_path.exists():
             room_zp = Image.open(zp01_path).convert('1')
             if room_zp.size == (width_px, height_px):
-                combined_zp = (np.array(room_zp, dtype=np.uint8) != 0).astype(np.uint8)
-                baked_tiles = baked_px.reshape(
-                    height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
-                ).any(axis=(1, 3))
-                baked_tile_px = np.repeat(np.repeat(baked_tiles, TILE_SIZE, axis=0),
-                                          TILE_SIZE, axis=1)
-                combined_zp[baked_tile_px] = 0
+                room_zp_arr = (np.array(room_zp, dtype=np.uint8) != 0).astype(np.uint8)
+
+        if is_title:
+            # Letters + room z-plane both mask; do NOT exclude baked tiles.
+            combined_zp = obj_zp
+            if room_zp_arr is not None:
+                combined_zp = (combined_zp | room_zp_arr).astype(np.uint8)
+        elif room_zp_arr is not None:
+            # Clear every tile touched by baked art, at 8x8 tile granularity.
+            combined_zp = room_zp_arr
+            baked_tiles = baked_px.reshape(
+                height_tiles, TILE_SIZE, width_tiles, TILE_SIZE
+            ).any(axis=(1, 3))
+            baked_tile_px = np.repeat(np.repeat(baked_tiles, TILE_SIZE, axis=0),
+                                      TILE_SIZE, axis=1)
+            combined_zp[baked_tile_px] = 0
 
     # Convert background to SNES color space (BGR555) AFTER baking fg objects.
     snes_pixels = _rgb_to_bgr555_array(bg_rgb.astype(np.int32))

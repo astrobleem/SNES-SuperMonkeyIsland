@@ -245,7 +245,8 @@ SCUMM.voiceSrchMid        dw      ;current midpoint
 SCUMM.scriptNestDepth     db      ;op_startScript recursion depth (0 = top level)
 SCUMM.songBeatBase        dw      ;VAR_MUSIC_TIMER snapshot when the beat song started
 SCUMM.songBeatId          db      ;sid currently driving the beat clock (0 = none)
-SCUMM._cgramHdmaReserve   ds 29   ;UNUSED remainder of the old cgramHdmaTable reserve
+SCUMM.choreLastFrame      dw      ;FrameCounter at last chore advance (frame-rate-independent 15 Hz gate)
+SCUMM._cgramHdmaReserve   ds 27   ;UNUSED remainder of the old cgramHdmaTable reserve (was 29; 2B → choreLastFrame)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
 SCUMM.argBuffer           ds 50   ;temp buffer for startScript vararg passing (25 words max)

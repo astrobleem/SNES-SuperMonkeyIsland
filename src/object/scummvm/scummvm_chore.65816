@@ -32,6 +32,15 @@
 .define CHORE_CMD_HIDE       $7B   ; hide limb (pic = $FF)
 .define CHORE_CMD_COUNTER    $7C   ; animCounter++ (deferred)
 
+; Costume animation advances once per chore.tick call. chore.tick is called
+; once per VM play tick, which follows the (variable) frame rate — measured at
+; a stable 30 Hz (every 2nd NTSC frame), but the per-pic wait values are
+; calibrated for the ~15 Hz SCUMM logic rate (see _tck.noWaitByte). Left
+; ungated, the campfire (cost 48) and walk cycles advance at 30 Hz — 2x too
+; fast. Pin the advance to wall-clock 15 Hz (every 4th NTSC frame) via
+; FrameCounter so animation runs at the intended speed regardless of loop rate.
+.define CHORE_TICK_INTERVAL  4     ; 60/4 = 15 Hz (raise = slower animation)
+
 
 .base BSL
 .bank 5 slot 0
@@ -621,6 +630,20 @@ scummvm.chore.tick:
   plb                                      ; DBR = $7E
   rep #$20
   .ACCU 16
+
+  ; --- Frame-rate-independent animation gate: advance at wall-clock 15 Hz ---
+  ; Only advance costume state when >= CHORE_TICK_INTERVAL NTSC frames have
+  ; elapsed since the last advance. Decouples animation from the (30 Hz) play
+  ; tick so the campfire + walk cycle run at the intended 15 Hz. DBR=$7E, so
+  ; FrameCounter ($7E:FC74) and choreLastFrame are directly .w-addressable.
+  lda.w FrameCounter
+  sec
+  sbc.w SCUMM.choreLastFrame
+  cmp #CHORE_TICK_INTERVAL
+  bcs +                                    ; >= interval -> advance this call
+    jmp _tck.exit                          ; else skip (branch range: use jmp)
++ lda.w FrameCounter
+  sta.w SCUMM.choreLastFrame
 
   ldx #0
 _tck.actorLoop:

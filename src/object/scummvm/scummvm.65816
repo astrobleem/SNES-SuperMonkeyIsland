@@ -330,6 +330,7 @@ _init.zeroCache:
   ;--- Init dialog state ---
   stz.w SCUMM.dialogActive
   stz.w SCUMM.dialogTimer
+  stz.w SCUMM.voicePlaying
   stz.w SCUMM.dialogX
   stz.w SCUMM.dialogY
   stz.w SCUMM.dialogColor
@@ -670,19 +671,35 @@ _play.noRoomRender:
 _play.verbClean:
   .ACCU 16
   .INDEX 16
-  ; Tick dialog timer
+  ; Tick dialog auto-clear
   rep #$20
   lda.w SCUMM.dialogActive
   beq _play.noDialog
-  lda.w SCUMM.dialogTimer
-  beq _play.clearDialog
-  dec a
-  sta.w SCUMM.dialogTimer
-  bra _play.noDialog
+  ; Talkie: while this line's MSU voice plays, the voice governs the line —
+  ; hold the text and clear it the moment playback ends (ScummVM stopTalk
+  ; parity). The text deadline only paces lines with no voice.
+  lda.w SCUMM.voicePlaying
+  beq _play.dialogTextTimer
+  sep #$20
+  lda.l MSU_STATUS
+  and.b #MSU_STATUS_AUDIO_PLAY
+  rep #$20
+  beq _play.clearDialog              ; voice finished → clear now
+  bra _play.noDialog                 ; voice still running → hold
+_play.dialogTextTimer:
+  .ACCU 16
+  ; dialogTimer is a FrameCounter deadline (wall-clock 60 Hz jiffies). A
+  ; countdown here would run at the play-tick rate (~30 Hz, less in heavy
+  ; rooms) and stretch every line 2x+.
+  lda.w FrameCounter
+  sec
+  sbc.w SCUMM.dialogTimer
+  bmi _play.noDialog                 ; deadline not reached
 _play.clearDialog:
   .ACCU 16
   .INDEX 16
   stz.w SCUMM.dialogActive
+  stz.w SCUMM.voicePlaying
   ; CGRAM word 29 is engine-owned (converter reserves art row 1 c13-c15), so
   ; there is nothing to restore when the line clears; the color just sits
   ; there until the next line rewrites it.
@@ -17271,6 +17288,7 @@ scummvm.extractAndRenderString:
   stz.w SCUMM.voiceOffsetLo
   stz.w SCUMM.voiceOffsetHi
   stz.w SCUMM.voiceCaptured
+  stz.w SCUMM.voicePlaying
   jsl scummvm.stopVoice
 
   ; --- Clear dialog tilemap buffer (fill with $0000) ---
@@ -17826,7 +17844,9 @@ _ears.renderEnd:
   ; SCUMM scripts and waitForMessage may check VAR(3) for message state.
   ldx #3*2
   sta.w SCUMM.globalVars,x
-  ; Timer = char_count * 6 + 60 (min 1 second)
+  ; Deadline = FrameCounter + char_count * 6 + 60 (min 1 second). Wall-clock
+  ; NTSC frames = true 60 Hz jiffies, independent of the ~30 Hz play tick
+  ; that checks it.
   lda.w SCUMM.dialogCharCount
   asl a                                ; *2
   sta.w SCUMM.scratch
@@ -17835,6 +17855,8 @@ _ears.renderEnd:
   adc.w SCUMM.scratch                  ; *6
   clc
   adc #60                              ; minimum 1 second
+  clc
+  adc.w FrameCounter
   sta.w SCUMM.dialogTimer
   lda #1
   sta.w SCUMM.dialogDmaPending
@@ -20829,6 +20851,10 @@ _pv.found:
 +
   lda #MSU_VOLUME_FULL
   sta.l MSU_VOLUME
+  rep #$20
+  .ACCU 16
+  lda #1
+  sta.w SCUMM.voicePlaying             ; play tick: voice now governs the line
   bra _pv.done
 
 _pv.notFound:

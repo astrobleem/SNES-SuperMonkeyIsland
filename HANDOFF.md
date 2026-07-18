@@ -98,7 +98,13 @@ Recent landings (all proven, see commit messages for evidence):
 7. **Lookout ambience**: the fire-crackle SBLs (real sids ~4/5) are not yet
    registered as TAD SFX — the old-man scene is canonically silent music-wise,
    but the reference has ambience.
-8. **soundKludge is minimal by design**: only `(256, sid, 7|8)` =
+8. **Speech/text speed option (Chad-approved idea, 2026-07-17)**: dialog line
+   duration is max(60 + chars*VAR_CHARINC jiffies, voice length) per ScummVM
+   displayDialog (`bd14271`); VAR_CHARINC = global var 37 (boot script sets 3,
+   engine seeds 4). A menu option adjusting var 37 (0-9, original used +/-
+   keys) gives players speech-delivery speed control — needs a UI home
+   (pause/options screen doesn't exist yet).
+9. **soundKludge is minimal by design**: only `(256, sid, 7|8)` =
    getBeatIndex/getTick is implemented (that's all script 152 needs). Other
    iMUSE forms (markers/triggers → VAR_SOUNDRESULT) are consumed as no-ops.
    Implement additional forms ONLY when a specific script needs them — check

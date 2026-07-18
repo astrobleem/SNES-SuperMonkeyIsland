@@ -246,7 +246,7 @@ SCUMM.scriptNestDepth     db      ;op_startScript recursion depth (0 = top level
 SCUMM.songBeatBase        dw      ;VAR_MUSIC_TIMER snapshot when the beat song started
 SCUMM.songBeatId          db      ;sid currently driving the beat clock (0 = none)
 SCUMM.choreLastFrame      dw      ;FrameCounter at last chore advance (frame-rate-independent 15 Hz gate)
-SCUMM.voicePlaying        dw      ;nonzero = MSU voice started for the current dialog line (voice end clears the line)
+SCUMM.voicePlaying        dw      ;nonzero = MSU voice started for the current dialog line (holds the line past the text deadline)
 SCUMM._cgramHdmaReserve   ds 25   ;UNUSED remainder of the old cgramHdmaTable reserve (was 27; 2B → voicePlaying)
 SCUMM.opcodeLimit         dw      ;per-slot opcode execution limit (prevents infinite loops)
 SCUMM.inExpression        dw      ;nonzero = inside expression eval; comparison opcodes must not branch
@@ -658,7 +658,7 @@ SCUMM.verbTilemap        ds 2048 ; BG2 WRAM tilemap buffer (32x32 x 2B)
 ;---------------------------------------------------------------------------
 .ramsection "scumm dialog state" bank 0 slot 1
 SCUMM.dialogActive       dw      ; nonzero = dialog text on screen
-SCUMM.dialogTimer        dw      ; FrameCounter deadline for auto-clear (subtitle-only lines; voiced lines clear at voice end)
+SCUMM.dialogTimer        dw      ; FrameCounter deadline for auto-clear (voiced lines: voice extends past it; duration = max(text delay, voice))
 SCUMM.dialogX            dw      ; text center X (SCUMM pixel coords)
 SCUMM.dialogY            dw      ; text top Y (SCUMM pixel coords)
 SCUMM.dialogColor        dw      ; text color — SCUMM color index (0-15), 0=default white

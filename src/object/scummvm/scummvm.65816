@@ -326,6 +326,9 @@ _init.zeroCache:
   lda #1
   ldx #48*2
   sta.w SCUMM.globalVars,x            ; VAR(48) = VAR_USERPUT = 1
+  lda #4
+  ldx #37*2
+  sta.w SCUMM.globalVars,x            ; VAR(37) = VAR_CHARINC = 4 (ScummVM resetScummVars)
 
   ;--- Init dialog state ---
   stz.w SCUMM.dialogActive
@@ -671,30 +674,26 @@ _play.noRoomRender:
 _play.verbClean:
   .ACCU 16
   .INDEX 16
-  ; Tick dialog auto-clear
+  ; Tick dialog auto-clear — ScummVM displayDialog order (string.cpp): hold
+  ; while the text delay runs, then keep holding while the talkie sound is
+  ; still playing, then stopTalk. Line duration = max(text delay, voice).
   rep #$20
   lda.w SCUMM.dialogActive
   beq _play.noDialog
-  ; Talkie: while this line's MSU voice plays, the voice governs the line —
-  ; hold the text and clear it the moment playback ends (ScummVM stopTalk
-  ; parity). The text deadline only paces lines with no voice.
-  lda.w SCUMM.voicePlaying
-  beq _play.dialogTextTimer
-  sep #$20
-  lda.l MSU_STATUS
-  and.b #MSU_STATUS_AUDIO_PLAY
-  rep #$20
-  beq _play.clearDialog              ; voice finished → clear now
-  bra _play.noDialog                 ; voice still running → hold
-_play.dialogTextTimer:
-  .ACCU 16
   ; dialogTimer is a FrameCounter deadline (wall-clock 60 Hz jiffies). A
   ; countdown here would run at the play-tick rate (~30 Hz, less in heavy
   ; rooms) and stretch every line 2x+.
   lda.w FrameCounter
   sec
   sbc.w SCUMM.dialogTimer
-  bmi _play.noDialog                 ; deadline not reached
+  bmi _play.noDialog                 ; text delay still running → hold
+  lda.w SCUMM.voicePlaying
+  beq _play.clearDialog              ; no voice on this line → clear
+  sep #$20
+  lda.l MSU_STATUS
+  and.b #MSU_STATUS_AUDIO_PLAY
+  rep #$20
+  bne _play.noDialog                 ; voice still running → hold
 _play.clearDialog:
   .ACCU 16
   .INDEX 16
@@ -17844,17 +17843,24 @@ _ears.renderEnd:
   ; SCUMM scripts and waitForMessage may check VAR(3) for message state.
   ldx #3*2
   sta.w SCUMM.globalVars,x
-  ; Deadline = FrameCounter + char_count * 6 + 60 (min 1 second). Wall-clock
-  ; NTSC frames = true 60 Hz jiffies, independent of the ~30 Hz play tick
-  ; that checks it.
-  lda.w SCUMM.dialogCharCount
-  asl a                                ; *2
-  sta.w SCUMM.scratch
-  asl a                                ; *4
+  ; Deadline = FrameCounter + 60 + char_count * VAR_CHARINC (var 37), in
+  ; wall-clock NTSC frames = true 60 Hz jiffies, independent of the ~30 Hz
+  ; play tick that checks it. ScummVM parity (displayDialog): v5 has no
+  ; VAR_DEFAULT_TALK_DELAY so the base is 60, plus VAR(VAR_CHARINC) per char.
+  ldx #37*2
+  lda.w SCUMM.globalVars,x             ; VAR_CHARINC (jiffies per char)
+  tax
+  lda #0
+  cpx #0
+  beq _ears.timerCharsDone
+_ears.timerCharsLoop:
   clc
-  adc.w SCUMM.scratch                  ; *6
+  adc.w SCUMM.dialogCharCount
+  dex
+  bne _ears.timerCharsLoop
+_ears.timerCharsDone:
   clc
-  adc #60                              ; minimum 1 second
+  adc #60                              ; base talk delay
   clc
   adc.w FrameCounter
   sta.w SCUMM.dialogTimer

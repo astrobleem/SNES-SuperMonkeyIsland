@@ -1,6 +1,6 @@
 # SNES Super Monkey Island
 
-A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nintendo, using MSU-1 for asset streaming.
+A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nintendo, targeting real NTSC hardware with MSU-1 for CD-quality speech.
 
 | | |
 |:---:|:---:|
@@ -18,26 +18,26 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 - **Platform**: SNES + MSU-1 (SD2SNES / FXPAK Pro), SA-1 co-processor
 - **Target**: MI1 VGA CD Talkie (`monkey.000` / `monkey.001`)
 - **Input**: SNES Mouse (primary), joypad with virtual cursor (fallback)
-- **Audio**: SPC700 native chip music + SFX via [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver), MSU-1 reserved for voice acting
-- **Assembler**: WLA-DX v9.3 (v9.4+ breaks the build)
-- **ROM**: 4MB HiROM (SA-1 directly addressable)
+- **Audio**: SPC700 native chip music + SFX via [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver); MSU-1 carries CD-quality speech (voice acting)
+- **Assembler**: WLA-DX 9.5-svn, vendored at `tools/wla-dx-9.5-svn/` (built by `make`; do not substitute a system WLA-DX)
+- **ROM**: 4MB HiROM (SA-1 directly addressable) — rooms and scripts are packed into upper ROM banks, not streamed from MSU-1
 - **Engine base**: Forked from Super Dragon's Lair Arcade (SNES MSU-1)
 
 ## Approach
 
 Following the GBAGI model (Brian Provinciano's native AGI interpreter for GBA): a purpose-built, hardware-native interpreter that reads original game data files. Not a ScummVM port.
 
-The SNES ROM is just the engine. All game assets live in an MSU-1 data pack generated offline from the user's own MI1 data files (`monkey.000` / `monkey.001`).
+Room backgrounds, tilesets, costumes, and script bytecode are converted offline from the user's own MI1 data files (`monkey.000` / `monkey.001`) and packed directly into the 4MB HiROM image via `rom_pack_data.py`; VRAM and WRAM stream from ROM banks as live caches, the tile-cache-from-a-fast-store model pioneered by the Super Dragon's Lair SNES port (there, from MSU-1; here, from ROM).
 
-MSU-1 provides unlimited storage (4GB addressable) with on-demand streaming. VRAM and WRAM act as live caches backed by MSU-1, the same proven architecture used by the Super Dragon's Lair SNES port for continuous FMV playback.
+MSU-1 is retained for two things: a boot-time presence-check handshake (`distribution/SuperMonkeyIsland.msu` must exist or the game won't boot, even though it's no longer read for room/script data) and streaming CD-quality speech for the talkie voice track.
 
 ## Build
 
-Build runs under WSL with WLA-DX v9.3:
+Build runs under WSL with the vendored WLA-DX 9.5-svn (`tools/wla-dx-9.5-svn/`):
 
 ```bash
 # Standard build (clean + build)
-wsl -e bash -c "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make clean && make"
+wsl -e bash -lc "cd /mnt/e/gh/SNES-SuperMonkeyIsland && make clean && make"
 
 # Output: build/SuperMonkeyIsland.sfc (also copied to distribution/)
 ```
@@ -50,7 +50,7 @@ Two harnesses cover different layers:
 
 | Harness | Purpose |
 |---------|---------|
-| `tests/run_vm_tests.py` | **178 unit tests** — inject synthetic SCUMM bytecode into the script cache, assert WRAM. Catches opcode-semantic regressions. |
+| `tests/run_vm_tests.py` | **183 unit tests** — inject synthetic SCUMM bytecode into the script cache, assert WRAM. Catches opcode-semantic regressions. |
 | `tests/integration/run_integration_tests.py` | Gameplay-grade — boots the ROM, lets the intro run, drives state pokes / clicks, asserts visible result. Catches scenarios unit tests miss. |
 
 Both run inside Mesen 2's `--testrunner` mode against the current build.
@@ -112,7 +112,7 @@ Engine distributed separately from game data (like GBAGI). Users supply their ow
 
 ## Status
 
-**Phases 0–2 complete, Phase 3 in progress.** SCUMM v5 interpreter + actor system + scaling + verb/dialog/walkbox systems are running. The boot chain reaches LucasArts logo → credits → title card → opening cutscene → controllable gameplay on the lookout. ScummVM-parity port of the walking pump (multi-leg `walkActor`, `buildWalkPath` with BOXM fizzle, `Camera::moveCamera` dead zone) has landed and is regression-tested.
+**Phases 0–2 complete, Phase 3 in progress.** SCUMM v5 interpreter + actor system + scaling + verb/dialog/walkbox systems are running. The boot chain reaches MSU-1 splash → title screen → full intro cutscene (music, CD speech, credits paced to the talkie) → lookout old-man dialogue → Part One card → **player control at the dock (room 33)**. Dialog choices work; SCUMM Bar rooms load. ScummVM-parity port of the walking pump (multi-leg `walkActor`, `buildWalkPath` with BOXM fizzle, `Camera::moveCamera` dead zone) has landed and is regression-tested.
 
 ### Rendering Pipeline
 - All 86 MI1 rooms extracted, converted, and shipped (in-ROM via `rom_pack_data.py`; MSU-1 boot handshake retained)
@@ -145,19 +145,17 @@ The pipeline: body + head costume tiles are composited into a BW-RAM pixel buffe
 - **Dialog** — BG3 text overlay, per-actor talk colors, auto-timed display, sentence line on BG2 verb row
 - **Walkbox pathfinding** — full SCUMM v5 walkbox + BOXM matrix; ScummVM `Actor::startWalkActor` semantics
 - **Object interaction** — `findObject` AABB with `kObjectClassUntouchable` skip, `doSentence`/`startObject` execution via OBCD VERB pipeline
-- **Audio** — Terrific Audio Driver v0.2.0 on SPC700; AdLib FM → SNES BRR sample pipeline; first real songs: LucasArts logo (`r010_lucasarts`), SCUMM Bar theme (`soun_scummbar`), SUPERGUYBRUSH theme
+- **Audio** — Terrific Audio Driver v0.2.0 on SPC700 (9 song groups wired in-game, MSU-1/TAD toggle verified); AdLib FM → SNES BRR sample pipeline; CD-quality speech via MSU-1 (talkie voice lines, per-line PCM)
 - **BW-RAM infrastructure** — save header + first-boot init, CGRAM shadow, `darkenPalette`, `setPalColor`
 - **SA-1 co-processor** — CC Type 2 sprite scaling, BW-RAM composite buffer, non-blocking pipeline
 
 ### Test Coverage
-- **178 unit tests** in `tests/run_vm_tests.py` covering opcode semantics (signed comparisons, expression evaluator, actor getters, walk pump, etc.)
+- **183 unit tests** in `tests/run_vm_tests.py` covering opcode semantics (signed comparisons, expression evaluator, actor getters, walk pump, etc.)
 - Gameplay-grade integration runner in `tests/integration/run_integration_tests.py` covering bugs that slipped through unit tests (invisible spawn, moonwalking, can't-enter SCUMM bar, old-man-on-campfire)
 - 11 ScummVM-spec divergences caught and fixed against the new harness; tracked in `docs/v5_behavior_matrix.md`
 
 ### Open Frontier
-- **Dialog choice selection** — choices render but no d-pad+A cursor-highlight-and-select. Blocks pirate conversations.
 - **Title-screen mountain cloud flicker** — partially mitigated; not fully resolved.
 - **Save/load serialization** — BW-RAM map + boot init done; serializing VM state into a slot is next.
 - **`palManipulate`** — gradual palette transitions (sunsets, lighting fades).
-- **Room-by-room gameplay verification** — 86 rooms, plus puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion).
-- **MSU-1 voice acting** — pipeline reserved, not yet wired.
+- **Room-by-room gameplay verification past the dock** — nothing beyond room 33 has been exercised; 86 rooms total, plus puzzle logic (insult sword fighting, Herman Toothrot, Governor's mansion).

@@ -5,7 +5,7 @@ The unit-grade harness in `tests/run_vm_tests.py` exercises opcode
 semantics in isolation by injecting bytecode into a frozen test slot.
 That can't catch gameplay-grade bugs — Bug 1 (invisible spawn), Bug 2
 (moonwalking), Bug 3 (cannot enter SCUMM bar), Bug 4 (old man on
-campfire) all slipped through 178 unit tests.
+campfire) all slipped through the unit-test suite.
 
 This runner is the second pass: it boots the ROM normally, lets MI1's
 intro run, then drives game-state pokes / clicks and asserts the

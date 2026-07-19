@@ -1,4 +1,4 @@
-# HANDOFF — SNES Super Monkey Island (2026-07-16)
+# HANDOFF — SNES Super Monkey Island (2026-07-17)
 
 Written by the outgoing agent for whoever picks this up next. Read CLAUDE.md
 and AGENTS.md first; this file is the *state + roadmap*, those are the *rules
@@ -20,7 +20,7 @@ hears, the map is wrong (this happened; see the DSOU lesson below).
 Boot → MSU-1 splash → title screen → full intro cutscene (music, CD speech,
 credits paced to the talkie) → lookout old-man dialogue → Part One card
 (room 96) → **player control at the dock (room 33)**. Dialog choices work.
-SCUMM Bar rooms load. VM regression suite: 183/183. Bank 0: 87.3%.
+SCUMM Bar rooms load. VM regression suite: 183/183. Bank 0: 87.9%.
 
 **The intro title screen is now fully correct** (merged to master via PR #4,
 merge `62ff4f3`): logo renders clean, clouds drift, and the clouds pass

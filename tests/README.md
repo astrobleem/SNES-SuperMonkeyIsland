@@ -1,7 +1,7 @@
 # SCUMM VM Tests
 
 Executable test coverage for the SCUMM v5 VM, so we can spot regressions
-without playing through 85 rooms by hand. Each test injects a tiny
+without playing through 86 rooms by hand. Each test injects a tiny
 synthetic bytecode sequence into the script cache, lets the SCUMM
 scheduler run it for a frame or two, and asserts the resulting WRAM state.
 

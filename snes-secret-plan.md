@@ -3,6 +3,20 @@
 
 ---
 
+> **Architecture note (2026-07-19):** Sections 1, 3, 5.2, and 6 below describe
+> the project's *original* design, where room/script/costume data streamed
+> live from an MSU-1 data pack. That plan changed: rooms and scripts are now
+> packed directly into the 4MB HiROM image by `tools/rom_pack_data.py`, and
+> VRAM/WRAM stream from ROM banks instead. MSU-1 today is used only for (a)
+> a boot-time presence-check handshake (`distribution/SuperMonkeyIsland.msu`
+> must exist) and (b) CD-quality speech playback for the talkie voice track —
+> see `room.msu1Seek` (dead code, kept for the presence check) and the talkie
+> backend landed 2026-07-05 (§ "Talkie voice backend"). This file is kept as
+> a historical design record per `CLAUDE.md`; for current architecture read
+> `CLAUDE.md`'s "Architecture (High-Level)" section and `HANDOFF.md`.
+
+---
+
 ## 1. What This Is (And Isn't)
 
 **This is a Monkey Island 1 interpreter for the SNES**, written in 65816 assembly. Not a ScummVM port. Not a general-purpose SCUMM engine. A purpose-built, hardware-native program that reads MI1's game data and runs it on the Super Nintendo — the same approach as GBAGI (Brian Provinciano's native AGI interpreter for Game Boy Advance).
@@ -18,7 +32,7 @@ We do the same thing, but for SCUMM v5 on SNES+MSU-1.
 ### Target
 - **Game**: The Secret of Monkey Island (VGA/CD, SCUMM v5)
 - **Platform**: SNES + MSU-1
-- **Language**: 65816 assembly (WLA-DX v9.3)
+- **Language**: 65816 assembly (WLA-DX 9.5-svn, vendored)
 - **Input**: SNES Mouse (primary), joypad (fallback with virtual cursor)
 - **Audio**: SPC700 native chip music + SFX via Terrific Audio Driver (TAD), MSU-1 for voice acting
 
@@ -314,7 +328,7 @@ $C000-$FFFF   16 KB   [Future: DMA Staging, OAM double-buffer]
 
 ### 5.1 SCUMM v5 Bytecode Interpreter — IMPLEMENTED
 
-The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented; ~20 sub-opcode stubs remain** in complex families (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). VM regression harness in `tests/run_vm_tests.py` runs **178 unit tests** covering opcode semantics; gameplay-grade integration runner in `tests/integration/run_integration_tests.py` covers scenarios unit tests miss. 11 ScummVM-spec divergences caught and fixed via the new harness; tracked in `docs/v5_behavior_matrix.md`.
+The heart of the engine. Interprets MI1's script bytecode. **All 105 base opcodes implemented; ~20 sub-opcode stubs remain** in complex families (`src/object/scummvm/scummvm.{h,65816}`). Room scripts (ENCD/EXCD/LSCR) loaded on room change; ENCD auto-started. Global script cache reloaded on room transitions to prevent stale pointer crashes. Expression evaluator fixed (correct sub-opcode dispatch, signed 16-bit multiply/divide). Multi-room smoke test: 15/15 rooms pass (1, 2, 3→83, 4→83, 5→83, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50). VM regression harness in `tests/run_vm_tests.py` runs **183 unit tests** covering opcode semantics; gameplay-grade integration runner in `tests/integration/run_integration_tests.py` covers scenarios unit tests miss. 11 ScummVM-spec divergences caught and fixed via the new harness; tracked in `docs/v5_behavior_matrix.md`.
 
 **Architecture (implemented):**
 - ScummVM is a Singleton OOP class — `play()` runs the full scheduler once per frame
@@ -1365,7 +1379,7 @@ re-verified still open on 2026-07-05.
 - [x] **Verb table driven by MI1 script** — hardcoded `initDefaultVerbs` deleted (`554ac3f`)
 - [x] **`op_pseudoRoom` drives resourceMapper** — resolver masks room & 0x7F (`d0fcce2`)
 - [x] **Actor priority overhaul** — default 3, gated by zClip (`a325a1e`, `3b9463f`); `findObject` uses `kObjectClassUntouchable` bitmap not `state==0` (`9f18687`)
-- [x] **VM regression harness** — `tests/run_vm_tests.py` runs **178 unit tests** that inject synthetic bytecode and assert WRAM. Catches opcode-semantic regressions in isolation.
+- [x] **VM regression harness** — `tests/run_vm_tests.py` runs **183 unit tests** that inject synthetic bytecode and assert WRAM. Catches opcode-semantic regressions in isolation.
 - [x] **Gameplay-grade integration runner** — `tests/integration/run_integration_tests.py` boots the ROM normally, drives state pokes / clicks, asserts visible result. Caught Bugs 1–4 (invisible spawn, moonwalking, can't-enter SCUMM bar, old-man-on-campfire) that slipped through the unit harness.
 - [x] **11 ScummVM-spec engine bugfixes** caught by the new harness — signed comparisons (`isGreater`/`isLess`/`isLessEqual`/`isGreaterEqual` use SIGNED int16), `getActorFacing` returns `newDirToOldDir(facing)`, expression evaluator stack-machine fixes, etc. (`7176932`)
 - [x] **`docs/v5_behavior_matrix.md`** — tracks every ScummVM `_game.version` gate vs. our port's behavior, with status legend (✅ MATCHES / ❌ DIVERGES / ⏳ PARTIAL)

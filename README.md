@@ -12,6 +12,8 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 | ![Governor's Mansion](screenshots/room53_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
 | ![Monkey Island](screenshots/room12_monkey_island.png) | ![LeChuck's Lair](screenshots/room65_hell.png) |
 
+**[Watch the main theme play on real SPC700 hardware](https://www.youtube.com/watch?v=nx0pLCmaNJM)** — 8-channel oscilloscope visualization, one pane per DSP voice.
+
 ## Architecture
 
 - **Language**: 65816 assembly with a custom OOP framework

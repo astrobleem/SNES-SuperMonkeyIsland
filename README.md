@@ -12,7 +12,8 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 | ![Governor's Mansion](screenshots/room53_mansion.png) | ![Monkey Head](screenshots/room69_monkey_head.png) |
 | ![Monkey Island](screenshots/room12_monkey_island.png) | ![LeChuck's Lair](screenshots/room65_hell.png) |
 
-**[Watch the main theme play on real SPC700 hardware](https://www.youtube.com/watch?v=nx0pLCmaNJM)** — 8-channel oscilloscope visualization, one pane per DSP voice.
+[![Watch the main theme play on real SPC700 hardware](https://img.youtube.com/vi/nx0pLCmaNJM/hqdefault.jpg)](https://www.youtube.com/watch?v=nx0pLCmaNJM)
+*Main theme on real SPC700 hardware — 8-channel oscilloscope visualization, one pane per DSP voice.*
 
 ## Architecture
 
@@ -20,7 +21,7 @@ A native SCUMM v5 interpreter for *The Secret of Monkey Island* on the Super Nin
 - **Platform**: SNES + MSU-1 (SD2SNES / FXPAK Pro), SA-1 co-processor
 - **Target**: MI1 VGA CD Talkie (`monkey.000` / `monkey.001`)
 - **Input**: SNES Mouse (primary), joypad with virtual cursor (fallback)
-- **Audio**: SPC700 native chip music + SFX via [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver); MSU-1 carries CD-quality speech (voice acting)
+- **Audio**: [SPC700 native chip music](audio/songs/) + SFX via [Terrific Audio Driver](https://github.com/undisbeliever/terrific-audio-driver); MSU-1 carries CD-quality speech (voice acting)
 - **Assembler**: WLA-DX 9.5-svn, vendored at `tools/wla-dx-9.5-svn/` (built by `make`; do not substitute a system WLA-DX)
 - **ROM**: 4MB HiROM (SA-1 directly addressable) — rooms and scripts are packed into upper ROM banks, not streamed from MSU-1
 - **Engine base**: Forked from Super Dragon's Lair Arcade (SNES MSU-1)
